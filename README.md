@@ -7,6 +7,8 @@ Catan Player
 On one tab:
 
 ```
+pipenv install
+pipenv shell
 export FLASK_ENV=development
 export FLASK_APP=server.py
 flask run
