@@ -10,6 +10,11 @@ class Resource(Enum):
     ORE = "ORE"
 
 
+class Tile:
+    def __init__(self, resource):
+        self.resource = resource
+
+
 TILE_DECK = [
     # Four wood tiles
     Tile(Resource.WOOD),
@@ -35,9 +40,3 @@ TILE_DECK = [
     Tile(Resource.ORE),
     Tile(Resource.ORE),
 ]
-
-
-class Tile:
-    def __init__(self, resource):
-        self.resource = resource
-
