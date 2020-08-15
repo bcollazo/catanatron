@@ -39,6 +39,13 @@ class Node:
         pass
 
 
+class Board:
+    def __init__(self, ports, tiles, numbers):
+        self.ports = ports
+        self.tiles = tiles
+        self.numbers = numbers
+
+
 TILE_DECK = [
     # Four wood tiles
     Tile(Resource.WOOD),
@@ -79,7 +86,7 @@ PORT_DECK = [
     Port(),
 ]
 
-NUMBERS_DECK = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 12]
+NUMBERS_DECK = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12]
 
 
 def generate_board():
@@ -93,6 +100,4 @@ def generate_board():
     print(shuffled_ports)
     print(shuffled_tiles)
     print(shuffled_numbers)
-
-
-generate_board()
+    return Board(shuffled_ports, shuffled_tiles, shuffled_numbers)
