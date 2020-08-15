@@ -1,3 +1,11 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
 .row {
   display: flex;
   justify-content: center;
@@ -13,35 +21,22 @@ $tile-height: 70px;
 
 .hexagon {
   position: relative;
-  width: $tile-width;
-  height: $tile-height;
-  background-color: #64c7cc;
-  margin: $tile-height / 2 2.5px;
+  width: 103px;
+  height: 120px;
+  background-size: cover;
 
   display: flex;
   justify-content: center;
   align-items: center;
+  padding-top: 20px;
   font-size: 2em;
+  font-weight: 700;
   color: white;
 }
-.hexagon:before,
-.hexagon:after {
-  content: "";
-  position: absolute;
-  width: 0;
-  border-left: $tile-width / 2 solid transparent;
-  border-right: $tile-width / 2 solid transparent;
-}
-.hexagon:before {
-  bottom: 100%;
-  border-bottom: $tile-height / 2 solid #64c7cc;
-}
-.hexagon:after {
-  top: 100%;
-  width: 0;
-  border-top: $tile-height / 2 solid #64c7cc;
-}
 
+.row {
+  position: relative;
+}
 .row:nth-child(2) .hexagon {
   top: -30px;
 }
@@ -74,71 +69,24 @@ body {
   background-color: $water-color;
 }
 .hexagon.wood {
-  background-color: $wood-color;
+  background-image: url("./tiles/tile_lumber.svg");
 }
-.hexagon.wood:before {
-  border-bottom: $tile-height / 2 solid $wood-color;
-}
-.hexagon.wood:after {
-  border-top: $tile-height / 2 solid $wood-color;
-}
-
 .hexagon.brick {
-  background-color: $brick-color;
+  background-image: url("./tiles/tile_brick.svg");
 }
-.hexagon.brick:before {
-  border-bottom: $tile-height / 2 solid $brick-color;
-}
-.hexagon.brick:after {
-  border-top: $tile-height / 2 solid $brick-color;
-}
-
 .hexagon.sheep {
-  background-color: $sheep-color;
+  background-image: url("./tiles/tile_wool.svg");
 }
-.hexagon.sheep:before {
-  border-bottom: $tile-height / 2 solid $sheep-color;
-}
-.hexagon.sheep:after {
-  border-top: $tile-height / 2 solid $sheep-color;
-}
-
 .hexagon.wheat {
-  background-color: $wheat-color;
+  background-image: url("./tiles/tile_grain.svg");
 }
-.hexagon.wheat:before {
-  border-bottom: $tile-height / 2 solid $wheat-color;
-}
-.hexagon.wheat:after {
-  border-top: $tile-height / 2 solid $wheat-color;
-}
-
 .hexagon.ore {
-  background-color: $ore-color;
+  background-image: url("./tiles/tile_ore.svg");
 }
-.hexagon.ore:before {
-  border-bottom: $tile-height / 2 solid $ore-color;
-}
-.hexagon.ore:after {
-  border-top: $tile-height / 2 solid $ore-color;
-}
-
 .hexagon.desert {
-  background-color: $desert-color;
-}
-.hexagon.desert:before {
-  border-bottom: $tile-height / 2 solid $desert-color;
-}
-.hexagon.desert:after {
-  border-top: $tile-height / 2 solid $desert-color;
+  background-image: url("./tiles/tile_desert.svg");
 }
 
 .hexagon.water {
-  background-color: $water-color;
-}
-.hexagon.water:before {
-  border-bottom: $tile-height / 2 solid $water-color;
-}
-.hexagon.water:after {
-  border-top: $tile-height / 2 solid $water-color;
+  background-color: transparent;
 }
