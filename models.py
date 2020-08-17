@@ -2,6 +2,13 @@ import random
 from enum import Enum
 
 
+class Color(Enum):
+    RED = "RED"
+    BLUE = "BLUE"
+    ORANGE = "ORANGE"
+    WHITE = "WHITE"
+
+
 class Resource(Enum):
     WOOD = "WOOD"
     BRICK = "BRICK"
