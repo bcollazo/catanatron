@@ -21,3 +21,9 @@ cd ui/
 yarn install
 yarn start
 ```
+
+## To run tests
+
+```
+python -m pytest tests/
+```
