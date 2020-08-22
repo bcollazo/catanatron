@@ -20,7 +20,8 @@ class Resource(Enum):
 class Tile:
     def __init__(self, resource=None):
         self.resource = resource
-        self.desert = resource == None
+        self.is_desert = resource == None
+
         self.intersections = []
 
     def __repr__(self):
