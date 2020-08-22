@@ -140,16 +140,6 @@ UNIT_VECTORS = {
 }
 
 
-MOVE_FUNCTIONS = {
-    Direction.NORTHEAST: lambda x: add(x, UNIT_VECTORS[Direction.NORTHEAST]),
-    Direction.SOUTHWEST: lambda x: add(x, UNIT_VECTORS[Direction.SOUTHWEST]),
-    Direction.NORTHWEST: lambda x: add(x, UNIT_VECTORS[Direction.NORTHWEST]),
-    Direction.SOUTHEAST: lambda x: add(x, UNIT_VECTORS[Direction.SOUTHEAST]),
-    Direction.EAST: lambda x: add(x, UNIT_VECTORS[Direction.EAST]),
-    Direction.WEST: lambda x: add(x, UNIT_VECTORS[Direction.WEST]),
-}
-
-
 def num_tiles_for(layer):
     """Including inner-layer tiles"""
     if layer == 0:
@@ -171,7 +161,7 @@ def generate_coordinate_system(num_layers):
         node = agenda.pop(0)
         visited.add(node)
 
-        neighbors = [MOVE_FUNCTIONS[d](node) for d in Direction]
+        neighbors = [add(node, UNIT_VECTORS[d]) for d in Direction]
         new_neighbors = filter(
             lambda x: x not in visited and x not in agenda, neighbors
         )
