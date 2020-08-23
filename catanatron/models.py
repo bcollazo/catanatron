@@ -162,7 +162,7 @@ class BaseMap:
             # center
             (0, 0, 0): Tile,
             # first layer
-            (1, -1, 1): Tile,
+            (1, -1, 0): Tile,
             (0, -1, 1): Tile,
             (-1, 0, 1): Tile,
             (-1, 1, 0): Tile,
