@@ -44,10 +44,13 @@ class EdgeRef(Enum):
 
 
 class Tile:
-    def __init__(self, resource, number, nodes, edges):
-        self.is_desert = resource == None
+    next_autoinc_id = 0
 
-        self.resource = resource
+    def __init__(self, resource, number, nodes, edges):
+        self.id = Tile.next_autoinc_id
+        Tile.next_autoinc_id += 1
+
+        self.resource = resource  # None means desert tile
         self.number = number
         self.nodes = nodes
         self.edges = edges
@@ -57,8 +60,13 @@ class Tile:
 
 
 class Port:
+    next_autoinc_id = 0
+
     def __init__(self, resource, direction, nodes, edges):
-        self.resource = resource  # No resource means its a 3:1 port.
+        self.id = Port.next_autoinc_id
+        Port.next_autoinc_id += 1
+
+        self.resource = resource  # None means its a 3:1 port.
         self.direction = direction
         self.nodes = nodes
         self.edges = edges
@@ -68,7 +76,12 @@ class Port:
 
 
 class Water:
+    next_autoinc_id = 0
+
     def __init__(self, nodes, edges):
+        self.id = Water.next_autoinc_id
+        Water.next_autoinc_id += 1
+
         self.nodes = nodes
         self.edges = edges
 
@@ -190,34 +203,32 @@ class BaseMap:
         }
 
 
-class Game:
-    def __init__(self):
-        # Map is defined by having a large-enough coordinate_system
-        # and reading from a (coordinate) => Tile | Water | Port map
-        # and filling the rest with water tiles.
-        self.map = BaseMap()
+class Board(dict):
+    """Since rep is basically a dict of (coordinate) => Tile, we inhert dict"""
 
-        # Initialization goes like: shuffle tiles, ports, and numbers.
-        # Goes one by one placing tiles in board. When placing ensure they
-        # are "attach" to possible neighbors. (no repeated nodes or edges)
+    def __init__(self, catan_map):
+        """
+        Initializes a new random board, based on the catan_map description.
+        It first shuffles tiles, ports, and numbers. Then goes satisfying the
+        topology (placing tiles on coordinates); ensuring to "attach" these to
+        neighbor tiles. (no repeated nodes or edges objects)
+        """
         shuffled_port_resources = random.sample(
-            self.map.port_resources, len(self.map.port_resources)
+            catan_map.port_resources, len(catan_map.port_resources)
         )
         shuffled_tile_resources = random.sample(
-            self.map.tile_resources, len(self.map.tile_resources)
+            catan_map.tile_resources, len(catan_map.tile_resources)
         )
-        shuffled_numbers = random.sample(self.map.numbers, len(self.map.numbers))
+        shuffled_numbers = random.sample(catan_map.numbers, len(catan_map.numbers))
 
         # for each topology entry, place a tile.
-        board = {}
-        for (coordinate, tile_type) in self.map.topology.items():
-            print(coordinate, tile_type)
-
-            nodes, edges = get_nodes_and_edges(board, coordinate)
+        tiles = {}
+        for (coordinate, tile_type) in catan_map.topology.items():
+            nodes, edges = get_nodes_and_edges(tiles, coordinate)
             if isinstance(tile_type, tuple):  # is port
                 (TileClass, direction) = tile_type
                 port = TileClass(shuffled_port_resources.pop(), direction, nodes, edges)
-                board[coordinate] = port
+                tiles[coordinate] = port
             elif tile_type == Tile:
                 resource = shuffled_tile_resources.pop()
                 if resource != None:
@@ -225,15 +236,27 @@ class Game:
                     tile = Tile(resource, number, nodes, edges)
                 else:
                     tile = Tile(None, None, nodes, edges)  # desert
-                board[coordinate] = tile
+                tiles[coordinate] = tile
             elif tile_type == Water:
                 water_tile = Water(nodes, edges)
-                board[coordinate] = water_tile
+                tiles[coordinate] = water_tile
             else:
                 raise Exception("Something went wrong")
 
+        self.tiles = tiles
+
+
+class Game:
+    def __init__(self):
+        # Map is defined by having a large-enough coordinate_system
+        # and reading from a (coordinate) => Tile | Water | Port map
+        # and filling the rest with water tiles.
+        self.map = BaseMap()
+
         # board should be: (coordinate) => Tile (with nodes and edges initialized)
-        self.board = board
+        self.board = Board(self.map)
+
+        # TODO: Create players.
 
 
 def get_nodes_and_edges(board, coordinate):
