@@ -22,19 +22,37 @@ function Water() {
   return <div className="hexagon water"></div>;
 }
 
-const drawTile = (ctx, x, y, radius, color, number) => {
+const write = (ctx, text, x, y, font = "30px Helvetica", color = "white") => {
+  ctx.font = font;
   ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.fillText(text, x, y);
+};
+
+const drawTile = (ctx, x, y, radius, tile) => {
+  ctx.fillStyle = color(tile);
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, 2 * Math.PI);
   ctx.fill();
 
-  if (number !== undefined) {
-    ctx.font = "30px Helvetica";
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.fillText(number, x - 1, y + 8);
+  if (tile.number !== undefined) {
+    write(ctx, tile.number, x - 1, y + 8);
+  }
+  if (tile.type === "PORT") {
+    if (tile.resource === null) {
+      write(ctx, "3:1", x - 1, y + 8);
+    } else {
+      ctx.fillStyle = colorResource(tile.resource);
+      ctx.beginPath();
+      ctx.arc(x, y, radius / 3, 0, 2 * Math.PI);
+      ctx.fill();
+    }
   }
 };
+
+function drawNode(ctx, x, y, nodeId) {
+  write(ctx, nodeId, x, y, "10px Helvetica", "black");
+}
 
 const color = (tile) => {
   if (tile.type === "WATER" || tile.type === "PORT") {
@@ -42,36 +60,76 @@ const color = (tile) => {
   } else if (tile.type === "DESERT") {
     return "orange";
   } else {
-    console.log(tile.resource);
-    return {
-      SHEEP: "lightgreen",
-      WOOD: "green",
-      BRICK: "red",
-      ORE: "gray",
-      WHEAT: "yellow",
-    }[tile.resource];
+    return colorResource(tile.resource);
+  }
+};
+
+const colorResource = (resource) => {
+  return {
+    SHEEP: "lightgreen",
+    WOOD: "green",
+    BRICK: "red",
+    ORE: "gray",
+    WHEAT: "yellow",
+  }[resource];
+};
+
+// https://www.redblobgames.com/grids/hexagons/
+const r = 60; // for drawing circle
+const sqrt3 = 1.73205080757;
+const size = 80;
+const w = sqrt3 * size;
+const h = 2 * size;
+function cube_to_axial(cube) {
+  return { q: cube[0], r: cube[2] };
+}
+const translateCoordinate = (coordinate, centerX, centerY) => {
+  const hex = cube_to_axial(coordinate);
+  return [
+    centerX + size * (sqrt3 * hex.q + (sqrt3 / 2) * hex.r),
+    centerY + size * (3 / 2) * hex.r,
+  ];
+};
+const getDelta = (direction) => {
+  switch (direction) {
+    case "NORTH":
+      return [0, -h / 2];
+    case "NORTHEAST":
+      return [w / 2, -h / 4];
+    case "SOUTHEAST":
+      return [w / 2, h / 4];
+    case "SOUTH":
+      return [0, h / 2];
+    case "SOUTHWEST":
+      return [-w / 2, h / 4];
+    case "NORTHWEST":
+      return [-w / 2, -h / 4];
   }
 };
 
 const draw = (ctx, state, windowWidth, windowHeight) => {
-  const radius = 40;
-  const diameter = 2 * radius;
-  const tileHeight = 60;
-
-  const centerX = windowWidth / 2 - radius;
-  const centerY = windowHeight / 2 - radius;
+  const centerX = windowWidth / 2;
+  const centerY = windowHeight / 2;
   for (const { coordinate, tile } of state.tiles) {
-    // add 2 diameters on 60deg for each X (0.5 on x and 0.86602540378 on y)
-    // add 2 diameters on 120deg for each Y (-0.5 on x and 0.86602540378 on y)
-    const [x, y, z] = coordinate;
-    const canvasX = centerX + x * 2 * diameter * 0.5 + y * 2 * diameter * -0.5;
-    const canvasY =
-      centerY +
-      z * diameter +
-      x * 2 * diameter * 0.86 +
-      y * 2 * diameter * 0.86;
-    drawTile(ctx, canvasX, canvasY, radius, color(tile), tile.number);
-    console.log(coordinate);
+    const [canvasX, canvasY] = translateCoordinate(
+      coordinate,
+      centerX,
+      centerY
+    );
+    drawTile(ctx, canvasX, canvasY, r, tile);
+  }
+
+  for (const nodeId in state.nodes) {
+    const node = state.nodes[nodeId];
+    const [tileX, tileY] = translateCoordinate(
+      node.tile_coordinate,
+      centerX,
+      centerY
+    );
+    const [deltaX, deltaY] = getDelta(node.direction);
+    const x = tileX + deltaX;
+    const y = tileY + deltaY;
+    drawNode(ctx, x, y, nodeId);
   }
 };
 
