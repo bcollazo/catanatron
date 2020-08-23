@@ -257,23 +257,37 @@ def get_nodes_and_edges(board, coordinate):
 
     # Find pre-existing ones
     neighbors = [(add(coordinate, UNIT_VECTORS[d]), d) for d in Direction]
-    for (coord, direction) in neighbors:
+    for (coord, neighbor_direction) in neighbors:
         if coord not in board:
             continue
 
         neighbor = board[coord]
-        if direction == Direction.EAST:
+        if neighbor_direction == Direction.EAST:
             nodes[NodeRef.NORTHEAST] = neighbor.nodes[NodeRef.NORTHWEST]
             nodes[NodeRef.SOUTHEAST] = neighbor.nodes[NodeRef.SOUTHWEST]
             edges[EdgeRef.EAST] = neighbor.edges[EdgeRef.WEST]
-        elif direction == Direction.WEST:
+        elif neighbor_direction == Direction.SOUTHEAST:
+            nodes[NodeRef.SOUTH] = neighbor.nodes[NodeRef.NORTHWEST]
+            nodes[NodeRef.SOUTHEAST] = neighbor.nodes[NodeRef.NORTH]
+            edges[EdgeRef.SOUTHEAST] = neighbor.edges[EdgeRef.NORTHWEST]
+        elif neighbor_direction == Direction.SOUTHWEST:
+            nodes[NodeRef.SOUTH] = neighbor.nodes[NodeRef.NORTHEAST]
+            nodes[NodeRef.SOUTHWEST] = neighbor.nodes[NodeRef.NORTH]
+            edges[EdgeRef.SOUTHWEST] = neighbor.edges[EdgeRef.NORTHEAST]
+        elif neighbor_direction == Direction.WEST:
             nodes[NodeRef.NORTHWEST] = neighbor.nodes[NodeRef.NORTHEAST]
             nodes[NodeRef.SOUTHWEST] = neighbor.nodes[NodeRef.SOUTHEAST]
             edges[EdgeRef.WEST] = neighbor.edges[EdgeRef.EAST]
-        elif direction == Direction.SOUTHWEST:
-            pass
+        elif neighbor_direction == Direction.NORTHWEST:
+            nodes[NodeRef.NORTH] = neighbor.nodes[NodeRef.SOUTHEAST]
+            nodes[NodeRef.NORTHWEST] = neighbor.nodes[NodeRef.SOUTH]
+            edges[EdgeRef.NORTHWEST] = neighbor.edges[EdgeRef.SOUTHEAST]
+        elif neighbor_direction == Direction.NORTHEAST:
+            nodes[NodeRef.NORTH] = neighbor.nodes[NodeRef.SOUTHWEST]
+            nodes[NodeRef.NORTHEAST] = neighbor.nodes[NodeRef.SOUTH]
+            edges[EdgeRef.NORTHEAST] = neighbor.edges[EdgeRef.SOUTHWEST]
         else:
-            pass
+            raise Exception("Something went wrong")
 
     # Initializes new ones
     for key, value in nodes.items():
@@ -284,6 +298,3 @@ def get_nodes_and_edges(board, coordinate):
             edges[key] = Edge()
 
     return nodes, edges
-
-
-Game()
