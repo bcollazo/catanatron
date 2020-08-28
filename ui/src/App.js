@@ -3,6 +3,7 @@ import cn from "classnames";
 
 import "./App.scss";
 import useWindowSize from "./useWindowSize";
+import { ControlPanel } from "./ControlPanel";
 
 const URL = "http://localhost:5000/board";
 
@@ -171,7 +172,12 @@ function App() {
   if (state === null) {
     return <div></div>;
   }
-  return <canvas ref={canvasRef} style={{ position: "fixed" }} />;
+  return (
+    <div className="game">
+      <canvas ref={canvasRef} style={{ position: "fixed" }} />
+      <ControlPanel />
+    </div>
+  );
 
   // const ports = state.ports.map((port) => <Water />); // TODO: Add port icon
   // const tiles = state.tiles.map((tile, index) => {
