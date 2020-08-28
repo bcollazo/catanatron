@@ -1,5 +1,6 @@
 import random
 from enum import Enum
+from collections import namedtuple, defaultdict
 
 from catanatron.coordinate_system import (
     generate_coordinate_system,
@@ -34,6 +35,7 @@ class NodeRef(Enum):
     NORTHWEST = "NORTHWEST"
 
 
+# References an edge from a tile.
 class EdgeRef(Enum):
     EAST = "EAST"
     SOUTHEAST = "SOUTHEAST"
@@ -41,6 +43,18 @@ class EdgeRef(Enum):
     WEST = "WEST"
     NORTHWEST = "NORTHWEST"
     NORTHEAST = "NORTHEAST"
+
+
+def get_edge_nodes(edgeRef):
+    """returns pair of nodes at the "ends" of a given edge"""
+    return {
+        EdgeRef.EAST: (NodeRef.NORTHEAST, NodeRef.SOUTHEAST),
+        EdgeRef.SOUTHEAST: (NodeRef.SOUTHEAST, NodeRef.SOUTH),
+        EdgeRef.SOUTHWEST: (NodeRef.SOUTH, NodeRef.SOUTHWEST),
+        EdgeRef.WEST: (NodeRef.SOUTHWEST, NodeRef.NORTHWEST),
+        EdgeRef.NORTHWEST: (NodeRef.NORTHWEST, NodeRef.NORTH),
+        EdgeRef.NORTHEAST: (NodeRef.NORTH, NodeRef.NORTHEAST),
+    }[edgeRef]
 
 
 class Tile:
@@ -203,47 +217,229 @@ class BaseMap:
         }
 
 
+# TODO: Build "deck" of these (14 roads, 5 settlements, 4 cities)
+class BuildingType(Enum):
+    SETTLEMENT = "SETTLEMENT"
+    CITY = "CITY"
+    ROAD = "ROAD"
+
+
+Building = namedtuple("Building", ["color", "building_type"])
+
+
+def initialize_board(catan_map):
+    shuffled_port_resources = random.sample(
+        catan_map.port_resources, len(catan_map.port_resources)
+    )
+    shuffled_tile_resources = random.sample(
+        catan_map.tile_resources, len(catan_map.tile_resources)
+    )
+    shuffled_numbers = random.sample(catan_map.numbers, len(catan_map.numbers))
+
+    # for each topology entry, place a tile. keep track of nodes and edges
+    all_tiles = {}
+    all_nodes = {}
+    all_edges = {}
+    # graph is { node => { edge: node }{<=3}}
+    graph = defaultdict(dict)
+    for (coordinate, tile_type) in catan_map.topology.items():
+        nodes, edges = get_nodes_and_edges(all_tiles, coordinate)
+
+        # create and save tile
+        if isinstance(tile_type, tuple):  # is port
+            (TileClass, direction) = tile_type
+            port = TileClass(shuffled_port_resources.pop(), direction, nodes, edges)
+            all_tiles[coordinate] = port
+        elif tile_type == Tile:
+            resource = shuffled_tile_resources.pop()
+            if resource != None:
+                number = shuffled_numbers.pop()
+                tile = Tile(resource, number, nodes, edges)
+            else:
+                tile = Tile(None, None, nodes, edges)  # desert
+            all_tiles[coordinate] = tile
+        elif tile_type == Water:
+            water_tile = Water(nodes, edges)
+            all_tiles[coordinate] = water_tile
+        else:
+            raise Exception("Something went wrong")
+
+        # upsert keys => nodes for querying later
+        for noderef, node in nodes.items():
+            all_nodes[(coordinate, noderef)] = node
+        for edgeref, edge in edges.items():
+            all_edges[(coordinate, edgeref)] = edge
+
+        # upsert connections in graph (bi-directional)
+        # clock-wise
+        graph[nodes[NodeRef.NORTH]][edges[EdgeRef.NORTHEAST]] = nodes[NodeRef.NORTHEAST]
+        graph[nodes[NodeRef.NORTHEAST]][edges[EdgeRef.EAST]] = nodes[NodeRef.SOUTHEAST]
+        graph[nodes[NodeRef.SOUTHEAST]][edges[EdgeRef.SOUTHEAST]] = nodes[NodeRef.SOUTH]
+        graph[nodes[NodeRef.SOUTH]][edges[EdgeRef.SOUTHWEST]] = nodes[NodeRef.SOUTHWEST]
+        graph[nodes[NodeRef.SOUTHWEST]][edges[EdgeRef.WEST]] = nodes[NodeRef.NORTHWEST]
+        graph[nodes[NodeRef.NORTHWEST]][edges[EdgeRef.NORTHWEST]] = nodes[NodeRef.NORTH]
+
+        # counter-clockwise
+        graph[nodes[NodeRef.NORTH]][edges[EdgeRef.NORTHWEST]] = nodes[NodeRef.NORTHWEST]
+        graph[nodes[NodeRef.NORTHWEST]][edges[EdgeRef.WEST]] = nodes[NodeRef.SOUTHWEST]
+        graph[nodes[NodeRef.SOUTHWEST]][edges[EdgeRef.SOUTHWEST]] = nodes[NodeRef.SOUTH]
+        graph[nodes[NodeRef.SOUTH]][edges[EdgeRef.SOUTHEAST]] = nodes[NodeRef.SOUTHEAST]
+        graph[nodes[NodeRef.SOUTHEAST]][edges[EdgeRef.EAST]] = nodes[NodeRef.NORTHEAST]
+        graph[nodes[NodeRef.NORTHEAST]][edges[EdgeRef.NORTHEAST]] = nodes[NodeRef.NORTH]
+
+    return (all_tiles, all_nodes, all_edges, graph)
+
+
 class Board(dict):
     """Since rep is basically a dict of (coordinate) => Tile, we inhert dict"""
 
-    def __init__(self, catan_map):
+    def __init__(self, catan_map=None):
         """
         Initializes a new random board, based on the catan_map description.
         It first shuffles tiles, ports, and numbers. Then goes satisfying the
         topology (placing tiles on coordinates); ensuring to "attach" these to
         neighbor tiles. (no repeated nodes or edges objects)
         """
-        shuffled_port_resources = random.sample(
-            catan_map.port_resources, len(catan_map.port_resources)
-        )
-        shuffled_tile_resources = random.sample(
-            catan_map.tile_resources, len(catan_map.tile_resources)
-        )
-        shuffled_numbers = random.sample(catan_map.numbers, len(catan_map.numbers))
+        catan_map = catan_map or BaseMap()
+        tiles, nodes, edges, graph = initialize_board(catan_map)
 
-        # for each topology entry, place a tile.
-        tiles = {}
-        for (coordinate, tile_type) in catan_map.topology.items():
-            nodes, edges = get_nodes_and_edges(tiles, coordinate)
-            if isinstance(tile_type, tuple):  # is port
-                (TileClass, direction) = tile_type
-                port = TileClass(shuffled_port_resources.pop(), direction, nodes, edges)
-                tiles[coordinate] = port
-            elif tile_type == Tile:
-                resource = shuffled_tile_resources.pop()
-                if resource != None:
-                    number = shuffled_numbers.pop()
-                    tile = Tile(resource, number, nodes, edges)
-                else:
-                    tile = Tile(None, None, nodes, edges)  # desert
-                tiles[coordinate] = tile
-            elif tile_type == Water:
-                water_tile = Water(nodes, edges)
-                tiles[coordinate] = water_tile
-            else:
-                raise Exception("Something went wrong")
+        self.tiles = tiles  # (coordinate) => Tile (with nodes and edges initialized)
+        self.nodes = nodes  # (coordinate, noderef) => node
+        self.edges = edges  # (coordinate, edgeref) => edge
+        self.graph = graph  #  { node => { edge: node }{<=3}}
 
-        self.tiles = tiles
+        # (coordinate, nodeRef | edgeRef) | node | edge => None | Building
+        self.buildings = {}
+
+    def build_settlement(self, color, coordinate, nodeRef, initial_placement=False):
+        """Adds a settlement, and ensures is a valid place to build.
+
+        Args:
+            color (Color): player's color
+            coordinate (tuple): (x,y,z) of tile
+            nodeRef (NodeRef): which of the 6 nodes of given tile
+            initial_placement (bool, optional):
+                Whether this is part of initial building phase, so as to skip
+                connectedness validation. Defaults to True.
+        """
+        if not initial_placement:
+            # TODO: Check connectedness
+            raise ValueError(
+                "Invalid Settlement Placement: not connected and not initial-placement"
+            )
+
+        # we add and check in multiple representations to ease querying
+        keys = [(coordinate, nodeRef), self.nodes[(coordinate, nodeRef)]]
+        exists = map(lambda k: self.buildings.get(k) is not None, keys)
+        if any(exists):
+            raise ValueError("Invalid Settlement Placement: a building exists there")
+
+        building = Building(color=color, building_type=BuildingType.SETTLEMENT)
+        for key in keys:
+            self.buildings[key] = building
+
+    def build_road(self, color, coordinate, edgeRef):
+        edge = self.edges.get((coordinate, edgeRef))
+        # if no house of this color in either end, invalid.
+        a_noderef, b_noderef = get_edge_nodes(edgeRef)
+        a_node = self.nodes.get((coordinate, a_noderef))
+        b_node = self.nodes.get((coordinate, b_noderef))
+
+        def get_color(building_key):
+            building = self.buildings.get(building_key)
+            return None if building is None else building.color
+
+        a_color = get_color(a_node)
+        b_color = get_color(b_node)
+
+        # boolean on whether this color has built something there (edge or node)
+        def color_has_built(building_key):
+            building = self.buildings.get(building_key)
+            return building is not None and building.color == color
+
+        one_end_has_color = color_has_built(a_node) or color_has_built(b_node)
+        a_connected = any(
+            [color_has_built(e) for e in self.graph.get(a_node).keys() if edge != e]
+        )
+        b_connected = any(
+            [color_has_built(e) for e in self.graph.get(b_node).keys() if edge != e]
+        )
+        enemy_on_a = a_color is not None and a_color != color
+        enemy_on_b = b_color is not None and b_color != color
+
+        nothing_there = self.buildings.get((coordinate, edgeRef)) is None
+        can_build = nothing_there and (
+            one_end_has_color
+            or (a_connected and not enemy_on_a)
+            or (b_connected and not enemy_on_b)
+        )
+        if not can_build:
+            raise ValueError("Invalid Road Placement: not connected")
+
+        # we add and check in multiple representations to ease querying
+        keys = [(coordinate, edgeRef), self.edges[(coordinate, edgeRef)]]
+        exists = map(lambda k: self.buildings.get(k) is not None, keys)
+        if any(exists):
+            raise ValueError("Invalid Road Placement: a road exists there")
+
+        building = Building(color=color, building_type=BuildingType.ROAD)
+        for key in keys:
+            self.buildings[key] = building
+
+    def buildable_nodes(self, color, initial_placement=False):
+        buildable = set()
+        if initial_placement:
+            for (coordinate, tile) in self.tiles.items():
+                if isinstance(tile, Port) or isinstance(tile, Water):
+                    continue
+
+                for (noderef, node) in tile.nodes.items():
+                    # if any of this or neighboring nodes has a building, not buildable.
+                    under_consideration = list(self.graph[node].values()) + [node]
+                    has_building = map(
+                        lambda n: self.buildings.get(n) is not None,
+                        under_consideration,
+                    )
+
+                    if any(has_building):
+                        continue  # not buildable
+                    buildable.add(node)
+
+        return buildable
+
+        # for initial_placement
+        # for each tile, get nodes. eliminate if at distance two (from graph)
+        # just ensure no building there or on neighboring 2 cells
+        # if not part of tile
+
+        # if not initial_placement
+        # get connected components of this color. For each subgraph,
+        # compute buildable nodes
+
+        # list of nodes is self.nodes.keys()
+        # get graph from tiles only.
+        # bfs from node is: put all three neighbors in agenda. mark as visited.
+        # visit agenda put all neighbors _not_ in visited (or agenda).
+        # if not part of tile
+
+        # if need to BFS connected graph.
+        # only explore edges that contain colored edge. (check buildings).
+
+        # for connected components.
+        #   find all my buildings. start bfs from any that _removes_ other
+        #   edges/nodes to visit. when done we have 1 connected component, repeat
+        #   from whats left in to_visit
+
+        # longest road:
+        #   given a connected component (subgraph); find longest acyclic path.
+
+        # node + nodeedgeref must be able to query edge.
+        # self.edges.get((node, nodeedgeref))
+        # self.edges.get((coordinate, edgeref))
+        # self.edges.get(edge_id)
+
+        # go through list of nodes, checking if buildable by color.
+        return []
 
 
 class Game:
@@ -279,8 +475,8 @@ def get_nodes_and_edges(board, coordinate):
     }
 
     # Find pre-existing ones
-    neighbors = [(add(coordinate, UNIT_VECTORS[d]), d) for d in Direction]
-    for (coord, neighbor_direction) in neighbors:
+    neighbor_tiles = [(add(coordinate, UNIT_VECTORS[d]), d) for d in Direction]
+    for (coord, neighbor_direction) in neighbor_tiles:
         if coord not in board:
             continue
 
@@ -313,11 +509,11 @@ def get_nodes_and_edges(board, coordinate):
             raise Exception("Something went wrong")
 
     # Initializes new ones
-    for key, value in nodes.items():
+    for noderef, value in nodes.items():
         if value == None:
-            nodes[key] = Node()
-    for key, value in edges.items():
+            nodes[noderef] = Node()
+    for edgeref, value in edges.items():
         if value == None:
-            edges[key] = Edge()
+            edges[edgeref] = Edge()
 
     return nodes, edges
