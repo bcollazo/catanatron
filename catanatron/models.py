@@ -339,35 +339,33 @@ class Board(dict):
             self.buildings[key] = building
 
     def build_road(self, color, coordinate, edgeRef):
-        edge = self.edges.get((coordinate, edgeRef))
-        # if no house of this color in either end, invalid.
+        edge_under_consideration = self.edges.get((coordinate, edgeRef))
+
         a_noderef, b_noderef = get_edge_nodes(edgeRef)
         a_node = self.nodes.get((coordinate, a_noderef))
         b_node = self.nodes.get((coordinate, b_noderef))
+        a_color = self.get_color(a_node)
+        b_color = self.get_color(b_node)
 
-        def get_color(building_key):
-            building = self.buildings.get(building_key)
-            return None if building is None else building.color
-
-        a_color = get_color(a_node)
-        b_color = get_color(b_node)
-
-        # boolean on whether this color has built something there (edge or node)
-        def color_has_built(building_key):
-            building = self.buildings.get(building_key)
-            return building is not None and building.color == color
-
-        one_end_has_color = color_has_built(a_node) or color_has_built(b_node)
+        nothing_there = self.buildings.get(edge_under_consideration) is None
+        one_end_has_color = self.is_color(a_node, color) or self.is_color(b_node, color)
         a_connected = any(
-            [color_has_built(e) for e in self.graph.get(a_node).keys() if edge != e]
+            [
+                self.is_color(edge, color)
+                for edge in self.graph.get(a_node).keys()
+                if edge_under_consideration != edge
+            ]
         )
         b_connected = any(
-            [color_has_built(e) for e in self.graph.get(b_node).keys() if edge != e]
+            [
+                self.is_color(edge, color)
+                for edge in self.graph.get(b_node).keys()
+                if edge_under_consideration != edge
+            ]
         )
         enemy_on_a = a_color is not None and a_color != color
         enemy_on_b = b_color is not None and b_color != color
 
-        nothing_there = self.buildings.get((coordinate, edgeRef)) is None
         can_build = nothing_there and (
             one_end_has_color
             or (a_connected and not enemy_on_a)
@@ -388,6 +386,9 @@ class Board(dict):
 
     def buildable_nodes(self, color, initial_placement=False):
         buildable = set()
+
+        # if initial-placement, iterate over non-water/port tiles, for each
+        # of these nodes check if its a buildable node.
         if initial_placement:
             for (coordinate, tile) in self.tiles.items():
                 if isinstance(tile, Port) or isinstance(tile, Water):
@@ -405,30 +406,12 @@ class Board(dict):
                         continue  # not buildable
                     buildable.add(node)
 
-        return buildable
-
-        # for initial_placement
-        # for each tile, get nodes. eliminate if at distance two (from graph)
-        # just ensure no building there or on neighboring 2 cells
-        # if not part of tile
-
-        # if not initial_placement
-        # get connected components of this color. For each subgraph,
-        # compute buildable nodes
-
-        # list of nodes is self.nodes.keys()
-        # get graph from tiles only.
-        # bfs from node is: put all three neighbors in agenda. mark as visited.
-        # visit agenda put all neighbors _not_ in visited (or agenda).
-        # if not part of tile
+        # if not initial-placement, find all connected components. For each
+        #   node in this connected subgraph, iterate checking buildability
+        connected_components = self.find_connected_components(color)
 
         # if need to BFS connected graph.
         # only explore edges that contain colored edge. (check buildings).
-
-        # for connected components.
-        #   find all my buildings. start bfs from any that _removes_ other
-        #   edges/nodes to visit. when done we have 1 connected component, repeat
-        #   from whats left in to_visit
 
         # longest road:
         #   given a connected component (subgraph); find longest acyclic path.
@@ -437,9 +420,100 @@ class Board(dict):
         # self.edges.get((node, nodeedgeref))
         # self.edges.get((coordinate, edgeref))
         # self.edges.get(edge_id)
+        return buildable
 
-        # go through list of nodes, checking if buildable by color.
-        return []
+    # ===== Helper functions
+    def get_color(self, building_key):
+        """None if no one has built here, else builder's color"""
+        building = self.buildings.get(building_key)
+        return None if building is None else building.color
+
+    def is_color(self, building_key, color):
+        """boolean on whether this color has built here (edge or node)"""
+        return self.get_color(building_key) == color
+
+    def find_connected_components(self, color):
+        """returns connected subgraphs for a given player
+
+        algorithm goes like: find all nodes where color has buildings.
+        start a BFS from any of these nodes, only following edges color owns,
+        appending to subgraph and eliminating from agenda if builded there.
+        repeat until list of settled_nodes is empty.
+
+        Args:
+            color (Color): [description]
+
+        Returns:
+            [list of self.graph-like objects]: connected subgraphs. subgraph
+                will include nodes that color might not own, just to make it
+                "closed" and easier for buildable_nodes to operate.
+        """
+        settled_nodes = set(
+            node for node in self.nodes.values() if self.is_color(node, color)
+        )
+        settled_edges = set(
+            edge for edge in self.edges.values() if self.is_color(edge, color)
+        )
+        # TODO: Include roads settled as well.
+        # subgraph will be inclusing of bordering nodes (even if others have built there)
+        # "buildable" will be all nodes here, as long as distance 2 of other buildings.
+        subgraphs = []
+        while len(settled_edges) > 0:
+            tmp_subgraph = defaultdict(dict)
+
+            # start bfs
+            agenda = [settled_edges.pop()]
+            visited = set()
+            while len(agenda) > 0:
+                edge = agenda.pop()
+                visited.add(edge)
+                if edge in settled_edges:
+                    settled_edges.remove(edge)
+
+                # can't imagine a better way to get the two "end" nodes
+                # given a edge, _without_ having the coordinate tile.
+                pair = None
+                for node, neighbors_map in self.graph.items():
+                    if edge in neighbors_map:
+                        pair = (node, neighbors_map[edge])
+                assert pair is not None
+
+                # add to subgraph
+                tmp_subgraph[pair[0]][edge] = pair[1]
+                tmp_subgraph[pair[1]][edge] = pair[0]
+
+                # edges to add to exploration are ones we are connected to.
+                a_color = self.get_color(pair[0])
+                if a_color is not None and a_color != color:  # enemy has a
+                    a_candidates = []  # dont expand this way
+                else:
+                    a_candidates = [
+                        candidate_edge
+                        for candidate_edge, neighbor in self.graph[pair[0]].items()
+                        if (
+                            candidate_edge != edge
+                            and self.is_color(candidate_edge, color)
+                        )
+                    ]
+                b_color = self.get_color(pair[1])
+                if b_color is not None and b_color != color:  # enemy has b
+                    b_candidates = []  # dont expand this way
+                else:
+                    b_candidates = [
+                        candidate_edge
+                        for candidate_edge, neighbor in self.graph[pair[1]].items()
+                        if (
+                            candidate_edge != edge
+                            and self.is_color(candidate_edge, color)
+                        )
+                    ]
+
+                for candidate_edge in a_candidates + b_candidates:
+                    if candidate_edge not in visited and candidate_edge not in agenda:
+                        agenda.append(candidate_edge)
+
+            subgraphs.append(dict(tmp_subgraph))
+        return subgraphs
 
 
 class Game:
