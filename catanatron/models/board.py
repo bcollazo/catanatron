@@ -2,12 +2,8 @@ import random
 from enum import Enum
 from collections import namedtuple, defaultdict
 
-from catanatron.coordinate_system import (
-    generate_coordinate_system,
-    Direction,
-    add,
-    UNIT_VECTORS,
-)
+from catanatron.coordinate_system import Direction, add, UNIT_VECTORS
+from catanatron.models.map import BaseMap, Tile, Water, Port
 
 
 class Color(Enum):
@@ -15,14 +11,6 @@ class Color(Enum):
     BLUE = "BLUE"
     ORANGE = "ORANGE"
     WHITE = "WHITE"
-
-
-class Resource(Enum):
-    WOOD = "WOOD"
-    BRICK = "BRICK"
-    SHEEP = "SHEEP"
-    WHEAT = "WHEAT"
-    ORE = "ORE"
 
 
 # Given a tile, the reference to the node.
@@ -57,49 +45,6 @@ def get_edge_nodes(edgeRef):
     }[edgeRef]
 
 
-class Tile:
-    next_autoinc_id = 0
-
-    def __init__(self, resource, number, nodes, edges):
-        self.id = Tile.next_autoinc_id
-        Tile.next_autoinc_id += 1
-
-        self.resource = resource  # None means desert tile
-        self.number = number
-        self.nodes = nodes
-        self.edges = edges
-
-    def __repr__(self):
-        return "Tile:" + str(self.resource)
-
-
-class Port:
-    next_autoinc_id = 0
-
-    def __init__(self, resource, direction, nodes, edges):
-        self.id = Port.next_autoinc_id
-        Port.next_autoinc_id += 1
-
-        self.resource = resource  # None means its a 3:1 port.
-        self.direction = direction
-        self.nodes = nodes
-        self.edges = edges
-
-    def __repr__(self):
-        return "Port:" + str(self.resource)
-
-
-class Water:
-    next_autoinc_id = 0
-
-    def __init__(self, nodes, edges):
-        self.id = Water.next_autoinc_id
-        Water.next_autoinc_id += 1
-
-        self.nodes = nodes
-        self.edges = edges
-
-
 class Edge:
     next_autoinc_id = 0
 
@@ -122,101 +67,6 @@ class Node:
 
     def __repr__(self):
         return "Node:" + str(self.id)
-
-
-class BaseMap:
-    """
-    Describes a basic 4 player map. Includes the tiles, ports, and numbers used.
-    """
-
-    def __init__(self):
-        self.numbers = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12]
-        self.port_resources = [
-            # These are 2:1 ports
-            Resource.WOOD,
-            Resource.BRICK,
-            Resource.SHEEP,
-            Resource.WHEAT,
-            Resource.ORE,
-            # These represet 3:1 ports
-            None,
-            None,
-            None,
-            None,
-        ]
-        self.tile_resources = [
-            # Four wood tiles
-            Resource.WOOD,
-            Resource.WOOD,
-            Resource.WOOD,
-            Resource.WOOD,
-            # Three brick tiles
-            Resource.BRICK,
-            Resource.BRICK,
-            Resource.BRICK,
-            # Four sheep tiles
-            Resource.SHEEP,
-            Resource.SHEEP,
-            Resource.SHEEP,
-            Resource.SHEEP,
-            # Four wheat tiles
-            Resource.WHEAT,
-            Resource.WHEAT,
-            Resource.WHEAT,
-            Resource.WHEAT,
-            # Three ore tiles
-            Resource.ORE,
-            Resource.ORE,
-            Resource.ORE,
-            # One desert
-            None,
-        ]
-
-        # 3 layers, where last layer is water
-        self.coordinate_system = generate_coordinate_system(3)
-        self.topology = {
-            # center
-            (0, 0, 0): Tile,
-            # first layer
-            (1, -1, 0): Tile,
-            (0, -1, 1): Tile,
-            (-1, 0, 1): Tile,
-            (-1, 1, 0): Tile,
-            (0, 1, -1): Tile,
-            (1, 0, -1): Tile,
-            # second layer
-            (2, -2, 0): Tile,
-            (1, -2, 1): Tile,
-            (0, -2, 2): Tile,
-            (-1, -1, 2): Tile,
-            (-2, 0, 2): Tile,
-            (-2, 1, 1): Tile,
-            (-2, 2, 0): Tile,
-            (-1, 2, -1): Tile,
-            (0, 2, -2): Tile,
-            (1, 1, -2): Tile,
-            (2, 0, -2): Tile,
-            (2, -1, -1): Tile,
-            # third (water) layer
-            (3, -3, 0): (Port, Direction.WEST),
-            (2, -3, 1): Water,
-            (1, -3, 2): (Port, Direction.NORTHWEST),
-            (0, -3, 3): Water,
-            (-1, -2, 3): (Port, Direction.NORTHWEST),
-            (-2, -1, 3): Water,
-            (-3, 0, 3): (Port, Direction.NORTHEAST),
-            (-3, 1, 2): Water,
-            (-3, 2, 1): (Port, Direction.EAST),
-            (-3, 3, 0): Water,
-            (-2, 3, -1): (Port, Direction.EAST),
-            (-1, 3, -2): Water,
-            (0, 3, -3): (Port, Direction.SOUTHEAST),
-            (1, 2, -3): Water,
-            (2, 1, -3): (Port, Direction.SOUTHWEST),
-            (3, 0, -3): Water,
-            (3, -1, -2): (Port, Direction.SOUTHWEST),
-            (3, -2, -1): Water,
-        }
 
 
 # TODO: Build "deck" of these (14 roads, 5 settlements, 4 cities)
@@ -242,7 +92,7 @@ def initialize_board(catan_map):
     all_tiles = {}
     all_nodes = {}
     all_edges = {}
-    # graph is { node => { edge: node }{<=3}}
+    # graph is { node => { edge: node }}
     graph = defaultdict(dict)
     for (coordinate, tile_type) in catan_map.topology.items():
         nodes, edges = get_nodes_and_edges(all_tiles, coordinate)

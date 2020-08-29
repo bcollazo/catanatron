@@ -1,11 +1,10 @@
 import pytest
 
-from catanatron.models import (
+from catanatron.models.map import Tile, Resource
+from catanatron.models.board import (
     get_nodes_and_edges,
     Node,
     Edge,
-    Tile,
-    Resource,
     Board,
     Color,
     EdgeRef,
