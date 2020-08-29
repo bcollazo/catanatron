@@ -177,15 +177,15 @@ def test_must_build_distance_two():
     )
 
 
-# def test_placements_must_be_connected():
-#     board = Board()
-#     board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
-#     board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHEAST)
+def test_placements_must_be_connected():
+    board = Board()
+    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHEAST)
 
-#     with pytest.raises(ValueError):  # distance less than 2 (even if connected)
-#         board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTHEAST)
-#     with pytest.raises(ValueError):  # not connected
-#         board.build_settlement(Color.RED, (0, 0, 0), NodeRef.NORTHEAST)
+    with pytest.raises(ValueError):  # distance less than 2 (even if connected)
+        board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTHEAST)
+    with pytest.raises(ValueError):  # not connected
+        board.build_settlement(Color.RED, (0, 0, 0), NodeRef.NORTHEAST)
 
-#     board.build_road(Color.RED, (0, 0, 0), EdgeRef.EAST)
-#     board.build_settlement(Color.RED, (0, 0, 0), NodeRef.NORTHEAST)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.EAST)
+    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.NORTHEAST)
