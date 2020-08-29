@@ -328,8 +328,9 @@ class Board(dict):
                 Whether this is part of initial building phase, so as to skip
                 connectedness validation. Defaults to True.
         """
-        if not initial_placement:
-            # TODO: Check connectedness
+        buildable = self.buildable_nodes(color, initial_placement=initial_placement)
+        node = self.nodes.get((coordinate, nodeRef))
+        if node not in buildable:
             raise ValueError(
                 "Invalid Settlement Placement: not connected and not initial-placement"
             )
