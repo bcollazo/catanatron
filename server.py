@@ -3,7 +3,8 @@ import json
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-from catanatron.models import Game, Water, Port
+from catanatron.game import Game
+from catanatron.models.map import Water, Port
 
 
 app = Flask(__name__)
@@ -52,4 +53,3 @@ def serialize_game(game):
 def board():
     game = Game()  # Make new in-memory Game, in the future we read board#i
     return jsonify(serialize_game(game))
-

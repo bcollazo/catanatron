@@ -1,4 +1,7 @@
-from catanatron.coordinate_system import num_tiles_for, generate_coordinate_system
+from catanatron.models.coordinate_system import (
+    num_tiles_for,
+    generate_coordinate_system,
+)
 
 
 def test_num_tiles_for():

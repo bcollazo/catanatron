@@ -1,6 +1,6 @@
 from enum import Enum
 
-from catanatron.coordinate_system import generate_coordinate_system, Direction
+from catanatron.models.coordinate_system import generate_coordinate_system, Direction
 
 
 class Resource(Enum):
