@@ -160,7 +160,19 @@ def test_three_connected_components_bc_enemy_cut_road():
     assert len(components) == 3
 
 
-# TODO: Test buildable_edges
+def test_buildable_edges_simple():
+    board = Board()
+    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
+    buildable = board.buildable_edges(Color.RED)
+    assert len(buildable) == 3
+
+
+def test_buildable_edges():
+    board = Board()
+    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHWEST)
+    buildable = board.buildable_edges(Color.RED)
+    assert len(buildable) == 4
 
 
 def test_must_build_distance_two():

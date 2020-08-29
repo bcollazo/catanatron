@@ -103,9 +103,11 @@ class Water:
 class Edge:
     next_autoinc_id = 0
 
-    def __init__(self):
+    def __init__(self, nodes):
         self.id = Edge.next_autoinc_id
         Edge.next_autoinc_id += 1
+
+        self.nodes = nodes  # the 2 nodes at the ends
 
     def __repr__(self):
         return "Edge:" + str(self.id)
@@ -346,39 +348,9 @@ class Board(dict):
             self.buildings[key] = building
 
     def build_road(self, color, coordinate, edgeRef):
-        edge_under_consideration = self.edges.get((coordinate, edgeRef))
-
-        a_noderef, b_noderef = get_edge_nodes(edgeRef)
-        a_node = self.nodes.get((coordinate, a_noderef))
-        b_node = self.nodes.get((coordinate, b_noderef))
-        a_color = self.get_color(a_node)
-        b_color = self.get_color(b_node)
-
-        nothing_there = self.buildings.get(edge_under_consideration) is None
-        one_end_has_color = self.is_color(a_node, color) or self.is_color(b_node, color)
-        a_connected = any(
-            [
-                self.is_color(edge, color)
-                for edge in self.graph.get(a_node).keys()
-                if edge_under_consideration != edge
-            ]
-        )
-        b_connected = any(
-            [
-                self.is_color(edge, color)
-                for edge in self.graph.get(b_node).keys()
-                if edge_under_consideration != edge
-            ]
-        )
-        enemy_on_a = a_color is not None and a_color != color
-        enemy_on_b = b_color is not None and b_color != color
-
-        can_build = nothing_there and (
-            one_end_has_color
-            or (a_connected and not enemy_on_a)
-            or (b_connected and not enemy_on_b)
-        )
-        if not can_build:
+        buildable = self.buildable_edges(color)
+        edge = self.edges.get((coordinate, edgeRef))
+        if edge not in buildable:
             raise ValueError("Invalid Road Placement: not connected")
 
         # we add and check in multiple representations to ease querying
@@ -427,6 +399,48 @@ class Board(dict):
 
         return buildable
 
+    def buildable_edges(self, color):
+        def is_buildable(edge):
+            a_node, b_node = edge.nodes
+            a_color = self.get_color(a_node)
+            b_color = self.get_color(b_node)
+
+            # check if buildable. buildable if nothing there, connected (one end_has_color)
+            nothing_there = self.buildings.get(edge) is None
+            one_end_has_color = self.is_color(a_node, color) or self.is_color(
+                b_node, color
+            )
+            a_connected = any(
+                [
+                    self.is_color(e, color)
+                    for e in self.graph.get(a_node).keys()
+                    if e != edge
+                ]
+            )
+            b_connected = any(
+                [
+                    self.is_color(e, color)
+                    for e in self.graph.get(b_node).keys()
+                    if e != edge
+                ]
+            )
+            enemy_on_a = a_color is not None and a_color != color
+            enemy_on_b = b_color is not None and b_color != color
+
+            can_build = nothing_there and (
+                one_end_has_color  # helpful for initial_placements
+                or (a_connected and not enemy_on_a)
+                or (b_connected and not enemy_on_b)
+            )
+            return can_build
+
+        buildable = set()
+        for edge in self.edges.values():
+            if is_buildable(edge):
+                buildable.add(edge)
+
+        return buildable
+
     # ===== Helper functions
     def get_color(self, building_key):
         """None if no one has built here, else builder's color"""
@@ -450,18 +464,13 @@ class Board(dict):
 
         Returns:
             [list of self.graph-like objects]: connected subgraphs. subgraph
-                will include nodes that color might not own, just to make it
-                "closed" and easier for buildable_nodes to operate.
+                might include nodes that color doesnt own (on the way and on ends),
+                just to make it is "closed" and easier for buildable_nodes to operate.
         """
-        settled_nodes = set(
-            node for node in self.nodes.values() if self.is_color(node, color)
-        )
         settled_edges = set(
             edge for edge in self.edges.values() if self.is_color(edge, color)
         )
-        # TODO: Include roads settled as well.
-        # subgraph will be inclusing of bordering nodes (even if others have built there)
-        # "buildable" will be all nodes here, as long as distance 2 of other buildings.
+
         subgraphs = []
         while len(settled_edges) > 0:
             tmp_subgraph = defaultdict(dict)
@@ -488,34 +497,23 @@ class Board(dict):
                 tmp_subgraph[pair[1]][edge] = pair[0]
 
                 # edges to add to exploration are ones we are connected to.
-                # TODO: This can prob get simplified:
+                candidates = set()  # will be explorable "5-edge star" around edge
                 a_color = self.get_color(pair[0])
-                if a_color is not None and a_color != color:  # enemy has a
-                    a_candidates = []  # dont expand this way
-                else:
-                    a_candidates = [
-                        candidate_edge
-                        for candidate_edge, neighbor in self.graph[pair[0]].items()
-                        if (
-                            candidate_edge != edge
-                            and self.is_color(candidate_edge, color)
-                        )
-                    ]
+                if a_color is None or a_color == color:  # enemy is not blocking
+                    for candidate_edge in self.graph[pair[0]].keys():
+                        candidates.add(candidate_edge)
                 b_color = self.get_color(pair[1])
-                if b_color is not None and b_color != color:  # enemy has b
-                    b_candidates = []  # dont expand this way
-                else:
-                    b_candidates = [
-                        candidate_edge
-                        for candidate_edge, neighbor in self.graph[pair[1]].items()
-                        if (
-                            candidate_edge != edge
-                            and self.is_color(candidate_edge, color)
-                        )
-                    ]
+                if b_color is None or b_color == color:  # enemy is not blocking
+                    for candidate_edge in self.graph[pair[1]].keys():
+                        candidates.add(candidate_edge)
 
-                for candidate_edge in a_candidates + b_candidates:
-                    if candidate_edge not in visited and candidate_edge not in agenda:
+                for candidate_edge in candidates:
+                    if (
+                        candidate_edge not in visited
+                        and candidate_edge not in agenda
+                        and candidate_edge != edge
+                        and self.is_color(candidate_edge, color)
+                    ):
                         agenda.append(candidate_edge)
 
             subgraphs.append(dict(tmp_subgraph))
@@ -594,6 +592,8 @@ def get_nodes_and_edges(board, coordinate):
             nodes[noderef] = Node()
     for edgeref, value in edges.items():
         if value == None:
-            edges[edgeref] = Edge()
+            a_noderef, b_noderef = get_edge_nodes(edgeref)
+            edge_nodes = (nodes[a_noderef], nodes[b_noderef])
+            edges[edgeref] = Edge(edge_nodes)
 
     return nodes, edges
