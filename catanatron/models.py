@@ -313,12 +313,6 @@ class Board(dict):
         # (coordinate, nodeRef | edgeRef) | node | edge => None | Building
         self.buildings = {}
 
-        # Should we?
-        # node + nodeedgeref must be able to query edge.
-        # self.edges.get((node, nodeedgeref))
-        # self.edges.get((coordinate, edgeref))
-        # self.edges.get(edge_id)
-
     def build_settlement(self, color, coordinate, nodeRef, initial_placement=False):
         """Adds a settlement, and ensures is a valid place to build.
 
