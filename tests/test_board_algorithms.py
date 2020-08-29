@@ -3,9 +3,10 @@ from catanatron.models.board_algorithms import (
     buildable_nodes,
     buildable_edges,
     find_connected_components,
+    longest_road,
 )
 
-
+# ===== Buildable nodes
 def test_buildable_nodes():
     board = Board()
     nodes = buildable_nodes(board, Color.RED)
@@ -39,6 +40,23 @@ def test_buildable_nodes_respects_distance_two():
     # TODO: assert Node?
 
 
+# ===== Buildable edges
+def test_buildable_edges_simple():
+    board = Board()
+    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
+    buildable = buildable_edges(board, Color.RED)
+    assert len(buildable) == 3
+
+
+def test_buildable_edges():
+    board = Board()
+    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHWEST)
+    buildable = buildable_edges(board, Color.RED)
+    assert len(buildable) == 4
+
+
+# ===== Find connected components
 def test_connected_components_empty_board():
     board = Board()
     components = find_connected_components(board, Color.RED)
@@ -95,16 +113,26 @@ def test_three_connected_components_bc_enemy_cut_road():
     assert len(components) == 3
 
 
-def test_buildable_edges_simple():
+# ===== Longest road
+def test_longest_road_simple():
     board = Board()
     board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
-    buildable = buildable_edges(board, Color.RED)
-    assert len(buildable) == 3
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHEAST)
+
+    color = longest_road(board)
+    assert color is None
+
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.EAST)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.NORTHEAST)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.NORTHWEST)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.WEST)
+
+    color = longest_road(board)
+    assert color == Color.RED
 
 
-def test_buildable_edges():
-    board = Board()
-    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
-    board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHWEST)
-    buildable = buildable_edges(board, Color.RED)
-    assert len(buildable) == 4
+# test: some roads under 5, None
+# test: single 5-road
+# test: two-players with 5-roads
+# test: circle around
+# test: complicated circle around

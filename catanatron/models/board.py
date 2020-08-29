@@ -2,6 +2,7 @@ import random
 from enum import Enum
 from collections import namedtuple, defaultdict
 
+from catanatron.models.enums import BuildingType
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.map import BaseMap, Tile, Water, Port
 from catanatron.models.board_algorithms import buildable_nodes, buildable_edges
@@ -70,20 +71,15 @@ class Node:
         return "Node:" + str(self.id)
 
 
-# TODO: Build "deck" of these (14 roads, 5 settlements, 4 cities)
-class BuildingType(Enum):
-    SETTLEMENT = "SETTLEMENT"
-    CITY = "CITY"
-    ROAD = "ROAD"
-
-
 Building = namedtuple("Building", ["color", "building_type"])
+
+Action = namedtuple("Action", ["color", "building"])
 
 
 class Board(dict):
     """Since rep is basically a dict of (coordinate) => Tile, we inhert dict"""
 
-    def __init__(self, catan_map=None):
+    def __init__(self, players=[c for c in Color], catan_map=None):
         """
         Initializes a new random board, based on the catan_map description.
         It first shuffles tiles, ports, and numbers. Then goes satisfying the
@@ -100,6 +96,9 @@ class Board(dict):
 
         # (coordinate, nodeRef | edgeRef) | node | edge => None | Building
         self.buildings = {}
+
+        self.actions = []  # log of all action taken by players
+        self.players = players
 
     def build_settlement(self, color, coordinate, nodeRef, initial_placement=False):
         """Adds a settlement, and ensures is a valid place to build.
@@ -129,6 +128,8 @@ class Board(dict):
         for key in keys:
             self.buildings[key] = building
 
+        self.actions.append(Action(color, building))
+
     def build_road(self, color, coordinate, edgeRef):
         buildable = buildable_edges(self, color)
         edge = self.edges.get((coordinate, edgeRef))
@@ -144,6 +145,8 @@ class Board(dict):
         building = Building(color=color, building_type=BuildingType.ROAD)
         for key in keys:
             self.buildings[key] = building
+
+        self.actions.append(Action(color, building))
 
     # ===== Helper functions
     def get_color(self, building_key):

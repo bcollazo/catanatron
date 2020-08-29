@@ -1,6 +1,9 @@
 from collections import defaultdict
+import itertools
 
+from catanatron.models.enums import BuildingType
 from catanatron.models.map import Port, Water
+from catanatron.models.board import BuildingType
 
 
 def buildable_nodes(board, color, initial_placement=False):
@@ -151,9 +154,97 @@ def longest_road(board):
     longest -- list of edges (all from a single color)
     color -- color of player whose longest path belongs.
     """
-    #   given a connected component (subgraph); find longest acyclic path.
+    max_count = 0
+    max_players = set([])
+    for color in board.players:
+        components = find_connected_components(board, color)
+        for component in components:
+            count = longest_acyclic_path(board, component)
+            if count < 5:
+                continue
+            if count > max_count:
+                max_count = count
+                max_players = set([color])
+            elif count == max_count:
+                max_players.add(color)
 
-    raise NotImplemented
+    print(max_players)
+    if len(max_players) == 0:
+        return None
+
+    # find first player that got to that point
+    road_building_actions_by_winners = list(
+        filter(
+            lambda a: a.building.building_type == BuildingType.ROAD
+            and a.color in max_players,
+            board.actions,
+        )
+    ).reverse()
+    while len(max_players) > 1:
+        for action in road_building_actions_by_winners:
+            max_players.remove(action.color)
+    return max_players.pop()
+
+
+def longest_acyclic_path(board, subgraph):
+    """Brute-force, tries all edge-orderings, discards non-paths, and takes max
+
+    Args:
+        board ([type]): [description]
+        subgraph ([type]): { node => {edge => node}}
+    """
+    # Consider all orderings of owned edges participating in this subgraph.
+    all_edges = set()
+    for node, connections in subgraph.items():
+        for edge, b_node in connections.items():
+            all_edges.add(edge)
+    permutations = []
+    for i in range(len(all_edges)):
+        permutations.extend(list(itertools.permutations(all_edges, i + 1)))
+
+    # Eliminate all that are not a path.
+    paths = []
+
+    def get_connection_node(a_edge, b_edge):
+        if a_edge.nodes[0] == b_edge.nodes[0]:
+            return a_edge.nodes[0]
+        elif a_edge.nodes[1] == b_edge.nodes[0]:
+            return a_edge.nodes[1]
+        elif a_edge.nodes[0] == b_edge.nodes[1]:
+            return a_edge.nodes[0]
+        elif a_edge.nodes[1] == b_edge.nodes[1]:
+            return a_edge.nodes[1]
+        else:
+            return None
+
+    for permutation in permutations:
+        if len(permutation) == 1:
+            paths.append(permutation)
+            continue
+
+        first_edge = permutation[0]
+        second_edge = permutation[1]
+        last_edge = first_edge
+        next_connection_node = get_connection_node(first_edge, second_edge)
+        if next_connection_node is None:
+            continue  # not a path, the first two are not connected
+
+        is_path = True  # assume the best
+        for edge in permutation[1:]:
+            connection_node = get_connection_node(last_edge, edge)
+            if connection_node == next_connection_node:
+                next_connection_node = list(
+                    filter(lambda n: n != connection_node, edge.nodes)
+                )[0]
+                last_edge = edge
+            else:
+                is_path = False
+                break
+
+        if is_path:
+            paths.append(permutation)
+
+    return len(max(paths, key=len))
 
 
 def largest_army(board):
