@@ -311,6 +311,12 @@ class Board(dict):
         # (coordinate, nodeRef | edgeRef) | node | edge => None | Building
         self.buildings = {}
 
+        # Should we?
+        # node + nodeedgeref must be able to query edge.
+        # self.edges.get((node, nodeedgeref))
+        # self.edges.get((coordinate, edgeref))
+        # self.edges.get(edge_id)
+
     def build_settlement(self, color, coordinate, nodeRef, initial_placement=False):
         """Adds a settlement, and ensures is a valid place to build.
 
@@ -387,6 +393,17 @@ class Board(dict):
     def buildable_nodes(self, color, initial_placement=False):
         buildable = set()
 
+        def is_buildable(node):
+            # is buildable if this and neighboring nodes are empty
+            # doesn't check for connected-ness
+            under_consideration = [node] + list(self.graph[node].values())
+            has_building = map(
+                lambda n: self.buildings.get(n) is None,
+                under_consideration,
+            )
+
+            return all(has_building)
+
         # if initial-placement, iterate over non-water/port tiles, for each
         # of these nodes check if its a buildable node.
         if initial_placement:
@@ -395,31 +412,18 @@ class Board(dict):
                     continue
 
                 for (noderef, node) in tile.nodes.items():
-                    # if any of this or neighboring nodes has a building, not buildable.
-                    under_consideration = list(self.graph[node].values()) + [node]
-                    has_building = map(
-                        lambda n: self.buildings.get(n) is not None,
-                        under_consideration,
-                    )
-
-                    if any(has_building):
-                        continue  # not buildable
-                    buildable.add(node)
+                    if is_buildable(node):
+                        buildable.add(node)
 
         # if not initial-placement, find all connected components. For each
         #   node in this connected subgraph, iterate checking buildability
         connected_components = self.find_connected_components(color)
+        for subgraph in connected_components:
+            for node in subgraph.keys():
+                # by definition node is "connected", so only need to check buildable
+                if is_buildable(node):
+                    buildable.add(node)
 
-        # if need to BFS connected graph.
-        # only explore edges that contain colored edge. (check buildings).
-
-        # longest road:
-        #   given a connected component (subgraph); find longest acyclic path.
-
-        # node + nodeedgeref must be able to query edge.
-        # self.edges.get((node, nodeedgeref))
-        # self.edges.get((coordinate, edgeref))
-        # self.edges.get(edge_id)
         return buildable
 
     # ===== Helper functions
@@ -483,6 +487,7 @@ class Board(dict):
                 tmp_subgraph[pair[1]][edge] = pair[0]
 
                 # edges to add to exploration are ones we are connected to.
+                # TODO: This can prob get simplified:
                 a_color = self.get_color(pair[0])
                 if a_color is not None and a_color != color:  # enemy has a
                     a_candidates = []  # dont expand this way
