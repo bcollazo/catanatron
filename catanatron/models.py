@@ -484,27 +484,19 @@ class Board(dict):
                 if edge in settled_edges:
                     settled_edges.remove(edge)
 
-                # can't imagine a better way to get the two "end" nodes
-                # given a edge, _without_ having the coordinate tile.
-                pair = None
-                for node, neighbors_map in self.graph.items():
-                    if edge in neighbors_map:
-                        pair = (node, neighbors_map[edge])
-                assert pair is not None
-
                 # add to subgraph
-                tmp_subgraph[pair[0]][edge] = pair[1]
-                tmp_subgraph[pair[1]][edge] = pair[0]
+                tmp_subgraph[edge.nodes[0]][edge] = edge.nodes[1]
+                tmp_subgraph[edge.nodes[1]][edge] = edge.nodes[0]
 
                 # edges to add to exploration are ones we are connected to.
                 candidates = set()  # will be explorable "5-edge star" around edge
-                a_color = self.get_color(pair[0])
+                a_color = self.get_color(edge.nodes[0])
                 if a_color is None or a_color == color:  # enemy is not blocking
-                    for candidate_edge in self.graph[pair[0]].keys():
+                    for candidate_edge in self.graph[edge.nodes[0]].keys():
                         candidates.add(candidate_edge)
-                b_color = self.get_color(pair[1])
+                b_color = self.get_color(edge.nodes[1])
                 if b_color is None or b_color == color:  # enemy is not blocking
-                    for candidate_edge in self.graph[pair[1]].keys():
+                    for candidate_edge in self.graph[edge.nodes[1]].keys():
                         candidates.add(candidate_edge)
 
                 for candidate_edge in candidates:
