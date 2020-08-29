@@ -308,7 +308,7 @@ class Board(dict):
         self.tiles = tiles  # (coordinate) => Tile (with nodes and edges initialized)
         self.nodes = nodes  # (coordinate, noderef) => node
         self.edges = edges  # (coordinate, edgeref) => edge
-        self.graph = graph  #  { node => { edge: node }{<=3}}
+        self.graph = graph  #  { node => { edge: node }}
 
         # (coordinate, nodeRef | edgeRef) | node | edge => None | Building
         self.buildings = {}
@@ -332,7 +332,7 @@ class Board(dict):
             )
 
         # we add and check in multiple representations to ease querying
-        keys = [(coordinate, nodeRef), self.nodes[(coordinate, nodeRef)]]
+        keys = [(coordinate, nodeRef), node]
         exists = map(lambda k: self.buildings.get(k) is not None, keys)
         if any(exists):
             raise ValueError("Invalid Settlement Placement: a building exists there")
@@ -348,7 +348,7 @@ class Board(dict):
             raise ValueError("Invalid Road Placement: not connected")
 
         # we add and check in multiple representations to ease querying
-        keys = [(coordinate, edgeRef), self.edges[(coordinate, edgeRef)]]
+        keys = [(coordinate, edgeRef), edge]
         exists = map(lambda k: self.buildings.get(k) is not None, keys)
         if any(exists):
             raise ValueError("Invalid Road Placement: a road exists there")
@@ -361,14 +361,12 @@ class Board(dict):
         buildable = set()
 
         def is_buildable(node):
-            # is buildable if this and neighboring nodes are empty
-            # doesn't check for connected-ness
+            """true if this and neighboring nodes are empty"""
             under_consideration = [node] + list(self.graph[node].values())
             has_building = map(
                 lambda n: self.buildings.get(n) is None,
                 under_consideration,
             )
-
             return all(has_building)
 
         # if initial-placement, iterate over non-water/port tiles, for each
