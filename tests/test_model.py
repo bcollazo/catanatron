@@ -162,18 +162,19 @@ def test_three_connected_components_bc_enemy_cut_road():
 
 # TODO: Test buildable_edges
 
-# def test_must_build_distance_two():
-#     board = Board()
-#     board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
-#     board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHEAST)
 
-#     with pytest.raises(ValueError):  # distance less than 2
-#         board.build_settlement(
-#             Color.BLUE, (0, 0, 0), NodeRef.SOUTHWEST, initial_placement=True
-#         )
-#     board.build_settlement(
-#         Color.BLUE, (0, 0, 0), NodeRef.NORTHEAST, initial_placement=True
-#     )
+def test_must_build_distance_two():
+    board = Board()
+    board.build_settlement(Color.RED, (0, 0, 0), NodeRef.SOUTH, initial_placement=True)
+    board.build_road(Color.RED, (0, 0, 0), EdgeRef.SOUTHEAST)
+
+    with pytest.raises(ValueError):  # distance less than 2
+        board.build_settlement(
+            Color.BLUE, (0, 0, 0), NodeRef.SOUTHWEST, initial_placement=True
+        )
+    board.build_settlement(
+        Color.BLUE, (0, 0, 0), NodeRef.NORTHEAST, initial_placement=True
+    )
 
 
 # def test_placements_must_be_connected():
