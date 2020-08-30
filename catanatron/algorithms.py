@@ -1,4 +1,4 @@
-from models import Color
+from catanatron.models import Color
 
 
 def longest_road(board):
