@@ -150,101 +150,64 @@ def longest_road(board):
     For each connected subgraph (made by single-colored roads) find
     the longest path. Take max of all these candidates.
 
-    Returns (path, color) tuple where
-    longest -- list of edges (all from a single color)
-    color -- color of player whose longest path belongs.
+    Returns (color, path) tuple where
+        color -- color of player whose longest path belongs.
+        longest -- list of edges (all from a single color)
     """
     max_count = 0
-    max_players = set([])
+    max_paths_by_player = dict()
     for color in board.players:
         components = find_connected_components(board, color)
         for component in components:
-            count = longest_acyclic_path(board, component)
+            path = longest_acyclic_path(board, component)
+            count = len(path)
             if count < 5:
                 continue
             if count > max_count:
                 max_count = count
-                max_players = set([color])
+                max_paths_by_player = dict()
+                max_paths_by_player[color] = path
             elif count == max_count:
-                max_players.add(color)
+                max_paths_by_player[color] = path
 
-    print(max_players)
-    if len(max_players) == 0:
-        return None
+    if len(max_paths_by_player) == 0:
+        return (None, None)
 
     # find first player that got to that point
     road_building_actions_by_winners = list(
         filter(
             lambda a: a.building.building_type == BuildingType.ROAD
-            and a.color in max_players,
+            and a.color in max_paths_by_player.keys(),
             board.actions,
         )
-    ).reverse()
-    while len(max_players) > 1:
-        for action in road_building_actions_by_winners:
-            max_players.remove(action.color)
-    return max_players.pop()
+    )
+    while len(max_paths_by_player) > 1:
+        action = road_building_actions_by_winners.pop()
+        del max_paths_by_player[action.color]
+    return max_paths_by_player.popitem()
 
 
 def longest_acyclic_path(board, subgraph):
-    """Brute-force, tries all edge-orderings, discards non-paths, and takes max
-
-    Args:
-        board ([type]): [description]
-        subgraph ([type]): { node => {edge => node}}
-    """
-    # Consider all orderings of owned edges participating in this subgraph.
-    all_edges = set()
-    for node, connections in subgraph.items():
-        for edge, b_node in connections.items():
-            all_edges.add(edge)
-    permutations = []
-    for i in range(len(all_edges)):
-        permutations.extend(list(itertools.permutations(all_edges, i + 1)))
-
-    # Eliminate all that are not a path.
     paths = []
+    for start_node, connections in subgraph.items():
+        # do DFS when reach leaf node, stop and add to paths
+        paths_from_this_node = []
+        agenda = [(start_node, [])]
+        while len(agenda) > 0:
+            node, path_thus_far = agenda.pop()
 
-    def get_connection_node(a_edge, b_edge):
-        if a_edge.nodes[0] == b_edge.nodes[0]:
-            return a_edge.nodes[0]
-        elif a_edge.nodes[1] == b_edge.nodes[0]:
-            return a_edge.nodes[1]
-        elif a_edge.nodes[0] == b_edge.nodes[1]:
-            return a_edge.nodes[0]
-        elif a_edge.nodes[1] == b_edge.nodes[1]:
-            return a_edge.nodes[1]
-        else:
-            return None
+            able_to_navigate = False
+            for edge, neighbor_node in subgraph[node].items():
+                if edge not in path_thus_far:
+                    agenda.insert(0, (neighbor_node, path_thus_far + [edge]))
+                    able_to_navigate = True
 
-    for permutation in permutations:
-        if len(permutation) == 1:
-            paths.append(permutation)
-            continue
+            if not able_to_navigate:  # then it is leaf node
+                paths_from_this_node.append(path_thus_far)
 
-        first_edge = permutation[0]
-        second_edge = permutation[1]
-        last_edge = first_edge
-        next_connection_node = get_connection_node(first_edge, second_edge)
-        if next_connection_node is None:
-            continue  # not a path, the first two are not connected
+        paths.extend(paths_from_this_node)
 
-        is_path = True  # assume the best
-        for edge in permutation[1:]:
-            connection_node = get_connection_node(last_edge, edge)
-            if connection_node == next_connection_node:
-                next_connection_node = list(
-                    filter(lambda n: n != connection_node, edge.nodes)
-                )[0]
-                last_edge = edge
-            else:
-                is_path = False
-                break
-
-        if is_path:
-            paths.append(permutation)
-
-    return len(max(paths, key=len))
+    return max(paths, key=len)
 
 
 def largest_army(board):
