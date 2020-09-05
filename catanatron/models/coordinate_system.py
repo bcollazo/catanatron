@@ -40,7 +40,7 @@ def num_tiles_for(layer):
 
 def generate_coordinate_system(num_layers):
     """
-    Generates a set of coordinates by expanding outward from a center tile on 
+    Generates a set of coordinates by expanding outward from a center tile on
     (0,0,0) with the given number of layers (as in an onion :)). Follows BFS.
     """
     num_tiles = num_tiles_for(num_layers)
