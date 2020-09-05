@@ -24,10 +24,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install pipenv
           pipenv install
-          pipenv shell
       - name: Lint with black
         run: |
-          black catanatron/ --check
+          pipenv run black catanatron/ --check
       - name: Test with pytest
         run: |
-          coverage run --source=catanatron -m pytest tests/
+          pipenv run coverage run --source=catanatron -m pytest tests/
