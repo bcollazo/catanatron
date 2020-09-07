@@ -1,4 +1,5 @@
 import random
+from typing import Iterable
 from collections import namedtuple
 
 from catanatron.models.map import BaseMap
@@ -31,7 +32,7 @@ class Game:
     """This will contain the rest of the state information (# victory points,
     # dev cards, etc... via the players attr)"""
 
-    def __init__(self, players):
+    def __init__(self, players: Iterable[Player]):
         self.players = players
         self.map = BaseMap()
         self.board = Board(self.map)
@@ -39,15 +40,40 @@ class Game:
 
         self.current_player_index = 0
         self.current_player_has_roll = False
+        random.shuffle(self.players)
 
     def play(self):
         """Runs the game until the end"""
-        self.play_initial_building_phase()
+        self.play_initial_build_phase()
         while self.winning_player() == None:
             self.play_tick()
 
-    def play_initial_building_phase(self):
-        raise NotImplementedError
+    def play_initial_build_phase(self):
+        """First player goes, settlement and road, ..."""
+        for player in self.players + list(reversed(self.players)):
+            # Place a settlement first
+            buildable_nodes = self.board.buildable_nodes(
+                player.color, initial_build_phase=True
+            )
+            actions = list(
+                map(
+                    lambda node: Action(player, ActionType.BUILD_SETTLEMENT, node),
+                    buildable_nodes,
+                )
+            )
+            action = player.decide(self.board, actions)
+            self.execute(action, initial_build_phase=True)
+
+            # Then a road
+            buildable_edges = self.board.buildable_edges(player.color)
+            actions = list(
+                map(
+                    lambda edge: Action(player, ActionType.BUILD_ROAD, edge),
+                    buildable_edges,
+                )
+            )
+            action = player.decide(self.board, actions)
+            self.execute(action, initial_build_phase=True)
 
     def winning_player(self):
         raise NotImplementedError
@@ -62,7 +88,7 @@ class Game:
 
         self.execute(action)
 
-    def execute(self, action, initial_building_phase=False):
+    def execute(self, action, initial_build_phase=False):
         self.actions.append(action)
 
         if action.action_type == ActionType.END_TURN:
@@ -71,13 +97,10 @@ class Game:
             )
             self.current_player_has_roll = False
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
-            (coordinate, node_ref) = action.value
             self.board.build_settlement(
                 action.player.color,
-                coordinate,
-                node_ref,
-                initial_placement=initial_building_phase,
+                action.value,
+                initial_build_phase=initial_build_phase,
             )
         elif action.action_type == ActionType.BUILD_ROAD:
-            (coordinate, edge_ref) = action.value
-            self.board.build_road(action.player.color, coordinate, edge_ref)
+            self.board.build_road(action.player.color, action.value)

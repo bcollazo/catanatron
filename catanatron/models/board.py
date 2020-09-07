@@ -38,60 +38,49 @@ class Board(dict):
         self.nodes = nodes  # (coordinate, noderef) => node
         self.edges = edges  # (coordinate, edgeref) => edge
         self.graph = graph  #  { node => { edge: node }}
-        self.buildings = {}  # (coordinate, ref) | node | edge => None | Building
+        self.buildings = {}  #  node | edge => None | Building
 
         # assumes there is at least one desert:
         self.robber_tile = filter(
             lambda c: tiles[c].resource == None, tiles.keys()
         ).__next__()
 
-    def build_settlement(self, color, coordinate, node_ref, initial_placement=False):
+    def build_settlement(self, color, node, initial_build_phase=False):
         """Adds a settlement, and ensures is a valid place to build.
 
         Args:
             color (Color): player's color
-            coordinate (tuple): (x,y,z) of tile
-            node_ref (NodeRef): which of the 6 nodes of given tile
-            initial_placement (bool, optional):
+            node (Node): where to build
+            initial_build_phase (bool, optional):
                 Whether this is part of initial building phase, so as to skip
                 connectedness validation. Defaults to True.
         """
-        buildable = self.buildable_nodes(color, initial_placement=initial_placement)
-        node = self.nodes.get((coordinate, node_ref))
+        buildable = self.buildable_nodes(color, initial_build_phase=initial_build_phase)
         if node not in buildable:
             raise ValueError(
                 "Invalid Settlement Placement: not connected and not initial-placement"
             )
 
-        # we add and check in multiple representations to ease querying
-        keys = list(filter(lambda x: self.nodes[x] == node, self.nodes)) + [node]
-        exists = map(lambda k: self.buildings.get(k) is not None, keys)
-        if any(exists):
+        if self.buildings.get(node) is not None:
             raise ValueError("Invalid Settlement Placement: a building exists there")
 
         building = Building(color=color, building_type=BuildingType.SETTLEMENT)
-        for key in keys:
-            self.buildings[key] = building
+        self.buildings[node] = building
         return building
 
-    def build_road(self, color, coordinate, edge_ref):
+    def build_road(self, color, edge):
         buildable = self.buildable_edges(color)
-        edge = self.edges.get((coordinate, edge_ref))
         if edge not in buildable:
             raise ValueError("Invalid Road Placement: not connected")
 
-        # we add and check in multiple representations to ease querying
-        keys = list(filter(lambda x: self.edges[x] == edge, self.edges)) + [edge]
-        exists = map(lambda k: self.buildings.get(k) is not None, keys)
-        if any(exists):
+        if self.buildings.get(edge) is not None:
             raise ValueError("Invalid Road Placement: a road exists there")
 
         building = Building(color=color, building_type=BuildingType.ROAD)
-        for key in keys:
-            self.buildings[key] = building
+        self.buildings[edge] = building
         return building
 
-    def buildable_nodes(self, color: Color, initial_placement=False):
+    def buildable_nodes(self, color: Color, initial_build_phase=False):
         buildable = set()
 
         def is_buildable(node):
@@ -105,7 +94,7 @@ class Board(dict):
 
         # if initial-placement, iterate over non-water/port tiles, for each
         # of these nodes check if its a buildable node.
-        if initial_placement:
+        if initial_build_phase:
             for (coordinate, tile) in self.tiles.items():
                 if isinstance(tile, Port) or isinstance(tile, Water):
                     continue
@@ -154,7 +143,7 @@ class Board(dict):
             enemy_on_b = b_color is not None and b_color != color
 
             can_build = nothing_there and (
-                one_end_has_color  # helpful for initial_placements
+                one_end_has_color  # helpful for initial_build_phase
                 or (a_connected and not enemy_on_a)
                 or (b_connected and not enemy_on_b)
             )
@@ -225,11 +214,11 @@ class Board(dict):
         return subgraphs
 
     # ===== Helper functions
-    def get_color(self, building_key):
+    def get_color(self, node_or_edge):
         """None if no one has built here, else builder's color"""
-        building = self.buildings.get(building_key)
+        building = self.buildings.get(node_or_edge)
         return None if building is None else building.color
 
-    def is_color(self, building_key, color):
+    def is_color(self, node_or_edge, color):
         """boolean on whether this color has built here (edge or node)"""
-        return self.get_color(building_key) == color
+        return self.get_color(node_or_edge) == color

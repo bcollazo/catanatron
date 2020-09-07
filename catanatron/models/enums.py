@@ -5,8 +5,8 @@ from collections import namedtuple
 class ActionType(Enum):
     ROLL = "ROLL"
 
-    BUILD_ROAD = "BUILD_ROAD"
-    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is (coordinate, noderef)
+    BUILD_ROAD = "BUILD_ROAD"  # value is edge
+    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node
     BUILD_CITY = "BUILD_CITY"
     BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"
     # Dev Card Plays
