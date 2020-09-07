@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
+import React from "react";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 
 import "./tailwind.output.css";
 import "./App.scss";

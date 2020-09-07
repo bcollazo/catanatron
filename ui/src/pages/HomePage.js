@@ -2,7 +2,6 @@ import React, { useCallback, useState } from "react";
 import axios from "axios";
 import { useHistory } from "react-router-dom";
 
-import "./HomePage.scss";
 import { API_URL } from "../configuration";
 
 export default function HomePage() {
@@ -12,12 +11,10 @@ export default function HomePage() {
   const onClick = useCallback(async () => {
     setDisabled(true);
     const response = await axios.post(API_URL + "/games");
-    console.log(response);
     const { game_id: gameId } = response.data;
-    console.log(gameId);
     setDisabled(false);
     history.push("/games/" + gameId);
-  });
+  }, [history]);
 
   return (
     <div className="flex flex-col items-center pt-32">
