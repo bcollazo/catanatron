@@ -1,18 +1,11 @@
-.App {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  max-height: 100vh;
-  overflow: hidden;
+* {
+  box-sizing: border-box;
 }
 
+// ===== OLD STYLES
 .row {
   display: flex;
   justify-content: center;
-}
-
-* {
-  box-sizing: border-box;
 }
 
 // ===== Base Styles
@@ -69,22 +62,22 @@ body {
   background-color: $water-color;
 }
 .hexagon.wood {
-  background-image: url("./tiles/tile_lumber.svg");
+  background-image: url("./assets/tiles/tile_lumber.svg");
 }
 .hexagon.brick {
-  background-image: url("./tiles/tile_brick.svg");
+  background-image: url("./assets/tiles/tile_brick.svg");
 }
 .hexagon.sheep {
-  background-image: url("./tiles/tile_wool.svg");
+  background-image: url("./assets/tiles/tile_wool.svg");
 }
 .hexagon.wheat {
-  background-image: url("./tiles/tile_grain.svg");
+  background-image: url("./assets/tiles/tile_grain.svg");
 }
 .hexagon.ore {
-  background-image: url("./tiles/tile_ore.svg");
+  background-image: url("./assets/tiles/tile_ore.svg");
 }
 .hexagon.desert {
-  background-image: url("./tiles/tile_desert.svg");
+  background-image: url("./assets/tiles/tile_desert.svg");
 }
 
 .hexagon.water {
