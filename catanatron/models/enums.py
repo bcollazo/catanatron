@@ -1,7 +1,22 @@
 from enum import Enum
+from collections import namedtuple
 
-# TODO: Build "deck" of these (14 roads, 5 settlements, 4 cities)
-class BuildingType(Enum):
-    SETTLEMENT = "SETTLEMENT"
-    CITY = "CITY"
-    ROAD = "ROAD"
+
+class ActionType(Enum):
+    ROLL = "ROLL"
+
+    BUILD_ROAD = "BUILD_ROAD"  # value is edge
+    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node
+    BUILD_CITY = "BUILD_CITY"
+    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"
+    # Dev Card Plays
+    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, player)
+    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"
+    PLAY_MONOPOLY = "PLAY_MONOPOLY"
+    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"
+
+    # TRADE: too complicated for now...
+    END_TURN = "END_TURN"
+
+
+Action = namedtuple("Action", ["player", "action_type", "value"])
