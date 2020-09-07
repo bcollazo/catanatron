@@ -1,15 +1,15 @@
 import pytest
 
 from catanatron.models.map import Tile, Resource
-from catanatron.models.board import (
+from catanatron.models.board_initializer import (
     get_nodes_and_edges,
     Node,
     Edge,
-    Board,
-    Color,
     EdgeRef,
     NodeRef,
 )
+from catanatron.models.board import Board
+from catanatron.models.player import Color
 
 
 def test_get_nodes_and_edges_on_empty_board():
@@ -96,3 +96,8 @@ def test_placements_must_be_connected():
 
     board.build_road(Color.RED, (0, 0, 0), EdgeRef.EAST)
     board.build_settlement(Color.RED, (0, 0, 0), NodeRef.NORTHEAST)
+
+
+def test_calling_the_edge_differently_is_not_a_problem():
+    """Tests building on (0,0,0), East is the same as (1,-1,0), West"""
+    pass
