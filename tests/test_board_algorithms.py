@@ -61,6 +61,15 @@ def test_buildable_edges():
     assert len(buildable) == 4
 
 
+def test_water_edge_is_not_buildable():
+    board = Board()
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 2, -2), NodeRef.NORTH)], initial_build_phase=True
+    )
+    buildable = board.buildable_edges(Color.RED)
+    assert len(buildable) == 2
+
+
 # ===== Find connected components
 def test_connected_components_empty_board():
     board = Board()

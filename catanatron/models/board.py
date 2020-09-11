@@ -115,7 +115,8 @@ class Board(dict):
         return buildable
 
     def buildable_edges(self, color: Color):
-        def is_buildable(edge):
+        # A water-edge is an edge where both adjacent tiles are water/ports
+        def is_buildable(edge):  # assumes not a water-edge
             a_node, b_node = edge.nodes
             a_color = self.get_color(a_node)
             b_color = self.get_color(b_node)
@@ -150,9 +151,13 @@ class Board(dict):
             return can_build
 
         buildable = set()
-        for edge in self.edges.values():
-            if is_buildable(edge):
-                buildable.add(edge)
+        for (coordinate, tile) in self.tiles.items():
+            if isinstance(tile, Port) or isinstance(tile, Water):
+                continue  # ignore water/port edges to ensure no water-edges.
+
+            for (edgeref, edge) in tile.edges.items():
+                if is_buildable(edge):
+                    buildable.add(edge)
 
         return buildable
 
