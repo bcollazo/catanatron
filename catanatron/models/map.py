@@ -1,14 +1,7 @@
 from enum import Enum
 
 from catanatron.models.coordinate_system import generate_coordinate_system, Direction
-
-
-class Resource(Enum):
-    WOOD = "WOOD"
-    BRICK = "BRICK"
-    SHEEP = "SHEEP"
-    WHEAT = "WHEAT"
-    ORE = "ORE"
+from catanatron.models.enums import Resource
 
 
 class Tile:
