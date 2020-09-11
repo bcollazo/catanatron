@@ -69,7 +69,15 @@ def serialize_game(game):
                 "building": building,
             }
 
-    return {"tiles": tiles, "nodes": nodes, "edges": edges}
+    actions = []
+    for action in game.actions:
+        actions.append(
+            {
+                "color": action.player.color.value,
+                "action_type": action.action_type.value,
+            }
+        )
+    return {"tiles": tiles, "nodes": nodes, "edges": edges, "actions": actions}
 
 
 games = {}

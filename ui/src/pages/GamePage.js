@@ -32,7 +32,7 @@ export default function GamePage() {
     <div className="h-full flex flex-col">
       <div className="w-full h-full flex bg-blue-600">
         <Board state={state} />
-        <SidePanel />
+        <SidePanel state={state} />
       </div>
 
       <ControlPanel onClickNext={onClickNext} />
