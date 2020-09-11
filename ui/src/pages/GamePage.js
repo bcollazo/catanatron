@@ -16,7 +16,7 @@ export default function GamePage() {
       const data = await response.json();
       setState(data);
     })();
-  }, []);
+  }, [gameId]);
 
   console.log(state);
   if (state === null) {

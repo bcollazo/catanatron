@@ -56,25 +56,29 @@ export default function Board({ state }) {
   const tiles = state.tiles.map(({ coordinate, tile }) =>
     renderTile(centerX, centerY, w, h, coordinate, tile, size)
   );
-  const roads = Object.entries(state.edges).map(
+  const roads = [];
+  Object.entries(state.edges).forEach(
     ([index, { building, direction, tile_coordinate }]) => {
       if (building !== null) {
-        return renderRoad();
+        roads.push(renderRoad());
       }
     }
   );
-  const nodeBuildings = Object.values(state.nodes).map(
+  const nodeBuildings = [];
+  Object.values(state.nodes).forEach(
     ({ building, direction, tile_coordinate }) => {
       if (building !== null) {
-        return renderNodeBuilding(
-          centerX,
-          centerY,
-          w,
-          h,
-          size,
-          tile_coordinate,
-          direction,
-          building
+        nodeBuildings.push(
+          renderNodeBuilding(
+            centerX,
+            centerY,
+            w,
+            h,
+            size,
+            tile_coordinate,
+            direction,
+            building
+          )
         );
       }
     }
@@ -105,6 +109,8 @@ const getDelta = (direction, w, h) => {
       return [-w / 2, h / 4];
     case "NORTHWEST":
       return [-w / 2, -h / 4];
+    default:
+      throw Error("Unkown direction " + direction);
   }
 };
 
