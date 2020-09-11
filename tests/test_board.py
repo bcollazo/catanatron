@@ -110,6 +110,17 @@ def test_placements_must_be_connected():
     board.build_settlement(Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTHEAST)])
 
 
+def test_city_requires_settlement_first():
+    board = Board()
+    with pytest.raises(ValueError):  # no settlement there
+        board.build_city(Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)])
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_city(Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)])
+
+
 def test_calling_the_edge_differently_is_not_a_problem():
     """Tests building on (0,0,0), East is the same as (1,-1,0), West"""
     pass

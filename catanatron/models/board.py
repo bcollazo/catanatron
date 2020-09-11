@@ -80,6 +80,19 @@ class Board(dict):
         self.buildings[edge] = building
         return building
 
+    def build_city(self, color, node):
+        building = self.buildings.get(node)
+        if (
+            building is None
+            or building.color != color
+            or building.building_type != BuildingType.SETTLEMENT
+        ):
+            raise ValueError("Invalid City Placement: no player settlement there")
+
+        building = Building(color=color, building_type=BuildingType.CITY)
+        self.buildings[node] = building
+        return building
+
     def buildable_nodes(self, color: Color, initial_build_phase=False):
         buildable = set()
 
