@@ -25,6 +25,5 @@ yarn start
 ## To run tests
 
 ```
-coverage run --source=catanatron -m pytest tests/
-coverage report
+coverage run --source=catanatron -m pytest tests/ && coverage report
 ```
