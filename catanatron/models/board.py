@@ -95,10 +95,7 @@ class Board(dict):
         # if initial-placement, iterate over non-water/port tiles, for each
         # of these nodes check if its a buildable node.
         if initial_build_phase:
-            for (coordinate, tile) in self.tiles.items():
-                if isinstance(tile, Port) or isinstance(tile, Water):
-                    continue
-
+            for (coordinate, tile) in self.resource_tiles():
                 for (noderef, node) in tile.nodes.items():
                     if is_buildable(node):
                         buildable.add(node)
@@ -151,15 +148,19 @@ class Board(dict):
             return can_build
 
         buildable = set()
-        for (coordinate, tile) in self.tiles.items():
-            if isinstance(tile, Port) or isinstance(tile, Water):
-                continue  # ignore water/port edges to ensure no water-edges.
 
+        for (coordinate, tile) in self.resource_tiles():
             for (edgeref, edge) in tile.edges.items():
                 if is_buildable(edge):
                     buildable.add(edge)
 
         return buildable
+
+    def resource_tiles(self):
+        for (coordinate, tile) in self.tiles.items():
+            if isinstance(tile, Port) or isinstance(tile, Water):
+                continue
+            yield (coordinate, tile)
 
     def find_connected_components(self, color: Color):
         """returns connected subgraphs for a given player
