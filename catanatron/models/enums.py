@@ -11,7 +11,7 @@ class Resource(Enum):
 
 
 class ActionType(Enum):
-    ROLL = "ROLL"
+    ROLL = "ROLL"  # value is None or rolled value.
 
     BUILD_ROAD = "BUILD_ROAD"  # value is edge
     BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node

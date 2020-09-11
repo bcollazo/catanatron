@@ -2,6 +2,22 @@ from catanatron.models.enums import Resource
 
 
 class ResourceDecks:
+    @staticmethod
+    def settlement_cost():
+        decks = ResourceDecks()
+        decks.replenish(1, Resource.WOOD)
+        decks.replenish(1, Resource.BRICK)
+        decks.replenish(1, Resource.SHEEP)
+        decks.replenish(1, Resource.WHEAT)
+        return decks
+
+    @staticmethod
+    def city_cost():
+        decks = ResourceDecks()
+        decks.replenish(2, Resource.WHEAT)
+        decks.replenish(3, Resource.ORE)
+        return decks
+
     def __init__(self, empty=False):
         starting_amount = 0 if empty else 19
         self.decks = {
