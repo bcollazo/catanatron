@@ -19,7 +19,15 @@ const bgColorResource = (resource) => {
   }[resource];
 };
 
-export default function Tile(centerX, centerY, w, h, coordinate, tile, size) {
+export default function Tile({
+  centerX,
+  centerY,
+  w,
+  h,
+  coordinate,
+  tile,
+  size,
+}) {
   const [x, y] = tilePixelVector(coordinate, size, centerX, centerY);
 
   let contents;
