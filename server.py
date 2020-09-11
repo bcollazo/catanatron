@@ -93,9 +93,18 @@ def create_game():
 
 @app.route("/games/<string:game_id>", methods=["GET"])
 def get_game(game_id):
-    print(games.keys())
     if game_id not in games:
         abort(404, description="Resource not found")
 
     game = games[game_id]
+    return jsonify(serialize_game(game))
+
+
+@app.route("/games/<string:game_id>/tick", methods=["POST"])
+def tick_game(game_id):
+    if game_id not in games:
+        abort(404, description="Resource not found")
+
+    game = games[game_id]
+    game.play_tick()
     return jsonify(serialize_game(game))

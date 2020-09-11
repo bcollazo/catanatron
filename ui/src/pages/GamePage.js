@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import axios from "axios";
 
 import { ControlPanel } from "./ControlPanel";
 import { API_URL } from "../configuration";
@@ -18,6 +19,11 @@ export default function GamePage() {
     })();
   }, [gameId]);
 
+  const onClickNext = useCallback(async () => {
+    const response = await axios.post(`${API_URL}/games/${gameId}/tick`);
+    setState(response.data);
+  }, [gameId]);
+
   console.log(state);
   if (state === null) {
     return <div></div>;
@@ -29,7 +35,7 @@ export default function GamePage() {
         <SidePanel />
       </div>
 
-      <ControlPanel />
+      <ControlPanel onClickNext={onClickNext} />
     </div>
   );
 }

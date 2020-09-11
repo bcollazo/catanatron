@@ -51,7 +51,7 @@ const Button = styled.div`
   cursor: pointer;
 `;
 
-export function ControlPanel() {
+export function ControlPanel({ onClickNext }) {
   return (
     <Panel>
       <CardsContainer>
@@ -69,9 +69,7 @@ export function ControlPanel() {
         </Card>
       </CardsContainer>
       <ActionContainer>
-        <Button>Trade</Button>
-        <Button>Build</Button>
-        <Button>End Turn</Button>
+        <Button onClick={onClickNext}>Tick</Button>
       </ActionContainer>
     </Panel>
   );

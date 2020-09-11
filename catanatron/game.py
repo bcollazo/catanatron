@@ -27,10 +27,11 @@ def playable_actions(player, has_roll, board):
     raise NotImplementedError
 
 
-# TODO: This will contain the turn-by-turn controlling logic.
 class Game:
-    """This will contain the rest of the state information (# victory points,
-    # dev cards, etc... via the players attr)"""
+    """
+    This contains the complete state of the game (board + players) and the
+    core turn-by-turn controlling logic.
+    """
 
     def __init__(self, players: Iterable[Player]):
         self.players = players
@@ -84,10 +85,10 @@ class Game:
     def play_tick(self):
         current_player = self.players[self.current_player_index]
 
-        playable_actions = playable_actions(
-            current_player, self.current_player_has_roll
+        actions = playable_actions(
+            current_player, self.current_player_has_roll, self.board
         )
-        action = current_player.decide(self.board, playable_actions)
+        action = current_player.decide(self.board, actions)
 
         self.execute(action)
 

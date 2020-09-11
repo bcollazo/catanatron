@@ -26,6 +26,16 @@ def test_playable_actions():
     assert actions[0].action_type == ActionType.ROLL
 
 
+def test_play_tick():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    game.play_initial_build_phase()
+    game.play_tick()
+    game.play_tick()
+
+    # assert no exception thrown
+
+
 # ===== Longest road
 def test_longest_road_simple():
     red = Player(Color.RED)
