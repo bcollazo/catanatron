@@ -20,25 +20,22 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
     max_count = 0
     max_paths_by_player = dict()
     for player in players:
-        color = player.color
-        components = board.find_connected_components(color)
-        for component in components:
-            path = longest_acyclic_path(component)
+        for path in continuous_roads_by_player(board, player):
             count = len(path)
             if count < 5:
                 continue
             if count > max_count:
                 max_count = count
                 max_paths_by_player = dict()
-                max_paths_by_player[color] = path
+                max_paths_by_player[player.color] = path
             elif count == max_count:
-                max_paths_by_player[color] = path
+                max_paths_by_player[player.color] = path
 
     if len(max_paths_by_player) == 0:
         return (None, None)
 
     # find first player that got to that point
-    road_building_actions_by_winners = list(
+    road_building_actions_by_candidates = list(
         filter(
             lambda a: a.action_type == ActionType.BUILD_ROAD
             and a.player.color in max_paths_by_player.keys(),
@@ -46,9 +43,15 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
         )
     )
     while len(max_paths_by_player) > 1:
-        action = road_building_actions_by_winners.pop()
+        action = road_building_actions_by_candidates.pop()
         del max_paths_by_player[action.player.color]
     return max_paths_by_player.popitem()
+
+
+def continuous_roads_by_player(board: Board, player: Player):
+    components = board.find_connected_components(player.color)
+    for component in components:
+        yield longest_acyclic_path(component)
 
 
 def longest_acyclic_path(subgraph: Graph):

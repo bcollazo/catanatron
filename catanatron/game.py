@@ -64,8 +64,11 @@ class Game:
             action = player.decide(self, actions)
             self.execute(action, initial_build_phase=True)
 
-            # Then a road
-            buildable_edges = self.board.buildable_edges(player.color)
+            # Then a road, ensure its connected to this last settlement
+            buildable_edges = filter(
+                lambda e: action.value in e.nodes,
+                self.board.buildable_edges(player.color),
+            )
             actions = list(
                 map(
                     lambda edge: Action(player, ActionType.BUILD_ROAD, edge),

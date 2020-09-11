@@ -1,7 +1,7 @@
 from catanatron.game import Game, playable_actions
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
-from catanatron.models.board_algorithms import longest_road
+from catanatron.models.board_algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.enums import ActionType, Action
 from catanatron.models.player import Player, Color, SimplePlayer
 
@@ -13,6 +13,8 @@ def test_initial_build_phase():
 
     # assert there are 4 houses and 4 roads
     assert len(set(game.board.buildings.keys())) == (len(players) * 4)
+    for path in continuous_roads_by_player(game.board, players[0]):
+        assert len(path) == 1
 
 
 def test_playable_actions():
