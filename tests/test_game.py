@@ -47,7 +47,8 @@ def test_yield_resources():
     board.build_settlement(
         Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
     )
-    payout = yield_resources(board, resource_decks, tile.number)
+    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    assert len(depleted) == 0
     assert payout[Color.RED][tile.resource] >= 1
 
 
@@ -65,7 +66,8 @@ def test_yield_resources_two_settlements():
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
     board.build_settlement(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
-    payout = yield_resources(board, resource_decks, tile.number)
+    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    assert len(depleted) == 0
     assert payout[Color.RED][tile.resource] >= 2
 
 
@@ -93,9 +95,29 @@ def test_yield_resources_two_players_and_city():
         initial_build_phase=True,
     )
     board.build_city(Color.BLUE, board.nodes[(coordinate, NodeRef.NORTHEAST)])
-    payout = yield_resources(board, resource_decks, tile.number)
+    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    assert len(depleted) == 0
     assert payout[Color.RED][tile.resource] >= 3
     assert payout[Color.BLUE][tile.resource] >= 2
+
+
+def test_empty_payout_if_not_enough_resources():
+    board = Board()
+    resource_decks = ResourceDecks()
+
+    tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
+    if tile.resource == None:  # is desert
+        tile, coordinate = board.tiles[(1, -1, 0)], (1, -1, 0)
+
+    board.build_settlement(
+        Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_city(Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)])
+    resource_decks.draw(18, tile.resource)
+
+    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    assert depleted == [tile.resource]
+    assert Color.RED not in payout or tile.resource not in payout[Color.RED]
 
 
 # ===== Longest road
