@@ -1,83 +1,21 @@
 import json
 import uuid
+from enum import Enum
 
 from flask import Flask, jsonify, abort
 from flask_cors import CORS
 
 from catanatron.game import Game
-from catanatron.models.map import Water, Port
-from catanatron.models.player import RandomPlayer, Color
-from catanatron.models.board_initializer import Edge
+from catanatron.models.map import Water, Port, Tile
+from catanatron.models.player import RandomPlayer, Color, Player
+from catanatron.models.enums import Action
+from catanatron.models.decks import ResourceDecks
+from catanatron.models.board import Building
+from catanatron.models.board_initializer import Node, Edge, NodeRef, EdgeRef
 
 
 app = Flask(__name__)
 CORS(app)
-
-
-def serialize_tile(tile):
-    if isinstance(tile, Water):
-        return {"type": "WATER"}
-    elif isinstance(tile, Port):
-        return {
-            "type": "PORT",
-            "direction": tile.direction.value,
-            "resource": None if tile.resource == None else tile.resource.value,
-        }
-    elif tile.resource == None:
-        return {"type": "DESERT"}
-    return {
-        "type": "RESOURCE_TILE",
-        "resource": tile.resource.value,
-        "number": tile.number,
-    }
-
-
-def serialize_game(game):
-    tiles = []
-    nodes = {}
-    edges = {}
-    for coordinate, tile in game.board.tiles.items():
-        tiles.append({"coordinate": coordinate, "tile": serialize_tile(tile)})
-        for direction, node in tile.nodes.items():
-            building = game.board.buildings.get(node, None)
-            building = (
-                None
-                if building is None
-                else {
-                    "color": building.color.value,
-                    "building_type": building.building_type.value,
-                }
-            )
-            nodes[node.id] = {
-                "tile_coordinate": coordinate,
-                "direction": direction.value,
-                "building": building,
-            }
-        for direction, edge in tile.edges.items():
-            building = game.board.buildings.get(edge, None)
-            building = (
-                None
-                if building is None
-                else {
-                    "color": building.color.value,
-                    "building_type": building.building_type.value,
-                }
-            )
-            edges[edge.id] = {
-                "tile_coordinate": coordinate,
-                "direction": direction.value,
-                "building": building,
-            }
-
-    actions = []
-    for action in game.actions:
-        actions.append(
-            {
-                "color": action.player.color.value,
-                "action_type": action.action_type.value,
-            }
-        )
-    return {"tiles": tiles, "nodes": nodes, "edges": edges, "actions": actions}
 
 
 games = {}
@@ -105,7 +43,7 @@ def get_game(game_id):
         abort(404, description="Resource not found")
 
     game = games[game_id]
-    return jsonify(serialize_game(game))
+    return json.dumps(game, cls=GameEncoder)
 
 
 @app.route("/games/<string:game_id>/tick", methods=["POST"])
@@ -115,4 +53,83 @@ def tick_game(game_id):
 
     game = games[game_id]
     game.play_tick()
-    return jsonify(serialize_game(game))
+    return json.dumps(game, cls=GameEncoder)
+
+
+class GameEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if obj is None:
+            return None
+        if isinstance(obj, Enum):
+            return obj.value
+        if isinstance(obj, Building) or isinstance(obj, Action):
+            return obj
+        if isinstance(obj, Game):
+            nodes = {}
+            edges = {}
+            for coordinate, tile in obj.board.tiles.items():
+                for direction, node in tile.nodes.items():
+                    building = obj.board.buildings.get(node, None)
+                    nodes[node.id] = {
+                        "id": node.id,
+                        "tile_coordinate": coordinate,
+                        "direction": self.default(direction),
+                        "building": self.default(building),
+                    }
+                for direction, edge in tile.edges.items():
+                    building = obj.board.buildings.get(edge, None)
+                    edges[edge.id] = {
+                        "id": edge.id,
+                        "tile_coordinate": coordinate,
+                        "direction": self.default(direction),
+                        "building": self.default(building),
+                    }
+
+            return {
+                "tiles": [
+                    {"coordinate": coordinate, "tile": self.default(tile)}
+                    for coordinate, tile in obj.board.tiles.items()
+                ],
+                "nodes": nodes,
+                "edges": edges,
+                "actions": [self.default(a) for a in obj.actions],
+                "players": [self.default(p) for p in obj.players],
+            }
+        if isinstance(obj, ResourceDecks):
+            return {resource.value: count for resource, count in obj.decks.items()}
+        if isinstance(obj, Player):
+            return obj.__dict__
+        if isinstance(obj, Node) or isinstance(obj, Edge):
+            return obj.id
+        if isinstance(obj, Water):
+            return {"type": "WATER"}
+        if isinstance(obj, Port):
+            return {
+                "type": "PORT",
+                "direction": self.default(obj.direction),
+                "resource": self.default(obj.resource),
+            }
+        if isinstance(obj, Tile):
+            if obj.resource == None:
+                return {"type": "DESERT"}
+            return {
+                "type": "RESOURCE_TILE",
+                "resource": self.default(obj.resource),
+                "number": obj.number,
+            }
+        return json.JSONEncoder.default(self, obj)
+
+
+@app.route("/test", methods=["GET"])
+def test():
+    game = Game(
+        players=[
+            RandomPlayer(Color.RED),
+            RandomPlayer(Color.BLUE),
+            RandomPlayer(Color.WHITE),
+            RandomPlayer(Color.ORANGE),
+        ]
+    )
+    game.play_initial_build_phase()
+
+    return json.dumps(game, cls=GameEncoder)

@@ -9,11 +9,27 @@ export default function SidePanel({ state }) {
     }
   }, [state.actions]);
 
-  const actions = state.actions.map(({ color, action_type }) => {
+  const actions = state.actions.map(([player, action_type, value], index) => {
+    const { color } = player;
+    let text = action_type + " " + value;
+    if (action_type === "ROLL") {
+      const number = value[0] + value[1];
+      text = `${action_type} (${value[0]}, ${value[1]}) = ${number}`;
+    }
+
     const colorClass = `text-white text-${color.toLowerCase()}-700`;
     return (
+      <div key={index} className={colorClass}>
+        {color}: {text}
+      </div>
+    );
+  });
+
+  const players = state.players.map(({ color, resource_decks }) => {
+    const colorClass = `bg-white bg-${color.toLowerCase()}-700 h-24`;
+    return (
       <div className={colorClass}>
-        {color}: {action_type}
+        {JSON.stringify(resource_decks, null, 2)}
       </div>
     );
   });
@@ -23,6 +39,7 @@ export default function SidePanel({ state }) {
       <div ref={actionRef} className="h-64 overflow-auto">
         {actions}
       </div>
+      {players}
     </div>
   );
 }

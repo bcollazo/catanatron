@@ -18,7 +18,7 @@ export default function Node({
   const x = tileX + deltaX;
   const y = tileY + deltaY;
 
-  const color = `bg-white bg-${building.color.toLowerCase()}-700`;
+  const color = `bg-white bg-${building[0].toLowerCase()}-700`;
   return (
     <div
       className={cn(

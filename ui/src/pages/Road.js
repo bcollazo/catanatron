@@ -16,7 +16,7 @@ export default function Road({
   direction,
   building,
 }) {
-  const color = `bg-white bg-${building.color.toLowerCase()}-700`;
+  const color = `bg-white bg-${building[0].toLowerCase()}-700`;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
   const [deltaX, deltaY, transform] = getEdgeDeltaAndTransform(direction, w, h);
   const x = tileX + deltaX;
