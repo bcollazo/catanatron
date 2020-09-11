@@ -14,8 +14,12 @@ def test_initial_build_phase():
 
     # assert there are 4 houses and 4 roads
     assert len(set(game.board.buildings.keys())) == (len(players) * 4)
-    for path in continuous_roads_by_player(game.board, players[0]):
-        assert len(path) == 1
+
+    # assert should be house-road pairs, or together
+    paths = continuous_roads_by_player(game.board, players[0])
+    assert len(paths) == 1 or (
+        len(paths) == 2 and len(paths[0]) == 1 and len(paths[1]) == 1
+    )
 
 
 def test_playable_actions():
@@ -27,12 +31,13 @@ def test_playable_actions():
     assert actions[0].action_type == ActionType.ROLL
 
 
-def test_play_tick():  # assert no exception thrown
+def test_can_play_for_a_bit():  # assert no exception thrown
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
     game.play_initial_build_phase()
-    game.play_tick()
-    game.play_tick()
+
+    for _ in range(10):
+        game.play_tick()
 
 
 # ===== Yield Resources
@@ -63,8 +68,8 @@ def test_yield_resources_two_settlements():
     board.build_settlement(
         Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
     )
-    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
-    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
+    board.build_road(Color.RED, board.edges[(coordinate, EdgeRef.SOUTHWEST)])
+    board.build_road(Color.RED, board.edges[(coordinate, EdgeRef.WEST)])
     board.build_settlement(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
     payout, depleted = yield_resources(board, resource_decks, tile.number)
     assert len(depleted) == 0
@@ -83,8 +88,8 @@ def test_yield_resources_two_players_and_city():
     board.build_settlement(
         Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
     )
-    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
-    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
+    board.build_road(Color.RED, board.edges[(coordinate, EdgeRef.SOUTHWEST)])
+    board.build_road(Color.RED, board.edges[(coordinate, EdgeRef.WEST)])
     board.build_settlement(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
     board.build_city(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
 

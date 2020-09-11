@@ -49,9 +49,11 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
 
 
 def continuous_roads_by_player(board: Board, player: Player):
+    paths = []
     components = board.find_connected_components(player.color)
     for component in components:
-        yield longest_acyclic_path(component)
+        paths.append(longest_acyclic_path(component))
+    return paths
 
 
 def longest_acyclic_path(subgraph: Graph):
