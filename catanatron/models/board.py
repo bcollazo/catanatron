@@ -20,7 +20,7 @@ Building = namedtuple("Building", ["color", "building_type"])
 Graph = Dict[Node, Dict[Edge, Node]]
 
 
-class Board(dict):
+class Board:
     """Tries to encapsulate all state information regarding the board"""
 
     def __init__(self, players=[c for c in Color], catan_map=None):
@@ -41,8 +41,8 @@ class Board(dict):
         self.buildings = {}  #  node | edge => None | Building
 
         # assumes there is at least one desert:
-        self.robber_tile = filter(
-            lambda c: tiles[c].resource == None, tiles.keys()
+        self.robber_coordinate = filter(
+            lambda coordinate: tiles[coordinate].resource == None, tiles.keys()
         ).__next__()
 
     def build_settlement(self, color, node, initial_build_phase=False):

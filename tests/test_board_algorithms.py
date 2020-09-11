@@ -38,7 +38,7 @@ def test_buildable_nodes_respects_distance_two():
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
     nodes = board.buildable_nodes(Color.RED)
     assert len(nodes) == 1
-    # TODO: assert Node?
+    assert nodes.pop() == board.nodes[((0, 0, 0), NodeRef.NORTHWEST)]
 
 
 # ===== Buildable edges

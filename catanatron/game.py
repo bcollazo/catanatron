@@ -1,11 +1,12 @@
 import random
 from typing import Iterable
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from catanatron.models.map import BaseMap
-from catanatron.models.board import Board
+from catanatron.models.board import Board, BuildingType
 from catanatron.models.enums import Action, ActionType
 from catanatron.models.player import Player
+from catanatron.models.decks import ResourceDecks
 
 
 def roll_dice():
@@ -25,6 +26,29 @@ def playable_actions(player, has_roll, board):
         return actions
 
     raise NotImplementedError
+
+
+def yield_resources(board, resource_decks, number):
+    """
+    Returns:
+        payouts: dictionary of "resource_decks" keyed by player
+            e.g. {Color.RED: {Resource.WEAT: 3}}
+    """
+    payout = defaultdict(lambda: defaultdict(int))
+    for coordinate, tile in board.resource_tiles():
+        if tile.number != number or board.robber_coordinate == coordinate:
+            continue  # doesn't yield
+
+        for node_ref, node in tile.nodes.items():
+            building = board.buildings.get(node)
+            if building == None:
+                continue
+            elif building.building_type == BuildingType.SETTLEMENT:
+                payout[building.color][tile.resource] += 1
+            elif building.building_type == BuildingType.CITY:
+                payout[building.color][tile.resource] += 2
+
+    return payout
 
 
 class Game:

@@ -1,9 +1,10 @@
-from catanatron.game import Game, playable_actions
+from catanatron.game import Game, playable_actions, yield_resources
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
 from catanatron.models.board_algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.enums import ActionType, Action
 from catanatron.models.player import Player, Color, SimplePlayer
+from catanatron.models.decks import ResourceDecks
 
 
 def test_initial_build_phase():
@@ -26,14 +27,75 @@ def test_playable_actions():
     assert actions[0].action_type == ActionType.ROLL
 
 
-def test_play_tick():
+def test_play_tick():  # assert no exception thrown
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
     game.play_initial_build_phase()
     game.play_tick()
     game.play_tick()
 
-    # assert no exception thrown
+
+# ===== Yield Resources
+def test_yield_resources():
+    board = Board()
+    resource_decks = ResourceDecks()
+
+    tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
+    if tile.resource == None:  # is desert
+        tile, coordinate = board.tiles[(1, -1, 0)], (1, -1, 0)
+
+    board.build_settlement(
+        Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
+    )
+    payout = yield_resources(board, resource_decks, tile.number)
+    assert payout[Color.RED][tile.resource] >= 1
+
+
+def test_yield_resources_two_settlements():
+    board = Board()
+    resource_decks = ResourceDecks()
+
+    tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
+    if tile.resource == None:  # is desert
+        tile, coordinate = board.tiles[(1, -1, 0)], (1, -1, 0)
+
+    board.build_settlement(
+        Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
+    board.build_settlement(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
+    payout = yield_resources(board, resource_decks, tile.number)
+    assert payout[Color.RED][tile.resource] >= 2
+
+
+def test_yield_resources_two_players_and_city():
+    board = Board()
+    resource_decks = ResourceDecks()
+
+    tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
+    if tile.resource == None:  # is desert
+        tile, coordinate = board.tiles[(1, -1, 0)], (1, -1, 0)
+
+    # red has one settlements and one city on tile
+    board.build_settlement(
+        Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
+    board.build_settlement(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
+    board.build_city(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
+
+    # blue has a city in tile
+    board.build_settlement(
+        Color.BLUE,
+        board.nodes[(coordinate, NodeRef.NORTHEAST)],
+        initial_build_phase=True,
+    )
+    board.build_city(Color.BLUE, board.nodes[(coordinate, NodeRef.NORTHEAST)])
+    payout = yield_resources(board, resource_decks, tile.number)
+    assert payout[Color.RED][tile.resource] >= 3
+    assert payout[Color.BLUE][tile.resource] >= 2
 
 
 # ===== Longest road
