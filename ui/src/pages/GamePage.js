@@ -24,7 +24,7 @@ export default function GamePage() {
   }
   return (
     <div className="h-full flex flex-col">
-      <div className="w-full h-full flex">
+      <div className="w-full h-full flex bg-blue-600">
         <Board state={state} />
         <SidePanel />
       </div>
