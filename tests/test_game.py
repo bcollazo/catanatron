@@ -3,11 +3,11 @@ from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
 from catanatron.models.board_algorithms import longest_road
 from catanatron.models.enums import ActionType, Action
-from catanatron.models.player import Player, Color, RandomPlayer
+from catanatron.models.player import Player, Color, SimplePlayer
 
 
 def test_initial_build_phase():
-    players = [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)]
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
     game.play_initial_build_phase()
 

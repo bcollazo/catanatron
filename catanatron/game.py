@@ -61,7 +61,7 @@ class Game:
                     buildable_nodes,
                 )
             )
-            action = player.decide(self.board, actions)
+            action = player.decide(self, actions)
             self.execute(action, initial_build_phase=True)
 
             # Then a road
@@ -72,7 +72,7 @@ class Game:
                     buildable_edges,
                 )
             )
-            action = player.decide(self.board, actions)
+            action = player.decide(self, actions)
             self.execute(action, initial_build_phase=True)
 
     def winning_player(self):
