@@ -33,10 +33,10 @@ def yield_resources(board, resource_decks, number):
     Returns:
         (payouts, depleted): tuple where:
         payouts: dictionary of "resource_decks" keyed by player
-            e.g. {Color.RED: {Resource.WEAT: 3}}
+                e.g. {Color.RED: ResourceDeck({Resource.WEAT: 3})}
             depleted: list of resources that couldn't yield
     """
-    payout = defaultdict(lambda: defaultdict(int))
+    intented_payout = defaultdict(lambda: defaultdict(int))
     resource_totals = defaultdict(int)
     for coordinate, tile in board.resource_tiles():
         if tile.number != number or board.robber_coordinate == coordinate:
@@ -47,24 +47,29 @@ def yield_resources(board, resource_decks, number):
             if building == None:
                 continue
             elif building.building_type == BuildingType.SETTLEMENT:
-                payout[building.color][tile.resource] += 1
+                intented_payout[building.color][tile.resource] += 1
                 resource_totals[tile.resource] += 1
             elif building.building_type == BuildingType.CITY:
-                payout[building.color][tile.resource] += 2
+                intented_payout[building.color][tile.resource] += 2
                 resource_totals[tile.resource] += 2
 
     # for each resource, check enough in deck to yield.
     depleted = []
-    for resource_i in Resource:
-        total = resource_totals[resource_i]
-        if not resource_decks.can_draw(total, resource_i):
-            depleted.append(resource_i)
-            for player, player_payout in payout.items():
-                payout[player] = dict(player_payout)
-                for resource_j, count in player_payout.items():
-                    del payout[player][resource_j]
+    for resource in Resource:
+        total = resource_totals[resource]
+        if not resource_decks.can_draw(total, resource):
+            depleted.append(resource)
 
-    return dict(payout), depleted
+    # build final data ResourceDecks structure
+    payout = {}
+    for player, player_payout in intented_payout.items():
+        payout[player] = ResourceDecks(empty=True)
+
+        for resource, count in player_payout.items():
+            if resource not in depleted:
+                payout[player].replenish(count, resource)
+
+    return payout, depleted
 
 
 class Game:

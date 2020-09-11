@@ -49,7 +49,7 @@ def test_yield_resources():
     )
     payout, depleted = yield_resources(board, resource_decks, tile.number)
     assert len(depleted) == 0
-    assert payout[Color.RED][tile.resource] >= 1
+    assert payout[Color.RED].count(tile.resource) >= 1
 
 
 def test_yield_resources_two_settlements():
@@ -68,7 +68,7 @@ def test_yield_resources_two_settlements():
     board.build_settlement(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
     payout, depleted = yield_resources(board, resource_decks, tile.number)
     assert len(depleted) == 0
-    assert payout[Color.RED][tile.resource] >= 2
+    assert payout[Color.RED].count(tile.resource) >= 2
 
 
 def test_yield_resources_two_players_and_city():
@@ -97,8 +97,8 @@ def test_yield_resources_two_players_and_city():
     board.build_city(Color.BLUE, board.nodes[(coordinate, NodeRef.NORTHEAST)])
     payout, depleted = yield_resources(board, resource_decks, tile.number)
     assert len(depleted) == 0
-    assert payout[Color.RED][tile.resource] >= 3
-    assert payout[Color.BLUE][tile.resource] >= 2
+    assert payout[Color.RED].count(tile.resource) >= 3
+    assert payout[Color.BLUE].count(tile.resource) >= 2
 
 
 def test_empty_payout_if_not_enough_resources():
@@ -117,7 +117,7 @@ def test_empty_payout_if_not_enough_resources():
 
     payout, depleted = yield_resources(board, resource_decks, tile.number)
     assert depleted == [tile.resource]
-    assert Color.RED not in payout or tile.resource not in payout[Color.RED]
+    assert Color.RED not in payout or payout[Color.RED].count(tile.resource) == 0
 
 
 # ===== Longest road
