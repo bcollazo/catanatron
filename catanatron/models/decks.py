@@ -2,13 +2,14 @@ from catanatron.models.enums import Resource
 
 
 class ResourceDecks:
-    def __init__(self):
+    def __init__(self, empty=False):
+        starting_amount = 0 if empty else 19
         self.decks = {
-            Resource.WOOD: 19,
-            Resource.BRICK: 19,
-            Resource.SHEEP: 19,
-            Resource.WHEAT: 19,
-            Resource.ORE: 19,
+            Resource.WOOD: starting_amount,
+            Resource.BRICK: starting_amount,
+            Resource.SHEEP: starting_amount,
+            Resource.WHEAT: starting_amount,
+            Resource.ORE: starting_amount,
         }
 
     def count(self, resource: Resource):
@@ -25,3 +26,13 @@ class ResourceDecks:
 
     def replenish(self, count: int, resource: Resource):
         self.decks[resource] += count
+
+    def __add__(self, other):
+        for resource in Resource:
+            self.replenish(other.count(resource), resource)
+        return self
+
+    def __sub__(self, other):
+        for resource in Resource:
+            self.draw(other.count(resource), resource)
+        return self
