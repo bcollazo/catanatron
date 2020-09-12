@@ -27,6 +27,22 @@ def road_possible_actions(player, board):
         return []
 
 
+def settlement_possible_actions(player, board):
+    has_money = player.resource_decks.includes(ResourceDecks.settlement_cost())
+
+    settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
+    has_settlements_available = len(settlements) < 5
+
+    if has_money and has_settlements_available:
+        buildable_nodes = board.buildable_nodes(player.color)
+        return [
+            Action(player, ActionType.BUILD_SETTLEMENT, node)
+            for node in buildable_nodes
+        ]
+    else:
+        return []
+
+
 def city_possible_actions(player, board):
     has_money = player.resource_decks.includes(ResourceDecks.city_cost())
 
@@ -56,7 +72,10 @@ def robber_possibilities(player, board, players):
             building = board.buildings.get(node)
             if building is not None:
                 candidate = players_by_color[building.color]
-                if candidate.resource_decks.num_cards() >= 1:
+                if (
+                    candidate.resource_decks.num_cards() >= 1
+                    and candidate.color != player.color  # can't play yourself
+                ):
                     players_to_steal_from.add(candidate)
 
         if len(players_to_steal_from) == 0:
@@ -210,6 +229,8 @@ class Game:
         actions = [Action(player, ActionType.END_TURN, None)]
         for action in road_possible_actions(player, self.board):
             actions.append(action)
+        for action in settlement_possible_actions(player, self.board):
+            actions.append(action)
         for action in city_possible_actions(player, self.board):
             actions.append(action)
 
@@ -275,6 +296,8 @@ class Game:
                 resource = random.choice(hand)
                 player_to_steal_from.resource_decks.draw(1, resource)
                 self.current_player().resource_decks.replenish(1, resource)
+
+            self.moving_robber = False
         elif action.action_type == ActionType.DISCARD:
             num_cards = action.player.resource_decks.num_cards()
             discarded = action.player.discard()
@@ -284,6 +307,7 @@ class Game:
             for resource in discarded:
                 to_discard.replenish(1, resource)
             action.player.resource_decks -= to_discard
+            self.resource_decks += to_discard
 
             action = Action(action.player, action.action_type, discarded)
         else:

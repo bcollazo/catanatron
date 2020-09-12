@@ -94,6 +94,7 @@ class GameEncoder(json.JSONEncoder):
                 "edges": edges,
                 "actions": [self.default(a) for a in obj.actions],
                 "players": [self.default(p) for p in obj.players],
+                "robber_coordinate": obj.board.robber_coordinate,
             }
         if isinstance(obj, ResourceDecks):
             return {resource.value: count for resource, count in obj.decks.items()}

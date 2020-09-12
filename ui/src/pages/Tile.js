@@ -19,6 +19,20 @@ const bgColorResource = (resource) => {
   }[resource];
 };
 
+export function Circle({ className, children, style }) {
+  return (
+    <div
+      className={cn(
+        "rounded-full h-8 w-8 bg-white flex justify-center items-center border-2 border-black",
+        className
+      )}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function Tile({
   centerX,
   centerY,
@@ -33,11 +47,7 @@ export default function Tile({
   let contents;
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
-    contents = (
-      <div className="rounded-full h-8 w-8 bg-white flex justify-center items-center border-2 border-black">
-        {tile.number}
-      </div>
-    );
+    contents = <Circle>{tile.number}</Circle>;
     resourceTile = {
       BRICK: brickTile,
       SHEEP: woolTile,
@@ -49,23 +59,10 @@ export default function Tile({
     resourceTile = desertTile;
   } else if (tile.type === "PORT") {
     if (tile.resource === null) {
-      contents = (
-        <div className="rounded-full h-8 w-8 bg-white flex justify-center items-center border-2 border-black">
-          3:1
-        </div>
-      );
+      contents = <Circle>3:1</Circle>;
     } else {
       const bg = bgColorResource(tile.resource);
-      contents = (
-        <div
-          className={cn(
-            "rounded-full h-8 w-8 bg-white flex justify-center items-center border-2 border-black",
-            bg
-          )}
-        >
-          2:1
-        </div>
-      );
+      contents = <Circle className={bg}>2:1</Circle>;
     }
   }
 
