@@ -31,6 +31,12 @@ class ResourceDecks:
     def count(self, resource: Resource):
         return self.decks[resource]
 
+    def num_cards(self):
+        total = 0
+        for resource in Resource:
+            total += self.count(resource)
+        return total
+
     def can_draw(self, count: int, resource: Resource):
         return self.count(resource) >= count
 

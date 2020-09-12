@@ -21,6 +21,10 @@ def test_initial_build_phase():
         len(paths) == 2 and len(paths[0]) == 1 and len(paths[1]) == 1
     )
 
+    # assert should have resources from last house.
+    assert players[0].resource_decks.num_cards() >= 1
+    assert players[1].resource_decks.num_cards() >= 1
+
 
 def test_playable_actions():
     board = Board()

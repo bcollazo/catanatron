@@ -18,6 +18,7 @@ def test_resource_deck_can_draw():
 def test_resource_deck_integration():
     decks = ResourceDecks()
     assert decks.count(Resource.WHEAT) == 19
+    assert decks.num_cards() == 19 * 5
 
     assert decks.can_draw(10, Resource.WHEAT)
     decks.draw(10, Resource.WHEAT)
