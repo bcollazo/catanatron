@@ -19,17 +19,32 @@ export default function Node({
   const y = tileY + deltaY;
 
   const color = `bg-white bg-${building[0].toLowerCase()}-700`;
+  const city = building[1] === "CITY";
+  const border = city ? "w-8 h-8 border-2" : "w-6 h-6 border-2";
   return (
-    <div
-      className={cn(
-        "node-building absolute w-6 h-6 border-2 border-black",
-        color
+    <>
+      <div
+        className={cn("node-building absolute border-black", color, border)}
+        style={{
+          left: x,
+          top: y,
+          transform: `translateY(-0.75rem) translateX(-0.75rem)`,
+        }}
+      ></div>
+      {city && (
+        <div
+          className={cn(
+            "node-building absolute border-black",
+            color,
+            "w-4 h-4 border-2"
+          )}
+          style={{
+            left: x,
+            top: y,
+            transform: `translateY(-0.25rem) translateX(-0.25rem)`,
+          }}
+        ></div>
       )}
-      style={{
-        left: x,
-        top: y,
-        transform: `translateY(-0.75rem) translateX(-0.75rem)`,
-      }}
-    ></div>
+    </>
   );
 }
