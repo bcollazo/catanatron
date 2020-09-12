@@ -35,14 +35,23 @@ export default function SidePanel({ state }) {
     );
   });
 
-  const players = state.players.map(({ color, resource_decks }) => {
-    const colorClass = `bg-white bg-${color.toLowerCase()}-700 h-24`;
-    return (
-      <div key={color} className={colorClass}>
-        {JSON.stringify(resource_decks, null, 2)}
-      </div>
-    );
-  });
+  const players = state.players.map(
+    ({
+      color,
+      resource_decks,
+      public_victory_points,
+      actual_victory_points,
+    }) => {
+      const colorClass = `bg-white bg-${color.toLowerCase()}-700 h-24`;
+      return (
+        <div key={color} className={colorClass}>
+          <div>{JSON.stringify(resource_decks, null, 2)}</div>
+          <div>VPs: {public_victory_points}</div>
+          <div>AVPs: {actual_victory_points}</div>
+        </div>
+      );
+    }
+  );
 
   return (
     <div className="h-full lg:w-1/3 w-1/2 bg-gray-900 p-6">

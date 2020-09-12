@@ -5,6 +5,7 @@ from collections import namedtuple, defaultdict
 from catanatron.models.map import BaseMap
 from catanatron.models.board import Board, BuildingType
 from catanatron.models.board_initializer import Node
+from catanatron.models.board_algorithms import longest_road
 from catanatron.models.enums import Action, ActionType, Resource
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDecks
@@ -198,7 +199,10 @@ class Game:
                     player.resource_decks.replenish(1, tile.resource)
 
     def winning_player(self):
-        raise NotImplementedError
+        for player in self.players:
+            if player.actual_victory_points == 10:
+                return player
+        return None
 
     def play_tick(self):
         """
@@ -315,6 +319,25 @@ class Game:
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.actions.append(action)
+        self.count_victory_points()
 
     def current_player(self):
         return self.players[self.current_player_index]
+
+    def count_victory_points(self):
+        (color, path) = longest_road(self.board, self.players, self.actions)
+        # TODO: Count largest army
+
+        for player in self.players:
+            public_vps = 0
+            public_vps += len(
+                self.board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
+            )  # count settlements
+            public_vps += 2 * len(
+                self.board.get_player_buildings(player.color, BuildingType.CITY)
+            )  # count cities
+            if color != None and self.players_by_color[color] == player:
+                public_vps += 2
+
+            player.public_victory_points = public_vps
+            player.actual_victory_points = public_vps  # TODO: add dev vps

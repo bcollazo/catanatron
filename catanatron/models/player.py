@@ -14,6 +14,8 @@ class Color(Enum):
 class Player:
     def __init__(self, color):
         self.color = color
+        self.public_victory_points = 0
+        self.actual_victory_points = 0
         self.resource_decks = ResourceDecks(empty=True)
 
     def decide(self, game, playable_actions):
