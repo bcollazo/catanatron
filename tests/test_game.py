@@ -6,6 +6,7 @@ from catanatron.game import (
     playable_actions,
     yield_resources,
     city_possible_actions,
+    road_possible_actions,
 )
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
@@ -75,6 +76,27 @@ def test_playable_actions():
     actions = playable_actions(player, False, board)
     assert len(actions) == 1
     assert actions[0].action_type == ActionType.ROLL
+
+
+def test_road_possible_actions():
+    board = Board()
+    player = Player(Color.RED)
+
+    assert len(road_possible_actions(player, board)) == 0  # no money or place
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    assert len(road_possible_actions(player, board)) == 0  # no money
+
+    player.resource_decks.replenish(1, Resource.WOOD)
+    player.resource_decks.replenish(1, Resource.BRICK)
+    assert len(road_possible_actions(player, board)) == 3
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTHEAST)], initial_build_phase=True
+    )
+    assert len(road_possible_actions(player, board)) == 6
 
 
 def test_city_playable_actions():

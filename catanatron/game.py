@@ -14,29 +14,32 @@ def roll_dice():
     return (random.randint(1, 6), random.randint(1, 6))
 
 
+def road_possible_actions(player, board):
+    has_money = player.resource_decks.includes(ResourceDecks.road_cost())
+
+    roads = board.get_player_buildings(player.color, BuildingType.ROAD)
+    has_roads_available = len(roads) < 15
+
+    if has_money and has_roads_available:
+        buildable_edges = board.buildable_edges(player.color)
+        return [Action(player, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
+    else:
+        return []
+
+
 def city_possible_actions(player, board):
     has_money = player.resource_decks.includes(ResourceDecks.city_cost())
 
-    buildings = list(
-        filter(
-            lambda x: isinstance(x[0], Node) and x[1].color == player.color,
-            board.buildings.items(),
-        )
-    )  # (node, building) list
-    cities = list(filter(lambda x: x[1].building_type == BuildingType.CITY, buildings))
+    cities = board.get_player_buildings(player.color, BuildingType.CITY)
     has_cities_available = len(cities) < 4
 
     if has_money and has_cities_available:
-        settlements = filter(
-            lambda x: x[1].building_type == BuildingType.SETTLEMENT, buildings
-        )
-        actions = [
-            Action(player, ActionType.BUILD_CITY, node)
-            for (node, building) in settlements
+        settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
+        return [
+            Action(player, ActionType.BUILD_CITY, node) for (node, _) in settlements
         ]
     else:
-        actions = []
-    return actions
+        return []
 
 
 def playable_actions(player, has_roll, board):
@@ -52,6 +55,8 @@ def playable_actions(player, has_roll, board):
         return actions
 
     actions = [Action(player, ActionType.END_TURN, None)]
+    for action in road_possible_actions(player, board):
+        actions.append(action)
     for action in city_possible_actions(player, board):
         actions.append(action)
 
