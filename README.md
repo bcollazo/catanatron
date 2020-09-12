@@ -21,7 +21,11 @@ class MyPlayer(Player):
             game (Game): complete game state. read-only.
             playable_actions (Iterable[Action]): options right now
         """
-        raise NotImplemented
+        raise NotImplementedError
+
+    def discard(self):
+        """Must return n/2 cards to discard from self.resource_decks"""
+        raise NotImplementedError
 ```
 
 Then running games like:

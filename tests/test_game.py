@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from catanatron.game import (
     Game,
@@ -88,6 +88,34 @@ def test_moving_robber_steals_correctly():
     game.execute(action)
     assert players[0].resource_decks.num_cards() == 1
     assert players[1].resource_decks.num_cards() == 0
+
+
+@patch("catanatron.game.roll_dice")
+def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 6)
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    game.play_initial_build_phase()
+
+    players[1].resource_decks = ResourceDecks(empty=True)
+    players[1].resource_decks.replenish(7, Resource.WHEAT)
+    game.execute(Action(players[0], ActionType.ROLL, None))  # roll
+    assert len(game.tick_queue) == 0
+
+
+@patch("catanatron.game.roll_dice")
+def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 6)
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    game.play_initial_build_phase()
+
+    players[1].resource_decks = ResourceDecks(empty=True)
+    players[1].resource_decks.replenish(9, Resource.WHEAT)
+    game.execute(Action(players[0], ActionType.ROLL, None))  # roll
+    assert len(game.tick_queue) == 1
+    game.play_tick()
+    assert players[1].resource_decks.num_cards() == 5
 
 
 # ===== Playable Actions
