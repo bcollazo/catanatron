@@ -2,7 +2,7 @@
 
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 
-Catan simluation environment in Python and Machine-Learning player.
+Settlers of Catan simluation environment in Python and Machine-Learning player.
 
 ## Usage
 
