@@ -42,23 +42,28 @@ def city_possible_actions(player, board):
         return []
 
 
-def playable_actions(player, has_roll, board):
-    if not has_roll:
-        actions = [Action(player, ActionType.ROLL, None)]
-        if player.has_knight_card():  # maybe knight
-            for coordinate in board.tiles.keys():
-                if coordinate != board.robber_tile.coordinate:
-                    actions.append(
-                        Action(player, ActionType.PLAY_KNIGHT_CARD, coordinate)
-                    )
+def robber_possibilities(player, board, players):
+    players_by_color = {p.color: p for p in players}
+    actions = []
+    for coordinate, tile in board.resource_tiles():
+        if coordinate == board.robber_coordinate:
+            continue  # ignore. must move robber.
 
-        return actions
+        # each tile can yield a (move-but-cant-steal) action or
+        #   several (move-and-steal-from-x) actions.
+        players_to_steal_from = set()
+        for node_ref, node in tile.nodes.items():
+            building = board.buildings.get(node)
+            if building is not None:
+                candidate = players_by_color[building.color]
+                if candidate.resource_decks.num_cards() >= 1:
+                    players_to_steal_from.add(candidate)
 
-    actions = [Action(player, ActionType.END_TURN, None)]
-    for action in road_possible_actions(player, board):
-        actions.append(action)
-    for action in city_possible_actions(player, board):
-        actions.append(action)
+        if len(players_to_steal_from) == 0:
+            actions.append(Action(player, ActionType.MOVE_ROBBER, (coordinate, None)))
+        else:
+            for p in players_to_steal_from:
+                actions.append(Action(player, ActionType.MOVE_ROBBER, (coordinate, p)))
 
     return actions
 
@@ -123,6 +128,7 @@ class Game:
 
         self.current_player_index = 0
         self.current_player_has_roll = False
+        self.moving_robber = False
         random.shuffle(self.players)
 
     def play(self):
@@ -179,13 +185,29 @@ class Game:
 
     def play_tick(self):
         current_player = self.players[self.current_player_index]
-
-        actions = playable_actions(
-            current_player, self.current_player_has_roll, self.board
-        )
+        actions = self.playable_actions(current_player)
         action = current_player.decide(self.board, actions)
-
         self.execute(action)
+
+    def playable_actions(self, player):
+        if self.moving_robber:
+            return robber_possibilities(player, self.board, self.players)
+
+        if not self.current_player_has_roll:
+            actions = [Action(player, ActionType.ROLL, None)]
+            if player.has_knight_card():  # maybe knight
+                # TODO: Change to PLAY_KNIGHT_CARD
+                actions.extend(robber_possibilities(player, self.board, self.players))
+
+            return actions
+
+        actions = [Action(player, ActionType.END_TURN, None)]
+        for action in road_possible_actions(player, self.board):
+            actions.append(action)
+        for action in city_possible_actions(player, self.board):
+            actions.append(action)
+
+        return actions
 
     def execute(self, action, initial_build_phase=False):
         if action.action_type == ActionType.END_TURN:
@@ -215,18 +237,34 @@ class Game:
             dices = roll_dice()
             number = dices[0] + dices[1]
 
-            payout, depleted = yield_resources(self.board, self.resource_decks, number)
-            for color, resource_decks in payout.items():
-                player = self.players_by_color[color]
+            if number == 7:
+                self.moving_robber = True
+            else:
+                payout, depleted = yield_resources(
+                    self.board, self.resource_decks, number
+                )
+                for color, resource_decks in payout.items():
+                    player = self.players_by_color[color]
 
-                # Atomically add to player's hand and remove from bank
-                player.resource_decks += resource_decks
-                self.resource_decks -= resource_decks
+                    # Atomically add to player's hand and remove from bank
+                    player.resource_decks += resource_decks
+                    self.resource_decks -= resource_decks
 
             action = Action(action.player, action.action_type, dices)
             self.current_player_has_roll = True
+        elif action.action_type == ActionType.MOVE_ROBBER:
+            (coordinate, player_to_steal_from) = action.value
+            self.board.robber_coordinate = coordinate
+            if player_to_steal_from is not None:
+                hand = player_to_steal_from.resource_decks.to_array()
+                resource = random.choice(hand)
+                player_to_steal_from.resource_decks.draw(1, resource)
+                self.current_player().resource_decks.replenish(1, resource)
         else:
             raise RuntimeError("Unknown ActionType")
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.actions.append(action)
+
+    def current_player(self):
+        return self.players[self.current_player_index]

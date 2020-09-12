@@ -62,6 +62,13 @@ class ResourceDecks:
     def replenish(self, count: int, resource: Resource):
         self.decks[resource] += count
 
+    def to_array(self):
+        """Make it look like a deck of cards"""
+        array = []
+        for resource in Resource:
+            array.extend([resource] * self.count(resource))
+        return array
+
     def __add__(self, other):
         for resource in Resource:
             self.replenish(other.count(resource), resource)

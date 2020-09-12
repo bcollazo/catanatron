@@ -3,10 +3,10 @@ from unittest.mock import MagicMock
 
 from catanatron.game import (
     Game,
-    playable_actions,
     yield_resources,
     city_possible_actions,
     road_possible_actions,
+    robber_possibilities,
 )
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
@@ -68,12 +68,34 @@ def test_buying_road_is_payed_for():
     assert game.resource_decks.count(Resource.WOOD) == 20  # since we didnt yield
 
 
+def test_moving_robber_steals_correctly():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+
+    players[1].resource_decks.replenish(1, Resource.WHEAT)
+    game.board.build_settlement(
+        Color.BLUE,
+        game.board.nodes[((0, 0, 0), NodeRef.SOUTH)],
+        initial_build_phase=True,
+    )
+
+    action = Action(players[0], ActionType.MOVE_ROBBER, ((2, 0, -2), None))
+    game.execute(action)
+    assert players[0].resource_decks.num_cards() == 0
+    assert players[1].resource_decks.num_cards() == 1
+
+    action = Action(players[0], ActionType.MOVE_ROBBER, ((0, 0, 0), players[1]))
+    game.execute(action)
+    assert players[0].resource_decks.num_cards() == 1
+    assert players[1].resource_decks.num_cards() == 0
+
+
 # ===== Playable Actions
 def test_playable_actions():
-    board = Board()
-    player = Player(Color.RED)
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
 
-    actions = playable_actions(player, False, board)
+    actions = game.playable_actions(players[0])
     assert len(actions) == 1
     assert actions[0].action_type == ActionType.ROLL
 
@@ -118,6 +140,34 @@ def test_city_playable_actions():
         Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTH)], initial_build_phase=True
     )
     assert len(city_possible_actions(player, board)) == 2
+
+
+def test_robber_possibilities():
+    board = Board()
+    red = Player(Color.RED)
+    blue = Player(Color.BLUE)
+    orange = Player(Color.ORANGE)
+    players = [red, blue, orange]
+
+    # one for each resource tile (excluding desert)
+    assert len(robber_possibilities(red, board, players)) == 18
+
+    # assert same number of possibilities, b.c. players have no cards.
+    board.build_settlement(
+        Color.BLUE, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_settlement(
+        Color.ORANGE, board.nodes[((0, 0, 0), NodeRef.NORTH)], initial_build_phase=True
+    )
+    assert len(robber_possibilities(red, board, players)) == 18
+
+    # assert same number of possibilities, b.c. only one player to rob in this tile
+    orange.resource_decks.replenish(1, Resource.WHEAT)
+    assert len(robber_possibilities(red, board, players)) == 18
+
+    # now possibilites increase by 1 b.c. we have to decide to steal from blue or green
+    blue.resource_decks.replenish(1, Resource.WHEAT)
+    assert len(robber_possibilities(red, board, players)) == 19
 
 
 # ===== Yield Resources

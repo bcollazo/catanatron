@@ -70,3 +70,13 @@ def test_can_subtract():
     b -= a
     assert a.count(Resource.SHEEP) == 13
     assert b.count(Resource.SHEEP) == 2
+
+
+def test_to_array():
+    a = ResourceDecks(empty=True)
+    assert len(a.to_array()) == 0
+
+    a.replenish(3, Resource.SHEEP)
+    a.replenish(2, Resource.BRICK)
+    assert len(a.to_array()) == 5
+    assert len(set(a.to_array())) == 2
