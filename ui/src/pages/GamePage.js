@@ -10,6 +10,7 @@ import Board from "./Board";
 export default function GamePage() {
   const { gameId } = useParams();
   const [state, setState] = useState(null);
+  const [automation, setAutomation] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -24,6 +25,19 @@ export default function GamePage() {
     setState(response.data);
   }, [gameId]);
 
+  const onClickAutomation = () => {
+    setAutomation(!automation);
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (automation) {
+        onClickNext();
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [automation]);
+
   console.log(state);
   if (state === null) {
     return <div></div>;
@@ -35,7 +49,10 @@ export default function GamePage() {
         <SidePanel state={state} />
       </div>
 
-      <ControlPanel onClickNext={onClickNext} />
+      <ControlPanel
+        onClickNext={onClickNext}
+        onClickAutomation={onClickAutomation}
+      />
     </div>
   );
 }

@@ -49,9 +49,10 @@ const Button = styled.div`
   width: 200px;
   text-align: center;
   cursor: pointer;
+  user-select: none;
 `;
 
-export function ControlPanel({ onClickNext }) {
+export function ControlPanel({ onClickNext, onClickAutomation }) {
   return (
     <Panel>
       <CardsContainer>
@@ -70,6 +71,7 @@ export function ControlPanel({ onClickNext }) {
       </CardsContainer>
       <ActionContainer>
         <Button onClick={onClickNext}>Tick</Button>
+        <Button onClick={onClickAutomation}>Toggle Automation</Button>
       </ActionContainer>
     </Panel>
   );
