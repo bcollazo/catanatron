@@ -17,12 +17,16 @@ class Player:
         self.resource_decks = ResourceDecks(empty=True)
 
     def decide(self, game, playable_actions):
-        """Must return one of the playable_actions.
+        """Should return one of the playable_actions.
 
         Args:
-            game (Game): to use only in a read-only manner
-            playable_actions ([type]): options right now
+            game (Game): complete game state. read-only.
+            playable_actions (Iterable[Action]): options right now
         """
+        raise NotImplementedError
+
+    def discard(self):
+        """Must return n/2 cards to discard from self.resource_decks"""
         raise NotImplementedError
 
     def receive(self, resource_decks):
@@ -36,8 +40,16 @@ class SimplePlayer(Player):
     def decide(self, game, playable_actions):
         return playable_actions[0]
 
+    def discard(self):
+        cards = self.resource_decks.to_array()
+        return cards[: len(cards) // 2]
+
 
 class RandomPlayer(Player):
     def decide(self, game, playable_actions):
         index = random.randrange(0, len(playable_actions))
         return playable_actions[index]
+
+    def discard(self):
+        cards = self.resource_decks.to_array()
+        return random.sample(cards, len(cards) // 2)

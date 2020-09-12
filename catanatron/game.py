@@ -126,9 +126,11 @@ class Game:
         self.actions = []  # log of all action taken by players
         self.resource_decks = ResourceDecks()
 
+        # variables to keep track of what to do next
         self.current_player_index = 0
         self.current_player_has_roll = False
         self.moving_robber = False
+        self.tick_queue = []
         random.shuffle(self.players)
 
     def play(self):
@@ -144,13 +146,11 @@ class Game:
             buildable_nodes = self.board.buildable_nodes(
                 player.color, initial_build_phase=True
             )
-            actions = list(
-                map(
-                    lambda node: Action(player, ActionType.BUILD_SETTLEMENT, node),
-                    buildable_nodes,
-                )
+            actions = map(
+                lambda node: Action(player, ActionType.BUILD_SETTLEMENT, node),
+                buildable_nodes,
             )
-            action = player.decide(self, actions)
+            action = player.decide(self, list(actions))
             self.execute(action, initial_build_phase=True)
 
             # Then a road, ensure its connected to this last settlement
@@ -158,13 +158,11 @@ class Game:
                 lambda e: action.value in e.nodes,
                 self.board.buildable_edges(player.color),
             )
-            actions = list(
-                map(
-                    lambda edge: Action(player, ActionType.BUILD_ROAD, edge),
-                    buildable_edges,
-                )
+            actions = map(
+                lambda edge: Action(player, ActionType.BUILD_ROAD, edge),
+                buildable_edges,
             )
-            action = player.decide(self, actions)
+            action = player.decide(self, list(actions))
             self.execute(action, initial_build_phase=True)
 
         # yield resources of second settlement
@@ -184,9 +182,17 @@ class Game:
         raise NotImplementedError
 
     def play_tick(self):
-        current_player = self.players[self.current_player_index]
-        actions = self.playable_actions(current_player)
-        action = current_player.decide(self.board, actions)
+        """
+        Consume from queue (player, decision) to support special building phase,
+            discarding, and other decisions out-of-turn.
+        If nothing there, fall back to (current, playable()) for current-turn.
+        """
+        if len(self.tick_queue) > 0:
+            (player, actions) = self.tick_queue.pop()
+        else:
+            player = self.players[self.current_player_index]
+            actions = self.playable_actions(player)
+        action = player.decide(self.board, actions)
         self.execute(action)
 
     def playable_actions(self, player):
@@ -238,6 +244,15 @@ class Game:
             number = dices[0] + dices[1]
 
             if number == 7:
+                players_to_discard = [
+                    p for p in self.players if p.resource_decks.num_cards() > 7
+                ]
+                self.tick_queue.extend(
+                    [
+                        (p, [Action(p, ActionType.DISCARD, None)])
+                        for p in players_to_discard
+                    ]
+                )
                 self.moving_robber = True
             else:
                 payout, depleted = yield_resources(
@@ -260,8 +275,19 @@ class Game:
                 resource = random.choice(hand)
                 player_to_steal_from.resource_decks.draw(1, resource)
                 self.current_player().resource_decks.replenish(1, resource)
+        elif action.action_type == ActionType.DISCARD:
+            num_cards = action.player.resource_decks.num_cards()
+            discarded = action.player.discard()
+            assert len(discarded) == num_cards // 2
+
+            to_discard = ResourceDecks(empty=True)
+            for resource in discarded:
+                to_discard.replenish(1, resource)
+            action.player.resource_decks -= to_discard
+
+            action = Action(action.player, action.action_type, discarded)
         else:
-            raise RuntimeError("Unknown ActionType")
+            raise RuntimeError("Unknown ActionType " + str(action.action_type))
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.actions.append(action)
