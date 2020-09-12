@@ -45,7 +45,7 @@ export default function SidePanel({ state }) {
   });
 
   return (
-    <div className="h-full lg:w-1/2 w-1/2 bg-gray-900 p-6">
+    <div className="h-full lg:w-1/3 w-1/2 bg-gray-900 p-6">
       <div ref={actionRef} className="h-64 overflow-auto">
         {actions}
       </div>
