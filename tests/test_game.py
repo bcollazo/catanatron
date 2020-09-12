@@ -7,7 +7,7 @@ from catanatron.game import (
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
 from catanatron.models.board_algorithms import longest_road, continuous_roads_by_player
-from catanatron.models.enums import ActionType, Action
+from catanatron.models.enums import ActionType, Action, Resource
 from catanatron.models.player import Player, Color, SimplePlayer
 from catanatron.models.decks import ResourceDecks
 
@@ -53,7 +53,8 @@ def test_city_playable_actions():
     )
     assert len(city_possible_actions(player, board)) == 0  # no money
 
-    player.resource_decks += ResourceDecks.city_cost()
+    player.resource_decks.replenish(2, Resource.WHEAT)
+    player.resource_decks.replenish(3, Resource.ORE)
     assert len(city_possible_actions(player, board)) == 1
 
     board.build_settlement(
