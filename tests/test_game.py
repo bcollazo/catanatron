@@ -23,7 +23,9 @@ def test_initial_build_phase():
 
     # assert should have resources from last house.
     assert players[0].resource_decks.num_cards() >= 1
+    assert players[0].resource_decks.num_cards() <= 3
     assert players[1].resource_decks.num_cards() >= 1
+    assert players[1].resource_decks.num_cards() <= 3
 
 
 def test_playable_actions():

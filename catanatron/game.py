@@ -130,7 +130,8 @@ class Game:
         second_settlements = map(
             lambda a: (a.player, a.value),
             filter(
-                lambda a: a.action_type == ActionType.BUILD_SETTLEMENT, self.actions
+                lambda a: a.action_type == ActionType.BUILD_SETTLEMENT,
+                self.actions[len(self.players) * 2 :],
             ),
         )
         for (player, node) in second_settlements:
