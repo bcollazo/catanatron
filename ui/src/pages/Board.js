@@ -5,6 +5,7 @@ import Tile from "./Tile";
 import { SQRT3 } from "../utils/coordinates";
 import Road from "./Road";
 import Node from "./Node";
+import Robber from "./Robber";
 
 export default function Board({ state }) {
   const ref = useRef(null);
@@ -97,6 +98,14 @@ export default function Board({ state }) {
         {tiles}
         {roads}
         {nodeBuildings}
+        <Robber
+          centerX={centerX}
+          centerY={centerY}
+          w={w}
+          h={h}
+          size={size}
+          coordinate={state.robber_coordinate}
+        />
       </div>
     </div>
   );

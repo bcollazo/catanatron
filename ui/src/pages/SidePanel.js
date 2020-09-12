@@ -15,6 +15,16 @@ export default function SidePanel({ state }) {
     if (action_type === "ROLL") {
       const number = value[0] + value[1];
       text = `${action_type} (${value[0]}, ${value[1]}) = ${number}`;
+    } else if (action_type === "MOVE_ROBBER") {
+      const player = value[1];
+      text = `${action_type}`;
+      if (player !== null) {
+        text += ` / STEAL ${player.color}`;
+      } else {
+        text += ` / DIDNT STEAL`;
+      }
+    } else if (action_type === "END_TURN") {
+      text = `${action_type}`;
     }
 
     const colorClass = `text-white text-${color.toLowerCase()}-700`;
