@@ -12,6 +12,7 @@ class Resource(Enum):
 
 class ActionType(Enum):
     ROLL = "ROLL"  # value is None or rolled value.
+    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Player|None).
 
     # Building/Buying
     BUILD_ROAD = "BUILD_ROAD"  # value is edge
