@@ -3,6 +3,13 @@ from catanatron.models.enums import Resource
 
 class ResourceDecks:
     @staticmethod
+    def road_cost():
+        decks = ResourceDecks(empty=True)
+        decks.replenish(1, Resource.WOOD)
+        decks.replenish(1, Resource.BRICK)
+        return decks
+
+    @staticmethod
     def settlement_cost():
         decks = ResourceDecks(empty=True)
         decks.replenish(1, Resource.WOOD)

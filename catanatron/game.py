@@ -195,10 +195,16 @@ class Game:
                 initial_build_phase=initial_build_phase,
             )
             if not initial_build_phase:
+                action.player.resource_decks -= ResourceDecks.settlement_cost()
                 self.resource_decks += ResourceDecks.settlement_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_ROAD:
             self.board.build_road(action.player.color, action.value)
             if not initial_build_phase:
+                action.player.resource_decks -= ResourceDecks.road_cost()
+                self.resource_decks += ResourceDecks.road_cost()  # replenish bank
+        elif action.action_type == ActionType.BUILD_CITY:
+            self.board.build_city(action.player.color, action.value)
+            action.player.resource_decks -= ResourceDecks.city_cost()
                 self.resource_decks += ResourceDecks.city_cost()  # replenish bank
         elif action.action_type == ActionType.ROLL:
             dices = roll_dice()
@@ -214,6 +220,8 @@ class Game:
 
             action = Action(action.player, action.action_type, dices)
             self.current_player_has_roll = True
+        else:
+            raise RuntimeError("Unknown ActionType")
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.actions.append(action)
