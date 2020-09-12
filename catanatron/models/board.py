@@ -175,6 +175,16 @@ class Board:
                 continue
             yield (coordinate, tile)
 
+    def get_adjacent_tiles(self, node_or_edge):
+        if isinstance(node_or_edge, Node):
+            for coordinate, tile in self.resource_tiles():
+                if node_or_edge in tile.nodes.values():
+                    yield tile
+        else:
+            for coordinate, tile in self.resource_tiles():
+                if node_or_edge in tile.edges.values():
+                    yield tile
+
     def find_connected_components(self, color: Color):
         """returns connected subgraphs for a given player
 

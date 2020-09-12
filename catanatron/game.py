@@ -126,7 +126,17 @@ class Game:
             action = player.decide(self, actions)
             self.execute(action, initial_build_phase=True)
 
-        # TODO: assign resources of second house
+        # yield resources of second settlement
+        second_settlements = map(
+            lambda a: (a.player, a.value),
+            filter(
+                lambda a: a.action_type == ActionType.BUILD_SETTLEMENT, self.actions
+            ),
+        )
+        for (player, node) in second_settlements:
+            for tile in self.board.get_adjacent_tiles(node):
+                if tile.resource != None:
+                    player.resource_decks.replenish(1, tile.resource)
 
     def winning_player(self):
         raise NotImplementedError
