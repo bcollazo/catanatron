@@ -4,6 +4,7 @@ from collections import namedtuple, defaultdict
 
 from catanatron.models.map import BaseMap
 from catanatron.models.board import Board, BuildingType
+from catanatron.models.board_initializer import Node
 from catanatron.models.enums import Action, ActionType, Resource
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDecks
@@ -11,6 +12,31 @@ from catanatron.models.decks import ResourceDecks
 
 def roll_dice():
     return (random.randint(1, 6), random.randint(1, 6))
+
+
+def city_possible_actions(player, board):
+    has_money = player.resource_decks.includes(ResourceDecks.city_cost())
+
+    buildings = list(
+        filter(
+            lambda x: isinstance(x[0], Node) and x[1].color == player.color,
+            board.buildings.items(),
+        )
+    )  # (node, building) list
+    cities = list(filter(lambda x: x[1].building_type == BuildingType.CITY, buildings))
+    has_cities_available = len(cities) < 4
+
+    if has_money and has_cities_available:
+        settlements = filter(
+            lambda x: x[1].building_type == BuildingType.SETTLEMENT, buildings
+        )
+        actions = [
+            Action(player, ActionType.BUILD_CITY, node)
+            for (node, building) in settlements
+        ]
+    else:
+        actions = []
+    return actions
 
 
 def playable_actions(player, has_roll, board):
@@ -25,7 +51,11 @@ def playable_actions(player, has_roll, board):
 
         return actions
 
-    raise NotImplementedError
+    actions = [Action(player, ActionType.END_TURN, None)]
+    for action in city_possible_actions(player, board):
+        actions.append(action)
+
+    return actions
 
 
 def yield_resources(board, resource_decks, number):
@@ -183,6 +213,7 @@ class Game:
                 self.resource_decks -= resource_decks
 
             action = Action(action.player, action.action_type, dices)
+            self.current_player_has_roll = True
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.actions.append(action)

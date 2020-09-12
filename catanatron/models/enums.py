@@ -13,10 +13,12 @@ class Resource(Enum):
 class ActionType(Enum):
     ROLL = "ROLL"  # value is None or rolled value.
 
+    # Building/Buying
     BUILD_ROAD = "BUILD_ROAD"  # value is edge
     BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node
     BUILD_CITY = "BUILD_CITY"
     BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"
+
     # Dev Card Plays
     PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, player)
     PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"

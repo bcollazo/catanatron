@@ -28,6 +28,12 @@ class ResourceDecks:
             Resource.ORE: starting_amount,
         }
 
+    def includes(self, other):
+        for resource in Resource:
+            if self.count(resource) < other.count(resource):
+                return False
+        return True
+
     def count(self, resource: Resource):
         return self.decks[resource]
 
