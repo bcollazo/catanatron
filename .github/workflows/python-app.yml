@@ -31,5 +31,7 @@ jobs:
         run: |
           pipenv run coverage run --source=catanatron -m pytest tests/
       - name: Coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pipenv run coveralls
