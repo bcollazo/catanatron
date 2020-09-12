@@ -4,8 +4,9 @@ from unittest.mock import MagicMock, patch
 from catanatron.game import (
     Game,
     yield_resources,
-    city_possible_actions,
     road_possible_actions,
+    settlement_possible_actions,
+    city_possible_actions,
     robber_possibilities,
 )
 from catanatron.models.board import Board
@@ -147,6 +148,26 @@ def test_road_possible_actions():
         Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTHEAST)], initial_build_phase=True
     )
     assert len(road_possible_actions(player, board)) == 6
+
+
+def test_settlement_possible_actions():
+    board = Board()
+    player = Player(Color.RED)
+
+    assert len(settlement_possible_actions(player, board)) == 0  # no money or place
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
+    assert len(settlement_possible_actions(player, board)) == 0  # no money
+
+    player.resource_decks += ResourceDecks.settlement_cost()
+    assert len(settlement_possible_actions(player, board)) == 1
+
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.NORTHWEST)])
+    assert len(settlement_possible_actions(player, board)) == 2
 
 
 def test_city_playable_actions():

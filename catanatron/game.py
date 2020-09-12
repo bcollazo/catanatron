@@ -27,6 +27,22 @@ def road_possible_actions(player, board):
         return []
 
 
+def settlement_possible_actions(player, board):
+    has_money = player.resource_decks.includes(ResourceDecks.settlement_cost())
+
+    settlements = board.get_player_buildings(player.color, BuildingType.ROAD)
+    has_settlements_available = len(settlements) < 5
+
+    if has_money and has_settlements_available:
+        buildable_nodes = board.buildable_nodes(player.color)
+        return [
+            Action(player, ActionType.BUILD_SETTLEMENT, node)
+            for node in buildable_nodes
+        ]
+    else:
+        return []
+
+
 def city_possible_actions(player, board):
     has_money = player.resource_decks.includes(ResourceDecks.city_cost())
 
@@ -209,6 +225,8 @@ class Game:
 
         actions = [Action(player, ActionType.END_TURN, None)]
         for action in road_possible_actions(player, self.board):
+            actions.append(action)
+        for action in settlement_possible_actions(player, self.board):
             actions.append(action)
         for action in city_possible_actions(player, self.board):
             actions.append(action)
