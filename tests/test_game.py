@@ -6,6 +6,7 @@ from catanatron.game import (
     playable_actions,
     yield_resources,
     city_possible_actions,
+    road_possible_actions,
 )
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
@@ -34,36 +35,6 @@ def test_initial_build_phase():
     assert players[0].resource_decks.num_cards() <= 3
     assert players[1].resource_decks.num_cards() >= 1
     assert players[1].resource_decks.num_cards() <= 3
-
-
-def test_playable_actions():
-    board = Board()
-    player = Player(Color.RED)
-
-    actions = playable_actions(player, False, board)
-    assert len(actions) == 1
-    assert actions[0].action_type == ActionType.ROLL
-
-
-def test_city_playable_actions():
-    board = Board()
-    player = Player(Color.RED)
-
-    assert len(city_possible_actions(player, board)) == 0  # no money or place
-
-    board.build_settlement(
-        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
-    )
-    assert len(city_possible_actions(player, board)) == 0  # no money
-
-    player.resource_decks.replenish(2, Resource.WHEAT)
-    player.resource_decks.replenish(3, Resource.ORE)
-    assert len(city_possible_actions(player, board)) == 1
-
-    board.build_settlement(
-        Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTH)], initial_build_phase=True
-    )
-    assert len(city_possible_actions(player, board)) == 2
 
 
 def test_can_play_for_a_bit():  # assert no exception thrown
@@ -95,6 +66,58 @@ def test_buying_road_is_payed_for():
     assert players[0].resource_decks.count(Resource.WOOD) == 0
     assert players[0].resource_decks.count(Resource.BRICK) == 0
     assert game.resource_decks.count(Resource.WOOD) == 20  # since we didnt yield
+
+
+# ===== Playable Actions
+def test_playable_actions():
+    board = Board()
+    player = Player(Color.RED)
+
+    actions = playable_actions(player, False, board)
+    assert len(actions) == 1
+    assert actions[0].action_type == ActionType.ROLL
+
+
+def test_road_possible_actions():
+    board = Board()
+    player = Player(Color.RED)
+
+    assert len(road_possible_actions(player, board)) == 0  # no money or place
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    assert len(road_possible_actions(player, board)) == 0  # no money
+
+    player.resource_decks.replenish(1, Resource.WOOD)
+    player.resource_decks.replenish(1, Resource.BRICK)
+    assert len(road_possible_actions(player, board)) == 3
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTHEAST)], initial_build_phase=True
+    )
+    assert len(road_possible_actions(player, board)) == 6
+
+
+def test_city_playable_actions():
+    board = Board()
+    player = Player(Color.RED)
+
+    assert len(city_possible_actions(player, board)) == 0  # no money or place
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    assert len(city_possible_actions(player, board)) == 0  # no money
+
+    player.resource_decks.replenish(2, Resource.WHEAT)
+    player.resource_decks.replenish(3, Resource.ORE)
+    assert len(city_possible_actions(player, board)) == 1
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTH)], initial_build_phase=True
+    )
+    assert len(city_possible_actions(player, board)) == 2
 
 
 # ===== Yield Resources

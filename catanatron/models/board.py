@@ -185,6 +185,16 @@ class Board:
                 if node_or_edge in tile.edges.values():
                     yield tile
 
+    def get_player_buildings(self, color, building_type=None):
+        buildings = filter(
+            lambda x: x[1].color == color,
+            self.buildings.items(),
+        )  # (node, building) sequence
+        if building_type is not None:
+            buildings = filter(lambda x: x[1].building_type == building_type, buildings)
+
+        return list(buildings)
+
     def find_connected_components(self, color: Color):
         """returns connected subgraphs for a given player
 
