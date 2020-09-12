@@ -275,6 +275,8 @@ class Game:
                 resource = random.choice(hand)
                 player_to_steal_from.resource_decks.draw(1, resource)
                 self.current_player().resource_decks.replenish(1, resource)
+
+            self.moving_robber = False
         elif action.action_type == ActionType.DISCARD:
             num_cards = action.player.resource_decks.num_cards()
             discarded = action.player.discard()
