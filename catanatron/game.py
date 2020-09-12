@@ -30,7 +30,7 @@ def road_possible_actions(player, board):
 def settlement_possible_actions(player, board):
     has_money = player.resource_decks.includes(ResourceDecks.settlement_cost())
 
-    settlements = board.get_player_buildings(player.color, BuildingType.ROAD)
+    settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
     has_settlements_available = len(settlements) < 5
 
     if has_money and has_settlements_available:
@@ -304,6 +304,7 @@ class Game:
             for resource in discarded:
                 to_discard.replenish(1, resource)
             action.player.resource_decks -= to_discard
+            self.resource_decks += to_discard
 
             action = Action(action.player, action.action_type, discarded)
         else:
