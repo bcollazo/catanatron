@@ -205,7 +205,7 @@ class Game:
         elif action.action_type == ActionType.BUILD_CITY:
             self.board.build_city(action.player.color, action.value)
             action.player.resource_decks -= ResourceDecks.city_cost()
-                self.resource_decks += ResourceDecks.city_cost()  # replenish bank
+            self.resource_decks += ResourceDecks.city_cost()  # replenish bank
         elif action.action_type == ActionType.ROLL:
             dices = roll_dice()
             number = dices[0] + dices[1]
