@@ -1,3 +1,6 @@
+import pytest
+from unittest.mock import MagicMock
+
 from catanatron.game import (
     Game,
     playable_actions,
@@ -70,6 +73,28 @@ def test_can_play_for_a_bit():  # assert no exception thrown
 
     for _ in range(10):
         game.play_tick()
+
+
+def test_buying_road_is_payed_for():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+
+    game.board.build_road = MagicMock()
+    action = Action(
+        players[0],
+        ActionType.BUILD_ROAD,
+        game.board.edges[((0, 0, 0), EdgeRef.SOUTHEAST)],
+    )
+    with pytest.raises(ValueError):  # not enough money
+        game.execute(action)
+
+    players[0].resource_decks.replenish(1, Resource.WOOD)
+    players[0].resource_decks.replenish(1, Resource.BRICK)
+    game.execute(action)
+
+    assert players[0].resource_decks.count(Resource.WOOD) == 0
+    assert players[0].resource_decks.count(Resource.BRICK) == 0
+    assert game.resource_decks.count(Resource.WOOD) == 20  # since we didnt yield
 
 
 # ===== Yield Resources
@@ -161,6 +186,8 @@ def test_empty_payout_if_not_enough_resources():
 def test_longest_road_simple():
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
+    red.resource_decks += ResourceDecks()  # whole bank in hand
+    blue.resource_decks += ResourceDecks()  # whole bank in hand
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes
@@ -198,6 +225,8 @@ def test_longest_road_simple():
 def test_longest_road_tie():
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
+    red.resource_decks += ResourceDecks()  # whole bank in hand
+    blue.resource_decks += ResourceDecks()  # whole bank in hand
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes
@@ -276,6 +305,8 @@ def test_longest_road_tie():
 def test_complicated_road():  # classic 8-like roads
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
+    red.resource_decks += ResourceDecks()  # whole bank in hand
+    blue.resource_decks += ResourceDecks()  # whole bank in hand
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes
