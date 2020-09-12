@@ -11,6 +11,7 @@ flask-cors = "*"
 coverage = "*"
 black = "*"
 pytest = "*"
+coveralls = "*"
 
 [requires]
 python_version = "3.8"
