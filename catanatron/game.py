@@ -72,7 +72,10 @@ def robber_possibilities(player, board, players):
             building = board.buildings.get(node)
             if building is not None:
                 candidate = players_by_color[building.color]
-                if candidate.resource_decks.num_cards() >= 1:
+                if (
+                    candidate.resource_decks.num_cards() >= 1
+                    and candidate.color != player.color  # can't play yourself
+                ):
                     players_to_steal_from.add(candidate)
 
         if len(players_to_steal_from) == 0:
