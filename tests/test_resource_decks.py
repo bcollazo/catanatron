@@ -5,39 +5,39 @@ from catanatron.models.decks import ResourceDeck
 
 
 def test_resource_deck_init():
-    decks = ResourceDeck.starting_bank()
-    assert decks.count(Resource.WOOD) == 19
+    deck = ResourceDeck.starting_bank()
+    assert deck.count(Resource.WOOD) == 19
 
 
 def test_resource_deck_can_draw():
-    decks = ResourceDeck.starting_bank()
-    assert decks.can_draw(10, Resource.BRICK)
-    assert not decks.can_draw(20, Resource.BRICK)
+    deck = ResourceDeck.starting_bank()
+    assert deck.can_draw(10, Resource.BRICK)
+    assert not deck.can_draw(20, Resource.BRICK)
 
 
 def test_resource_deck_integration():
-    decks = ResourceDeck.starting_bank()
-    assert decks.count(Resource.WHEAT) == 19
-    assert decks.num_cards() == 19 * 5
+    deck = ResourceDeck.starting_bank()
+    assert deck.count(Resource.WHEAT) == 19
+    assert deck.num_cards() == 19 * 5
 
-    assert decks.can_draw(10, Resource.WHEAT)
-    decks.draw(10, Resource.WHEAT)
-    assert decks.count(Resource.WHEAT) == 9
-
-    with pytest.raises(ValueError):  # not enough
-        decks.draw(10, Resource.WHEAT)
-
-    decks.draw(9, Resource.WHEAT)
-    assert decks.count(Resource.WHEAT) == 0
+    assert deck.can_draw(10, Resource.WHEAT)
+    deck.draw(10, Resource.WHEAT)
+    assert deck.count(Resource.WHEAT) == 9
 
     with pytest.raises(ValueError):  # not enough
-        decks.draw(1, Resource.WHEAT)
+        deck.draw(10, Resource.WHEAT)
 
-    decks.replenish(2, Resource.WHEAT)
-    assert decks.count(Resource.WHEAT) == 2
+    deck.draw(9, Resource.WHEAT)
+    assert deck.count(Resource.WHEAT) == 0
 
-    decks.draw(1, Resource.WHEAT)
-    assert decks.count(Resource.WHEAT) == 1
+    with pytest.raises(ValueError):  # not enough
+        deck.draw(1, Resource.WHEAT)
+
+    deck.replenish(2, Resource.WHEAT)
+    assert deck.count(Resource.WHEAT) == 2
+
+    deck.draw(1, Resource.WHEAT)
+    assert deck.count(Resource.WHEAT) == 1
 
 
 def test_can_add():
