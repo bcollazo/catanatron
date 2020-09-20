@@ -6,86 +6,20 @@ from catanatron.models.map import BaseMap
 from catanatron.models.board import Board, BuildingType
 from catanatron.models.board_initializer import Node
 from catanatron.models.board_algorithms import longest_road
-from catanatron.models.enums import Action, ActionType, Resource
+from catanatron.models.enums import Resource
+from catanatron.models.actions import (
+    Action,
+    ActionType,
+    road_possible_actions,
+    city_possible_actions,
+    settlement_possible_actions,
+)
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDecks
 
 
 def roll_dice():
     return (random.randint(1, 6), random.randint(1, 6))
-
-
-def road_possible_actions(player, board):
-    has_money = player.resource_decks.includes(ResourceDecks.road_cost())
-
-    roads = board.get_player_buildings(player.color, BuildingType.ROAD)
-    has_roads_available = len(roads) < 15
-
-    if has_money and has_roads_available:
-        buildable_edges = board.buildable_edges(player.color)
-        return [Action(player, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
-    else:
-        return []
-
-
-def settlement_possible_actions(player, board):
-    has_money = player.resource_decks.includes(ResourceDecks.settlement_cost())
-
-    settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
-    has_settlements_available = len(settlements) < 5
-
-    if has_money and has_settlements_available:
-        buildable_nodes = board.buildable_nodes(player.color)
-        return [
-            Action(player, ActionType.BUILD_SETTLEMENT, node)
-            for node in buildable_nodes
-        ]
-    else:
-        return []
-
-
-def city_possible_actions(player, board):
-    has_money = player.resource_decks.includes(ResourceDecks.city_cost())
-
-    cities = board.get_player_buildings(player.color, BuildingType.CITY)
-    has_cities_available = len(cities) < 4
-
-    if has_money and has_cities_available:
-        settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
-        return [
-            Action(player, ActionType.BUILD_CITY, node) for (node, _) in settlements
-        ]
-    else:
-        return []
-
-
-def robber_possibilities(player, board, players):
-    players_by_color = {p.color: p for p in players}
-    actions = []
-    for coordinate, tile in board.resource_tiles():
-        if coordinate == board.robber_coordinate:
-            continue  # ignore. must move robber.
-
-        # each tile can yield a (move-but-cant-steal) action or
-        #   several (move-and-steal-from-x) actions.
-        players_to_steal_from = set()
-        for node_ref, node in tile.nodes.items():
-            building = board.buildings.get(node)
-            if building is not None:
-                candidate = players_by_color[building.color]
-                if (
-                    candidate.resource_decks.num_cards() >= 1
-                    and candidate.color != player.color  # can't play yourself
-                ):
-                    players_to_steal_from.add(candidate)
-
-        if len(players_to_steal_from) == 0:
-            actions.append(Action(player, ActionType.MOVE_ROBBER, (coordinate, None)))
-        else:
-            for p in players_to_steal_from:
-                actions.append(Action(player, ActionType.MOVE_ROBBER, (coordinate, p)))
-
-    return actions
 
 
 def yield_resources(board, resource_decks, number):

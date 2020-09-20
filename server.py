@@ -8,7 +8,7 @@ from flask_cors import CORS
 from catanatron.game import Game
 from catanatron.models.map import Water, Port, Tile
 from catanatron.models.player import RandomPlayer, Color, Player
-from catanatron.models.enums import Action
+from catanatron.models.actions import Action
 from catanatron.models.decks import ResourceDecks
 from catanatron.models.board import Building
 from catanatron.models.board_initializer import Node, Edge, NodeRef, EdgeRef

@@ -2,7 +2,7 @@ from collections import defaultdict
 import itertools
 from typing import Iterable
 
-from catanatron.models.enums import ActionType, Action
+from catanatron.models.actions import ActionType, Action
 from catanatron.models.map import Port, Water
 from catanatron.models.board import Board, Graph
 from catanatron.models.player import Player, Color
