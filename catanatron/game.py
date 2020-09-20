@@ -6,7 +6,7 @@ from catanatron.models.map import BaseMap
 from catanatron.models.board import Board, BuildingType
 from catanatron.models.board_initializer import Node
 from catanatron.models.board_algorithms import longest_road
-from catanatron.models.enums import Resource
+from catanatron.models.enums import Resource, DevelopmentCard
 from catanatron.models.actions import (
     Action,
     ActionType,
@@ -16,7 +16,7 @@ from catanatron.models.actions import (
     robber_possibilities,
 )
 from catanatron.models.player import Player
-from catanatron.models.decks import ResourceDeck
+from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 
 
 def roll_dice():
@@ -80,6 +80,7 @@ class Game:
         self.board = Board(self.map)
         self.actions = []  # log of all action taken by players
         self.resource_deck = ResourceDeck.starting_bank()
+        self.development_deck = DevelopmentDeck.starting_bank()
 
         # variables to keep track of what to do next
         self.current_player_index = 0
@@ -173,6 +174,9 @@ class Game:
         for action in city_possible_actions(player, self.board):
             actions.append(action)
 
+        if player.resource_deck.includes(ResourceDeck.development_card_cost()):
+            actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
+
         return actions
 
     def execute(self, action, initial_build_phase=False):
@@ -231,9 +235,7 @@ class Game:
             (coordinate, player_to_steal_from) = action.value
             self.board.robber_coordinate = coordinate
             if player_to_steal_from is not None:
-                hand = player_to_steal_from.resource_deck.to_array()
-                resource = random.choice(hand)
-                player_to_steal_from.resource_deck.draw(1, resource)
+                resource = player_to_steal_from.resource_deck.random_draw()
                 self.current_player().resource_deck.replenish(1, resource)
 
             self.moving_robber = False
@@ -249,6 +251,20 @@ class Game:
             self.resource_deck += to_discard
 
             action = Action(action.player, action.action_type, discarded)
+        elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
+            if self.development_deck.num_cards() == 0:
+                raise ValueError("No more development cards")
+            if not action.player.resource_deck.includes(
+                ResourceDeck.development_card_cost()
+            ):
+                raise ValueError("No money to buy development card")
+
+            development_card = self.development_deck.random_draw()
+            action.player.development_deck.replenish(1, development_card)
+            action.player.resource_deck -= ResourceDeck.development_card_cost()
+            self.resource_deck += ResourceDeck.development_card_cost()
+
+            action = Action(action.player, action.action_type, development_card)
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 

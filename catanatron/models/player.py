@@ -1,7 +1,7 @@
 import random
 from enum import Enum
 
-from catanatron.models.decks import ResourceDeck
+from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 
 
 class Color(Enum):
@@ -17,6 +17,7 @@ class Player:
         self.public_victory_points = 0
         self.actual_victory_points = 0
         self.resource_deck = ResourceDeck()
+        self.development_deck = DevelopmentDeck()
 
     def decide(self, game, playable_actions):
         """Should return one of the playable_actions.

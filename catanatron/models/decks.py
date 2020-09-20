@@ -1,3 +1,5 @@
+import random
+
 from catanatron.models.enums import Resource, DevelopmentCard
 
 
@@ -35,6 +37,15 @@ class Deck:
 
         self.cards[card_type] -= count
 
+    def random_draw(self):
+        array = self.to_array()
+        if len(array) == 0:
+            raise ValueError(f"Cant random_draw. Not enough cards.")
+
+        card_type = random.choice(array)
+        self.draw(1, card_type)
+        return card_type
+
     def replenish(self, count: int, card_type):
         self.cards[card_type] += count
 
@@ -54,6 +65,9 @@ class Deck:
         for card_type in self.card_types:
             self.draw(other.count(card_type), card_type)
         return self
+
+    def __str__(self):
+        return str(self.cards)
 
 
 class ResourceDeck(Deck):
@@ -88,6 +102,14 @@ class ResourceDeck(Deck):
         deck = ResourceDeck()
         deck.replenish(2, Resource.WHEAT)
         deck.replenish(3, Resource.ORE)
+        return deck
+
+    @staticmethod
+    def development_card_cost():
+        deck = ResourceDeck()
+        deck.replenish(1, Resource.SHEEP)
+        deck.replenish(1, Resource.WHEAT)
+        deck.replenish(1, Resource.ORE)
         return deck
 
     def __init__(self):

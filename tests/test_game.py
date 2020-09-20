@@ -113,6 +113,33 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     assert players[1].resource_deck.num_cards() == 5
 
 
+# ===== Development Cards
+def test_cant_buy_more_than_max_card():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+
+    with pytest.raises(ValueError):  # not enough money
+        game.execute(Action(players[0], ActionType.BUY_DEVELOPMENT_CARD, None))
+
+    players[0].resource_deck.replenish(26, Resource.SHEEP)
+    players[0].resource_deck.replenish(26, Resource.WHEAT)
+    players[0].resource_deck.replenish(26, Resource.ORE)
+
+    for i in range(25):
+        game.execute(Action(players[0], ActionType.BUY_DEVELOPMENT_CARD, None))
+
+    # assert must have all victory points
+    game.count_victory_points()
+    assert players[0].development_deck.num_cards() == 25
+    assert players[0].public_victory_points == 0
+    assert players[0].actual_victory_points == 5
+
+    with pytest.raises(ValueError):  # not enough cards in bank
+        game.execute(Action(players[0], ActionType.BUY_DEVELOPMENT_CARD, None))
+
+    assert players[0].resource_deck.num_cards() == 3
+
+
 # ===== Yield Resources
 def test_yield_resources():
     board = Board()
