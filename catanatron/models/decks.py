@@ -1,80 +1,96 @@
 from catanatron.models.enums import Resource
 
 
-class ResourceDeck:
-    @staticmethod
-    def road_cost():
-        decks = ResourceDeck(empty=True)
-        decks.replenish(1, Resource.WOOD)
-        decks.replenish(1, Resource.BRICK)
-        return decks
+class Deck:
+    def __init__(self, card_types):
+        """Provides functionality to manage a pack of cards.
 
-    @staticmethod
-    def settlement_cost():
-        decks = ResourceDeck(empty=True)
-        decks.replenish(1, Resource.WOOD)
-        decks.replenish(1, Resource.BRICK)
-        decks.replenish(1, Resource.SHEEP)
-        decks.replenish(1, Resource.WHEAT)
-        return decks
+        Args:
+            card_types (Enum): Describes cards to use
+        """
+        self.card_types = card_types
+        self.cards = {card: 0 for card in self.card_types}
 
-    @staticmethod
-    def city_cost():
-        decks = ResourceDeck(empty=True)
-        decks.replenish(2, Resource.WHEAT)
-        decks.replenish(3, Resource.ORE)
-        return decks
-
-    def __init__(self, empty=False):
-        starting_amount = 0 if empty else 19
-        self.decks = {
-            Resource.WOOD: starting_amount,
-            Resource.BRICK: starting_amount,
-            Resource.SHEEP: starting_amount,
-            Resource.WHEAT: starting_amount,
-            Resource.ORE: starting_amount,
-        }
-
-    def includes(self, other: ResourceDeck):
-        for resource in Resource:
-            if self.count(resource) < other.count(resource):
+    def includes(self, other):
+        for card_type in self.card_types:
+            if self.count(card_type) < other.count(card_type):
                 return False
         return True
 
-    def count(self, resource: Resource):
-        return self.decks[resource]
+    def count(self, card_type):
+        return self.cards[card_type]
 
     def num_cards(self):
         total = 0
-        for resource in Resource:
-            total += self.count(resource)
+        for card_type in self.card_types:
+            total += self.count(card_type)
         return total
 
-    def can_draw(self, count: int, resource: Resource):
-        return self.count(resource) >= count
+    def can_draw(self, count: int, card_type):
+        return self.count(card_type) >= count
 
-    def draw(self, count: int, resource: Resource):
-        if not self.can_draw(count, resource):
-            raise ValueError(f"Not enough resources. Cant draw {count} {resource}")
+    def draw(self, count: int, card_type):
+        if not self.can_draw(count, card_type):
+            raise ValueError(f"Cant draw {count} {card_type}. Not enough cards.")
 
-        self.decks[resource] -= count
+        self.cards[card_type] -= count
 
-    def replenish(self, count: int, resource: Resource):
-        self.decks[resource] += count
+    def replenish(self, count: int, card_type):
+        self.cards[card_type] += count
 
     def to_array(self):
         """Make it look like a deck of cards"""
         array = []
-        for resource in Resource:
-            array.extend([resource] * self.count(resource))
+        for card_type in self.card_types:
+            array.extend([card_type] * self.count(card_type))
         return array
 
-    def __add__(self, other: ResourceDeck):
-        for resource in Resource:
-            self.replenish(other.count(resource), resource)
+    def __add__(self, other):
+        for card_type in self.card_types:
+            self.replenish(other.count(card_type), card_type)
         return self
 
-    def __sub__(self, other: ResourceDeck):
-        for resource in Resource:
-            self.draw(other.count(resource), resource)
+    def __sub__(self, other):
+        for card_type in self.card_types:
+            self.draw(other.count(card_type), card_type)
         return self
+
+
+class ResourceDeck(Deck):
+    @staticmethod
+    def starting_bank():
+        deck = ResourceDeck(empty=True)
+        deck.replenish(19, Resource.WOOD)
+        deck.replenish(19, Resource.BRICK)
+        deck.replenish(19, Resource.SHEEP)
+        deck.replenish(19, Resource.WHEAT)
+        deck.replenish(19, Resource.ORE)
+        return deck
+
+    @staticmethod
+    def road_cost():
+        deck = ResourceDeck(empty=True)
+        deck.replenish(1, Resource.WOOD)
+        deck.replenish(1, Resource.BRICK)
+        return deck
+
+    @staticmethod
+    def settlement_cost():
+        deck = ResourceDeck(empty=True)
+        deck.replenish(1, Resource.WOOD)
+        deck.replenish(1, Resource.BRICK)
+        deck.replenish(1, Resource.SHEEP)
+        deck.replenish(1, Resource.WHEAT)
+        return deck
+
+    @staticmethod
+    def city_cost():
+        deck = ResourceDeck(empty=True)
+        deck.replenish(2, Resource.WHEAT)
+        deck.replenish(3, Resource.ORE)
+        return deck
+
+    def __init__(self, empty=False):
+        Deck.__init__(self, Resource)
+        if not empty:
+            self.__add__(ResourceDeck.starting_bank())
