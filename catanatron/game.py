@@ -13,6 +13,7 @@ from catanatron.models.actions import (
     road_possible_actions,
     city_possible_actions,
     settlement_possible_actions,
+    robber_possibilities,
 )
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck
