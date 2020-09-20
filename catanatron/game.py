@@ -291,4 +291,6 @@ class Game:
                 public_vps += 2
 
             player.public_victory_points = public_vps
-            player.actual_victory_points = public_vps  # TODO: add dev vps
+            player.actual_victory_points = public_vps + player.development_deck.count(
+                DevelopmentCard.VICTORY_POINT
+            )
