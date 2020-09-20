@@ -1,22 +1,22 @@
 import pytest
 
 from catanatron.models.enums import Resource
-from catanatron.models.decks import ResourceDecks
+from catanatron.models.decks import ResourceDeck
 
 
 def test_resource_deck_init():
-    decks = ResourceDecks()
+    decks = ResourceDeck()
     assert decks.count(Resource.WOOD) == 19
 
 
 def test_resource_deck_can_draw():
-    decks = ResourceDecks()
+    decks = ResourceDeck()
     assert decks.can_draw(10, Resource.BRICK)
     assert not decks.can_draw(20, Resource.BRICK)
 
 
 def test_resource_deck_integration():
-    decks = ResourceDecks()
+    decks = ResourceDeck()
     assert decks.count(Resource.WHEAT) == 19
     assert decks.num_cards() == 19 * 5
 
@@ -41,8 +41,8 @@ def test_resource_deck_integration():
 
 
 def test_can_add():
-    a = ResourceDecks(empty=True)
-    b = ResourceDecks(empty=True)
+    a = ResourceDeck(empty=True)
+    b = ResourceDeck(empty=True)
 
     a.replenish(10, Resource.ORE)
     b.replenish(1, Resource.ORE)
@@ -55,8 +55,8 @@ def test_can_add():
 
 
 def test_can_subtract():
-    a = ResourceDecks(empty=True)
-    b = ResourceDecks(empty=True)
+    a = ResourceDeck(empty=True)
+    b = ResourceDeck(empty=True)
 
     a.replenish(13, Resource.SHEEP)
     b.replenish(4, Resource.SHEEP)
@@ -73,7 +73,7 @@ def test_can_subtract():
 
 
 def test_to_array():
-    a = ResourceDecks(empty=True)
+    a = ResourceDeck(empty=True)
     assert len(a.to_array()) == 0
 
     a.replenish(3, Resource.SHEEP)

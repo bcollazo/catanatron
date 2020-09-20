@@ -38,14 +38,14 @@ export default function SidePanel({ state }) {
   const players = state.players.map(
     ({
       color,
-      resource_decks,
+      resource_deck,
       public_victory_points,
       actual_victory_points,
     }) => {
       const colorClass = `bg-white bg-${color.toLowerCase()}-700 h-24`;
       return (
         <div key={color} className={colorClass}>
-          <div>{JSON.stringify(resource_decks, null, 2)}</div>
+          <div>{JSON.stringify(resource_deck, null, 2)}</div>
           <div>VPs: {public_victory_points}</div>
           <div>AVPs: {actual_victory_points}</div>
         </div>

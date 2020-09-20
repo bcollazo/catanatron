@@ -9,7 +9,7 @@ from catanatron.game import Game
 from catanatron.models.map import Water, Port, Tile
 from catanatron.models.player import RandomPlayer, Color, Player
 from catanatron.models.actions import Action
-from catanatron.models.decks import ResourceDecks
+from catanatron.models.decks import ResourceDeck
 from catanatron.models.board import Building
 from catanatron.models.board_initializer import Node, Edge, NodeRef, EdgeRef
 
@@ -96,7 +96,7 @@ class GameEncoder(json.JSONEncoder):
                 "players": [self.default(p) for p in obj.players],
                 "robber_coordinate": obj.board.robber_coordinate,
             }
-        if isinstance(obj, ResourceDecks):
+        if isinstance(obj, ResourceDeck):
             return {resource.value: count for resource, count in obj.decks.items()}
         if isinstance(obj, Player):
             return obj.__dict__

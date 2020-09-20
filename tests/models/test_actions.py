@@ -10,7 +10,7 @@ from catanatron.models.board_initializer import NodeRef, EdgeRef
 from catanatron.models.enums import Resource
 from catanatron.models.player import Player, Color, SimplePlayer
 from catanatron.game import Game
-from catanatron.models.decks import ResourceDecks
+from catanatron.models.decks import ResourceDeck
 
 
 def test_playable_actions():
@@ -33,8 +33,8 @@ def test_road_possible_actions():
     )
     assert len(road_possible_actions(player, board)) == 0  # no money
 
-    player.resource_decks.replenish(1, Resource.WOOD)
-    player.resource_decks.replenish(1, Resource.BRICK)
+    player.resource_deck.replenish(1, Resource.WOOD)
+    player.resource_deck.replenish(1, Resource.BRICK)
     assert len(road_possible_actions(player, board)) == 3
 
     board.build_settlement(
@@ -56,7 +56,7 @@ def test_settlement_possible_actions():
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
     assert len(settlement_possible_actions(player, board)) == 0  # no money
 
-    player.resource_decks += ResourceDecks.settlement_cost()
+    player.resource_deck += ResourceDeck.settlement_cost()
     assert len(settlement_possible_actions(player, board)) == 1
 
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.NORTHWEST)])
@@ -74,8 +74,8 @@ def test_city_playable_actions():
     )
     assert len(city_possible_actions(player, board)) == 0  # no money
 
-    player.resource_decks.replenish(2, Resource.WHEAT)
-    player.resource_decks.replenish(3, Resource.ORE)
+    player.resource_deck.replenish(2, Resource.WHEAT)
+    player.resource_deck.replenish(3, Resource.ORE)
     assert len(city_possible_actions(player, board)) == 1
 
     board.build_settlement(
@@ -104,9 +104,9 @@ def test_robber_possibilities():
     assert len(robber_possibilities(red, board, players)) == 18
 
     # assert same number of possibilities, b.c. only one player to rob in this tile
-    orange.resource_decks.replenish(1, Resource.WHEAT)
+    orange.resource_deck.replenish(1, Resource.WHEAT)
     assert len(robber_possibilities(red, board, players)) == 18
 
     # now possibilites increase by 1 b.c. we have to decide to steal from blue or green
-    blue.resource_decks.replenish(1, Resource.WHEAT)
+    blue.resource_deck.replenish(1, Resource.WHEAT)
     assert len(robber_possibilities(red, board, players)) == 19

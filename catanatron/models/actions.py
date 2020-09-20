@@ -1,7 +1,7 @@
 from enum import Enum
 from collections import namedtuple
 
-from catanatron.models.decks import ResourceDecks
+from catanatron.models.decks import ResourceDeck
 from catanatron.models.board import BuildingType
 
 
@@ -30,7 +30,7 @@ Action = namedtuple("Action", ["player", "action_type", "value"])
 
 
 def road_possible_actions(player, board):
-    has_money = player.resource_decks.includes(ResourceDecks.road_cost())
+    has_money = player.resource_deck.includes(ResourceDeck.road_cost())
 
     roads = board.get_player_buildings(player.color, BuildingType.ROAD)
     has_roads_available = len(roads) < 15
@@ -43,7 +43,7 @@ def road_possible_actions(player, board):
 
 
 def settlement_possible_actions(player, board):
-    has_money = player.resource_decks.includes(ResourceDecks.settlement_cost())
+    has_money = player.resource_deck.includes(ResourceDeck.settlement_cost())
 
     settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
     has_settlements_available = len(settlements) < 5
@@ -59,7 +59,7 @@ def settlement_possible_actions(player, board):
 
 
 def city_possible_actions(player, board):
-    has_money = player.resource_decks.includes(ResourceDecks.city_cost())
+    has_money = player.resource_deck.includes(ResourceDeck.city_cost())
 
     cities = board.get_player_buildings(player.color, BuildingType.CITY)
     has_cities_available = len(cities) < 4
@@ -88,7 +88,7 @@ def robber_possibilities(player, board, players):
             if building is not None:
                 candidate = players_by_color[building.color]
                 if (
-                    candidate.resource_decks.num_cards() >= 1
+                    candidate.resource_deck.num_cards() >= 1
                     and candidate.color != player.color  # can't play yourself
                 ):
                     players_to_steal_from.add(candidate)

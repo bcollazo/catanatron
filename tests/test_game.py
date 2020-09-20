@@ -8,7 +8,7 @@ from catanatron.models.board_algorithms import longest_road, continuous_roads_by
 from catanatron.models.enums import Resource
 from catanatron.models.actions import ActionType, Action
 from catanatron.models.player import Player, Color, SimplePlayer
-from catanatron.models.decks import ResourceDecks
+from catanatron.models.decks import ResourceDeck
 
 
 def test_initial_build_phase():
@@ -26,10 +26,10 @@ def test_initial_build_phase():
     )
 
     # assert should have resources from last house.
-    assert players[0].resource_decks.num_cards() >= 1
-    assert players[0].resource_decks.num_cards() <= 3
-    assert players[1].resource_decks.num_cards() >= 1
-    assert players[1].resource_decks.num_cards() <= 3
+    assert players[0].resource_deck.num_cards() >= 1
+    assert players[0].resource_deck.num_cards() <= 3
+    assert players[1].resource_deck.num_cards() >= 1
+    assert players[1].resource_deck.num_cards() <= 3
 
 
 def test_can_play_for_a_bit():  # assert no exception thrown
@@ -54,20 +54,20 @@ def test_buying_road_is_payed_for():
     with pytest.raises(ValueError):  # not enough money
         game.execute(action)
 
-    players[0].resource_decks.replenish(1, Resource.WOOD)
-    players[0].resource_decks.replenish(1, Resource.BRICK)
+    players[0].resource_deck.replenish(1, Resource.WOOD)
+    players[0].resource_deck.replenish(1, Resource.BRICK)
     game.execute(action)
 
-    assert players[0].resource_decks.count(Resource.WOOD) == 0
-    assert players[0].resource_decks.count(Resource.BRICK) == 0
-    assert game.resource_decks.count(Resource.WOOD) == 20  # since we didnt yield
+    assert players[0].resource_deck.count(Resource.WOOD) == 0
+    assert players[0].resource_deck.count(Resource.BRICK) == 0
+    assert game.resource_deck.count(Resource.WOOD) == 20  # since we didnt yield
 
 
 def test_moving_robber_steals_correctly():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
-    players[1].resource_decks.replenish(1, Resource.WHEAT)
+    players[1].resource_deck.replenish(1, Resource.WHEAT)
     game.board.build_settlement(
         Color.BLUE,
         game.board.nodes[((0, 0, 0), NodeRef.SOUTH)],
@@ -76,13 +76,13 @@ def test_moving_robber_steals_correctly():
 
     action = Action(players[0], ActionType.MOVE_ROBBER, ((2, 0, -2), None))
     game.execute(action)
-    assert players[0].resource_decks.num_cards() == 0
-    assert players[1].resource_decks.num_cards() == 1
+    assert players[0].resource_deck.num_cards() == 0
+    assert players[1].resource_deck.num_cards() == 1
 
     action = Action(players[0], ActionType.MOVE_ROBBER, ((0, 0, 0), players[1]))
     game.execute(action)
-    assert players[0].resource_decks.num_cards() == 1
-    assert players[1].resource_decks.num_cards() == 0
+    assert players[0].resource_deck.num_cards() == 1
+    assert players[1].resource_deck.num_cards() == 0
 
 
 @patch("catanatron.game.roll_dice")
@@ -92,8 +92,8 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     game = Game(players)
     game.play_initial_build_phase()
 
-    players[1].resource_decks = ResourceDecks(empty=True)
-    players[1].resource_decks.replenish(7, Resource.WHEAT)
+    players[1].resource_deck = ResourceDeck(empty=True)
+    players[1].resource_deck.replenish(7, Resource.WHEAT)
     game.execute(Action(players[0], ActionType.ROLL, None))  # roll
     assert len(game.tick_queue) == 0
 
@@ -105,18 +105,18 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     game = Game(players)
     game.play_initial_build_phase()
 
-    players[1].resource_decks = ResourceDecks(empty=True)
-    players[1].resource_decks.replenish(9, Resource.WHEAT)
+    players[1].resource_deck = ResourceDeck(empty=True)
+    players[1].resource_deck.replenish(9, Resource.WHEAT)
     game.execute(Action(players[0], ActionType.ROLL, None))  # roll
     assert len(game.tick_queue) == 1
     game.play_tick()
-    assert players[1].resource_decks.num_cards() == 5
+    assert players[1].resource_deck.num_cards() == 5
 
 
 # ===== Yield Resources
 def test_yield_resources():
     board = Board()
-    resource_decks = ResourceDecks()
+    resource_deck = ResourceDeck()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -125,14 +125,14 @@ def test_yield_resources():
     board.build_settlement(
         Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
     )
-    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    payout, depleted = yield_resources(board, resource_deck, tile.number)
     assert len(depleted) == 0
     assert payout[Color.RED].count(tile.resource) >= 1
 
 
 def test_yield_resources_two_settlements():
     board = Board()
-    resource_decks = ResourceDecks()
+    resource_deck = ResourceDeck()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -144,14 +144,14 @@ def test_yield_resources_two_settlements():
     board.build_road(Color.RED, board.edges[(coordinate, EdgeRef.SOUTHWEST)])
     board.build_road(Color.RED, board.edges[(coordinate, EdgeRef.WEST)])
     board.build_settlement(Color.RED, board.nodes[(coordinate, NodeRef.NORTHWEST)])
-    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    payout, depleted = yield_resources(board, resource_deck, tile.number)
     assert len(depleted) == 0
     assert payout[Color.RED].count(tile.resource) >= 2
 
 
 def test_yield_resources_two_players_and_city():
     board = Board()
-    resource_decks = ResourceDecks()
+    resource_deck = ResourceDeck()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -173,7 +173,7 @@ def test_yield_resources_two_players_and_city():
         initial_build_phase=True,
     )
     board.build_city(Color.BLUE, board.nodes[(coordinate, NodeRef.NORTHEAST)])
-    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    payout, depleted = yield_resources(board, resource_deck, tile.number)
     assert len(depleted) == 0
     assert payout[Color.RED].count(tile.resource) >= 3
     assert payout[Color.BLUE].count(tile.resource) >= 2
@@ -181,7 +181,7 @@ def test_yield_resources_two_players_and_city():
 
 def test_empty_payout_if_not_enough_resources():
     board = Board()
-    resource_decks = ResourceDecks()
+    resource_deck = ResourceDeck()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -191,9 +191,9 @@ def test_empty_payout_if_not_enough_resources():
         Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)], initial_build_phase=True
     )
     board.build_city(Color.RED, board.nodes[(coordinate, NodeRef.SOUTH)])
-    resource_decks.draw(18, tile.resource)
+    resource_deck.draw(18, tile.resource)
 
-    payout, depleted = yield_resources(board, resource_decks, tile.number)
+    payout, depleted = yield_resources(board, resource_deck, tile.number)
     assert depleted == [tile.resource]
     assert Color.RED not in payout or payout[Color.RED].count(tile.resource) == 0
 
@@ -202,8 +202,8 @@ def test_empty_payout_if_not_enough_resources():
 def test_longest_road_simple():
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
-    red.resource_decks += ResourceDecks()  # whole bank in hand
-    blue.resource_decks += ResourceDecks()  # whole bank in hand
+    red.resource_deck += ResourceDeck()  # whole bank in hand
+    blue.resource_deck += ResourceDeck()  # whole bank in hand
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes
@@ -241,8 +241,8 @@ def test_longest_road_simple():
 def test_longest_road_tie():
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
-    red.resource_decks += ResourceDecks()  # whole bank in hand
-    blue.resource_decks += ResourceDecks()  # whole bank in hand
+    red.resource_deck += ResourceDeck()  # whole bank in hand
+    blue.resource_deck += ResourceDeck()  # whole bank in hand
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes
@@ -321,8 +321,8 @@ def test_longest_road_tie():
 def test_complicated_road():  # classic 8-like roads
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
-    red.resource_decks += ResourceDecks()  # whole bank in hand
-    blue.resource_decks += ResourceDecks()  # whole bank in hand
+    red.resource_deck += ResourceDeck()  # whole bank in hand
+    blue.resource_deck += ResourceDeck()  # whole bank in hand
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes

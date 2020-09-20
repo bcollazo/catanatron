@@ -15,18 +15,18 @@ from catanatron.models.actions import (
     settlement_possible_actions,
 )
 from catanatron.models.player import Player
-from catanatron.models.decks import ResourceDecks
+from catanatron.models.decks import ResourceDeck
 
 
 def roll_dice():
     return (random.randint(1, 6), random.randint(1, 6))
 
 
-def yield_resources(board, resource_decks, number):
+def yield_resources(board, resource_deck, number):
     """
     Returns:
         (payouts, depleted): tuple where:
-        payouts: dictionary of "resource_decks" keyed by player
+        payouts: dictionary of "resource_deck" keyed by player
                 e.g. {Color.RED: ResourceDeck({Resource.WEAT: 3})}
             depleted: list of resources that couldn't yield
     """
@@ -51,13 +51,13 @@ def yield_resources(board, resource_decks, number):
     depleted = []
     for resource in Resource:
         total = resource_totals[resource]
-        if not resource_decks.can_draw(total, resource):
+        if not resource_deck.can_draw(total, resource):
             depleted.append(resource)
 
-    # build final data ResourceDecks structure
+    # build final data ResourceDeck structure
     payout = {}
     for player, player_payout in intented_payout.items():
-        payout[player] = ResourceDecks(empty=True)
+        payout[player] = ResourceDeck(empty=True)
 
         for resource, count in player_payout.items():
             if resource not in depleted:
@@ -78,7 +78,7 @@ class Game:
         self.map = BaseMap()
         self.board = Board(self.map)
         self.actions = []  # log of all action taken by players
-        self.resource_decks = ResourceDecks()
+        self.resource_deck = ResourceDeck()
 
         # variables to keep track of what to do next
         self.current_player_index = 0
@@ -130,7 +130,7 @@ class Game:
         for (player, node) in second_settlements:
             for tile in self.board.get_adjacent_tiles(node):
                 if tile.resource != None:
-                    player.resource_decks.replenish(1, tile.resource)
+                    player.resource_deck.replenish(1, tile.resource)
 
     def winning_player(self):
         for player in self.players:
@@ -187,24 +187,24 @@ class Game:
                 initial_build_phase=initial_build_phase,
             )
             if not initial_build_phase:
-                action.player.resource_decks -= ResourceDecks.settlement_cost()
-                self.resource_decks += ResourceDecks.settlement_cost()  # replenish bank
+                action.player.resource_deck -= ResourceDeck.settlement_cost()
+                self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_ROAD:
             self.board.build_road(action.player.color, action.value)
             if not initial_build_phase:
-                action.player.resource_decks -= ResourceDecks.road_cost()
-                self.resource_decks += ResourceDecks.road_cost()  # replenish bank
+                action.player.resource_deck -= ResourceDeck.road_cost()
+                self.resource_deck += ResourceDeck.road_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_CITY:
             self.board.build_city(action.player.color, action.value)
-            action.player.resource_decks -= ResourceDecks.city_cost()
-            self.resource_decks += ResourceDecks.city_cost()  # replenish bank
+            action.player.resource_deck -= ResourceDeck.city_cost()
+            self.resource_deck += ResourceDeck.city_cost()  # replenish bank
         elif action.action_type == ActionType.ROLL:
             dices = roll_dice()
             number = dices[0] + dices[1]
 
             if number == 7:
                 players_to_discard = [
-                    p for p in self.players if p.resource_decks.num_cards() > 7
+                    p for p in self.players if p.resource_deck.num_cards() > 7
                 ]
                 self.tick_queue.extend(
                     [
@@ -215,14 +215,14 @@ class Game:
                 self.moving_robber = True
             else:
                 payout, depleted = yield_resources(
-                    self.board, self.resource_decks, number
+                    self.board, self.resource_deck, number
                 )
-                for color, resource_decks in payout.items():
+                for color, resource_deck in payout.items():
                     player = self.players_by_color[color]
 
                     # Atomically add to player's hand and remove from bank
-                    player.resource_decks += resource_decks
-                    self.resource_decks -= resource_decks
+                    player.resource_deck += resource_deck
+                    self.resource_deck -= resource_deck
 
             action = Action(action.player, action.action_type, dices)
             self.current_player_has_roll = True
@@ -230,22 +230,22 @@ class Game:
             (coordinate, player_to_steal_from) = action.value
             self.board.robber_coordinate = coordinate
             if player_to_steal_from is not None:
-                hand = player_to_steal_from.resource_decks.to_array()
+                hand = player_to_steal_from.resource_deck.to_array()
                 resource = random.choice(hand)
-                player_to_steal_from.resource_decks.draw(1, resource)
-                self.current_player().resource_decks.replenish(1, resource)
+                player_to_steal_from.resource_deck.draw(1, resource)
+                self.current_player().resource_deck.replenish(1, resource)
 
             self.moving_robber = False
         elif action.action_type == ActionType.DISCARD:
-            num_cards = action.player.resource_decks.num_cards()
+            num_cards = action.player.resource_deck.num_cards()
             discarded = action.player.discard()
             assert len(discarded) == num_cards // 2
 
-            to_discard = ResourceDecks(empty=True)
+            to_discard = ResourceDeck(empty=True)
             for resource in discarded:
                 to_discard.replenish(1, resource)
-            action.player.resource_decks -= to_discard
-            self.resource_decks += to_discard
+            action.player.resource_deck -= to_discard
+            self.resource_deck += to_discard
 
             action = Action(action.player, action.action_type, discarded)
         else:

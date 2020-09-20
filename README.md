@@ -24,7 +24,7 @@ class MyPlayer(Player):
         raise NotImplementedError
 
     def discard(self):
-        """Must return n/2 cards to discard from self.resource_decks"""
+        """Must return n/2 cards to discard from self.resource_deck"""
         raise NotImplementedError
 ```
 
