@@ -92,7 +92,7 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     game = Game(players)
     game.play_initial_build_phase()
 
-    players[1].resource_deck = ResourceDeck(empty=True)
+    players[1].resource_deck = ResourceDeck()
     players[1].resource_deck.replenish(7, Resource.WHEAT)
     game.execute(Action(players[0], ActionType.ROLL, None))  # roll
     assert len(game.tick_queue) == 0
@@ -105,7 +105,7 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     game = Game(players)
     game.play_initial_build_phase()
 
-    players[1].resource_deck = ResourceDeck(empty=True)
+    players[1].resource_deck = ResourceDeck()
     players[1].resource_deck.replenish(9, Resource.WHEAT)
     game.execute(Action(players[0], ActionType.ROLL, None))  # roll
     assert len(game.tick_queue) == 1
@@ -116,7 +116,7 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
 # ===== Yield Resources
 def test_yield_resources():
     board = Board()
-    resource_deck = ResourceDeck()
+    resource_deck = ResourceDeck.starting_bank()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -132,7 +132,7 @@ def test_yield_resources():
 
 def test_yield_resources_two_settlements():
     board = Board()
-    resource_deck = ResourceDeck()
+    resource_deck = ResourceDeck.starting_bank()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -151,7 +151,7 @@ def test_yield_resources_two_settlements():
 
 def test_yield_resources_two_players_and_city():
     board = Board()
-    resource_deck = ResourceDeck()
+    resource_deck = ResourceDeck.starting_bank()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -181,7 +181,7 @@ def test_yield_resources_two_players_and_city():
 
 def test_empty_payout_if_not_enough_resources():
     board = Board()
-    resource_deck = ResourceDeck()
+    resource_deck = ResourceDeck.starting_bank()
 
     tile, coordinate = board.tiles[(0, 0, 0)], (0, 0, 0)
     if tile.resource == None:  # is desert
@@ -202,8 +202,8 @@ def test_empty_payout_if_not_enough_resources():
 def test_longest_road_simple():
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
-    red.resource_deck += ResourceDeck()  # whole bank in hand
-    blue.resource_deck += ResourceDeck()  # whole bank in hand
+    red.resource_deck += ResourceDeck.starting_bank()
+    blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes
@@ -241,8 +241,8 @@ def test_longest_road_simple():
 def test_longest_road_tie():
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
-    red.resource_deck += ResourceDeck()  # whole bank in hand
-    blue.resource_deck += ResourceDeck()  # whole bank in hand
+    red.resource_deck += ResourceDeck.starting_bank()
+    blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes
@@ -321,8 +321,8 @@ def test_longest_road_tie():
 def test_complicated_road():  # classic 8-like roads
     red = Player(Color.RED)
     blue = Player(Color.BLUE)
-    red.resource_deck += ResourceDeck()  # whole bank in hand
-    blue.resource_deck += ResourceDeck()  # whole bank in hand
+    red.resource_deck += ResourceDeck.starting_bank()
+    blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
     nodes = game.board.nodes

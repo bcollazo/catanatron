@@ -16,7 +16,7 @@ class Player:
         self.color = color
         self.public_victory_points = 0
         self.actual_victory_points = 0
-        self.resource_deck = ResourceDeck(empty=True)
+        self.resource_deck = ResourceDeck()
 
     def decide(self, game, playable_actions):
         """Should return one of the playable_actions.

@@ -58,7 +58,7 @@ def yield_resources(board, resource_deck, number):
     # build final data ResourceDeck structure
     payout = {}
     for player, player_payout in intented_payout.items():
-        payout[player] = ResourceDeck(empty=True)
+        payout[player] = ResourceDeck()
 
         for resource, count in player_payout.items():
             if resource not in depleted:
@@ -79,7 +79,7 @@ class Game:
         self.map = BaseMap()
         self.board = Board(self.map)
         self.actions = []  # log of all action taken by players
-        self.resource_deck = ResourceDeck()
+        self.resource_deck = ResourceDeck.starting_bank()
 
         # variables to keep track of what to do next
         self.current_player_index = 0
@@ -242,7 +242,7 @@ class Game:
             discarded = action.player.discard()
             assert len(discarded) == num_cards // 2
 
-            to_discard = ResourceDeck(empty=True)
+            to_discard = ResourceDeck()
             for resource in discarded:
                 to_discard.replenish(1, resource)
             action.player.resource_deck -= to_discard

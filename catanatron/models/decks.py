@@ -59,7 +59,7 @@ class Deck:
 class ResourceDeck(Deck):
     @staticmethod
     def starting_bank():
-        deck = ResourceDeck(empty=True)
+        deck = ResourceDeck()
         deck.replenish(19, Resource.WOOD)
         deck.replenish(19, Resource.BRICK)
         deck.replenish(19, Resource.SHEEP)
@@ -69,14 +69,14 @@ class ResourceDeck(Deck):
 
     @staticmethod
     def road_cost():
-        deck = ResourceDeck(empty=True)
+        deck = ResourceDeck()
         deck.replenish(1, Resource.WOOD)
         deck.replenish(1, Resource.BRICK)
         return deck
 
     @staticmethod
     def settlement_cost():
-        deck = ResourceDeck(empty=True)
+        deck = ResourceDeck()
         deck.replenish(1, Resource.WOOD)
         deck.replenish(1, Resource.BRICK)
         deck.replenish(1, Resource.SHEEP)
@@ -85,12 +85,10 @@ class ResourceDeck(Deck):
 
     @staticmethod
     def city_cost():
-        deck = ResourceDeck(empty=True)
+        deck = ResourceDeck()
         deck.replenish(2, Resource.WHEAT)
         deck.replenish(3, Resource.ORE)
         return deck
 
-    def __init__(self, empty=False):
+    def __init__(self):
         Deck.__init__(self, Resource)
-        if not empty:
-            self.__add__(ResourceDeck.starting_bank())
