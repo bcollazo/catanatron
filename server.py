@@ -97,7 +97,7 @@ class GameEncoder(json.JSONEncoder):
                 "robber_coordinate": obj.board.robber_coordinate,
             }
         if isinstance(obj, ResourceDeck):
-            return {resource.value: count for resource, count in obj.decks.items()}
+            return {resource.value: count for resource, count in obj.cards.items()}
         if isinstance(obj, Player):
             return obj.__dict__
         if isinstance(obj, Node) or isinstance(obj, Edge):
