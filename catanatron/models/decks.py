@@ -1,4 +1,4 @@
-from catanatron.models.enums import Resource
+from catanatron.models.enums import Resource, DevelopmentCard
 
 
 class Deck:
@@ -92,3 +92,18 @@ class ResourceDeck(Deck):
 
     def __init__(self):
         Deck.__init__(self, Resource)
+
+
+class DevelopmentDeck(Deck):
+    @staticmethod
+    def starting_bank():
+        deck = DevelopmentDeck()
+        deck.replenish(14, DevelopmentCard.KNIGHT)
+        deck.replenish(2, DevelopmentCard.YEAR_OF_PLENTY)
+        deck.replenish(2, DevelopmentCard.ROAD_BUILDING)
+        deck.replenish(2, DevelopmentCard.MONOPOLY)
+        deck.replenish(5, DevelopmentCard.VICTORY_POINT)
+        return deck
+
+    def __init__(self):
+        Deck.__init__(self, DevelopmentCard)

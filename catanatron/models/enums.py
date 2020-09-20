@@ -8,3 +8,11 @@ class Resource(Enum):
     SHEEP = "SHEEP"
     WHEAT = "WHEAT"
     ORE = "ORE"
+
+
+class DevelopmentCard(Enum):
+    KNIGHT = "KNIGHT"
+    YEAR_OF_PLENTY = "YEAR_OF_PLENTY"
+    MONOPOLY = "MONOPOLY"
+    ROAD_BUILDING = "ROAD_BUILDING"
+    VICTORY_POINT = "VICTORY_POINT"
