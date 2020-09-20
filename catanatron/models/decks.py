@@ -35,7 +35,7 @@ class ResourceDeck:
             Resource.ORE: starting_amount,
         }
 
-    def includes(self, other):
+    def includes(self, other: ResourceDeck):
         for resource in Resource:
             if self.count(resource) < other.count(resource):
                 return False
@@ -69,12 +69,12 @@ class ResourceDeck:
             array.extend([resource] * self.count(resource))
         return array
 
-    def __add__(self, other):
+    def __add__(self, other: ResourceDeck):
         for resource in Resource:
             self.replenish(other.count(resource), resource)
         return self
 
-    def __sub__(self, other):
+    def __sub__(self, other: ResourceDeck):
         for resource in Resource:
             self.draw(other.count(resource), resource)
         return self
