@@ -12,6 +12,7 @@ coverage = "*"
 black = "*"
 pytest = "*"
 coveralls = "*"
+psycopg2 = "*"
 
 [requires]
 python_version = "3.8"

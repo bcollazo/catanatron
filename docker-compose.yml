@@ -1,0 +1,10 @@
+version: "3.3"
+services:
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=catanatron
+      - POSTGRES_PASSWORD=victorypoint
+      - POSTGRES_DB=catanatron_db
+    ports:
+      - 5432:5432
