@@ -34,6 +34,8 @@ following on three different Terminal tabs.
 
 ### React UI
 
+Make sure you have `yarn` installed (https://classic.yarnpkg.com/en/docs/install/).
+
 ```
 cd ui/
 yarn install
@@ -41,6 +43,8 @@ yarn start
 ```
 
 ### Flask Web Server
+
+Make sure you have `pipenv` installed (https://pipenv-fork.readthedocs.io/en/latest/install.html#installing-pipenv).
 
 ```
 pipenv install
@@ -52,7 +56,7 @@ flask run
 
 ### PostgreSQL Database
 
-Make sure you have docker-compose installed (https://docs.docker.com/compose/install/).
+Make sure you have `docker-compose` installed (https://docs.docker.com/compose/install/).
 
 ```
 docker-compose up
@@ -60,7 +64,8 @@ docker-compose up
 
 ### Running a Game
 
-After bringing up the three components, you can run the `play.py` script which will run a game and print out a link to the final state.
+After bringing up the three components, you can run the `play.py` script which
+will run a game and print out a link to watch the game.
 
 ```
 python play.py
@@ -68,7 +73,7 @@ python play.py
 
 ## Developing for Catanatron
 
-To develop for Catanatron core logic you can run the following test suite:
+To develop for Catanatron core logic you can use the following test suite:
 
 ```
 coverage run --source=catanatron -m pytest tests/ && coverage report
