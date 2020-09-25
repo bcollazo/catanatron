@@ -16,7 +16,7 @@ class GameEncoder(json.JSONEncoder):
             return None
         if isinstance(obj, Enum):
             return obj.value
-        if isinstance(obj, Building) or isinstance(obj, Action):
+        if isinstance(obj, tuple):
             return obj
         if isinstance(obj, Game):
             nodes = {}
