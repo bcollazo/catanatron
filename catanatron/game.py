@@ -2,10 +2,10 @@ import random
 from typing import Iterable
 from collections import namedtuple, defaultdict
 
+from catanatron.algorithms import longest_road
 from catanatron.models.map import BaseMap
 from catanatron.models.board import Board, BuildingType
 from catanatron.models.board_initializer import Node
-from catanatron.models.board_algorithms import longest_road
 from catanatron.models.enums import Resource, DevelopmentCard
 from catanatron.models.actions import (
     Action,

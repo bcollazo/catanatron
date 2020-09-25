@@ -1,7 +1,7 @@
+from catanatron.algorithms import longest_road
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import EdgeRef, NodeRef
-from catanatron.models.board_algorithms import longest_road
-from catanatron.models.player import Player, Color
+from catanatron.models.player import Color
 
 # ===== Buildable nodes
 def test_buildable_nodes():

@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from catanatron.game import Game, yield_resources
+from catanatron.algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
-from catanatron.models.board_algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.enums import Resource
 from catanatron.models.actions import ActionType, Action
 from catanatron.models.player import Player, Color, SimplePlayer
