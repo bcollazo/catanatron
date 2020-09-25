@@ -18,6 +18,9 @@ from catanatron.models.actions import (
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 
+# To timeout RandomRobots from getting stuck...
+TURNS_LIMIT = 1000
+
 
 def roll_dice():
     return (random.randint(1, 6), random.randint(1, 6))
@@ -89,10 +92,12 @@ class Game:
         self.tick_queue = []
         random.shuffle(self.players)
 
+        self.num_turns = 0
+
     def play(self):
         """Runs the game until the end"""
         self.play_initial_build_phase()
-        while self.winning_player() == None:
+        while self.winning_player() == None and self.num_turns < TURNS_LIMIT:
             self.play_tick()
 
     def play_initial_build_phase(self):
@@ -136,7 +141,7 @@ class Game:
 
     def winning_player(self):
         for player in self.players:
-            if player.actual_victory_points == 10:
+            if player.actual_victory_points >= 10:
                 return player
         return None
 
@@ -174,7 +179,10 @@ class Game:
         for action in city_possible_actions(player, self.board):
             actions.append(action)
 
-        if player.resource_deck.includes(ResourceDeck.development_card_cost()):
+        if (
+            player.resource_deck.includes(ResourceDeck.development_card_cost())
+            and self.development_deck.num_cards() > 0
+        ):
             actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
 
         return actions
@@ -185,6 +193,7 @@ class Game:
                 self.players
             )
             self.current_player_has_roll = False
+            self.num_turns += 1
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
             self.board.build_settlement(
                 action.player.color,
