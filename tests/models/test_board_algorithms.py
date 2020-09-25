@@ -41,6 +41,29 @@ def test_buildable_nodes_respects_distance_two():
     assert nodes.pop() == board.nodes[((0, 0, 0), NodeRef.NORTHWEST)]
 
 
+def test_cant_use_enemy_roads_to_connect():
+    board = Board()
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHEAST)])
+
+    board.build_settlement(
+        Color.BLUE,
+        board.nodes[((0, 0, 0), NodeRef.NORTHEAST)],
+        initial_build_phase=True,
+    )
+    board.build_road(Color.BLUE, board.edges[((0, 0, 0), EdgeRef.EAST)])
+    board.build_road(Color.BLUE, board.edges[((0, 0, 0), EdgeRef.NORTHEAST)])
+    board.build_road(Color.BLUE, board.edges[((1, 0, -1), EdgeRef.WEST)])
+
+    nodes = board.buildable_nodes(Color.RED)
+    assert len(nodes) == 0
+
+    nodes = board.buildable_nodes(Color.BLUE)
+    assert len(nodes) == 1
+
+
 # ===== Buildable edges
 def test_buildable_edges_simple():
     board = Board()

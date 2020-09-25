@@ -1,7 +1,7 @@
 import pytest
 
 from catanatron.models.enums import Resource
-from catanatron.models.decks import ResourceDeck
+from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 
 
 def test_resource_deck_init():
@@ -80,3 +80,11 @@ def test_to_array():
     a.replenish(2, Resource.BRICK)
     assert len(a.to_array()) == 5
     assert len(set(a.to_array())) == 2
+
+
+def test_random_draw():
+    a = DevelopmentDeck.starting_bank()
+    num_cards = a.num_cards()
+
+    a.random_draw()
+    assert a.num_cards() == num_cards - 1
