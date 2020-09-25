@@ -24,7 +24,7 @@ def test_playable_actions():
 
 def test_road_possible_actions():
     board = Board()
-    player = Player(Color.RED)
+    player = SimplePlayer(Color.RED)
 
     assert len(road_possible_actions(player, board)) == 0  # no money or place
 
@@ -45,7 +45,7 @@ def test_road_possible_actions():
 
 def test_settlement_possible_actions():
     board = Board()
-    player = Player(Color.RED)
+    player = SimplePlayer(Color.RED)
 
     assert len(settlement_possible_actions(player, board)) == 0  # no money or place
 
@@ -65,7 +65,7 @@ def test_settlement_possible_actions():
 
 def test_city_playable_actions():
     board = Board()
-    player = Player(Color.RED)
+    player = SimplePlayer(Color.RED)
 
     assert len(city_possible_actions(player, board)) == 0  # no money or place
 
@@ -86,9 +86,9 @@ def test_city_playable_actions():
 
 def test_robber_possibilities():
     board = Board()
-    red = Player(Color.RED)
-    blue = Player(Color.BLUE)
-    orange = Player(Color.ORANGE)
+    red = SimplePlayer(Color.RED)
+    blue = SimplePlayer(Color.BLUE)
+    orange = SimplePlayer(Color.ORANGE)
     players = [red, blue, orange]
 
     # one for each resource tile (excluding desert)
@@ -107,6 +107,8 @@ def test_robber_possibilities():
     orange.resource_deck.replenish(1, Resource.WHEAT)
     assert len(robber_possibilities(red, board, players)) == 18
 
-    # now possibilites increase by 1 b.c. we have to decide to steal from blue or green
+    # now possibilites increase by 1 b.c. we have to decide to steal from blue or orange
     blue.resource_deck.replenish(1, Resource.WHEAT)
+    # TODO: This fails sometimes. Investigate.
+    print(orange, blue, robber_possibilities(red, board, players))
     assert len(robber_possibilities(red, board, players)) == 19
