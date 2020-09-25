@@ -6,12 +6,10 @@ Settlers of Catan simluation environment in Python and Machine-Learning player.
 
 ## Usage
 
-### API
-
 You can create your own AI bots/players implementing the following API:
 
 ```python
-from catanatron.models.players import RandomPlayer
+from catanatron.models.players import Player
 
 class MyPlayer(Player):
     def decide(self, game: Game, playable_actions: Iterable[Action]):
@@ -28,30 +26,21 @@ class MyPlayer(Player):
         raise NotImplementedError
 ```
 
-Then running games like:
+## Running and Watching a Game
 
-```python
-from catanatron.models.game import Game
-from catanatron.models.players import RandomPlayer, MyPlayer
+To visualize a game execution, you'll need to run 3 components. A React UI, a Flask
+Web Server, and a PostgreSQL database (provided in docker container). Run the
+following on three different Terminal tabs.
 
-players = [
-    RandomPlayer(Color.RED),
-    RandomPlayer(Color.BLUE),
-    RandomPlayer(Color.GREEN),
-    MyPlayer(Color.WHITE)
-]
-game = Game(players)
-game.play()
+### React UI
+
+```
+cd ui/
+yarn install
+yarn start
 ```
 
-You can then watch the game in the debugger UI or save a serialized verion of the game state.
-
-### Debugger UI
-
-This brings up a React-powered web interface where you can inspect robots playing
-the game.
-
-On one tab (server):
+### Flask Web Server
 
 ```
 pipenv install
@@ -61,15 +50,23 @@ export FLASK_APP=server.py
 flask run
 ```
 
-On another tab (client):
+### PostgreSQL Database
+
+Make sure you have docker-compose installed (https://docs.docker.com/compose/install/).
 
 ```
-cd ui/
-yarn install
-yarn start
+docker-compose up
 ```
 
-## Tests
+### Running a Game
+
+After bringing up the three components, you can run the `play.py` script which will run a game and print out a link to the final state.
+
+```
+python play.py
+```
+
+## Developing for Catanatron
 
 To develop for Catanatron core logic you can run the following test suite:
 
