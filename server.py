@@ -45,6 +45,7 @@ def tick_game(game_id):
     if game is None:
         abort(404, description="Resource not found")
 
-    game.play_tick()
+    if game.winning_player() is None:
+        game.play_tick()
     save_game(game_id, game)
     return json.dumps(game, cls=GameEncoder)
