@@ -1,4 +1,5 @@
 from catanatron.models.actions import (
+    year_of_plenty_possible_actions,
     road_possible_actions,
     settlement_possible_actions,
     city_possible_actions,
@@ -20,6 +21,19 @@ def test_playable_actions():
     actions = game.playable_actions(players[0])
     assert len(actions) == 1
     assert actions[0].action_type == ActionType.ROLL
+
+
+def test_year_of_plenty_possible_actions_full_resource_bank():
+    player = SimplePlayer(Color.RED)
+    bank_resource_deck = ResourceDeck.starting_bank()
+    assert len(year_of_plenty_possible_actions(player, bank_resource_deck)) == 15
+
+
+def test_year_of_plenty_possible_actions_not_enough_cards():
+    player = SimplePlayer(Color.RED)
+    bank_resource_deck = ResourceDeck()
+    bank_resource_deck.replenish(2, Resource.ORE)
+    assert len(year_of_plenty_possible_actions(player, bank_resource_deck)) == 1
 
 
 def test_road_possible_actions():
