@@ -5,7 +5,7 @@ from catanatron.game import Game, yield_resources
 from catanatron.algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
-from catanatron.models.enums import Resource
+from catanatron.models.enums import Resource, DevelopmentCard
 from catanatron.models.actions import ActionType, Action
 from catanatron.models.player import Player, Color, SimplePlayer
 from catanatron.models.decks import ResourceDeck
@@ -137,6 +137,59 @@ def test_cant_buy_more_than_max_card():
         game.execute(Action(players[0], ActionType.BUY_DEVELOPMENT_CARD, None))
 
     assert players[0].resource_deck.num_cards() == 3
+
+
+def test_play_year_of_plenty_gives_player_resources():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    player_to_act = players[0]
+    player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
+    cards_to_add = ResourceDeck()
+    cards_to_add.replenish(1, Resource.ORE)
+    cards_to_add.replenish(1, Resource.WHEAT)
+    action_to_execute = Action(
+        player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add
+    )
+
+    game.execute(action_to_execute)
+
+    for card_type in Resource:
+        if card_type == Resource.ORE or card_type == Resource.WHEAT:
+            assert player_to_act.resource_deck.count(card_type) == 1
+            assert game.resource_deck.count(card_type) == 18
+        else:
+            assert player_to_act.resource_deck.count(card_type) == 0
+            assert game.resource_deck.count(card_type) == 19
+    assert player_to_act.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) == 0
+
+
+def test_play_year_of_plenty_not_enough_resources():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    player_to_act = players[0]
+    game = Game(players)
+    game.resource_deck = ResourceDeck()
+    player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
+
+    cards_to_add = ResourceDeck()
+    cards_to_add.replenish(1, Resource.ORE)
+    cards_to_add.replenish(1, Resource.WHEAT)
+    action_to_execute = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add)
+
+    with pytest.raises(ValueError):  # not enough cards in bank
+        game.execute(action_to_execute)
+
+
+def test_play_year_of_plenty_no_year_of_plenty_card():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+
+    cards_to_add = ResourceDeck()
+    cards_to_add.replenish(1, Resource.ORE)
+    cards_to_add.replenish(1, Resource.WHEAT)
+    action_to_execute = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add)
+
+    with pytest.raises(ValueError):  # no year of plenty card
+        game.execute(action_to_execute)
 
 
 # ===== Yield Resources

@@ -3,6 +3,7 @@ from collections import namedtuple
 
 from catanatron.models.decks import ResourceDeck
 from catanatron.models.board import BuildingType
+from catanatron.models.enums import Resource
 
 
 class ActionType(Enum):
@@ -27,6 +28,29 @@ class ActionType(Enum):
 
 
 Action = namedtuple("Action", ["player", "action_type", "value"])
+
+
+def year_of_plenty_possible_actions(player, resource_deck):
+    possible_combinations = set()
+    actions = []
+    for first_card in Resource:
+        for second_card in Resource:
+            if (
+                resource_deck.can_draw(1, first_card)
+                and resource_deck.can_draw(1, second_card)
+                and (second_card, first_card) not in possible_combinations
+            ):
+                possible_combinations.add((first_card, second_card))
+                cards_selected = ResourceDeck()
+                cards_selected.replenish(1, first_card)
+                cards_selected.replenish(1, second_card)
+                actions.append(
+                    Action(player, ActionType.PLAY_YEAR_OF_PLENTY, cards_selected)
+                )
+
+    # TODO: If none of the combinations are possible due to shortages
+    # in the deck, allow player to draw one card
+    return actions
 
 
 def road_possible_actions(player, board):

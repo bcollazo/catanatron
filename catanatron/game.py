@@ -14,6 +14,7 @@ from catanatron.models.actions import (
     city_possible_actions,
     settlement_possible_actions,
     robber_possibilities,
+    year_of_plenty_possible_actions,
 )
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
@@ -179,6 +180,11 @@ class Game:
         for action in city_possible_actions(player, self.board):
             actions.append(action)
 
+        # Can only do if the player has not already played a development card
+        if player.has_year_of_plenty_card():
+            for action in year_of_plenty_possible_actions(player, self.resource_deck):
+                actions.append(action)
+
         if (
             player.resource_deck.includes(ResourceDeck.development_card_cost())
             and self.development_deck.num_cards() > 0
@@ -274,6 +280,22 @@ class Game:
             self.resource_deck += ResourceDeck.development_card_cost()
 
             action = Action(action.player, action.action_type, development_card)
+        elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
+            cards_selected = action.value  # Assuming action.value is a resource deck
+            player_to_act = action.player
+            if (
+                not player_to_act.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY)
+                > 0
+            ):
+                raise ValueError("Player doesn't have year of plenty card")
+            if not self.resource_deck.includes(cards_selected):
+                raise ValueError(
+                    "Not enough resources of this type (these types?) in bank"
+                )
+            player_to_act.resource_deck += cards_selected
+            player_to_act.development_deck.draw(1, DevelopmentCard.YEAR_OF_PLENTY)
+            self.resource_deck -= cards_selected
+
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 

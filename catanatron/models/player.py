@@ -2,6 +2,7 @@ import random
 from enum import Enum
 
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
+from catanatron.models.enums import DevelopmentCard
 
 
 class Color(Enum):
@@ -37,6 +38,9 @@ class Player:
 
     def has_knight_card(self):
         return False
+
+    def has_year_of_plenty_card(self):
+        return self.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) > 0
 
 
 class SimplePlayer(Player):
