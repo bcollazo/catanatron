@@ -173,7 +173,9 @@ def test_play_year_of_plenty_not_enough_resources():
     cards_to_add = ResourceDeck()
     cards_to_add.replenish(1, Resource.ORE)
     cards_to_add.replenish(1, Resource.WHEAT)
-    action_to_execute = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add)
+    action_to_execute = Action(
+        player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add
+    )
 
     with pytest.raises(ValueError):  # not enough cards in bank
         game.execute(action_to_execute)
@@ -190,6 +192,41 @@ def test_play_year_of_plenty_no_year_of_plenty_card():
 
     with pytest.raises(ValueError):  # no year of plenty card
         game.execute(action_to_execute)
+
+
+def test_play_monopoly_no_monopoly_card():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+
+    action_to_execute = Action(players[0], ActionType.PLAY_MONOPOLY, Resource.ORE)
+
+    with pytest.raises(ValueError):  # no monopoly
+        game.execute(action_to_execute)
+
+
+def test_play_monopoly_player_steals_cards():
+    player_to_act = SimplePlayer(Color.RED)
+    player_to_steal_from_1 = SimplePlayer(Color.BLUE)
+    player_to_steal_from_2 = SimplePlayer(Color.ORANGE)
+
+    player_to_act.development_deck.replenish(1, DevelopmentCard.MONOPOLY)
+
+    player_to_steal_from_1.resource_deck.replenish(3, Resource.ORE)
+    player_to_steal_from_1.resource_deck.replenish(1, Resource.WHEAT)
+    player_to_steal_from_2.resource_deck.replenish(2, Resource.ORE)
+    player_to_steal_from_2.resource_deck.replenish(1, Resource.WHEAT)
+
+    players = [player_to_act, player_to_steal_from_1, player_to_steal_from_2]
+    game = Game(players)
+    action_to_execute = Action(player_to_act, ActionType.PLAY_MONOPOLY, Resource.ORE)
+
+    game.execute(action_to_execute)
+
+    assert player_to_act.resource_deck.count(Resource.ORE) == 5
+    assert player_to_steal_from_1.resource_deck.count(Resource.ORE) == 0
+    assert player_to_steal_from_1.resource_deck.count(Resource.WHEAT) == 1
+    assert player_to_steal_from_2.resource_deck.count(Resource.ORE) == 0
+    assert player_to_steal_from_2.resource_deck.count(Resource.WHEAT) == 1
 
 
 # ===== Yield Resources

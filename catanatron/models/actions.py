@@ -30,6 +30,12 @@ class ActionType(Enum):
 Action = namedtuple("Action", ["player", "action_type", "value"])
 
 
+def monopoly_possible_actions(player):
+    return [
+        Action(player, ActionType.PLAY_MONOPOLY, card_type) for card_type in Resource
+    ]
+
+
 def year_of_plenty_possible_actions(player, resource_deck):
     possible_combinations = set()
     actions = []
