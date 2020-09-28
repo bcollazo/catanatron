@@ -304,11 +304,6 @@ class Game:
             cards_stolen = ResourceDeck()
             if not player_to_act.has_monopoly_card():
                 raise ValueError("Player doesn't have monopoly card")
-            # Loop through players
-            # For each player, count number of resource specified
-            # subtract from their resource deck
-            # replentish new resource deck
-            # add new resource deck to current player's hand
             for player in self.players:
                 if not player_to_act.color == player.color:
                     number_of_cards_to_steal = player.resource_deck.count(
