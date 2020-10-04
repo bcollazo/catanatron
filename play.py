@@ -17,6 +17,6 @@ game = Game(
         RandomPlayer(Color.ORANGE),
     ],
 )
-game.play(lambda g: save_game_state(g))
+game.play()
 print({p.color.value: p.actual_victory_points for p in game.players})
 print("See result at http://localhost:3000/games/" + game.id)

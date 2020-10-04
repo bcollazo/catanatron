@@ -1,3 +1,6 @@
+import itertools
+import operator as op
+from functools import reduce
 from enum import Enum
 from collections import namedtuple
 
@@ -6,12 +9,25 @@ from catanatron.models.board import BuildingType
 from catanatron.models.enums import Resource
 
 
+class ActionPrompt(Enum):
+    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"
+    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"
+    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"
+    ROLL = "ROLL"
+    PLAY_TURN = "PLAY_TURN"
+    DISCARD = "DISCARD"
+    MOVE_ROBBER = "MOVE_ROBBER"
+
+
 class ActionType(Enum):
     ROLL = "ROLL"  # value is None or rolled value.
     MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Player|None).
     DISCARD = "DISCARD"  # value is None or discarded cards
 
     # Building/Buying
+    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"
+    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"
+    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"
     BUILD_ROAD = "BUILD_ROAD"  # value is edge
     BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node
     BUILD_CITY = "BUILD_CITY"
@@ -27,6 +43,7 @@ class ActionType(Enum):
     END_TURN = "END_TURN"
 
 
+# TODO: Distinguish between PossibleAction and FinalizedAction?
 Action = namedtuple("Action", ["player", "action_type", "value"])
 
 
@@ -130,3 +147,61 @@ def robber_possibilities(player, board, players):
                 actions.append(Action(player, ActionType.MOVE_ROBBER, (coordinate, p)))
 
     return actions
+
+
+def initial_settlement_possibilites(player, board, is_first):
+    action_type = (
+        ActionType.BUILD_FIRST_SETTLEMENT
+        if is_first
+        else ActionType.BUILD_SECOND_SETTLEMENT
+    )
+    buildable_nodes = board.buildable_nodes(player.color, initial_build_phase=True)
+    return list(map(lambda node: Action(player, action_type, node), buildable_nodes))
+
+
+def initial_road_possibilities(player, board, actions):
+    # Must be connected to last settlement
+    node_building_actions_by_player = filter(
+        lambda action: action.player == player
+        and action.action_type == ActionType.BUILD_FIRST_SETTLEMENT
+        or action.action_type == ActionType.BUILD_SECOND_SETTLEMENT,
+        actions,
+    )
+    last_settlement_node = list(node_building_actions_by_player)[-1].value
+
+    buildable_edges = filter(
+        lambda edge: last_settlement_node in edge.nodes,
+        board.buildable_edges(player.color),
+    )
+    return list(
+        map(
+            lambda edge: Action(player, ActionType.BUILD_INITIAL_ROAD, edge),
+            buildable_edges,
+        )
+    )
+
+
+def discard_possibilities(player):
+    hand = player.resource_deck.to_array()
+    num_cards = player.resource_deck.num_cards()
+    num_to_discard = num_cards // 2
+
+    num_possibilities = ncr(num_cards, num_to_discard)
+    if num_possibilities > 100000:  # if too many, just take first N
+        return [Action(player, ActionType.DISCARD, hand[:num_to_discard])]
+
+    to_discard = itertools.combinations(hand, num_to_discard)
+    return list(
+        map(
+            lambda combination: Action(player, ActionType.DISCARD, combination),
+            to_discard,
+        )
+    )
+
+
+def ncr(n, r):
+    """n choose r. helper for discard_possibilities"""
+    r = min(r, n - r)
+    numer = reduce(op.mul, range(n, n - r, -1), 1)
+    denom = reduce(op.mul, range(1, r + 1), 1)
+    return numer // denom

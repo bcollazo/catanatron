@@ -31,7 +31,8 @@ SELECT_GAME_QUERY = """
     SELECT pickle_data FROM game_states 
     WHERE game_id = %s ORDER BY action_index DESC LIMIT 1
 """
-SELECT_GAMES_QUERY = """SELECT * FROM game_states"""
+SELECT_GAME_IDS_QUERY = """SELECT DISTINCT game_id FROM game_states"""
+SELECT_STATES_QUERY = """SELECT * FROM game_states WHERE game_id = %s"""
 
 connection = psycopg2.connect(
     user="catanatron",
@@ -56,8 +57,8 @@ def save_game_state(game):
     connection.commit()
 
 
-def get_game(uuid):
-    cursor.execute(SELECT_GAME_QUERY, (uuid,))
+def get_last_game_state(game_id):
+    cursor.execute(SELECT_GAME_QUERY, (game_id,))
     row = cursor.fetchone()
     if row is None:
         return None
@@ -67,8 +68,17 @@ def get_game(uuid):
     return game
 
 
-def get_games():
-    cursor.execute(SELECT_GAMES_QUERY)
+# TODO: Filter by winners
+def get_finished_games_ids():
+    cursor.execute(SELECT_GAME_IDS_QUERY)
+    row = cursor.fetchone()
+    while row is not None:
+        yield row[0]
+        row = cursor.fetchone()
+
+
+def get_game_states(game_id):
+    cursor.execute(SELECT_STATES_QUERY, (game_id))
     row = cursor.fetchone()
     while row is not None:
         pickle_data = row[2]
