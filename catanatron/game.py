@@ -184,6 +184,9 @@ class Game:
         if player.has_year_of_plenty_card():
             for action in year_of_plenty_possible_actions(player, self.resource_deck):
                 actions.append(action)
+        if player.has_monopoly_card():
+            for action in monopoly_possible_actions(player):
+                actions.append(action)
 
         if (
             player.resource_deck.includes(ResourceDeck.development_card_cost())
@@ -295,6 +298,22 @@ class Game:
             player_to_act.resource_deck += cards_selected
             player_to_act.development_deck.draw(1, DevelopmentCard.YEAR_OF_PLENTY)
             self.resource_deck -= cards_selected
+        elif action.action_type == ActionType.PLAY_MONOPOLY:
+            player_to_act = action.player
+            card_type_to_steal = action.value
+            cards_stolen = ResourceDeck()
+            if not player_to_act.has_monopoly_card():
+                raise ValueError("Player doesn't have monopoly card")
+            for player in self.players:
+                if not player_to_act.color == player.color:
+                    number_of_cards_to_steal = player.resource_deck.count(
+                        card_type_to_steal
+                    )
+                    cards_stolen.replenish(number_of_cards_to_steal, card_type_to_steal)
+                    player.resource_deck.draw(
+                        number_of_cards_to_steal, card_type_to_steal
+                    )
+            player_to_act.resource_deck += cards_stolen
 
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))

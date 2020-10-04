@@ -1,4 +1,5 @@
 from catanatron.models.actions import (
+    monopoly_possible_actions,
     year_of_plenty_possible_actions,
     road_possible_actions,
     settlement_possible_actions,
@@ -34,6 +35,11 @@ def test_year_of_plenty_possible_actions_not_enough_cards():
     bank_resource_deck = ResourceDeck()
     bank_resource_deck.replenish(2, Resource.ORE)
     assert len(year_of_plenty_possible_actions(player, bank_resource_deck)) == 1
+
+
+def test_monopoly_possible_actions():
+    player = SimplePlayer(Color.RED)
+    assert len(monopoly_possible_actions(player)) == len(Resource)
 
 
 def test_road_possible_actions():

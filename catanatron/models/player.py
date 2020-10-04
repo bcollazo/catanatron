@@ -42,6 +42,9 @@ class Player:
     def has_year_of_plenty_card(self):
         return self.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) > 0
 
+    def has_monopoly_card(self):
+        return self.development_deck.count(DevelopmentCard.MONOPOLY) > 0
+
 
 class SimplePlayer(Player):
     def decide(self, game, playable_actions):
