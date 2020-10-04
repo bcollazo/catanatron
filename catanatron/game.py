@@ -1,3 +1,4 @@
+import uuid
 import random
 from typing import Iterable
 from collections import namedtuple, defaultdict
@@ -78,6 +79,7 @@ class Game:
     """
 
     def __init__(self, players: Iterable[Player]):
+        self.id = str(uuid.uuid4())
         self.players = players
         self.players_by_color = {p.color: p for p in players}
         self.map = BaseMap()
@@ -95,13 +97,13 @@ class Game:
 
         self.num_turns = 0
 
-    def play(self):
+    def play(self, action_callback=None):
         """Runs the game until the end"""
-        self.play_initial_build_phase()
+        self.play_initial_build_phase(action_callback)
         while self.winning_player() == None and self.num_turns < TURNS_LIMIT:
-            self.play_tick()
+            self.play_tick(action_callback)
 
-    def play_initial_build_phase(self):
+    def play_initial_build_phase(self, action_callback=None):
         """First player goes, settlement and road, ..."""
         for player in self.players + list(reversed(self.players)):
             # Place a settlement first
@@ -113,7 +115,9 @@ class Game:
                 buildable_nodes,
             )
             action = player.decide(self, list(actions))
-            self.execute(action, initial_build_phase=True)
+            self.execute(
+                action, initial_build_phase=True, action_callback=action_callback
+            )
 
             # Then a road, ensure its connected to this last settlement
             buildable_edges = filter(
@@ -125,7 +129,9 @@ class Game:
                 buildable_edges,
             )
             action = player.decide(self, list(actions))
-            self.execute(action, initial_build_phase=True)
+            self.execute(
+                action, initial_build_phase=True, action_callback=action_callback
+            )
 
         # yield resources of second settlement
         second_settlements = map(
@@ -140,13 +146,19 @@ class Game:
                 if tile.resource != None:
                     player.resource_deck.replenish(1, tile.resource)
 
+        # TODO: For the robot to better learn, refactor this method to use .execute via
+        #   ActionType.BUILD_FIRST_SETTLEMENT and ActionType.BUILD_SECOND_SETTLEMENT.
+        #   So that it learns second settlement yields.
+        # if action_callback:
+        #     action_callback()
+
     def winning_player(self):
         for player in self.players:
             if player.actual_victory_points >= 10:
                 return player
         return None
 
-    def play_tick(self):
+    def play_tick(self, action_callback=None):
         """
         Consume from queue (player, decision) to support special building phase,
             discarding, and other decisions out-of-turn.
@@ -158,7 +170,7 @@ class Game:
             player = self.players[self.current_player_index]
             actions = self.playable_actions(player)
         action = player.decide(self.board, actions)
-        self.execute(action)
+        self.execute(action, action_callback=action_callback)
 
     def playable_actions(self, player):
         if self.moving_robber:
@@ -196,7 +208,7 @@ class Game:
 
         return actions
 
-    def execute(self, action, initial_build_phase=False):
+    def execute(self, action, initial_build_phase=False, action_callback=None):
         if action.action_type == ActionType.END_TURN:
             self.current_player_index = (self.current_player_index + 1) % len(
                 self.players
@@ -321,6 +333,9 @@ class Game:
         # TODO: Think about possible-action/idea vs finalized-action design
         self.actions.append(action)
         self.count_victory_points()
+
+        if action_callback:
+            action_callback(self)
 
     def current_player(self):
         return self.players[self.current_player_index]
