@@ -18,5 +18,6 @@ game = Game(
     ],
 )
 game.play()
+save_game_state(game)
 print({p.color.value: p.actual_victory_points for p in game.players})
 print("See result at http://localhost:3000/games/" + game.id)

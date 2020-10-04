@@ -78,10 +78,10 @@ def get_finished_games_ids():
 
 
 def get_game_states(game_id):
-    cursor.execute(SELECT_STATES_QUERY, (game_id))
+    cursor.execute(SELECT_STATES_QUERY, (game_id,))
     row = cursor.fetchone()
     while row is not None:
-        pickle_data = row[2]
+        pickle_data = row[4]
         game = pickle.loads(pickle_data)
         yield game
         row = cursor.fetchone()
