@@ -16,6 +16,7 @@ from catanatron.models.actions import (
     settlement_possible_actions,
     robber_possibilities,
     year_of_plenty_possible_actions,
+    monopoly_possible_actions,
 )
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
@@ -326,6 +327,7 @@ class Game:
                         number_of_cards_to_steal, card_type_to_steal
                     )
             player_to_act.resource_deck += cards_stolen
+            player_to_act.development_deck.draw(1, DevelopmentCard.MONOPOLY)
 
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
