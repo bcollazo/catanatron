@@ -1,3 +1,4 @@
+import copy
 import itertools
 import operator as op
 from functools import reduce
@@ -37,7 +38,7 @@ class ActionType(Enum):
     PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, player)
     PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"
     PLAY_MONOPOLY = "PLAY_MONOPOLY"
-    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"
+    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_1, edge_2)
 
     # Trade
     MARITIME_TRADE = "MARITIME_TRADE"  # value is TradeOffer
@@ -127,7 +128,9 @@ def city_possible_actions(player, board):
         return []
 
 
-def robber_possibilities(player, board, players):
+def robber_possibilities(player, board, players, is_dev_card):
+    action_type = ActionType.PLAY_KNIGHT_CARD if is_dev_card else ActionType.MOVE_ROBBER
+
     players_by_color = {p.color: p for p in players}
     actions = []
     for coordinate, tile in board.resource_tiles():
@@ -148,10 +151,10 @@ def robber_possibilities(player, board, players):
                     players_to_steal_from.add(candidate)
 
         if len(players_to_steal_from) == 0:
-            actions.append(Action(player, ActionType.MOVE_ROBBER, (coordinate, None)))
+            actions.append(Action(player, action_type, (coordinate, None)))
         else:
             for p in players_to_steal_from:
-                actions.append(Action(player, ActionType.MOVE_ROBBER, (coordinate, p)))
+                actions.append(Action(player, action_type, (coordinate, p)))
 
     return actions
 
@@ -247,5 +250,27 @@ def maritime_trade_possibilities(player, bank_resource_cards, board):
                         possibilities.append(
                             Action(player, ActionType.MARITIME_TRADE, trade_offer)
                         )
+
+    return possibilities
+
+
+def road_building_possibilities(player, board):
+    """
+    On purpose we _dont_ remove equivalent possibilities, since we need to be
+    able to handle high branching degree anyway in AI.
+    """
+    first_edges = board.buildable_edges(player.color)
+    possibilities = []
+    for first_edge in first_edges:
+        board_copy = copy.deepcopy(board)
+        first_edge_copy = board_copy.get_edge_by_id(first_edge.id)
+        board_copy.build_road(player.color, first_edge_copy)
+        second_edges_copy = board_copy.buildable_edges(player.color)
+
+        for second_edge_copy in second_edges_copy:
+            second_edge = board.get_edge_by_id(second_edge_copy.id)
+            possibilities.append(
+                Action(player, ActionType.PLAY_ROAD_BUILDING, (first_edge, second_edge))
+            )
 
     return possibilities
