@@ -114,6 +114,7 @@ class Game:
 
         self.tick_queue = initialize_tick_queue(players)
         self.current_player_index = 0
+        self.played_dev_card_this_turn = False
         self.num_turns = 0
 
     def play(self, action_callback=None):
@@ -168,22 +169,21 @@ class Game:
                 actions.append(action)
             for action in city_possible_actions(player, self.board):
                 actions.append(action)
-
-            # TODO: Can only do if the player has not already played a development card
-            if player.has_year_of_plenty_card():
-                for action in year_of_plenty_possible_actions(
-                    player, self.resource_deck
-                ):
-                    actions.append(action)
-            if player.has_monopoly_card():
-                for action in monopoly_possible_actions(player):
-                    actions.append(action)
-
             if (
                 player.resource_deck.includes(ResourceDeck.development_card_cost())
                 and self.development_deck.num_cards() > 0
             ):
                 actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
+
+            if not self.played_dev_card_this_turn:
+                if player.has_year_of_plenty_card():
+                    for action in year_of_plenty_possible_actions(
+                        player, self.resource_deck
+                    ):
+                        actions.append(action)
+                if player.has_monopoly_card():
+                    for action in monopoly_possible_actions(player):
+                        actions.append(action)
 
             return actions
         else:
@@ -195,6 +195,7 @@ class Game:
             self.current_player_index = next_player_index
             self.tick_queue.append((self.players[next_player_index], ActionPrompt.ROLL))
             self.num_turns += 1
+            self.played_dev_card_this_turn = False
         elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
             self.board.build_settlement(
                 action.player.color, action.value, initial_build_phase=True
@@ -289,15 +290,20 @@ class Game:
                 raise ValueError(
                     "Not enough resources of this type (these types?) in bank"
                 )
+            if self.played_dev_card_this_turn:
+                raise ValueError("Player has already played a dev card this turn")
             player_to_act.resource_deck += cards_selected
             player_to_act.development_deck.draw(1, DevelopmentCard.YEAR_OF_PLENTY)
             self.resource_deck -= cards_selected
+            self.played_dev_card_this_turn = True
         elif action.action_type == ActionType.PLAY_MONOPOLY:
             player_to_act = action.player
             card_type_to_steal = action.value
             cards_stolen = ResourceDeck()
             if not player_to_act.has_monopoly_card():
                 raise ValueError("Player doesn't have monopoly card")
+            if self.played_dev_card_this_turn:
+                raise ValueError("Player has already played a dev card this turn")
             for player in self.players:
                 if not player_to_act.color == player.color:
                     number_of_cards_to_steal = player.resource_deck.count(
@@ -309,7 +315,7 @@ class Game:
                     )
             player_to_act.resource_deck += cards_stolen
             player_to_act.development_deck.draw(1, DevelopmentCard.MONOPOLY)
-
+            self.played_dev_card_this_turn = True
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 

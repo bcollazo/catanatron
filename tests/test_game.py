@@ -530,3 +530,21 @@ def test_complicated_road():  # classic 8-like roads
     color, path = longest_road(game.board, game.players, game.actions)
     assert color == Color.RED
     assert len(path) == 11
+
+
+def test_can_only_play_one_dev_card_per_turn():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+
+    players[0].development_deck.replenish(2, DevelopmentCard.YEAR_OF_PLENTY)
+    cards_selected = ResourceDeck()
+    cards_selected.replenish(2, Resource.BRICK)
+    action = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_selected)
+    game.execute(action)
+    with pytest.raises(ValueError):  # shouldnt be able to play two dev cards
+        game.execute(action)
