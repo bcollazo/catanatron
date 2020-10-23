@@ -1,20 +1,23 @@
 import pytest
+import json
 from unittest.mock import MagicMock, patch
 
-from catanatron.game import Game, yield_resources
+from catanatron.game import Game, yield_resources, replay_game
+from catanatron.json import GameEncoder
 from catanatron.algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
 from catanatron.models.enums import Resource, DevelopmentCard
-from catanatron.models.actions import ActionType, Action
+from catanatron.models.actions import ActionType, Action, ActionPrompt
 from catanatron.models.player import Player, Color, SimplePlayer
-from catanatron.models.decks import ResourceDeck
+from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 
 
 def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    game.play_initial_build_phase()
+    for i in range(len(game.tick_queue) - 1):
+        game.play_tick()
 
     # assert there are 4 houses and 4 roads
     assert len(set(game.board.buildings.keys())) == (len(players) * 4)
@@ -34,8 +37,6 @@ def test_initial_build_phase():
 def test_can_play_for_a_bit():  # assert no exception thrown
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    game.play_initial_build_phase()
-
     for _ in range(10):
         game.play_tick()
 
@@ -89,12 +90,18 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    game.play_initial_build_phase()
 
     players[1].resource_deck = ResourceDeck()
     players[1].resource_deck.replenish(7, Resource.WHEAT)
     game.execute(Action(players[0], ActionType.ROLL, None))  # roll
-    assert len(game.tick_queue) == 0
+
+    discarding_ticks = list(
+        filter(
+            lambda a: a[0] == players[1] and a[1] == ActionPrompt.DISCARD,
+            game.tick_queue,
+        )
+    )
+    assert len(discarding_ticks) == 0
 
 
 @patch("catanatron.game.roll_dice")
@@ -102,12 +109,21 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    game.play_initial_build_phase()
+    for _ in range(8):
+        game.play_tick()  # run initial placements
 
     players[1].resource_deck = ResourceDeck()
     players[1].resource_deck.replenish(9, Resource.WHEAT)
-    game.execute(Action(players[0], ActionType.ROLL, None))  # roll
-    assert len(game.tick_queue) == 1
+    game.play_tick()  # should be player 0 rolling.
+
+    discarding_ticks = list(
+        filter(
+            lambda a: a[0] == players[1] and a[1] == ActionPrompt.DISCARD,
+            game.tick_queue,
+        )
+    )
+    assert len(discarding_ticks) == 1
+
     game.play_tick()
     assert players[1].resource_deck.num_cards() == 5
 
@@ -327,27 +343,34 @@ def test_longest_road_simple():
 
     game.execute(
         Action(
-            red,
-            ActionType.BUILD_SETTLEMENT,
-            nodes[((0, 0, 0), NodeRef.SOUTH)],
-        ),
-        initial_build_phase=True,
+            red, ActionType.BUILD_FIRST_SETTLEMENT, nodes[((0, 0, 0), NodeRef.SOUTH)]
+        )
     )
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)])
+        Action(
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)]
+        )
     )
 
     color, path = longest_road(game.board, game.players, game.actions)
     assert color is None
 
-    game.execute(Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.EAST)]))
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)])
+        Action(red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.EAST)])
     )
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)])
+        Action(
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)]
+        )
     )
-    game.execute(Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.WEST)]))
+    game.execute(
+        Action(
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)]
+        )
+    )
+    game.execute(
+        Action(red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.WEST)])
+    )
 
     color, path = longest_road(game.board, game.players, game.actions)
     assert color == Color.RED
@@ -367,26 +390,26 @@ def test_longest_road_tie():
     game.execute(
         Action(
             red,
-            ActionType.BUILD_SETTLEMENT,
+            ActionType.BUILD_FIRST_SETTLEMENT,
             nodes[((0, 0, 0), NodeRef.SOUTH)],
         ),
-        initial_build_phase=True,
     )
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)])
+        Action(
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)]
+        )
     )
     game.execute(
         Action(
             blue,
-            ActionType.BUILD_SETTLEMENT,
+            ActionType.BUILD_FIRST_SETTLEMENT,
             nodes[((0, 2, -2), NodeRef.SOUTH)],
         ),
-        initial_build_phase=True,
     )
     game.execute(
         Action(
             blue,
-            ActionType.BUILD_ROAD,
+            ActionType.BUILD_INITIAL_ROAD,
             edges[((0, 2, -2), EdgeRef.SOUTHEAST)],
         )
     )
@@ -445,8 +468,9 @@ def test_complicated_road():  # classic 8-like roads
     edges = game.board.edges
 
     game.execute(
-        Action(red, ActionType.BUILD_SETTLEMENT, nodes[((0, 0, 0), NodeRef.SOUTH)]),
-        initial_build_phase=True,
+        Action(
+            red, ActionType.BUILD_FIRST_SETTLEMENT, nodes[((0, 0, 0), NodeRef.SOUTH)]
+        ),
     )
     game.execute(
         Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)])
@@ -508,3 +532,22 @@ def test_complicated_road():  # classic 8-like roads
     color, path = longest_road(game.board, game.players, game.actions)
     assert color == Color.RED
     assert len(path) == 11
+
+
+def test_play_and_replay_game():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+    game.play()
+
+    replayed = None
+    for state in replay_game(game):
+        replayed = state
+
+    og_final_state = json.dumps(game, cls=GameEncoder)
+    final_state = json.dumps(replayed, cls=GameEncoder)
+    assert final_state, og_final_state

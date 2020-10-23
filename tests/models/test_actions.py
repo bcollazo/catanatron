@@ -1,3 +1,6 @@
+from pprint import pprint
+
+
 from catanatron.models.actions import (
     monopoly_possible_actions,
     year_of_plenty_possible_actions,
@@ -5,7 +8,10 @@ from catanatron.models.actions import (
     settlement_possible_actions,
     city_possible_actions,
     robber_possibilities,
+    initial_settlement_possibilites,
+    discard_possibilities,
     ActionType,
+    ActionPrompt,
 )
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
@@ -19,7 +25,7 @@ def test_playable_actions():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
-    actions = game.playable_actions(players[0])
+    actions = game.playable_actions(players[0], ActionPrompt.ROLL)
     assert len(actions) == 1
     assert actions[0].action_type == ActionType.ROLL
 
@@ -130,5 +136,17 @@ def test_robber_possibilities():
     # now possibilites increase by 1 b.c. we have to decide to steal from blue or orange
     blue.resource_deck.replenish(1, Resource.WHEAT)
     # TODO: This fails sometimes. Investigate.
-    print(orange, blue, robber_possibilities(red, board, players))
+    pprint(robber_possibilities(red, board, players))
     assert len(robber_possibilities(red, board, players)) == 19
+
+
+def test_initial_placement_possibilities():
+    board = Board()
+    red = SimplePlayer(Color.RED)
+    assert len(initial_settlement_possibilites(red, board, True)) == 54
+
+
+def test_discard_possibilities():
+    player = SimplePlayer(Color.RED)
+    player.resource_deck.replenish(8, Resource.WHEAT)
+    assert len(discard_possibilities(player)) == 70

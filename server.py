@@ -4,7 +4,7 @@ import uuid
 from flask import Flask, jsonify, abort
 from flask_cors import CORS
 
-from database import save_game, get_game
+from database import save_game_state, get_last_game_state
 from catanatron.game import Game
 from catanatron.json import GameEncoder
 from catanatron.models.player import RandomPlayer, Color
@@ -24,15 +24,13 @@ def create_game():
             RandomPlayer(Color.ORANGE),
         ]
     )
-    game.play_initial_build_phase()
-    game_id = uuid.uuid4()
-    save_game(game_id, game)
-    return jsonify({"game_id": game_id})
+    save_game_state(game)
+    return jsonify({"game_id": game.id})
 
 
 @app.route("/games/<string:game_id>", methods=["GET"])
 def get_game_endpoint(game_id):
-    game = get_game(game_id)
+    game = get_last_game_state(game_id)
     if game is None:
         abort(404, description="Resource not found")
 
@@ -41,10 +39,10 @@ def get_game_endpoint(game_id):
 
 @app.route("/games/<string:game_id>/tick", methods=["POST"])
 def tick_game(game_id):
-    game = get_game(game_id)
+    game = get_last_game_state(game_id)
     if game is None:
         abort(404, description="Resource not found")
 
-    game.play_tick()
-    save_game(game_id, game)
+    if game.winning_player() is None:
+        game.play_tick(lambda g: save_game_state(g))
     return json.dumps(game, cls=GameEncoder)

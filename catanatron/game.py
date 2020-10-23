@@ -1,4 +1,8 @@
+import uuid
 import random
+import sys
+import copy
+from enum import Enum
 from typing import Iterable
 from collections import namedtuple, defaultdict
 
@@ -8,6 +12,7 @@ from catanatron.models.board import Board, BuildingType
 from catanatron.models.board_initializer import Node
 from catanatron.models.enums import Resource, DevelopmentCard
 from catanatron.models.actions import (
+    ActionPrompt,
     Action,
     ActionType,
     road_possible_actions,
@@ -15,6 +20,10 @@ from catanatron.models.actions import (
     settlement_possible_actions,
     robber_possibilities,
     year_of_plenty_possible_actions,
+    monopoly_possible_actions,
+    initial_road_possibilities,
+    initial_settlement_possibilites,
+    discard_possibilities,
 )
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
@@ -71,14 +80,31 @@ def yield_resources(board, resource_deck, number):
     return payout, depleted
 
 
+def initialize_tick_queue(players):
+    """First player goes, settlement and road, ..."""
+    tick_queue = []
+    for player in players:
+        tick_queue.append((player, ActionPrompt.BUILD_FIRST_SETTLEMENT))
+        tick_queue.append((player, ActionPrompt.BUILD_INITIAL_ROAD))
+    for player in reversed(players):
+        tick_queue.append((player, ActionPrompt.BUILD_SECOND_SETTLEMENT))
+        tick_queue.append((player, ActionPrompt.BUILD_INITIAL_ROAD))
+    tick_queue.append((players[0], ActionPrompt.ROLL))
+    return tick_queue
+
+
 class Game:
     """
     This contains the complete state of the game (board + players) and the
     core turn-by-turn controlling logic.
     """
 
-    def __init__(self, players: Iterable[Player]):
-        self.players = players
+    def __init__(self, players: Iterable[Player], seed=None):
+        self.seed = seed or random.randrange(sys.maxsize)
+        random.seed(self.seed)
+
+        self.id = str(uuid.uuid4())
+        self.players = random.sample(players, len(players))
         self.players_by_color = {p.color: p for p in players}
         self.map = BaseMap()
         self.board = Board(self.map)
@@ -86,59 +112,14 @@ class Game:
         self.resource_deck = ResourceDeck.starting_bank()
         self.development_deck = DevelopmentDeck.starting_bank()
 
-        # variables to keep track of what to do next
+        self.tick_queue = initialize_tick_queue(players)
         self.current_player_index = 0
-        self.current_player_has_roll = False
-        self.moving_robber = False
-        self.tick_queue = []
-        random.shuffle(self.players)
-
         self.num_turns = 0
 
-    def play(self):
+    def play(self, action_callback=None):
         """Runs the game until the end"""
-        self.play_initial_build_phase()
         while self.winning_player() == None and self.num_turns < TURNS_LIMIT:
-            self.play_tick()
-
-    def play_initial_build_phase(self):
-        """First player goes, settlement and road, ..."""
-        for player in self.players + list(reversed(self.players)):
-            # Place a settlement first
-            buildable_nodes = self.board.buildable_nodes(
-                player.color, initial_build_phase=True
-            )
-            actions = map(
-                lambda node: Action(player, ActionType.BUILD_SETTLEMENT, node),
-                buildable_nodes,
-            )
-            action = player.decide(self, list(actions))
-            self.execute(action, initial_build_phase=True)
-
-            # Then a road, ensure its connected to this last settlement
-            buildable_edges = filter(
-                lambda e: action.value in e.nodes,
-                self.board.buildable_edges(player.color),
-            )
-            actions = map(
-                lambda edge: Action(player, ActionType.BUILD_ROAD, edge),
-                buildable_edges,
-            )
-            action = player.decide(self, list(actions))
-            self.execute(action, initial_build_phase=True)
-
-        # yield resources of second settlement
-        second_settlements = map(
-            lambda a: (a.player, a.value),
-            filter(
-                lambda a: a.action_type == ActionType.BUILD_SETTLEMENT,
-                self.actions[len(self.players) * 2 :],
-            ),
-        )
-        for (player, node) in second_settlements:
-            for tile in self.board.get_adjacent_tiles(node):
-                if tile.resource != None:
-                    player.resource_deck.replenish(1, tile.resource)
+            self.play_tick(action_callback)
 
     def winning_player(self):
         for player in self.players:
@@ -146,77 +127,98 @@ class Game:
                 return player
         return None
 
-    def play_tick(self):
+    def play_tick(self, action_callback=None):
         """
         Consume from queue (player, decision) to support special building phase,
             discarding, and other decisions out-of-turn.
         If nothing there, fall back to (current, playable()) for current-turn.
         """
         if len(self.tick_queue) > 0:
-            (player, actions) = self.tick_queue.pop()
+            (player, action_prompt) = self.tick_queue.pop(0)
         else:
-            player = self.players[self.current_player_index]
-            actions = self.playable_actions(player)
+            (player, action_prompt) = (self.current_player(), ActionPrompt.PLAY_TURN)
+
+        actions = self.playable_actions(player, action_prompt)
         action = player.decide(self.board, actions)
-        self.execute(action)
+        self.execute(action, action_callback=action_callback)
 
-    def playable_actions(self, player):
-        if self.moving_robber:
+    def playable_actions(self, player, action_prompt):
+        if action_prompt == ActionPrompt.BUILD_FIRST_SETTLEMENT:
+            return initial_settlement_possibilites(player, self.board, True)
+        elif action_prompt == ActionPrompt.BUILD_SECOND_SETTLEMENT:
+            return initial_settlement_possibilites(player, self.board, False)
+        elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
+            return initial_road_possibilities(player, self.board, self.actions)
+        elif action_prompt == ActionPrompt.MOVE_ROBBER:
             return robber_possibilities(player, self.board, self.players)
-
-        if not self.current_player_has_roll:
+        elif action_prompt == ActionPrompt.ROLL:
             actions = [Action(player, ActionType.ROLL, None)]
             if player.has_knight_card():  # maybe knight
                 # TODO: Change to PLAY_KNIGHT_CARD
                 actions.extend(robber_possibilities(player, self.board, self.players))
 
             return actions
-
-        actions = [Action(player, ActionType.END_TURN, None)]
-        for action in road_possible_actions(player, self.board):
-            actions.append(action)
-        for action in settlement_possible_actions(player, self.board):
-            actions.append(action)
-        for action in city_possible_actions(player, self.board):
-            actions.append(action)
-
-        # Can only do if the player has not already played a development card
-        if player.has_year_of_plenty_card():
-            for action in year_of_plenty_possible_actions(player, self.resource_deck):
+        elif action_prompt == ActionPrompt.DISCARD:
+            return discard_possibilities(player)
+        elif action_prompt == ActionPrompt.PLAY_TURN:
+            actions = [Action(player, ActionType.END_TURN, None)]
+            for action in road_possible_actions(player, self.board):
                 actions.append(action)
-        if player.has_monopoly_card():
-            for action in monopoly_possible_actions(player):
+            for action in settlement_possible_actions(player, self.board):
+                actions.append(action)
+            for action in city_possible_actions(player, self.board):
                 actions.append(action)
 
-        if (
-            player.resource_deck.includes(ResourceDeck.development_card_cost())
-            and self.development_deck.num_cards() > 0
-        ):
-            actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
+            # TODO: Can only do if the player has not already played a development card
+            if player.has_year_of_plenty_card():
+                for action in year_of_plenty_possible_actions(
+                    player, self.resource_deck
+                ):
+                    actions.append(action)
+            if player.has_monopoly_card():
+                for action in monopoly_possible_actions(player):
+                    actions.append(action)
 
-        return actions
+            if (
+                player.resource_deck.includes(ResourceDeck.development_card_cost())
+                and self.development_deck.num_cards() > 0
+            ):
+                actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
 
-    def execute(self, action, initial_build_phase=False):
+            return actions
+        else:
+            raise RuntimeError("Unknown ActionPrompt")
+
+    def execute(self, action, action_callback=None):
         if action.action_type == ActionType.END_TURN:
-            self.current_player_index = (self.current_player_index + 1) % len(
-                self.players
-            )
-            self.current_player_has_roll = False
+            next_player_index = (self.current_player_index + 1) % len(self.players)
+            self.current_player_index = next_player_index
+            self.tick_queue.append((self.players[next_player_index], ActionPrompt.ROLL))
             self.num_turns += 1
+        elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
+            self.board.build_settlement(
+                action.player.color, action.value, initial_build_phase=True
+            )
+        elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
+            self.board.build_settlement(
+                action.player.color, action.value, initial_build_phase=True
+            )
+            # yield resources of second settlement
+            for tile in self.board.get_adjacent_tiles(action.value):
+                if tile.resource != None:
+                    action.player.resource_deck.replenish(1, tile.resource)
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
             self.board.build_settlement(
-                action.player.color,
-                action.value,
-                initial_build_phase=initial_build_phase,
+                action.player.color, action.value, initial_build_phase=False
             )
-            if not initial_build_phase:
-                action.player.resource_deck -= ResourceDeck.settlement_cost()
-                self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
+            action.player.resource_deck -= ResourceDeck.settlement_cost()
+            self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
+        elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
+            self.board.build_road(action.player.color, action.value)
         elif action.action_type == ActionType.BUILD_ROAD:
             self.board.build_road(action.player.color, action.value)
-            if not initial_build_phase:
-                action.player.resource_deck -= ResourceDeck.road_cost()
-                self.resource_deck += ResourceDeck.road_cost()  # replenish bank
+            action.player.resource_deck -= ResourceDeck.road_cost()
+            self.resource_deck += ResourceDeck.road_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_CITY:
             self.board.build_city(action.player.color, action.value)
             action.player.resource_deck -= ResourceDeck.city_cost()
@@ -230,12 +232,9 @@ class Game:
                     p for p in self.players if p.resource_deck.num_cards() > 7
                 ]
                 self.tick_queue.extend(
-                    [
-                        (p, [Action(p, ActionType.DISCARD, None)])
-                        for p in players_to_discard
-                    ]
+                    [(p, ActionPrompt.DISCARD) for p in players_to_discard]
                 )
-                self.moving_robber = True
+                self.tick_queue.append((action.player, ActionPrompt.MOVE_ROBBER))
             else:
                 payout, depleted = yield_resources(
                     self.board, self.resource_deck, number
@@ -248,27 +247,22 @@ class Game:
                     self.resource_deck -= resource_deck
 
             action = Action(action.player, action.action_type, dices)
-            self.current_player_has_roll = True
+            self.tick_queue.append((action.player, ActionPrompt.PLAY_TURN))
         elif action.action_type == ActionType.MOVE_ROBBER:
             (coordinate, player_to_steal_from) = action.value
             self.board.robber_coordinate = coordinate
             if player_to_steal_from is not None:
                 resource = player_to_steal_from.resource_deck.random_draw()
-                self.current_player().resource_deck.replenish(1, resource)
-
-            self.moving_robber = False
+                action.player.resource_deck.replenish(1, resource)
         elif action.action_type == ActionType.DISCARD:
-            num_cards = action.player.resource_deck.num_cards()
-            discarded = action.player.discard()
-            assert len(discarded) == num_cards // 2
+            discarded = action.value
 
             to_discard = ResourceDeck()
             for resource in discarded:
                 to_discard.replenish(1, resource)
+
             action.player.resource_deck -= to_discard
             self.resource_deck += to_discard
-
-            action = Action(action.player, action.action_type, discarded)
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
             if self.development_deck.num_cards() == 0:
                 raise ValueError("No more development cards")
@@ -314,6 +308,7 @@ class Game:
                         number_of_cards_to_steal, card_type_to_steal
                     )
             player_to_act.resource_deck += cards_stolen
+            player_to_act.development_deck.draw(1, DevelopmentCard.MONOPOLY)
 
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
@@ -321,6 +316,9 @@ class Game:
         # TODO: Think about possible-action/idea vs finalized-action design
         self.actions.append(action)
         self.count_victory_points()
+
+        if action_callback:
+            action_callback(self)
 
     def current_player(self):
         return self.players[self.current_player_index]
@@ -344,3 +342,28 @@ class Game:
             player.actual_victory_points = public_vps + player.development_deck.count(
                 DevelopmentCard.VICTORY_POINT
             )
+
+
+def replay_game(game):
+    game_copy = copy.deepcopy(game)
+
+    for player in game_copy.players:
+        player.public_victory_points = 0
+        player.actual_victory_points = 0
+        player.resource_deck = ResourceDeck()
+        player.development_deck = DevelopmentDeck()
+
+    tmp_game = Game(game_copy.players, seed=game.seed)
+    tmp_game.id = game_copy.id
+    tmp_game.players = game_copy.players  # use same seating order
+    tmp_game.map = game_copy.map
+    tmp_game.board = game_copy.board
+    tmp_game.board.buildings = {}
+    tmp_game.board.robber_coordinate = filter(
+        lambda coordinate: tmp_game.board.tiles[coordinate].resource == None,
+        tmp_game.board.tiles.keys(),
+    ).__next__()
+
+    for action in game_copy.actions:
+        tmp_game.execute(action)
+        yield tmp_game

@@ -14,7 +14,6 @@ def test_serialization():
             SimplePlayer(Color.ORANGE),
         ]
     )
-    game.play_initial_build_phase()
 
     string = json.dumps(game, cls=GameEncoder)
     result = json.loads(string)

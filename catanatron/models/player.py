@@ -29,10 +29,6 @@ class Player:
         """
         raise NotImplementedError
 
-    def discard(self):
-        """Must return n/2 cards to discard from self.resource_deck"""
-        raise NotImplementedError
-
     def receive(self, resource_deck):
         self.resource_deck += resource_deck
 
@@ -45,21 +41,16 @@ class Player:
     def has_monopoly_card(self):
         return self.development_deck.count(DevelopmentCard.MONOPOLY) > 0
 
+    def __repr__(self):
+        return type(self).__name__ + "[" + self.color.value + "]"
+
 
 class SimplePlayer(Player):
     def decide(self, game, playable_actions):
         return playable_actions[0]
-
-    def discard(self):
-        cards = self.resource_deck.to_array()
-        return cards[: len(cards) // 2]
 
 
 class RandomPlayer(Player):
     def decide(self, game, playable_actions):
         index = random.randrange(0, len(playable_actions))
         return playable_actions[index]
-
-    def discard(self):
-        cards = self.resource_deck.to_array()
-        return random.sample(cards, len(cards) // 2)
