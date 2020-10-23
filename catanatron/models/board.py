@@ -4,7 +4,12 @@ from typing import Dict
 
 from catanatron.models.player import Color
 from catanatron.models.map import BaseMap, Water, Port
-from catanatron.models.board_initializer import initialize_board, Node, Edge
+from catanatron.models.board_initializer import (
+    initialize_board,
+    Node,
+    Edge,
+    PORT_DIRECTION_TO_NODEREFS,
+)
 
 
 # TODO: Build "deck" of these (14 roads, 5 settlements, 4 cities)
@@ -30,11 +35,10 @@ class Board:
         topology (placing tiles on coordinates); ensuring to "attach" these to
         neighbor tiles. (no repeated nodes or edges objects).
         """
-        catan_map = catan_map or BaseMap()
-        tiles, nodes, edges, graph = initialize_board(catan_map)
+        self.map = catan_map or BaseMap()
 
+        tiles, nodes, edges, graph = initialize_board(self.map)
         self.tiles = tiles  # (coordinate) => Tile (with nodes and edges initialized)
-
         self.nodes = nodes  # (coordinate, noderef) => node
         self.edges = edges  # (coordinate, edgeref) => edge
         self.graph = graph  #  { node => { edge: node }}
@@ -194,6 +198,25 @@ class Board:
             buildings = filter(lambda x: x[1].building_type == building_type, buildings)
 
         return list(buildings)
+
+    def get_port_nodes(self):
+        """Yields (node, resource) tuples"""
+        for (coordinate, value) in self.map.topology.items():
+            if not isinstance(value, tuple):
+                continue
+
+            _, direction = value
+            (a_noderef, b_noderef) = PORT_DIRECTION_TO_NODEREFS[direction]
+            yield (self.nodes[(coordinate, a_noderef)], self.tiles[coordinate].resource)
+            yield (self.nodes[(coordinate, b_noderef)], self.tiles[coordinate].resource)
+
+    def get_player_port_resources(self, color):
+        """Yields resources (None for 3:1) of ports owned by color"""
+        ports = []
+        for node, resource in self.get_port_nodes():
+            building = self.buildings.get(node)
+            if building is not None and building.color == color:
+                yield resource
 
     def find_connected_components(self, color: Color):
         """returns connected subgraphs for a given player

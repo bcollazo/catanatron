@@ -124,3 +124,9 @@ def test_city_requires_settlement_first():
 def test_calling_the_edge_differently_is_not_a_problem():
     """Tests building on (0,0,0), East is the same as (1,-1,0), West"""
     pass
+
+
+def test_get_ports():
+    board = Board()
+    ports = list(board.get_port_nodes())
+    assert len(ports) == 9 * 2

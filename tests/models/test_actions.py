@@ -152,14 +152,15 @@ def test_discard_possibilities():
     assert len(discard_possibilities(player)) == 70
 
 
-def test_maritime_trade_possibilities():
+def test_4to1_maritime_trade_possibilities():
+    board = Board()
     player = SimplePlayer(Color.RED)
 
     bank = ResourceDeck.starting_bank()
-    assert len(maritime_trade_possibilities(player, bank)) == 0  # no cards in hand
+    assert len(maritime_trade_possibilities(player, bank, board)) == 0
 
     player.resource_deck.replenish(4, Resource.WHEAT)
-    assert len(maritime_trade_possibilities(player, bank)) == 4
+    assert len(maritime_trade_possibilities(player, bank, board)) == 4
 
     player.resource_deck.replenish(4, Resource.BRICK)
-    assert len(maritime_trade_possibilities(player, bank)) == 8
+    assert len(maritime_trade_possibilities(player, bank, board)) == 8

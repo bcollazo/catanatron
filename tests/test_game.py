@@ -6,7 +6,7 @@ from catanatron.algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
 from catanatron.models.enums import Resource, DevelopmentCard
-from catanatron.models.actions import ActionType, Action, ActionPrompt
+from catanatron.models.actions import ActionType, Action, ActionPrompt, TradeOffer
 from catanatron.models.player import Player, Color, SimplePlayer
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 
@@ -548,3 +548,47 @@ def test_can_only_play_one_dev_card_per_turn():
     game.execute(action)
     with pytest.raises(ValueError):  # shouldnt be able to play two dev cards
         game.execute(action)
+
+
+def test_trade_execution():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+
+    players[0].resource_deck.replenish(4, Resource.BRICK)
+    trade_offer = TradeOffer([Resource.BRICK] * 4, [Resource.ORE], None)
+    action = Action(players[0], ActionType.MARITIME_TRADE, trade_offer)
+    game.execute(action)
+
+    assert players[0].resource_deck.num_cards() == 1
+    assert game.resource_deck.num_cards() == 19 * 5 + 4 - 1
+
+
+def test_can_trade_with_port():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+
+    # Find port at (3, -3, 0), West.
+    port_node = game.board.nodes[((2, -2, 0), NodeRef.NORTHEAST)]
+    port = game.board.tiles[(3, -3, 0)]
+    action = Action(players[0], ActionType.BUILD_FIRST_SETTLEMENT, port_node)
+    game.execute(action)
+
+    resource_out = port.resource or Resource.WHEAT
+    num_out = 3 if port.resource is None else 2
+    players[0].resource_deck.replenish(num_out, resource_out)
+    resource_in = Resource.WHEAT if resource_out != Resource.WHEAT else Resource.WOOD
+
+    actions = game.playable_actions(players[0], ActionPrompt.PLAY_TURN)
+    trade_offer = TradeOffer([resource_out] * num_out, resource_in, None)
+    assert len(actions) == 5
+    # assert Action(players[0], ActionType.MARITIME_TRADE, trade_offer) in actions?

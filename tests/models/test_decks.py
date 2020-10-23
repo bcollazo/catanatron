@@ -88,3 +88,16 @@ def test_random_draw():
 
     a.random_draw()
     assert a.num_cards() == num_cards - 1
+
+
+def test_from_array():
+    a = ResourceDeck.from_array(
+        [
+            Resource.BRICK,
+            Resource.BRICK,
+            Resource.WOOD,
+        ]
+    )
+    assert a.num_cards() == 3
+    assert a.count(Resource.BRICK) == 2
+    assert a.count(Resource.WOOD) == 1
