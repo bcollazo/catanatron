@@ -189,3 +189,14 @@ def get_edge_nodes(edge_ref):
         EdgeRef.NORTHWEST: (NodeRef.NORTHWEST, NodeRef.NORTH),
         EdgeRef.NORTHEAST: (NodeRef.NORTH, NodeRef.NORTHEAST),
     }[edge_ref]
+
+
+# TODO: Could consolidate Direction with EdgeRef.
+PORT_DIRECTION_TO_NODEREFS = {
+    Direction.WEST: (NodeRef.NORTHWEST, NodeRef.SOUTHWEST),
+    Direction.NORTHWEST: (NodeRef.NORTH, NodeRef.NORTHWEST),
+    Direction.NORTHEAST: (NodeRef.NORTHEAST, NodeRef.NORTH),
+    Direction.EAST: (NodeRef.SOUTHEAST, NodeRef.NORTHEAST),
+    Direction.SOUTHEAST: (NodeRef.SOUTH, NodeRef.SOUTHEAST),
+    Direction.SOUTHWEST: (NodeRef.SOUTHWEST, NodeRef.SOUTH),
+}

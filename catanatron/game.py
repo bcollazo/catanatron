@@ -189,7 +189,9 @@ class Game:
                         actions.append(action)
 
             # Trade
-            for action in maritime_trade_possibilities(player, self.resource_deck):
+            for action in maritime_trade_possibilities(
+                player, self.resource_deck, self.board
+            ):
                 actions.append(action)
 
             return actions
@@ -323,6 +325,19 @@ class Game:
             player_to_act.resource_deck += cards_stolen
             player_to_act.development_deck.draw(1, DevelopmentCard.MONOPOLY)
             self.played_dev_card_this_turn = True
+        elif action.action_type == ActionType.MARITIME_TRADE:
+            trade_offer = action.value
+            offering = ResourceDeck.from_array(trade_offer.offering)
+            asking = ResourceDeck.from_array(trade_offer.asking)
+            tradee = trade_offer.tradee or self  # self means bank
+            if not action.player.resource_deck.includes(offering):
+                raise ValueError("Trying to trade without money")
+            if not tradee.resource_deck.includes(asking):
+                raise ValueError("Tradee doenst have those cards")
+            action.player.resource_deck -= offering
+            tradee.resource_deck += offering
+            action.player.resource_deck += asking
+            tradee.resource_deck -= asking
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 

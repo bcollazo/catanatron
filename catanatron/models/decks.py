@@ -4,6 +4,13 @@ from catanatron.models.enums import Resource, DevelopmentCard
 
 
 class Deck:
+    @classmethod
+    def from_array(cls, card_array):
+        deck = cls()
+        for card in card_array:
+            deck.replenish(1, card)
+        return deck
+
     def __init__(self, card_types):
         """Provides functionality to manage a pack of cards.
 
