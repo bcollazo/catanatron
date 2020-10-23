@@ -1,9 +1,7 @@
 import pytest
-import json
 from unittest.mock import MagicMock, patch
 
 from catanatron.game import Game, yield_resources, replay_game
-from catanatron.json import GameEncoder
 from catanatron.algorithms import longest_road, continuous_roads_by_player
 from catanatron.models.board import Board
 from catanatron.models.board_initializer import NodeRef, EdgeRef
@@ -532,22 +530,3 @@ def test_complicated_road():  # classic 8-like roads
     color, path = longest_road(game.board, game.players, game.actions)
     assert color == Color.RED
     assert len(path) == 11
-
-
-def test_play_and_replay_game():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-        SimplePlayer(Color.WHITE),
-        SimplePlayer(Color.ORANGE),
-    ]
-    game = Game(players)
-    game.play()
-
-    replayed = None
-    for state in replay_game(game):
-        replayed = state
-
-    og_final_state = json.dumps(game, cls=GameEncoder)
-    final_state = json.dumps(replayed, cls=GameEncoder)
-    assert final_state, og_final_state
