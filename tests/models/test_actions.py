@@ -1,6 +1,3 @@
-from pprint import pprint
-
-
 from catanatron.models.actions import (
     monopoly_possible_actions,
     year_of_plenty_possible_actions,
@@ -135,10 +132,12 @@ def test_robber_possibilities():
     assert len(robber_possibilities(red, board, players)) == 18
 
     # now possibilites increase by 1 b.c. we have to decide to steal from blue or orange
+    # Unless desert is (0,0,0)... in which case still at 18...
     blue.resource_deck.replenish(1, Resource.WHEAT)
-    # TODO: This fails sometimes. Investigate.
-    pprint(robber_possibilities(red, board, players))
-    assert len(robber_possibilities(red, board, players)) == 19
+    possibilities = len(robber_possibilities(red, board, players))
+    assert possibilities == 19 or (
+        possibilities == 18 and board.tiles[(0, 0, 0)].resource is None
+    )
 
 
 def test_initial_placement_possibilities():
