@@ -8,6 +8,7 @@ from catanatron.models.actions import (
     initial_settlement_possibilites,
     discard_possibilities,
     maritime_trade_possibilities,
+    road_building_possibilities,
     ActionType,
     ActionPrompt,
 )
@@ -116,7 +117,7 @@ def test_robber_possibilities():
     players = [red, blue, orange]
 
     # one for each resource tile (excluding desert)
-    assert len(robber_possibilities(red, board, players)) == 18
+    assert len(robber_possibilities(red, board, players, True)) == 18
 
     # assert same number of possibilities, b.c. players have no cards.
     board.build_settlement(
@@ -125,16 +126,16 @@ def test_robber_possibilities():
     board.build_settlement(
         Color.ORANGE, board.nodes[((0, 0, 0), NodeRef.NORTH)], initial_build_phase=True
     )
-    assert len(robber_possibilities(red, board, players)) == 18
+    assert len(robber_possibilities(red, board, players, True)) == 18
 
     # assert same number of possibilities, b.c. only one player to rob in this tile
     orange.resource_deck.replenish(1, Resource.WHEAT)
-    assert len(robber_possibilities(red, board, players)) == 18
+    assert len(robber_possibilities(red, board, players, False)) == 18
 
     # now possibilites increase by 1 b.c. we have to decide to steal from blue or orange
     # Unless desert is (0,0,0)... in which case still at 18...
     blue.resource_deck.replenish(1, Resource.WHEAT)
-    possibilities = len(robber_possibilities(red, board, players))
+    possibilities = len(robber_possibilities(red, board, players, False))
     assert possibilities == 19 or (
         possibilities == 18 and board.tiles[(0, 0, 0)].resource is None
     )
@@ -164,3 +165,35 @@ def test_4to1_maritime_trade_possibilities():
 
     player.resource_deck.replenish(4, Resource.BRICK)
     assert len(maritime_trade_possibilities(player, bank, board)) == 8
+
+
+def test_road_building_possibilities():
+    board = Board()
+    player = SimplePlayer(Color.RED)
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+
+    result = road_building_possibilities(player, board)
+
+    # 6 length-2 paths, 3 * 2 combinations
+    assert len(result) == 6 + 6
+
+
+def test_road_building_two_houses():
+    board = Board()
+    player = SimplePlayer(Color.RED)
+
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
+    )
+    board.build_settlement(
+        Color.RED, board.nodes[((0, 0, 0), NodeRef.NORTH)], initial_build_phase=True
+    )
+
+    result = road_building_possibilities(player, board)
+    # 6 length-2 paths in first house,
+    # 6 length-2 paths in second house,
+    # 6 * 5 combinations of length-1 paths
+    assert len(result) == 6 + 6 + 6 * 5

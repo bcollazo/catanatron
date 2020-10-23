@@ -25,6 +25,7 @@ from catanatron.models.actions import (
     initial_settlement_possibilites,
     discard_possibilities,
     maritime_trade_possibilities,
+    road_building_possibilities,
 )
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
@@ -152,47 +153,48 @@ class Game:
         elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
             return initial_road_possibilities(player, self.board, self.actions)
         elif action_prompt == ActionPrompt.MOVE_ROBBER:
-            return robber_possibilities(player, self.board, self.players)
+            return robber_possibilities(player, self.board, self.players, False)
         elif action_prompt == ActionPrompt.ROLL:
             actions = [Action(player, ActionType.ROLL, None)]
-            if player.has_knight_card():  # maybe knight
-                # TODO: Change to PLAY_KNIGHT_CARD
-                actions.extend(robber_possibilities(player, self.board, self.players))
-
+            if player.has_knight_card():
+                actions.extend(
+                    robber_possibilities(player, self.board, self.players, True)
+                )
             return actions
         elif action_prompt == ActionPrompt.DISCARD:
             return discard_possibilities(player)
         elif action_prompt == ActionPrompt.PLAY_TURN:
             # Buy / Build
             actions = [Action(player, ActionType.END_TURN, None)]
-            for action in road_possible_actions(player, self.board):
-                actions.append(action)
-            for action in settlement_possible_actions(player, self.board):
-                actions.append(action)
-            for action in city_possible_actions(player, self.board):
-                actions.append(action)
-            if (
+            actions.extend(road_possible_actions(player, self.board))
+            actions.extend(settlement_possible_actions(player, self.board))
+            actions.extend(city_possible_actions(player, self.board))
+            can_buy_dev_card = (
                 player.resource_deck.includes(ResourceDeck.development_card_cost())
                 and self.development_deck.num_cards() > 0
-            ):
+            )
+            if can_buy_dev_card:
                 actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
 
             # Play Dev Cards
             if not self.played_dev_card_this_turn:
                 if player.has_year_of_plenty_card():
-                    for action in year_of_plenty_possible_actions(
-                        player, self.resource_deck
-                    ):
-                        actions.append(action)
+                    actions.extend(
+                        year_of_plenty_possible_actions(player, self.resource_deck)
+                    )
                 if player.has_monopoly_card():
-                    for action in monopoly_possible_actions(player):
-                        actions.append(action)
+                    actions.extend(monopoly_possible_actions(player))
+                if player.has_knight_card():
+                    actions.extend(
+                        robber_possibilities(player, self.board, self.players, True)
+                    )
+                if player.has_road_building():
+                    actions.extend(road_building_possibilities(player, self.board))
 
             # Trade
-            for action in maritime_trade_possibilities(
-                player, self.resource_deck, self.board
-            ):
-                actions.append(action)
+            actions.extend(
+                maritime_trade_possibilities(player, self.resource_deck, self.board)
+            )
 
             return actions
         else:
@@ -233,6 +235,20 @@ class Game:
             self.board.build_city(action.player.color, action.value)
             action.player.resource_deck -= ResourceDeck.city_cost()
             self.resource_deck += ResourceDeck.city_cost()  # replenish bank
+        elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
+            if self.development_deck.num_cards() == 0:
+                raise ValueError("No more development cards")
+            if not action.player.resource_deck.includes(
+                ResourceDeck.development_card_cost()
+            ):
+                raise ValueError("No money to buy development card")
+
+            development_card = self.development_deck.random_draw()
+            action.player.development_deck.replenish(1, development_card)
+            action.player.resource_deck -= ResourceDeck.development_card_cost()
+            self.resource_deck += ResourceDeck.development_card_cost()
+
+            action = Action(action.player, action.action_type, development_card)
         elif action.action_type == ActionType.ROLL:
             dices = roll_dice()
             number = dices[0] + dices[1]
@@ -258,12 +274,6 @@ class Game:
 
             action = Action(action.player, action.action_type, dices)
             self.tick_queue.append((action.player, ActionPrompt.PLAY_TURN))
-        elif action.action_type == ActionType.MOVE_ROBBER:
-            (coordinate, player_to_steal_from) = action.value
-            self.board.robber_coordinate = coordinate
-            if player_to_steal_from is not None:
-                resource = player_to_steal_from.resource_deck.random_draw()
-                action.player.resource_deck.replenish(1, resource)
         elif action.action_type == ActionType.DISCARD:
             discarded = action.value
 
@@ -273,20 +283,21 @@ class Game:
 
             action.player.resource_deck -= to_discard
             self.resource_deck += to_discard
-        elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-            if self.development_deck.num_cards() == 0:
-                raise ValueError("No more development cards")
-            if not action.player.resource_deck.includes(
-                ResourceDeck.development_card_cost()
-            ):
-                raise ValueError("No money to buy development card")
-
-            development_card = self.development_deck.random_draw()
-            action.player.development_deck.replenish(1, development_card)
-            action.player.resource_deck -= ResourceDeck.development_card_cost()
-            self.resource_deck += ResourceDeck.development_card_cost()
-
-            action = Action(action.player, action.action_type, development_card)
+        elif action.action_type == ActionType.MOVE_ROBBER:
+            (coordinate, player_to_steal_from) = action.value
+            self.board.robber_coordinate = coordinate
+            if player_to_steal_from is not None:
+                resource = player_to_steal_from.resource_deck.random_draw()
+                action.player.resource_deck.replenish(1, resource)
+        elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
+            if action.player.development_deck.count(DevelopmentCard.KNIGHT) == 0:
+                raise ValueError("Trying to play knight with no dev card")
+            (coordinate, player_to_steal_from) = action.value
+            self.board.robber_coordinate = coordinate
+            if player_to_steal_from is not None:
+                resource = player_to_steal_from.resource_deck.random_draw()
+                action.player.resource_deck.replenish(1, resource)
+            action.player.development_deck.draw(1, DevelopmentCard.KNIGHT)
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
             cards_selected = action.value  # Assuming action.value is a resource deck
             player_to_act = action.player
@@ -324,6 +335,14 @@ class Game:
                     )
             player_to_act.resource_deck += cards_stolen
             player_to_act.development_deck.draw(1, DevelopmentCard.MONOPOLY)
+            self.played_dev_card_this_turn = True
+        elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
+            if not action.player.has_road_building():
+                raise ValueError("Player doesn't have road building card")
+            first_edge, second_edge = action.value
+            self.board.build_road(action.player.color, first_edge)
+            self.board.build_road(action.player.color, second_edge)
+            action.player.development_deck.draw(1, DevelopmentCard.ROAD_BUILDING)
             self.played_dev_card_this_turn = True
         elif action.action_type == ActionType.MARITIME_TRADE:
             trade_offer = action.value

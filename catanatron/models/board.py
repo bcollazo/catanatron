@@ -218,6 +218,10 @@ class Board:
             if building is not None and building.color == color:
                 yield resource
 
+    def get_edge_by_id(self, edge_id):
+        filtered = filter(lambda e: e.id == edge_id, self.edges.values())
+        return next(filtered, None)
+
     def find_connected_components(self, color: Color):
         """returns connected subgraphs for a given player
 

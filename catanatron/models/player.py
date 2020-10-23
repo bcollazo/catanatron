@@ -33,13 +33,16 @@ class Player:
         self.resource_deck += resource_deck
 
     def has_knight_card(self):
-        return False
+        return self.development_deck.count(DevelopmentCard.KNIGHT) > 0
 
     def has_year_of_plenty_card(self):
         return self.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) > 0
 
     def has_monopoly_card(self):
         return self.development_deck.count(DevelopmentCard.MONOPOLY) > 0
+
+    def has_road_building(self):
+        return self.development_deck.count(DevelopmentCard.ROAD_BUILDING) > 0
 
     def __repr__(self):
         return type(self).__name__ + "[" + self.color.value + "]"
