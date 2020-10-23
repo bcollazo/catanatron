@@ -4,14 +4,15 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-
-[packages]
-flask = "*"
-flask-cors = "*"
+pytest-watch = "*"
 coverage = "*"
 black = "*"
 pytest = "*"
 coveralls = "*"
+
+[packages]
+flask = "*"
+flask-cors = "*"
 psycopg2 = "*"
 catanatron = {editable = true, path = "."}
 
