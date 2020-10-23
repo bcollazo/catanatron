@@ -24,6 +24,7 @@ from catanatron.models.actions import (
     initial_road_possibilities,
     initial_settlement_possibilites,
     discard_possibilities,
+    maritime_trade_possibilities,
 )
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
@@ -162,6 +163,7 @@ class Game:
         elif action_prompt == ActionPrompt.DISCARD:
             return discard_possibilities(player)
         elif action_prompt == ActionPrompt.PLAY_TURN:
+            # Buy / Build
             actions = [Action(player, ActionType.END_TURN, None)]
             for action in road_possible_actions(player, self.board):
                 actions.append(action)
@@ -175,6 +177,7 @@ class Game:
             ):
                 actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
 
+            # Play Dev Cards
             if not self.played_dev_card_this_turn:
                 if player.has_year_of_plenty_card():
                     for action in year_of_plenty_possible_actions(
@@ -184,6 +187,10 @@ class Game:
                 if player.has_monopoly_card():
                     for action in monopoly_possible_actions(player):
                         actions.append(action)
+
+            # Trade
+            for action in maritime_trade_possibilities(player, self.resource_deck):
+                actions.append(action)
 
             return actions
         else:
