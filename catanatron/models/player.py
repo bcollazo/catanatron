@@ -20,6 +20,14 @@ class Player:
         self.resource_deck = ResourceDeck()
         self.development_deck = DevelopmentDeck()
 
+        self.playable_development_cards = []
+
+    def start_turn(self):
+        self.playable_development_cards = self.development_deck.to_array()
+
+    def mark_played_dev_card(self):
+        self.playable_development_cards = []
+
     def decide(self, game, playable_actions):
         """Should return one of the playable_actions.
 
@@ -32,17 +40,17 @@ class Player:
     def receive(self, resource_deck):
         self.resource_deck += resource_deck
 
-    def has_knight_card(self):
-        return self.development_deck.count(DevelopmentCard.KNIGHT) > 0
+    def can_play_knight(self):
+        return DevelopmentCard.KNIGHT in self.playable_development_cards
 
-    def has_year_of_plenty_card(self):
-        return self.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) > 0
+    def can_play_year_of_plenty(self):
+        return DevelopmentCard.YEAR_OF_PLENTY in self.playable_development_cards
 
-    def has_monopoly_card(self):
-        return self.development_deck.count(DevelopmentCard.MONOPOLY) > 0
+    def can_play_monopoly(self):
+        return DevelopmentCard.MONOPOLY in self.playable_development_cards
 
-    def has_road_building(self):
-        return self.development_deck.count(DevelopmentCard.ROAD_BUILDING) > 0
+    def can_play_road_building(self):
+        return DevelopmentCard.ROAD_BUILDING in self.playable_development_cards
 
     def __repr__(self):
         return type(self).__name__ + "[" + self.color.value + "]"
