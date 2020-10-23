@@ -13,6 +13,7 @@ black = "*"
 pytest = "*"
 coveralls = "*"
 psycopg2 = "*"
+catanatron = {editable = true, path = "."}
 
 [requires]
 python_version = "3.8"
