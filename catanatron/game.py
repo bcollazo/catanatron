@@ -332,6 +332,8 @@ class Game:
             tradee = trade_offer.tradee or self  # self means bank
             if not action.player.resource_deck.includes(offering):
                 raise ValueError("Trying to trade without money")
+            if not tradee.resource_deck.includes(asking):
+                raise ValueError("Tradee doenst have those cards")
             action.player.resource_deck -= offering
             tradee.resource_deck += offering
             action.player.resource_deck += asking
