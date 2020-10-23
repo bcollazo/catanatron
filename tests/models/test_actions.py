@@ -10,6 +10,7 @@ from catanatron.models.actions import (
     robber_possibilities,
     initial_settlement_possibilites,
     discard_possibilities,
+    maritime_trade_possibilities,
     ActionType,
     ActionPrompt,
 )
@@ -150,3 +151,16 @@ def test_discard_possibilities():
     player = SimplePlayer(Color.RED)
     player.resource_deck.replenish(8, Resource.WHEAT)
     assert len(discard_possibilities(player)) == 70
+
+
+def test_maritime_trade_possibilities():
+    player = SimplePlayer(Color.RED)
+
+    bank = ResourceDeck.starting_bank()
+    assert len(maritime_trade_possibilities(player, bank)) == 0  # no cards in hand
+
+    player.resource_deck.replenish(4, Resource.WHEAT)
+    assert len(maritime_trade_possibilities(player, bank)) == 4
+
+    player.resource_deck.replenish(4, Resource.BRICK)
+    assert len(maritime_trade_possibilities(player, bank)) == 8

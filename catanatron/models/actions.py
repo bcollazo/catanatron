@@ -39,7 +39,10 @@ class ActionType(Enum):
     PLAY_MONOPOLY = "PLAY_MONOPOLY"
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"
 
-    # TRADE: too complicated for now...
+    # Trade
+    MARITIME_TRADE = "MARITIME_TRADE"
+    # TODO: Domestic trade. Im thinking should contain SUGGEST_TRADE, ACCEPT_TRADE actions...
+
     END_TURN = "END_TURN"
 
 
@@ -205,3 +208,18 @@ def ncr(n, r):
     numer = reduce(op.mul, range(n, n - r, -1), 1)
     denom = reduce(op.mul, range(1, r + 1), 1)
     return numer // denom
+
+
+def maritime_trade_possibilities(player, bank_resource_cards):
+    possibilities = []
+    for resource in Resource:
+        if player.resource_deck.count(resource) >= 4:
+            possibilities.extend(
+                [
+                    Action(player, ActionType.MARITIME_TRADE, (resource, j_resource))
+                    for j_resource in Resource
+                    if resource != j_resource  # cant trade for same resource
+                ]
+            )
+
+    return possibilities
