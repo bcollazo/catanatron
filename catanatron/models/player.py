@@ -20,10 +20,11 @@ class Player:
         self.resource_deck = ResourceDeck()
         self.development_deck = DevelopmentDeck()
 
-        self.playable_development_cards = []
+        self.clean_turn_state()
 
-    def start_turn(self):
+    def clean_turn_state(self):
         self.playable_development_cards = self.development_deck.to_array()
+        self.has_rolled = False
 
     def mark_played_dev_card(self):
         self.playable_development_cards = []

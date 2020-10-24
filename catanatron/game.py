@@ -138,7 +138,10 @@ class Game:
         if len(self.tick_queue) > 0:
             (player, action_prompt) = self.tick_queue.pop(0)
         else:
-            (player, action_prompt) = (self.current_player(), ActionPrompt.PLAY_TURN)
+            player = self.current_player()
+            action_prompt = (
+                ActionPrompt.PLAY_TURN if player.has_rolled else ActionPrompt.ROLL
+            )
 
         actions = self.playable_actions(player, action_prompt)
         action = player.decide(self.board, actions)
@@ -202,9 +205,9 @@ class Game:
         if action.action_type == ActionType.END_TURN:
             next_player_index = (self.current_player_index + 1) % len(self.players)
             self.current_player_index = next_player_index
+            self.players[next_player_index].clean_turn_state()
             self.tick_queue.append((self.players[next_player_index], ActionPrompt.ROLL))
             self.num_turns += 1
-            self.players[next_player_index].start_turn()  # clears dev card state
         elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
             self.board.build_settlement(
                 action.player.color, action.value, initial_build_phase=True
@@ -272,6 +275,7 @@ class Game:
 
             action = Action(action.player, action.action_type, dices)
             self.tick_queue.append((action.player, ActionPrompt.PLAY_TURN))
+            action.player.has_rolled = True
         elif action.action_type == ActionType.DISCARD:
             discarded = action.value
 
