@@ -161,6 +161,8 @@ def test_play_year_of_plenty_gives_player_resources():
     cards_to_add = ResourceDeck()
     cards_to_add.replenish(1, Resource.ORE)
     cards_to_add.replenish(1, Resource.WHEAT)
+
+    player_to_act.start_turn()
     action_to_execute = Action(
         player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add
     )
@@ -187,6 +189,8 @@ def test_play_year_of_plenty_not_enough_resources():
     cards_to_add = ResourceDeck()
     cards_to_add.replenish(1, Resource.ORE)
     cards_to_add.replenish(1, Resource.WHEAT)
+
+    player_to_act.start_turn()
     action_to_execute = Action(
         player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add
     )
@@ -202,6 +206,8 @@ def test_play_year_of_plenty_no_year_of_plenty_card():
     cards_to_add = ResourceDeck()
     cards_to_add.replenish(1, Resource.ORE)
     cards_to_add.replenish(1, Resource.WHEAT)
+
+    players[0].start_turn()
     action_to_execute = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add)
 
     with pytest.raises(ValueError):  # no year of plenty card
@@ -212,6 +218,7 @@ def test_play_monopoly_no_monopoly_card():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
+    players[0].start_turn()
     action_to_execute = Action(players[0], ActionType.PLAY_MONOPOLY, Resource.ORE)
 
     with pytest.raises(ValueError):  # no monopoly
@@ -232,6 +239,8 @@ def test_play_monopoly_player_steals_cards():
 
     players = [player_to_act, player_to_steal_from_1, player_to_steal_from_2]
     game = Game(players)
+
+    player_to_act.start_turn()
     action_to_execute = Action(player_to_act, ActionType.PLAY_MONOPOLY, Resource.ORE)
 
     game.execute(action_to_execute)
@@ -544,6 +553,8 @@ def test_can_only_play_one_dev_card_per_turn():
     players[0].development_deck.replenish(2, DevelopmentCard.YEAR_OF_PLENTY)
     cards_selected = ResourceDeck()
     cards_selected.replenish(2, Resource.BRICK)
+
+    players[0].start_turn()
     action = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_selected)
     game.execute(action)
     with pytest.raises(ValueError):  # shouldnt be able to play two dev cards
