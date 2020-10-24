@@ -116,7 +116,6 @@ class Game:
 
         self.tick_queue = initialize_tick_queue(players)
         self.current_player_index = 0
-        self.played_dev_card_this_turn = False
         self.num_turns = 0
 
     def play(self, action_callback=None):
@@ -156,7 +155,7 @@ class Game:
             return robber_possibilities(player, self.board, self.players, False)
         elif action_prompt == ActionPrompt.ROLL:
             actions = [Action(player, ActionType.ROLL, None)]
-            if player.has_knight_card():
+            if player.can_play_knight():
                 actions.extend(
                     robber_possibilities(player, self.board, self.players, True)
                 )
@@ -177,19 +176,18 @@ class Game:
                 actions.append(Action(player, ActionType.BUY_DEVELOPMENT_CARD, None))
 
             # Play Dev Cards
-            if not self.played_dev_card_this_turn:
-                if player.has_year_of_plenty_card():
-                    actions.extend(
-                        year_of_plenty_possible_actions(player, self.resource_deck)
-                    )
-                if player.has_monopoly_card():
-                    actions.extend(monopoly_possible_actions(player))
-                if player.has_knight_card():
-                    actions.extend(
-                        robber_possibilities(player, self.board, self.players, True)
-                    )
-                if player.has_road_building():
-                    actions.extend(road_building_possibilities(player, self.board))
+            if player.can_play_year_of_plenty():
+                actions.extend(
+                    year_of_plenty_possible_actions(player, self.resource_deck)
+                )
+            if player.can_play_monopoly():
+                actions.extend(monopoly_possible_actions(player))
+            if player.can_play_knight():
+                actions.extend(
+                    robber_possibilities(player, self.board, self.players, True)
+                )
+            if player.can_play_road_building():
+                actions.extend(road_building_possibilities(player, self.board))
 
             # Trade
             actions.extend(
@@ -206,7 +204,7 @@ class Game:
             self.current_player_index = next_player_index
             self.tick_queue.append((self.players[next_player_index], ActionPrompt.ROLL))
             self.num_turns += 1
-            self.played_dev_card_this_turn = False
+            self.players[next_player_index].start_turn()  # clears dev card state
         elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
             self.board.build_settlement(
                 action.player.color, action.value, initial_build_phase=True
@@ -290,42 +288,34 @@ class Game:
                 resource = player_to_steal_from.resource_deck.random_draw()
                 action.player.resource_deck.replenish(1, resource)
         elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
-            if action.player.development_deck.count(DevelopmentCard.KNIGHT) == 0:
-                raise ValueError("Trying to play knight with no dev card")
+            if not action.player.can_play_knight():
+                raise ValueError("Player cant play knight card now")
             (coordinate, player_to_steal_from) = action.value
             self.board.robber_coordinate = coordinate
             if player_to_steal_from is not None:
                 resource = player_to_steal_from.resource_deck.random_draw()
                 action.player.resource_deck.replenish(1, resource)
             action.player.development_deck.draw(1, DevelopmentCard.KNIGHT)
+            action.player.mark_played_dev_card()
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
             cards_selected = action.value  # Assuming action.value is a resource deck
-            player_to_act = action.player
-            if (
-                not player_to_act.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY)
-                > 0
-            ):
-                raise ValueError("Player doesn't have year of plenty card")
+            if not action.player.can_play_year_of_plenty():
+                raise ValueError("Player cant play year of plenty now")
             if not self.resource_deck.includes(cards_selected):
                 raise ValueError(
                     "Not enough resources of this type (these types?) in bank"
                 )
-            if self.played_dev_card_this_turn:
-                raise ValueError("Player has already played a dev card this turn")
-            player_to_act.resource_deck += cards_selected
-            player_to_act.development_deck.draw(1, DevelopmentCard.YEAR_OF_PLENTY)
+            action.player.resource_deck += cards_selected
+            action.player.development_deck.draw(1, DevelopmentCard.YEAR_OF_PLENTY)
             self.resource_deck -= cards_selected
-            self.played_dev_card_this_turn = True
+            action.player.mark_played_dev_card()
         elif action.action_type == ActionType.PLAY_MONOPOLY:
-            player_to_act = action.player
             card_type_to_steal = action.value
             cards_stolen = ResourceDeck()
-            if not player_to_act.has_monopoly_card():
-                raise ValueError("Player doesn't have monopoly card")
-            if self.played_dev_card_this_turn:
-                raise ValueError("Player has already played a dev card this turn")
+            if not action.player.can_play_monopoly():
+                raise ValueError("Player cant play monopoly now")
             for player in self.players:
-                if not player_to_act.color == player.color:
+                if not action.player.color == player.color:
                     number_of_cards_to_steal = player.resource_deck.count(
                         card_type_to_steal
                     )
@@ -333,17 +323,17 @@ class Game:
                     player.resource_deck.draw(
                         number_of_cards_to_steal, card_type_to_steal
                     )
-            player_to_act.resource_deck += cards_stolen
-            player_to_act.development_deck.draw(1, DevelopmentCard.MONOPOLY)
-            self.played_dev_card_this_turn = True
+            action.player.resource_deck += cards_stolen
+            action.player.development_deck.draw(1, DevelopmentCard.MONOPOLY)
+            action.player.mark_played_dev_card()
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
-            if not action.player.has_road_building():
-                raise ValueError("Player doesn't have road building card")
+            if not action.player.can_play_road_building():
+                raise ValueError("Player cant play road building now")
             first_edge, second_edge = action.value
             self.board.build_road(action.player.color, first_edge)
             self.board.build_road(action.player.color, second_edge)
             action.player.development_deck.draw(1, DevelopmentCard.ROAD_BUILDING)
-            self.played_dev_card_this_turn = True
+            action.player.mark_played_dev_card()
         elif action.action_type == ActionType.MARITIME_TRADE:
             trade_offer = action.value
             offering = ResourceDeck.from_array(trade_offer.offering)
