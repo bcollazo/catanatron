@@ -14,13 +14,14 @@ from database import save_game_state
 from catanatron.game import Game
 from catanatron.json import GameEncoder
 from catanatron.models.player import RandomPlayer, Color, SimplePlayer
+from catanatron.players.weighted_random import WeightedRandomPlayer
 
 
 @click.command()
 @click.option("--num", default=5, help="Number of greetings.")
 def simulate(num):
     """Simple program simulates NUM Catan games."""
-    player_classes = [RandomPlayer, RandomPlayer, RandomPlayer, SimplePlayer]
+    player_classes = [WeightedRandomPlayer, RandomPlayer, RandomPlayer, SimplePlayer]
     colors = [Color.RED, Color.BLUE, Color.ORANGE, Color.WHITE]
     pseudonyms = ["Foo", "Bar", "Baz", "Qux"]
 
