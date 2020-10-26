@@ -13,7 +13,8 @@ class Color(Enum):
 
 
 class Player:
-    def __init__(self, color):
+    def __init__(self, color, name=None):
+        self.name = name
         self.color = color
         self.public_victory_points = 0
         self.actual_victory_points = 0
@@ -54,7 +55,7 @@ class Player:
         return DevelopmentCard.ROAD_BUILDING in self.playable_development_cards
 
     def __repr__(self):
-        return type(self).__name__ + "[" + self.color.value + "]"
+        return f"{type(self).__name__}:{self.name}[{self.color.value}]"
 
 
 class SimplePlayer(Player):
