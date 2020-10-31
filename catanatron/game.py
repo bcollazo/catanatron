@@ -209,31 +209,37 @@ class Game:
             self.tick_queue.append((self.players[next_player_index], ActionPrompt.ROLL))
             self.num_turns += 1
         elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
+            node = self.board.get_node_by_id(action.value)
             self.board.build_settlement(
-                action.player.color, action.value, initial_build_phase=True
+                action.player.color, node, initial_build_phase=True
             )
         elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
+            node = self.board.get_node_by_id(action.value)
             self.board.build_settlement(
-                action.player.color, action.value, initial_build_phase=True
+                action.player.color, node, initial_build_phase=True
             )
             # yield resources of second settlement
             for tile in self.board.get_adjacent_tiles(action.value):
                 if tile.resource != None:
                     action.player.resource_deck.replenish(1, tile.resource)
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
+            node = self.board.get_node_by_id(action.value)
             self.board.build_settlement(
-                action.player.color, action.value, initial_build_phase=False
+                action.player.color, node, initial_build_phase=False
             )
             action.player.resource_deck -= ResourceDeck.settlement_cost()
             self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
-            self.board.build_road(action.player.color, action.value)
+            edge = self.board.get_edge_by_id(action.value)
+            self.board.build_road(action.player.color, edge)
         elif action.action_type == ActionType.BUILD_ROAD:
-            self.board.build_road(action.player.color, action.value)
+            edge = self.board.get_edge_by_id(action.value)
+            self.board.build_road(action.player.color, edge)
             action.player.resource_deck -= ResourceDeck.road_cost()
             self.resource_deck += ResourceDeck.road_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_CITY:
-            self.board.build_city(action.player.color, action.value)
+            node = self.board.get_node_by_id(action.value)
+            self.board.build_city(action.player.color, node)
             action.player.resource_deck -= ResourceDeck.city_cost()
             self.resource_deck += ResourceDeck.city_cost()  # replenish bank
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:

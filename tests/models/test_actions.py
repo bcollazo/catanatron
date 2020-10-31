@@ -167,6 +167,14 @@ def test_4to1_maritime_trade_possibilities():
     assert len(maritime_trade_possibilities(player, bank, board)) == 8
 
 
+def test_maritime_possibities_respect_bank_not_having_cards():
+    board = Board()
+    player = SimplePlayer(Color.RED)
+    player.resource_deck.replenish(4, Resource.WHEAT)
+    bank = ResourceDeck()
+    assert len(maritime_trade_possibilities(player, bank, board)) == 0
+
+
 def test_road_building_possibilities():
     board = Board()
     player = SimplePlayer(Color.RED)

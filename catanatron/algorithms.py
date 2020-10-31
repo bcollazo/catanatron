@@ -44,7 +44,8 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
     )
     while len(max_paths_by_player) > 1:
         action = road_building_actions_by_candidates.pop()
-        del max_paths_by_player[action.player.color]
+        if action.player.color in max_paths_by_player:
+            del max_paths_by_player[action.player.color]
     return max_paths_by_player.popitem()
 
 
