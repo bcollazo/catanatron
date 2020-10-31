@@ -222,6 +222,10 @@ class Board:
         filtered = filter(lambda e: e.id == edge_id, self.edges.values())
         return next(filtered, None)
 
+    def get_node_by_id(self, node_id):
+        filtered = filter(lambda n: n.id == node_id, self.nodes.values())
+        return next(filtered, None)
+
     def find_connected_components(self, color: Color):
         """returns connected subgraphs for a given player
 

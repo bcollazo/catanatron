@@ -26,13 +26,13 @@ class ActionType(Enum):
     DISCARD = "DISCARD"  # value is None or discarded cards
 
     # Building/Buying
-    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"
-    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"
-    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"
-    BUILD_ROAD = "BUILD_ROAD"  # value is edge
-    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node
-    BUILD_CITY = "BUILD_CITY"
-    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"
+    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"  # value is node_id
+    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"  # value is node id
+    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"  # value is edge id
+    BUILD_ROAD = "BUILD_ROAD"  # value is edge id
+    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node id
+    BUILD_CITY = "BUILD_CITY"  # value is node id
+    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None
 
     # Dev Card Plays
     PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, player)
@@ -92,7 +92,9 @@ def road_possible_actions(player, board):
 
     if has_money and has_roads_available:
         buildable_edges = board.buildable_edges(player.color)
-        return [Action(player, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
+        return [
+            Action(player, ActionType.BUILD_ROAD, edge.id) for edge in buildable_edges
+        ]
     else:
         return []
 
@@ -106,7 +108,7 @@ def settlement_possible_actions(player, board):
     if has_money and has_settlements_available:
         buildable_nodes = board.buildable_nodes(player.color)
         return [
-            Action(player, ActionType.BUILD_SETTLEMENT, node)
+            Action(player, ActionType.BUILD_SETTLEMENT, node.id)
             for node in buildable_nodes
         ]
     else:
@@ -122,7 +124,7 @@ def city_possible_actions(player, board):
     if has_money and has_cities_available:
         settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
         return [
-            Action(player, ActionType.BUILD_CITY, node) for (node, _) in settlements
+            Action(player, ActionType.BUILD_CITY, node.id) for (node, _) in settlements
         ]
     else:
         return []
@@ -166,7 +168,7 @@ def initial_settlement_possibilites(player, board, is_first):
         else ActionType.BUILD_SECOND_SETTLEMENT
     )
     buildable_nodes = board.buildable_nodes(player.color, initial_build_phase=True)
-    return list(map(lambda node: Action(player, action_type, node), buildable_nodes))
+    return list(map(lambda node: Action(player, action_type, node.id), buildable_nodes))
 
 
 def initial_road_possibilities(player, board, actions):
@@ -177,7 +179,8 @@ def initial_road_possibilities(player, board, actions):
         or action.action_type == ActionType.BUILD_SECOND_SETTLEMENT,
         actions,
     )
-    last_settlement_node = list(node_building_actions_by_player)[-1].value
+    last_settlement_node_id = list(node_building_actions_by_player)[-1].value
+    last_settlement_node = board.get_node_by_id(last_settlement_node_id)
 
     buildable_edges = filter(
         lambda edge: last_settlement_node in edge.nodes,
@@ -185,7 +188,7 @@ def initial_road_possibilities(player, board, actions):
     )
     return list(
         map(
-            lambda edge: Action(player, ActionType.BUILD_INITIAL_ROAD, edge),
+            lambda edge: Action(player, ActionType.BUILD_INITIAL_ROAD, edge.id),
             buildable_edges,
         )
     )
@@ -197,7 +200,7 @@ def discard_possibilities(player):
     num_to_discard = num_cards // 2
 
     num_possibilities = ncr(num_cards, num_to_discard)
-    if num_possibilities > 100000:  # if too many, just take first N
+    if num_possibilities > 100:  # if too many, just take first N
         return [Action(player, ActionType.DISCARD, hand[:num_to_discard])]
 
     to_discard = itertools.combinations(hand, num_to_discard)
@@ -217,6 +220,7 @@ def ncr(n, r):
     return numer // denom
 
 
+# TODO: Remove possibilities if bank doesnt have them.
 def maritime_trade_possibilities(player, bank_resource_cards, board):
     possibilities = []
     # 4:1 trade
