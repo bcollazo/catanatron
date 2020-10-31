@@ -220,14 +220,14 @@ def ncr(n, r):
     return numer // denom
 
 
-# TODO: Remove possibilities if bank doesnt have them.
-def maritime_trade_possibilities(player, bank_resource_cards, board):
+def maritime_trade_possibilities(player, bank, board):
     possibilities = []
     # 4:1 trade
     for resource in Resource:
         if player.resource_deck.count(resource) >= 4:
             for j_resource in Resource:
-                if resource != j_resource:  # cant trade for same resource
+                # cant trade for same resource, and bank must have enough
+                if resource != j_resource and bank.count(j_resource) > 0:
                     trade_offer = TradeOffer([resource] * 4, [j_resource], None)
                     possibilities.append(
                         Action(player, ActionType.MARITIME_TRADE, trade_offer)
@@ -239,7 +239,8 @@ def maritime_trade_possibilities(player, bank_resource_cards, board):
             for resource in Resource:
                 if player.resource_deck.count(resource) >= 3:
                     for j_resource in Resource:
-                        if resource != j_resource:  # cant trade for same resource
+                        # cant trade for same resource, and bank must have enough
+                        if resource != j_resource and bank.count(j_resource) > 0:
                             trade_offer = TradeOffer([resource] * 3, [j_resource], None)
                             possibilities.append(
                                 Action(player, ActionType.MARITIME_TRADE, trade_offer)
@@ -247,7 +248,8 @@ def maritime_trade_possibilities(player, bank_resource_cards, board):
         else:  # has 2:1
             if player.resource_deck.count(port_resource) >= 2:
                 for j_resource in Resource:
-                    if port_resource != j_resource:  # cant trade for same resource
+                    # cant trade for same resource, and bank must have enough
+                    if port_resource != j_resource and bank.count(j_resource) > 0:
                         trade_offer = TradeOffer(
                             [port_resource] * 2, [j_resource], None
                         )
