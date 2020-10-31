@@ -2,7 +2,7 @@ import React from "react";
 import styled from "styled-components";
 
 const Panel = styled.div`
-  height: 300px;
+  height: 180px;
   padding: 20px;
 
   background: white;
