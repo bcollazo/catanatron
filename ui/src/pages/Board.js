@@ -34,7 +34,10 @@ export default function Board({ state }) {
     size = w / SQRT3;
     h = 2 * size;
   } else {
-    h = (4 * (boardHeight / numLevels)) / 3;
+    // boardHeight = numLevels * (3h/4) + (1h/4)
+    // 4*boardHeight = numLevels * 3h + 1h
+    // 4*boardHeight = (3*numLevels + 1)*h, so:
+    h = (4 * boardHeight) / (3 * numLevels + 1);
     size = h / 2;
     w = SQRT3 * size;
   }
@@ -93,7 +96,7 @@ export default function Board({ state }) {
   );
 
   return (
-    <div className="board-container w-full flex-grow m-10">
+    <div className="board-container flex-grow flex">
       <div ref={ref} className="board relative w-full h-full">
         {tiles}
         {roads}

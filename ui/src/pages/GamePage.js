@@ -33,11 +33,11 @@ export default function GamePage() {
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       if (automation && !inFlightRequest) {
-        onClickNext();
+        await onClickNext();
       }
-    }, 300);
+    }, 200);
     return () => clearInterval(interval);
   }, [automation, inFlightRequest]);
 
