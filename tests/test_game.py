@@ -350,12 +350,12 @@ def test_longest_road_simple():
 
     game.execute(
         Action(
-            red, ActionType.BUILD_FIRST_SETTLEMENT, nodes[((0, 0, 0), NodeRef.SOUTH)]
+            red, ActionType.BUILD_FIRST_SETTLEMENT, nodes[((0, 0, 0), NodeRef.SOUTH)].id
         )
     )
     game.execute(
         Action(
-            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)]
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)].id
         )
     )
 
@@ -363,20 +363,20 @@ def test_longest_road_simple():
     assert color is None
 
     game.execute(
-        Action(red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.EAST)])
+        Action(red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.EAST)].id)
     )
     game.execute(
         Action(
-            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)]
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)].id
         )
     )
     game.execute(
         Action(
-            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)]
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)].id
         )
     )
     game.execute(
-        Action(red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.WEST)])
+        Action(red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.WEST)].id)
     )
 
     color, path = longest_road(game.board, game.players, game.actions)
@@ -398,54 +398,62 @@ def test_longest_road_tie():
         Action(
             red,
             ActionType.BUILD_FIRST_SETTLEMENT,
-            nodes[((0, 0, 0), NodeRef.SOUTH)],
+            nodes[((0, 0, 0), NodeRef.SOUTH)].id,
         ),
     )
     game.execute(
         Action(
-            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)]
+            red, ActionType.BUILD_INITIAL_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)].id
         )
     )
     game.execute(
         Action(
             blue,
             ActionType.BUILD_FIRST_SETTLEMENT,
-            nodes[((0, 2, -2), NodeRef.SOUTH)],
+            nodes[((0, 2, -2), NodeRef.SOUTH)].id,
         ),
     )
     game.execute(
         Action(
             blue,
             ActionType.BUILD_INITIAL_ROAD,
-            edges[((0, 2, -2), EdgeRef.SOUTHEAST)],
+            edges[((0, 2, -2), EdgeRef.SOUTHEAST)].id,
         )
     )
 
-    game.execute(Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.EAST)]))
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)])
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.EAST)].id)
     )
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)])
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)].id)
     )
-    game.execute(Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.WEST)]))
+    game.execute(
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)].id)
+    )
+    game.execute(
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.WEST)].id)
+    )
 
-    game.execute(Action(blue, ActionType.BUILD_ROAD, edges[((0, 2, -2), EdgeRef.EAST)]))
+    game.execute(
+        Action(blue, ActionType.BUILD_ROAD, edges[((0, 2, -2), EdgeRef.EAST)].id)
+    )
     game.execute(
         Action(
             blue,
             ActionType.BUILD_ROAD,
-            edges[((0, 2, -2), EdgeRef.NORTHEAST)],
+            edges[((0, 2, -2), EdgeRef.NORTHEAST)].id,
         )
     )
     game.execute(
         Action(
             blue,
             ActionType.BUILD_ROAD,
-            edges[((0, 2, -2), EdgeRef.NORTHWEST)],
+            edges[((0, 2, -2), EdgeRef.NORTHWEST)].id,
         )
     )
-    game.execute(Action(blue, ActionType.BUILD_ROAD, edges[((0, 2, -2), EdgeRef.WEST)]))
+    game.execute(
+        Action(blue, ActionType.BUILD_ROAD, edges[((0, 2, -2), EdgeRef.WEST)].id)
+    )
 
     color, path = longest_road(game.board, game.players, game.actions)
     assert color == Color.RED  # even if blue also has 5-road. red had it first
@@ -455,7 +463,7 @@ def test_longest_road_tie():
         Action(
             blue,
             ActionType.BUILD_ROAD,
-            edges[((0, 2, -2), EdgeRef.SOUTHWEST)],
+            edges[((0, 2, -2), EdgeRef.SOUTHWEST)].id,
         )
     )
     color, path = longest_road(game.board, game.players, game.actions)
@@ -476,51 +484,57 @@ def test_complicated_road():  # classic 8-like roads
 
     game.execute(
         Action(
-            red, ActionType.BUILD_FIRST_SETTLEMENT, nodes[((0, 0, 0), NodeRef.SOUTH)]
+            red, ActionType.BUILD_FIRST_SETTLEMENT, nodes[((0, 0, 0), NodeRef.SOUTH)].id
         ),
     )
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)])
-    )
-    game.execute(Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.EAST)]))
-    game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)])
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHEAST)].id)
     )
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)])
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.EAST)].id)
     )
-    game.execute(Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.WEST)]))
     game.execute(
-        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHEAST)].id)
+    )
+    game.execute(
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.NORTHWEST)].id)
+    )
+    game.execute(
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.WEST)].id)
+    )
+    game.execute(
+        Action(red, ActionType.BUILD_ROAD, edges[((0, 0, 0), EdgeRef.SOUTHWEST)].id)
     )
 
     game.execute(
         Action(
             red,
             ActionType.BUILD_ROAD,
-            edges[((1, -1, 0), EdgeRef.SOUTHWEST)],
+            edges[((1, -1, 0), EdgeRef.SOUTHWEST)].id,
         )
     )
     game.execute(
         Action(
             red,
             ActionType.BUILD_ROAD,
-            edges[((1, -1, 0), EdgeRef.SOUTHEAST)],
+            edges[((1, -1, 0), EdgeRef.SOUTHEAST)].id,
         )
     )
-    game.execute(Action(red, ActionType.BUILD_ROAD, edges[((1, -1, 0), EdgeRef.EAST)]))
     game.execute(
-        Action(
-            red,
-            ActionType.BUILD_ROAD,
-            edges[((1, -1, 0), EdgeRef.NORTHEAST)],
-        )
+        Action(red, ActionType.BUILD_ROAD, edges[((1, -1, 0), EdgeRef.EAST)].id)
     )
     game.execute(
         Action(
             red,
             ActionType.BUILD_ROAD,
-            edges[((1, -1, 0), EdgeRef.NORTHWEST)],
+            edges[((1, -1, 0), EdgeRef.NORTHEAST)].id,
+        )
+    )
+    game.execute(
+        Action(
+            red,
+            ActionType.BUILD_ROAD,
+            edges[((1, -1, 0), EdgeRef.NORTHWEST)].id,
         )
     )
 
@@ -532,7 +546,7 @@ def test_complicated_road():  # classic 8-like roads
         Action(
             red,
             ActionType.BUILD_ROAD,
-            edges[((2, -2, 0), EdgeRef.SOUTHWEST)],
+            edges[((2, -2, 0), EdgeRef.SOUTHWEST)].id,
         )
     )
 
@@ -591,7 +605,7 @@ def test_can_trade_with_port():
     # Find port at (3, -3, 0), West.
     port_node = game.board.nodes[((2, -2, 0), NodeRef.NORTHEAST)]
     port = game.board.tiles[(3, -3, 0)]
-    action = Action(players[0], ActionType.BUILD_FIRST_SETTLEMENT, port_node)
+    action = Action(players[0], ActionType.BUILD_FIRST_SETTLEMENT, port_node.id)
     game.execute(action)
 
     resource_out = port.resource or Resource.WHEAT
