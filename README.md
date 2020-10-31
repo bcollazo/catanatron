@@ -74,3 +74,9 @@ To develop for Catanatron core logic you can use the following test suite:
 ```
 coverage run --source=catanatron -m pytest tests/ && coverage report
 ```
+
+Or you can run the suite in watch-mode with:
+
+```
+ptw --ignore=tests/integration_tests/ --nobeep
+```
