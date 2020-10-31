@@ -1,9 +1,10 @@
 from catanatron.game import Game
-from catanatron.algorithms import longest_road
+from catanatron.algorithms import longest_road, largest_army
 from catanatron.models.board_initializer import NodeRef, EdgeRef
 from catanatron.models.actions import Action, ActionType
 from catanatron.models.player import SimplePlayer, Color
 from catanatron.models.decks import ResourceDeck
+from catanatron.models.enums import DevelopmentCard
 
 
 def road(player, node_id):
@@ -183,3 +184,51 @@ def test_triple_longest_road_tie():
     color, path = longest_road(game.board, game.players, game.actions)
     assert color == Color.RED
     assert len(path) == 6
+
+
+def test_largest_army_calculation_when_no_one_has_three():
+    red = SimplePlayer(Color.RED)
+    blue = SimplePlayer(Color.BLUE)
+    white = SimplePlayer(Color.WHITE)
+
+    red.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    red.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    blue.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    actions = [
+        Action(red, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(red, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(blue, ActionType.PLAY_KNIGHT_CARD, None),
+    ]
+
+    color, count = largest_army([red, blue, white], actions)
+    assert color is None and count is None
+
+
+def test_largest_army_calculation_on_tie():
+    red = SimplePlayer(Color.RED)
+    blue = SimplePlayer(Color.BLUE)
+    white = SimplePlayer(Color.WHITE)
+
+    red.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    red.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    red.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    blue.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    blue.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    blue.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    actions = [
+        Action(red, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(red, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(red, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(blue, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(blue, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(blue, ActionType.PLAY_KNIGHT_CARD, None),
+    ]
+
+    color, count = largest_army([red, blue, white], actions)
+    assert color is Color.RED and count == 3
+
+    blue.mark_played_dev_card(DevelopmentCard.KNIGHT)
+    actions.append(Action(blue, ActionType.PLAY_KNIGHT_CARD, None))
+
+    color, count = largest_army([red, blue, white], actions)
+    assert color is Color.BLUE and count == 4
