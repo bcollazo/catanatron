@@ -11,6 +11,7 @@ export default function GamePage() {
   const { gameId } = useParams();
   const [state, setState] = useState(null);
   const [automation, setAutomation] = useState(false);
+  const [inFlightRequest, setInFlightRequest] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -21,7 +22,9 @@ export default function GamePage() {
   }, [gameId]);
 
   const onClickNext = useCallback(async () => {
+    setInFlightRequest(true);
     const response = await axios.post(`${API_URL}/games/${gameId}/tick`);
+    setInFlightRequest(false);
     setState(response.data);
   }, [gameId]);
 
@@ -31,12 +34,12 @@ export default function GamePage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (automation) {
+      if (automation && !inFlightRequest) {
         onClickNext();
       }
-    }, 200);
+    }, 300);
     return () => clearInterval(interval);
-  }, [automation]);
+  }, [automation, inFlightRequest]);
 
   console.log(state);
   if (state === null) {
