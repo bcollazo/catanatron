@@ -6,6 +6,7 @@ from catanatron.models.actions import ActionType, Action
 from catanatron.models.map import Port, Water
 from catanatron.models.board import Board, Graph
 from catanatron.models.player import Player, Color
+from catanatron.models.enums import DevelopmentCard
 
 
 def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Action]):
@@ -78,3 +79,31 @@ def longest_acyclic_path(subgraph: Graph):
         paths.extend(paths_from_this_node)
 
     return max(paths, key=len)
+
+
+def largest_army(players: Iterable[Player], actions: Iterable[Action]):
+    num_knights_to_players = defaultdict(set)
+    for player in players:
+        num_knight_played = player.played_development_cards.count(
+            DevelopmentCard.KNIGHT
+        )
+        num_knights_to_players[num_knight_played].add(player.color)
+
+    max_count = max(num_knights_to_players.keys())
+    if max_count < 3:
+        return (None, None)
+
+    candidates = num_knights_to_players[max_count]
+    knight_actions = list(
+        filter(
+            lambda a: a.action_type == ActionType.PLAY_KNIGHT_CARD
+            and a.player.color in candidates,
+            actions,
+        )
+    )
+    while len(candidates) > 1:
+        action = knight_actions.pop()
+        if action.player.color in candidates:
+            candidates.remove(action.player.color)
+
+    return candidates.pop(), max_count

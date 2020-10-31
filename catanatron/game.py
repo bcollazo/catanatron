@@ -306,7 +306,7 @@ class Game:
                 resource = player_to_steal_from.resource_deck.random_draw()
                 action.player.resource_deck.replenish(1, resource)
             action.player.development_deck.draw(1, DevelopmentCard.KNIGHT)
-            action.player.mark_played_dev_card()
+            action.player.mark_played_dev_card(DevelopmentCard.KNIGHT)
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
             cards_selected = action.value  # Assuming action.value is a resource deck
             if not action.player.can_play_year_of_plenty():
@@ -318,7 +318,7 @@ class Game:
             action.player.resource_deck += cards_selected
             action.player.development_deck.draw(1, DevelopmentCard.YEAR_OF_PLENTY)
             self.resource_deck -= cards_selected
-            action.player.mark_played_dev_card()
+            action.player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
         elif action.action_type == ActionType.PLAY_MONOPOLY:
             card_type_to_steal = action.value
             cards_stolen = ResourceDeck()
@@ -335,7 +335,7 @@ class Game:
                     )
             action.player.resource_deck += cards_stolen
             action.player.development_deck.draw(1, DevelopmentCard.MONOPOLY)
-            action.player.mark_played_dev_card()
+            action.player.mark_played_dev_card(DevelopmentCard.MONOPOLY)
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
             if not action.player.can_play_road_building():
                 raise ValueError("Player cant play road building now")
@@ -343,7 +343,7 @@ class Game:
             self.board.build_road(action.player.color, first_edge)
             self.board.build_road(action.player.color, second_edge)
             action.player.development_deck.draw(1, DevelopmentCard.ROAD_BUILDING)
-            action.player.mark_played_dev_card()
+            action.player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
         elif action.action_type == ActionType.MARITIME_TRADE:
             trade_offer = action.value
             offering = ResourceDeck.from_array(trade_offer.offering)

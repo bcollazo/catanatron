@@ -1,5 +1,6 @@
 import random
 from enum import Enum
+from collections import defaultdict
 
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 from catanatron.models.enums import DevelopmentCard
@@ -20,6 +21,7 @@ class Player:
         self.actual_victory_points = 0
         self.resource_deck = ResourceDeck()
         self.development_deck = DevelopmentDeck()
+        self.played_development_cards = DevelopmentDeck()
 
         self.clean_turn_state()
 
@@ -27,8 +29,9 @@ class Player:
         self.playable_development_cards = self.development_deck.to_array()
         self.has_rolled = False
 
-    def mark_played_dev_card(self):
+    def mark_played_dev_card(self, card_type):
         self.playable_development_cards = []
+        self.played_development_cards.replenish(1, card_type)
 
     def decide(self, game, playable_actions):
         """Should return one of the playable_actions.
