@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState } from "react";
 import useWindowSize from "../utils/useWindowSize";
 import Tile from "./Tile";
 import { SQRT3 } from "../utils/coordinates";
-import Road from "./Road";
+import Edge from "./Edge";
 import Node from "./Node";
 import Robber from "./Robber";
 
@@ -54,53 +54,45 @@ export default function Board({ state }) {
       size={size}
     />
   ));
-  const roads = [];
-  Object.values(state.edges).forEach(
-    ({ building, direction, tile_coordinate }) => {
-      if (building !== null) {
-        roads.push(
-          <Road
-            key={[tile_coordinate, direction]}
-            centerX={centerX}
-            centerY={centerY}
-            w={w}
-            h={h}
-            size={size}
-            coordinate={tile_coordinate}
-            direction={direction}
-            building={building}
-          />
-        );
-      }
-    }
-  );
-  const nodeBuildings = [];
-  Object.values(state.nodes).forEach(
-    ({ building, direction, tile_coordinate }) => {
-      if (building !== null) {
-        nodeBuildings.push(
-          <Node
-            key={[tile_coordinate, direction]}
-            centerX={centerX}
-            centerY={centerY}
-            w={w}
-            h={h}
-            size={size}
-            coordinate={tile_coordinate}
-            direction={direction}
-            building={building}
-          />
-        );
-      }
-    }
-  );
+  const edges = Object.values(
+    state.edges
+  ).map(({ building, direction, tile_coordinate, id }) => (
+    <Edge
+      id={id}
+      key={id}
+      centerX={centerX}
+      centerY={centerY}
+      w={w}
+      h={h}
+      size={size}
+      coordinate={tile_coordinate}
+      direction={direction}
+      building={building}
+    />
+  ));
+  const nodes = Object.values(
+    state.nodes
+  ).map(({ building, direction, tile_coordinate, id }) => (
+    <Node
+      id={id}
+      key={id}
+      centerX={centerX}
+      centerY={centerY}
+      w={w}
+      h={h}
+      size={size}
+      coordinate={tile_coordinate}
+      direction={direction}
+      building={building}
+    />
+  ));
 
   return (
     <div className="board-container flex-grow flex">
       <div ref={ref} className="board relative w-full h-full">
         {tiles}
-        {roads}
-        {nodeBuildings}
+        {edges}
+        {nodes}
         <Robber
           centerX={centerX}
           centerY={centerY}
