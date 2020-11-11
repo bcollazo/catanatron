@@ -26,11 +26,8 @@ class EdgeRef(Enum):
 
 
 class Edge:
-    next_autoinc_id = 0
-
-    def __init__(self, nodes):
-        self.id = Edge.next_autoinc_id
-        Edge.next_autoinc_id += 1
+    def __init__(self, edge_id, nodes):
+        self.id = edge_id
 
         self.nodes = nodes  # the 2 nodes at the ends
 
@@ -39,11 +36,8 @@ class Edge:
 
 
 class Node:
-    next_autoinc_id = 0
-
-    def __init__(self):
-        self.id = Node.next_autoinc_id
-        Node.next_autoinc_id += 1
+    def __init__(self, node_id):
+        self.id = node_id
 
     def __repr__(self):
         return "Node:" + str(self.id)
@@ -63,10 +57,14 @@ def initialize_board(catan_map):
     all_tiles = {}
     all_nodes = {}
     all_edges = {}
+    node_autoinc = 0
+    edge_autoinc = 0
     # graph is { node => { edge: node }}
     graph = defaultdict(dict)
     for (coordinate, tile_type) in catan_map.topology.items():
-        nodes, edges = get_nodes_and_edges(all_tiles, coordinate)
+        nodes, edges, node_autoinc, edge_autoinc = get_nodes_and_edges(
+            all_tiles, coordinate, node_autoinc, edge_autoinc
+        )
 
         # create and save tile
         if isinstance(tile_type, tuple):  # is port
@@ -113,7 +111,7 @@ def initialize_board(catan_map):
     return (all_tiles, all_nodes, all_edges, graph)
 
 
-def get_nodes_and_edges(tiles, coordinate):
+def get_nodes_and_edges(tiles, coordinate, node_autoinc, edge_autoinc):
     """Get pre-existing nodes and edges in board for given tile coordinate"""
     nodes = {
         NodeRef.NORTH: None,
@@ -169,14 +167,16 @@ def get_nodes_and_edges(tiles, coordinate):
     # Initializes new ones
     for noderef, value in nodes.items():
         if value == None:
-            nodes[noderef] = Node()
+            nodes[noderef] = Node(node_autoinc)
+            node_autoinc += 1
     for edgeref, value in edges.items():
         if value == None:
             a_noderef, b_noderef = get_edge_nodes(edgeref)
             edge_nodes = (nodes[a_noderef], nodes[b_noderef])
-            edges[edgeref] = Edge(edge_nodes)
+            edges[edgeref] = Edge(edge_autoinc, edge_nodes)
+            edge_autoinc += 1
 
-    return nodes, edges
+    return nodes, edges, node_autoinc, edge_autoinc
 
 
 def get_edge_nodes(edge_ref):
