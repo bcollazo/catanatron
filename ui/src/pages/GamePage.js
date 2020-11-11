@@ -33,11 +33,11 @@ export default function GamePage() {
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       if (automation && !inFlightRequest) {
-        onClickNext();
+        await onClickNext();
       }
-    }, 300);
+    }, 100);
     return () => clearInterval(interval);
   }, [automation, inFlightRequest]);
 
@@ -46,16 +46,15 @@ export default function GamePage() {
     return <div></div>;
   }
   return (
-    <div className="h-full flex flex-col">
-      <div className="w-full h-full flex bg-blue-600">
+    <div className="h-full flex">
+      <div className="w-full h-full flex flex-col bg-blue-600">
         <Board state={state} />
-        <SidePanel state={state} />
+        <ControlPanel
+          onClickNext={onClickNext}
+          onClickAutomation={onClickAutomation}
+        />
       </div>
-
-      <ControlPanel
-        onClickNext={onClickNext}
-        onClickAutomation={onClickAutomation}
-      />
+      <SidePanel state={state} />
     </div>
   );
 }

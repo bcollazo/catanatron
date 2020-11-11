@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Iterable
 from collections import namedtuple, defaultdict
 
-from catanatron.algorithms import longest_road
+from catanatron.algorithms import longest_road, largest_army
 from catanatron.models.map import BaseMap
 from catanatron.models.board import Board, BuildingType
 from catanatron.models.board_initializer import Node
@@ -144,7 +144,7 @@ class Game:
             )
 
         actions = self.playable_actions(player, action_prompt)
-        action = player.decide(self.board, actions)
+        action = player.decide(self, actions)
         self.execute(action, action_callback=action_callback)
 
     def playable_actions(self, player, action_prompt):
@@ -371,9 +371,12 @@ class Game:
         return self.players[self.current_player_index]
 
     def count_victory_points(self):
-        (color, path) = longest_road(self.board, self.players, self.actions)
-        # TODO: Count largest army
+        road_color = longest_road(self.board, self.players, self.actions)[0]
+        army_color = largest_army(self.players, self.actions)[0]
 
+        for player in self.players:
+            player.has_road = False
+            player.has_army = False
         for player in self.players:
             public_vps = 0
             public_vps += len(
@@ -382,8 +385,12 @@ class Game:
             public_vps += 2 * len(
                 self.board.get_player_buildings(player.color, BuildingType.CITY)
             )  # count cities
-            if color != None and self.players_by_color[color] == player:
-                public_vps += 2
+            if road_color != None and self.players_by_color[road_color] == player:
+                public_vps += 2  # road
+                player.has_road = True
+            if army_color != None and self.players_by_color[army_color] == player:
+                public_vps += 2  # army
+                player.has_army = True
 
             player.public_victory_points = public_vps
             player.actual_victory_points = public_vps + player.development_deck.count(

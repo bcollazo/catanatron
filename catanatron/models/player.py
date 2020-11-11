@@ -22,6 +22,8 @@ class Player:
         self.resource_deck = ResourceDeck()
         self.development_deck = DevelopmentDeck()
         self.played_development_cards = DevelopmentDeck()
+        self.has_road = False
+        self.has_army = False
 
         self.clean_turn_state()
 

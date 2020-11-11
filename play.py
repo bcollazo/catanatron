@@ -18,15 +18,15 @@ from catanatron.players.weighted_random import WeightedRandomPlayer
 
 
 @click.command()
-@click.option("--num", default=5, help="Number of greetings.")
-def simulate(num):
+@click.option("-n", "--number", default=5, help="Number of games.")
+def simulate(number):
     """Simple program simulates NUM Catan games."""
     player_classes = [WeightedRandomPlayer, RandomPlayer, RandomPlayer, SimplePlayer]
     colors = [Color.RED, Color.BLUE, Color.ORANGE, Color.WHITE]
     pseudonyms = ["Foo", "Bar", "Baz", "Qux"]
 
     wins = defaultdict(int)
-    for x in range(num):
+    for x in range(number):
         seating = random.sample(range(4), 4)
         players = [player_classes[i](colors[i], pseudonyms[i]) for i in seating]
 

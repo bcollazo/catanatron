@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import cn from "classnames";
 
 export default function SidePanel({ state }) {
   const actionRef = useRef(null);
@@ -39,22 +40,31 @@ export default function SidePanel({ state }) {
     ({
       color,
       resource_deck,
+      development_deck,
       public_victory_points,
       actual_victory_points,
+      played_development_cards,
+      has_army,
+      has_road,
     }) => {
-      const colorClass = `bg-white bg-${color.toLowerCase()}-700 h-24`;
+      const playerClass = `bg-white bg-${color.toLowerCase()}-700 h-42 overflow-auto`;
       return (
-        <div key={color} className={colorClass}>
+        <div key={color} className={playerClass}>
           <div>{JSON.stringify(resource_deck, null, 2)}</div>
+          <div>{JSON.stringify(development_deck, null, 2)}</div>
           <div>VPs: {public_victory_points}</div>
           <div>AVPs: {actual_victory_points}</div>
+          <div className={cn({ "font-bold": has_army })}>
+            Knights: {played_development_cards["KNIGHT"]}
+          </div>
+          {has_road && <div className="font-bold">Longest Road</div>}
         </div>
       );
     }
   );
 
   return (
-    <div className="h-full lg:w-1/3 w-1/2 bg-gray-900 p-6">
+    <div className="h-full w-1/2 bg-gray-900 p-4">
       <div ref={actionRef} className="h-64 overflow-auto">
         {actions}
       </div>
