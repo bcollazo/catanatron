@@ -31,7 +31,7 @@ SELECT_GAME_QUERY = """
     SELECT pickle_data FROM game_states 
     WHERE game_id = %s ORDER BY action_index DESC LIMIT 1
 """
-SELECT_GAME_IDS_QUERY = """SELECT DISTINCT game_id FROM game_states"""
+SELECT_GAME_IDS_QUERY = """SELECT game_id FROM game_states GROUP BY game_id ORDER BY MAX(id) DESC LIMIT %s"""
 SELECT_STATES_QUERY = """SELECT * FROM game_states WHERE game_id = %s"""
 
 connection = psycopg2.connect(
@@ -50,11 +50,17 @@ connection.commit()
 def save_game_state(game):
     state = json.dumps(game, cls=GameEncoder)
     pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
-    cursor.execute(
-        INSERT_STATE_QUERY,
-        (game.id, len(game.actions), state, pickle_data),
-    )
-    connection.commit()
+    try:
+        cursor.execute(
+            INSERT_STATE_QUERY,
+            (game.id, len(game.actions), state, pickle_data),
+        )
+        connection.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(
+            "Error in transction Reverting all other operations of a transction ", error
+        )
+        connection.rollback()
 
 
 def get_last_game_state(game_id):
@@ -69,12 +75,11 @@ def get_last_game_state(game_id):
 
 
 # TODO: Filter by winners
-def get_finished_games_ids():
-    cursor.execute(SELECT_GAME_IDS_QUERY)
-    row = cursor.fetchone()
-    while row is not None:
+def get_finished_games_ids(limit=10):
+    cursor.execute(SELECT_GAME_IDS_QUERY, (limit,))
+    rows = cursor.fetchall()
+    for row in rows:
         yield row[0]
-        row = cursor.fetchone()
 
 
 def get_game_states(game_id):
