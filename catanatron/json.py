@@ -60,14 +60,16 @@ class GameEncoder(json.JSONEncoder):
             return {"type": "WATER"}
         if isinstance(obj, Port):
             return {
+                "id": obj.id,
                 "type": "PORT",
                 "direction": self.default(obj.direction),
                 "resource": self.default(obj.resource),
             }
         if isinstance(obj, Tile):
             if obj.resource == None:
-                return {"type": "DESERT"}
+                return {"id": obj.id, "type": "DESERT"}
             return {
+                "id": obj.id,
                 "type": "RESOURCE_TILE",
                 "resource": self.default(obj.resource),
                 "number": obj.number,

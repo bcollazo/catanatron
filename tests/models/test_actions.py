@@ -147,10 +147,11 @@ def test_initial_placement_possibilities():
     assert len(initial_settlement_possibilites(red, board, True)) == 54
 
 
-def test_discard_possibilities():
-    player = SimplePlayer(Color.RED)
-    player.resource_deck.replenish(8, Resource.WHEAT)
-    assert len(discard_possibilities(player)) == 70
+# TODO: Forcing random selection to ease dimensionality.
+# def test_discard_possibilities():
+#     player = SimplePlayer(Color.RED)
+#     player.resource_deck.replenish(8, Resource.WHEAT)
+#     assert len(discard_possibilities(player)) == 70
 
 
 def test_4to1_maritime_trade_possibilities():

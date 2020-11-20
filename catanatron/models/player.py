@@ -19,21 +19,29 @@ class Player:
         self.color = color
         self.public_victory_points = 0
         self.actual_victory_points = 0
+
         self.resource_deck = ResourceDeck()
         self.development_deck = DevelopmentDeck()
         self.played_development_cards = DevelopmentDeck()
+
         self.has_road = False
         self.has_army = False
 
-        self.clean_turn_state()
+        self.roads_available = 15
+        self.settlements_available = 5
+        self.cities_available = 4
+
+        self.has_rolled = False
+        self.playable_development_cards = self.development_deck.to_array()
 
     def clean_turn_state(self):
-        self.playable_development_cards = self.development_deck.to_array()
         self.has_rolled = False
+        self.playable_development_cards = self.development_deck.to_array()
 
     def mark_played_dev_card(self, card_type):
-        self.playable_development_cards = []
+        self.development_deck.draw(1, card_type)
         self.played_development_cards.replenish(1, card_type)
+        self.playable_development_cards = []
 
     def decide(self, game, playable_actions):
         """Should return one of the playable_actions.

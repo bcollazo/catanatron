@@ -191,6 +191,8 @@ def test_largest_army_calculation_when_no_one_has_three():
     blue = SimplePlayer(Color.BLUE)
     white = SimplePlayer(Color.WHITE)
 
+    red.development_deck.replenish(2, DevelopmentCard.KNIGHT)
+    blue.development_deck.replenish(1, DevelopmentCard.KNIGHT)
     red.mark_played_dev_card(DevelopmentCard.KNIGHT)
     red.mark_played_dev_card(DevelopmentCard.KNIGHT)
     blue.mark_played_dev_card(DevelopmentCard.KNIGHT)
@@ -209,6 +211,8 @@ def test_largest_army_calculation_on_tie():
     blue = SimplePlayer(Color.BLUE)
     white = SimplePlayer(Color.WHITE)
 
+    red.development_deck.replenish(3, DevelopmentCard.KNIGHT)
+    blue.development_deck.replenish(4, DevelopmentCard.KNIGHT)
     red.mark_played_dev_card(DevelopmentCard.KNIGHT)
     red.mark_played_dev_card(DevelopmentCard.KNIGHT)
     red.mark_played_dev_card(DevelopmentCard.KNIGHT)

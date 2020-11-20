@@ -5,11 +5,8 @@ from catanatron.models.enums import Resource
 
 
 class Tile:
-    next_autoinc_id = 0
-
-    def __init__(self, resource, number, nodes, edges):
-        self.id = Tile.next_autoinc_id
-        Tile.next_autoinc_id += 1
+    def __init__(self, tile_id, resource, number, nodes, edges):
+        self.id = tile_id
 
         self.resource = resource  # None means desert tile
         self.number = number
@@ -21,11 +18,8 @@ class Tile:
 
 
 class Port:
-    next_autoinc_id = 0
-
-    def __init__(self, resource, direction, nodes, edges):
-        self.id = Port.next_autoinc_id
-        Port.next_autoinc_id += 1
+    def __init__(self, port_id, resource, direction, nodes, edges):
+        self.id = port_id
 
         self.resource = resource  # None means its a 3:1 port.
         self.direction = direction
@@ -37,12 +31,7 @@ class Port:
 
 
 class Water:
-    next_autoinc_id = 0
-
     def __init__(self, nodes, edges):
-        self.id = Water.next_autoinc_id
-        Water.next_autoinc_id += 1
-
         self.nodes = nodes
         self.edges = edges
 

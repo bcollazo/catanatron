@@ -3,7 +3,7 @@ from collections import namedtuple, defaultdict
 from typing import Dict
 
 from catanatron.models.player import Color
-from catanatron.models.map import BaseMap, Water, Port
+from catanatron.models.map import BaseMap, Water, Port, Tile
 from catanatron.models.board_initializer import (
     initialize_board,
     Node,
@@ -12,7 +12,6 @@ from catanatron.models.board_initializer import (
 )
 
 
-# TODO: Build "deck" of these (14 roads, 5 settlements, 4 cities)
 class BuildingType(Enum):
     SETTLEMENT = "SETTLEMENT"
     CITY = "CITY"
@@ -224,6 +223,18 @@ class Board:
 
     def get_node_by_id(self, node_id):
         filtered = filter(lambda n: n.id == node_id, self.nodes.values())
+        return next(filtered, None)
+
+    def get_tile_by_id(self, tile_id):
+        filtered = filter(
+            lambda t: isinstance(t, Tile) and t.id == tile_id, self.tiles.values()
+        )
+        return next(filtered, None)
+
+    def get_port_by_id(self, port_id):
+        filtered = filter(
+            lambda t: isinstance(t, Port) and t.id == port_id, self.tiles.values()
+        )
         return next(filtered, None)
 
     def find_connected_components(self, color: Color):

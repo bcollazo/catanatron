@@ -77,7 +77,7 @@ def test_moving_robber_steals_correctly():
     assert players[0].resource_deck.num_cards() == 0
     assert players[1].resource_deck.num_cards() == 1
 
-    action = Action(players[0], ActionType.MOVE_ROBBER, ((0, 0, 0), players[1]))
+    action = Action(players[0], ActionType.MOVE_ROBBER, ((0, 0, 0), players[1].color))
     game.execute(action)
     assert players[0].resource_deck.num_cards() == 1
     assert players[1].resource_deck.num_cards() == 0
@@ -158,13 +158,10 @@ def test_play_year_of_plenty_gives_player_resources():
     game = Game(players)
     player_to_act = players[0]
     player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
-    cards_to_add = ResourceDeck()
-    cards_to_add.replenish(1, Resource.ORE)
-    cards_to_add.replenish(1, Resource.WHEAT)
 
     player_to_act.clean_turn_state()
     action_to_execute = Action(
-        player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add
+        player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, [Resource.ORE, Resource.WHEAT]
     )
 
     game.execute(action_to_execute)
@@ -186,13 +183,9 @@ def test_play_year_of_plenty_not_enough_resources():
     game.resource_deck = ResourceDeck()
     player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
 
-    cards_to_add = ResourceDeck()
-    cards_to_add.replenish(1, Resource.ORE)
-    cards_to_add.replenish(1, Resource.WHEAT)
-
     player_to_act.clean_turn_state()
     action_to_execute = Action(
-        player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add
+        player_to_act, ActionType.PLAY_YEAR_OF_PLENTY, [Resource.ORE, Resource.WHEAT]
     )
 
     with pytest.raises(ValueError):  # not enough cards in bank
@@ -203,12 +196,10 @@ def test_play_year_of_plenty_no_year_of_plenty_card():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
-    cards_to_add = ResourceDeck()
-    cards_to_add.replenish(1, Resource.ORE)
-    cards_to_add.replenish(1, Resource.WHEAT)
-
     players[0].clean_turn_state()
-    action_to_execute = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_to_add)
+    action_to_execute = Action(
+        players[0], ActionType.PLAY_YEAR_OF_PLENTY, [Resource.ORE, Resource.WHEAT]
+    )
 
     with pytest.raises(ValueError):  # no year of plenty card
         game.execute(action_to_execute)
@@ -347,11 +338,9 @@ def test_can_only_play_one_dev_card_per_turn():
     game = Game(players)
 
     players[0].development_deck.replenish(2, DevelopmentCard.YEAR_OF_PLENTY)
-    cards_selected = ResourceDeck()
-    cards_selected.replenish(2, Resource.BRICK)
 
     players[0].clean_turn_state()
-    action = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, cards_selected)
+    action = Action(players[0], ActionType.PLAY_YEAR_OF_PLENTY, 2 * [Resource.BRICK])
     game.execute(action)
     with pytest.raises(ValueError):  # shouldnt be able to play two dev cards
         game.execute(action)
