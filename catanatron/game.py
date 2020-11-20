@@ -221,7 +221,7 @@ class Game:
             )
             action.player.settlements_available -= 1
             # yield resources of second settlement
-            for tile in self.board.get_adjacent_tiles(action.value):
+            for tile in self.board.get_adjacent_tiles(node):
                 if tile.resource != None:
                     action.player.resource_deck.replenish(1, tile.resource)
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
@@ -410,11 +410,24 @@ class Game:
 def replay_game(game):
     game_copy = copy.deepcopy(game)
 
+    # Can't use player.__class__(player.color, player.name) b.c. actions tied to player instances
     for player in game_copy.players:
         player.public_victory_points = 0
         player.actual_victory_points = 0
+
         player.resource_deck = ResourceDeck()
         player.development_deck = DevelopmentDeck()
+        player.played_development_cards = DevelopmentDeck()
+
+        player.has_road = False
+        player.has_army = False
+
+        player.roads_available = 15
+        player.settlements_available = 5
+        player.cities_available = 4
+
+        player.has_rolled = False
+        player.playable_development_cards = player.development_deck.to_array()
 
     tmp_game = Game(game_copy.players, seed=game.seed)
     tmp_game.id = game_copy.id
