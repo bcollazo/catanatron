@@ -346,7 +346,9 @@ class Game:
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
             if not action.player.can_play_road_building():
                 raise ValueError("Player cant play road building now")
-            first_edge, second_edge = action.value
+            first_edge_id, second_edge_id = action.value
+            first_edge = self.board.get_edge_by_id(first_edge_id)
+            second_edge = self.board.get_edge_by_id(second_edge_id)
             self.board.build_road(action.player.color, first_edge)
             self.board.build_road(action.player.color, second_edge)
             action.player.roads_available -= 2

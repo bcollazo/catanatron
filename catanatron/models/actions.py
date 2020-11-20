@@ -21,9 +21,9 @@ class ActionPrompt(Enum):
 
 
 class ActionType(Enum):
-    ROLL = "ROLL"  # value is None or rolled value.
-    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Player|None).
-    DISCARD = "DISCARD"  # value is None or discarded cards
+    ROLL = "ROLL"  # value is None (rolled value for logging).
+    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None).
+    DISCARD = "DISCARD"  # value is None (discarded cards for logging)
 
     # Building/Buying
     BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"  # value is node_id
@@ -35,16 +35,16 @@ class ActionType(Enum):
     BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None
 
     # Dev Card Plays
-    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, player)
-    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"
-    PLAY_MONOPOLY = "PLAY_MONOPOLY"
-    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_1, edge_2)
+    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None)
+    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is [resource1, resource2]
+    PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
+    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
 
     # Trade
     MARITIME_TRADE = "MARITIME_TRADE"  # value is TradeOffer
     # TODO: Domestic trade. Im thinking should contain SUGGEST_TRADE, ACCEPT_TRADE actions...
 
-    END_TURN = "END_TURN"
+    END_TURN = "END_TURN"  # value is None
 
 
 # TODO: Distinguish between PossibleAction and FinalizedAction?
@@ -271,7 +271,11 @@ def road_building_possibilities(player, board):
         for second_edge_copy in second_edges_copy:
             second_edge = board.get_edge_by_id(second_edge_copy.id)
             possibilities.append(
-                Action(player, ActionType.PLAY_ROAD_BUILDING, (first_edge, second_edge))
+                Action(
+                    player,
+                    ActionType.PLAY_ROAD_BUILDING,
+                    (first_edge.id, second_edge.id),
+                )
             )
 
     return possibilities
