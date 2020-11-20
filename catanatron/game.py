@@ -114,7 +114,7 @@ class Game:
         self.resource_deck = ResourceDeck.starting_bank()
         self.development_deck = DevelopmentDeck.starting_bank()
 
-        self.tick_queue = initialize_tick_queue(players)
+        self.tick_queue = initialize_tick_queue(self.players)
         self.current_player_index = 0
         self.num_turns = 0
 
@@ -213,11 +213,13 @@ class Game:
             self.board.build_settlement(
                 action.player.color, node, initial_build_phase=True
             )
+            action.player.settlements_available -= 1
         elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
             node = self.board.get_node_by_id(action.value)
             self.board.build_settlement(
                 action.player.color, node, initial_build_phase=True
             )
+            action.player.settlements_available -= 1
             # yield resources of second settlement
             for tile in self.board.get_adjacent_tiles(action.value):
                 if tile.resource != None:
@@ -228,18 +230,23 @@ class Game:
                 action.player.color, node, initial_build_phase=False
             )
             action.player.resource_deck -= ResourceDeck.settlement_cost()
+            action.player.settlements_available -= 1
             self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
             edge = self.board.get_edge_by_id(action.value)
             self.board.build_road(action.player.color, edge)
+            action.player.roads_available -= 1
         elif action.action_type == ActionType.BUILD_ROAD:
             edge = self.board.get_edge_by_id(action.value)
             self.board.build_road(action.player.color, edge)
+            action.player.roads_available -= 1
             action.player.resource_deck -= ResourceDeck.road_cost()
             self.resource_deck += ResourceDeck.road_cost()  # replenish bank
         elif action.action_type == ActionType.BUILD_CITY:
             node = self.board.get_node_by_id(action.value)
             self.board.build_city(action.player.color, node)
+            action.player.settlements_available += 1
+            action.player.cities_available -= 1
             action.player.resource_deck -= ResourceDeck.city_cost()
             self.resource_deck += ResourceDeck.city_cost()  # replenish bank
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
@@ -283,32 +290,34 @@ class Game:
             self.tick_queue.append((action.player, ActionPrompt.PLAY_TURN))
             action.player.has_rolled = True
         elif action.action_type == ActionType.DISCARD:
-            discarded = action.value
+            # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
+            hand = action.player.resource_deck.to_array()
+            num_to_discard = len(hand) // 2
+            discarded = random.sample(hand, k=num_to_discard)
 
-            to_discard = ResourceDeck()
-            for resource in discarded:
-                to_discard.replenish(1, resource)
+            to_discard = ResourceDeck.from_array(discarded)
 
             action.player.resource_deck -= to_discard
             self.resource_deck += to_discard
         elif action.action_type == ActionType.MOVE_ROBBER:
-            (coordinate, player_to_steal_from) = action.value
+            (coordinate, color_to_steal_from) = action.value
             self.board.robber_coordinate = coordinate
-            if player_to_steal_from is not None:
+            if color_to_steal_from is not None:
+                player_to_steal_from = self.players_by_color[color_to_steal_from]
                 resource = player_to_steal_from.resource_deck.random_draw()
                 action.player.resource_deck.replenish(1, resource)
         elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
             if not action.player.can_play_knight():
                 raise ValueError("Player cant play knight card now")
-            (coordinate, player_to_steal_from) = action.value
+            (coordinate, color_to_steal_from) = action.value
             self.board.robber_coordinate = coordinate
-            if player_to_steal_from is not None:
+            if color_to_steal_from is not None:
+                player_to_steal_from = self.players_by_color[color_to_steal_from]
                 resource = player_to_steal_from.resource_deck.random_draw()
                 action.player.resource_deck.replenish(1, resource)
-            action.player.development_deck.draw(1, DevelopmentCard.KNIGHT)
             action.player.mark_played_dev_card(DevelopmentCard.KNIGHT)
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
-            cards_selected = action.value  # Assuming action.value is a resource deck
+            cards_selected = ResourceDeck.from_array(action.value)
             if not action.player.can_play_year_of_plenty():
                 raise ValueError("Player cant play year of plenty now")
             if not self.resource_deck.includes(cards_selected):
@@ -316,7 +325,6 @@ class Game:
                     "Not enough resources of this type (these types?) in bank"
                 )
             action.player.resource_deck += cards_selected
-            action.player.development_deck.draw(1, DevelopmentCard.YEAR_OF_PLENTY)
             self.resource_deck -= cards_selected
             action.player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
         elif action.action_type == ActionType.PLAY_MONOPOLY:
@@ -334,7 +342,6 @@ class Game:
                         number_of_cards_to_steal, card_type_to_steal
                     )
             action.player.resource_deck += cards_stolen
-            action.player.development_deck.draw(1, DevelopmentCard.MONOPOLY)
             action.player.mark_played_dev_card(DevelopmentCard.MONOPOLY)
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
             if not action.player.can_play_road_building():
@@ -342,7 +349,7 @@ class Game:
             first_edge, second_edge = action.value
             self.board.build_road(action.player.color, first_edge)
             self.board.build_road(action.player.color, second_edge)
-            action.player.development_deck.draw(1, DevelopmentCard.ROAD_BUILDING)
+            action.player.roads_available -= 2
             action.player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
         elif action.action_type == ActionType.MARITIME_TRADE:
             trade_offer = action.value

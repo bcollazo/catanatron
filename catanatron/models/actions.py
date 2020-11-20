@@ -62,21 +62,20 @@ def monopoly_possible_actions(player):
 
 
 def year_of_plenty_possible_actions(player, resource_deck):
-    possible_combinations = set()
     actions = []
-    for first_card in Resource:
-        for second_card in Resource:
-            if (
-                resource_deck.can_draw(1, first_card)
-                and resource_deck.can_draw(1, second_card)
-                and (second_card, first_card) not in possible_combinations
+    resource_list = list(Resource)
+    for i, first_card in enumerate(resource_list):
+        for j in range(i, len(resource_list)):
+            second_card = resource_list[i]  # doing it this way to not repeat
+            if resource_deck.can_draw(1, first_card) and resource_deck.can_draw(
+                1, second_card
             ):
-                possible_combinations.add((first_card, second_card))
-                cards_selected = ResourceDeck()
-                cards_selected.replenish(1, first_card)
-                cards_selected.replenish(1, second_card)
                 actions.append(
-                    Action(player, ActionType.PLAY_YEAR_OF_PLENTY, cards_selected)
+                    Action(
+                        player,
+                        ActionType.PLAY_YEAR_OF_PLENTY,
+                        [first_card, second_card],
+                    )
                 )
 
     # TODO: If none of the combinations are possible due to shortages
@@ -86,9 +85,7 @@ def year_of_plenty_possible_actions(player, resource_deck):
 
 def road_possible_actions(player, board):
     has_money = player.resource_deck.includes(ResourceDeck.road_cost())
-
-    roads = board.get_player_buildings(player.color, BuildingType.ROAD)
-    has_roads_available = len(roads) < 15
+    has_roads_available = player.roads_available > 0
 
     if has_money and has_roads_available:
         buildable_edges = board.buildable_edges(player.color)
@@ -101,9 +98,7 @@ def road_possible_actions(player, board):
 
 def settlement_possible_actions(player, board):
     has_money = player.resource_deck.includes(ResourceDeck.settlement_cost())
-
-    settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
-    has_settlements_available = len(settlements) < 5
+    has_settlements_available = player.settlements_available > 0
 
     if has_money and has_settlements_available:
         buildable_nodes = board.buildable_nodes(player.color)
@@ -117,9 +112,7 @@ def settlement_possible_actions(player, board):
 
 def city_possible_actions(player, board):
     has_money = player.resource_deck.includes(ResourceDeck.city_cost())
-
-    cities = board.get_player_buildings(player.color, BuildingType.CITY)
-    has_cities_available = len(cities) < 4
+    has_cities_available = player.cities_available > 0
 
     if has_money and has_cities_available:
         settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
@@ -141,7 +134,7 @@ def robber_possibilities(player, board, players, is_dev_card):
 
         # each tile can yield a (move-but-cant-steal) action or
         #   several (move-and-steal-from-x) actions.
-        players_to_steal_from = set()
+        to_steal_from = set()  # set of player_indexs
         for node_ref, node in tile.nodes.items():
             building = board.buildings.get(node)
             if building is not None:
@@ -150,13 +143,13 @@ def robber_possibilities(player, board, players, is_dev_card):
                     candidate.resource_deck.num_cards() >= 1
                     and candidate.color != player.color  # can't play yourself
                 ):
-                    players_to_steal_from.add(candidate)
+                    to_steal_from.add(candidate.color)
 
-        if len(players_to_steal_from) == 0:
+        if len(to_steal_from) == 0:
             actions.append(Action(player, action_type, (coordinate, None)))
         else:
-            for p in players_to_steal_from:
-                actions.append(Action(player, action_type, (coordinate, p)))
+            for color in to_steal_from:
+                actions.append(Action(player, action_type, (coordinate, color)))
 
     return actions
 
@@ -195,21 +188,23 @@ def initial_road_possibilities(player, board, actions):
 
 
 def discard_possibilities(player):
-    hand = player.resource_deck.to_array()
-    num_cards = player.resource_deck.num_cards()
-    num_to_discard = num_cards // 2
+    return [Action(player, ActionType.DISCARD, None)]
+    # TODO: Be robust to high dimensionality of DISCARD
+    # hand = player.resource_deck.to_array()
+    # num_cards = player.resource_deck.num_cards()
+    # num_to_discard = num_cards // 2
 
-    num_possibilities = ncr(num_cards, num_to_discard)
-    if num_possibilities > 100:  # if too many, just take first N
-        return [Action(player, ActionType.DISCARD, hand[:num_to_discard])]
+    # num_possibilities = ncr(num_cards, num_to_discard)
+    # if num_possibilities > 100:  # if too many, just take first N
+    #     return [Action(player, ActionType.DISCARD, hand[:num_to_discard])]
 
-    to_discard = itertools.combinations(hand, num_to_discard)
-    return list(
-        map(
-            lambda combination: Action(player, ActionType.DISCARD, combination),
-            to_discard,
-        )
-    )
+    # to_discard = itertools.combinations(hand, num_to_discard)
+    # return list(
+    #     map(
+    #         lambda combination: Action(player, ActionType.DISCARD, combination),
+    #         to_discard,
+    #     )
+    # )
 
 
 def ncr(n, r):

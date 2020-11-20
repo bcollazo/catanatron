@@ -17,10 +17,10 @@ export default function SidePanel({ state }) {
       const number = value[0] + value[1];
       text = `${action_type} (${value[0]}, ${value[1]}) = ${number}`;
     } else if (action_type === "MOVE_ROBBER") {
-      const player = value[1];
+      const color_to_steal_from = value[1];
       text = `${action_type}`;
-      if (player !== null) {
-        text += ` / STEAL ${player.color}`;
+      if (color_to_steal_from !== null) {
+        text += ` / STEAL ${color_to_steal_from}`;
       } else {
         text += ` / DIDNT STEAL`;
       }

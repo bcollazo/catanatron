@@ -23,7 +23,7 @@ def test_get_nodes_and_edges_for_east_attachment():
         {}, (0, 0, 0), 0, 0
     )
     nodes2, edges2, node_autoinc, edge_autoinc = get_nodes_and_edges(
-        {(0, 0, 0): Tile(Resource.WOOD, 3, nodes1, edges1)},
+        {(0, 0, 0): Tile(0, Resource.WOOD, 3, nodes1, edges1)},
         (1, -1, 0),
         node_autoinc,
         edge_autoinc,
@@ -37,15 +37,15 @@ def test_get_nodes_and_edges_for_east_and_southeast_attachment():
         {}, (0, 0, 0), 0, 0
     )
     nodes2, edges2, node_autoinc, edge_autoinc = get_nodes_and_edges(
-        {(0, 0, 0): Tile(Resource.WOOD, 3, nodes1, edges1)},
+        {(0, 0, 0): Tile(0, Resource.WOOD, 3, nodes1, edges1)},
         (1, -1, 0),
         node_autoinc,
         edge_autoinc,
     )
     nodes3, edges3, node_autoinc, edge_autoinc = get_nodes_and_edges(
         {
-            (0, 0, 0): Tile(Resource.WOOD, 3, nodes1, edges1),
-            (1, -1, 0): Tile(Resource.BRICK, 6, nodes2, edges2),
+            (0, 0, 0): Tile(1, Resource.WOOD, 3, nodes1, edges1),
+            (1, -1, 0): Tile(2, Resource.BRICK, 6, nodes2, edges2),
         },
         (0, -1, 1),
         node_autoinc,

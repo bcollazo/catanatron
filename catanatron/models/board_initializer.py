@@ -3,7 +3,7 @@ from enum import Enum
 from collections import defaultdict
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
-from catanatron.models.map import Tile, Water
+from catanatron.models.map import Tile, Water, Port
 
 # Given a tile, the reference to the node.
 class NodeRef(Enum):
@@ -59,6 +59,8 @@ def initialize_board(catan_map):
     all_edges = {}
     node_autoinc = 0
     edge_autoinc = 0
+    tile_autoinc = 0
+    port_autoinc = 0
     # graph is { node => { edge: node }}
     graph = defaultdict(dict)
     for (coordinate, tile_type) in catan_map.topology.items():
@@ -68,17 +70,21 @@ def initialize_board(catan_map):
 
         # create and save tile
         if isinstance(tile_type, tuple):  # is port
-            (TileClass, direction) = tile_type
-            port = TileClass(shuffled_port_resources.pop(), direction, nodes, edges)
+            (_, direction) = tile_type
+            port = Port(
+                port_autoinc, shuffled_port_resources.pop(), direction, nodes, edges
+            )
             all_tiles[coordinate] = port
+            port_autoinc += 1
         elif tile_type == Tile:
             resource = shuffled_tile_resources.pop()
             if resource != None:
                 number = shuffled_numbers.pop()
-                tile = Tile(resource, number, nodes, edges)
+                tile = Tile(tile_autoinc, resource, number, nodes, edges)
             else:
-                tile = Tile(None, None, nodes, edges)  # desert
+                tile = Tile(tile_autoinc, None, None, nodes, edges)  # desert
             all_tiles[coordinate] = tile
+            tile_autoinc += 1
         elif tile_type == Water:
             water_tile = Water(nodes, edges)
             all_tiles[coordinate] = water_tile
