@@ -2,7 +2,6 @@ import uuid
 import random
 import sys
 import copy
-from enum import Enum
 from typing import Iterable
 from collections import namedtuple, defaultdict
 
@@ -52,7 +51,7 @@ def yield_resources(board, resource_deck, number):
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield
 
-        for node_ref, node in tile.nodes.items():
+        for _, node in tile.nodes.items():
             building = board.buildings.get(node)
             if building == None:
                 continue
@@ -257,14 +256,19 @@ class Game:
             ):
                 raise ValueError("No money to buy development card")
 
-            development_card = self.development_deck.random_draw()
-            action.player.development_deck.replenish(1, development_card)
+            if action.value is None:
+                card = self.development_deck.random_draw()
+            else:
+                card = action.value
+                self.development_deck.draw(1, card)
+
+            action.player.development_deck.replenish(1, card)
             action.player.resource_deck -= ResourceDeck.development_card_cost()
             self.resource_deck += ResourceDeck.development_card_cost()
 
-            action = Action(action.player, action.action_type, development_card)
+            action = Action(action.player, action.action_type, card)
         elif action.action_type == ActionType.ROLL:
-            dices = roll_dice()
+            dices = action.value or roll_dice()
             number = dices[0] + dices[1]
 
             if number == 7:
@@ -276,9 +280,7 @@ class Game:
                 )
                 self.tick_queue.append((action.player, ActionPrompt.MOVE_ROBBER))
             else:
-                payout, depleted = yield_resources(
-                    self.board, self.resource_deck, number
-                )
+                payout, _ = yield_resources(self.board, self.resource_deck, number)
                 for color, resource_deck in payout.items():
                     player = self.players_by_color[color]
 
@@ -290,30 +292,55 @@ class Game:
             self.tick_queue.append((action.player, ActionPrompt.PLAY_TURN))
             action.player.has_rolled = True
         elif action.action_type == ActionType.DISCARD:
-            # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
-            hand = action.player.resource_deck.to_array()
-            num_to_discard = len(hand) // 2
-            discarded = random.sample(hand, k=num_to_discard)
-
+            if action.value is None:
+                # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
+                hand = action.player.resource_deck.to_array()
+                num_to_discard = len(hand) // 2
+                discarded = random.sample(hand, k=num_to_discard)
+            else:
+                discarded = action.value  # for replay functionality
             to_discard = ResourceDeck.from_array(discarded)
 
             action.player.resource_deck -= to_discard
             self.resource_deck += to_discard
+            action = Action(action.player, action.action_type, discarded)
         elif action.action_type == ActionType.MOVE_ROBBER:
-            (coordinate, color_to_steal_from) = action.value
+            (coordinate, robbed_color, robbed_resource) = action.value
             self.board.robber_coordinate = coordinate
-            if color_to_steal_from is not None:
-                player_to_steal_from = self.players_by_color[color_to_steal_from]
-                resource = player_to_steal_from.resource_deck.random_draw()
+            if robbed_color is None:
+                pass  # do nothing
+            else:
+                player_to_steal_from = self.players_by_color[robbed_color]
+                if robbed_resource is None:
+                    resource = player_to_steal_from.resource_deck.random_draw()
+                    action = Action(
+                        action.player,
+                        action.action_type,
+                        (coordinate, robbed_color, resource),
+                    )
+                else:  # for replay functionality
+                    resource = robbed_resource
+                    player_to_steal_from.resource_deck.draw(1, resource)
                 action.player.resource_deck.replenish(1, resource)
         elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
             if not action.player.can_play_knight():
                 raise ValueError("Player cant play knight card now")
-            (coordinate, color_to_steal_from) = action.value
+            (coordinate, robbed_color, robbed_resource) = action.value
             self.board.robber_coordinate = coordinate
-            if color_to_steal_from is not None:
-                player_to_steal_from = self.players_by_color[color_to_steal_from]
-                resource = player_to_steal_from.resource_deck.random_draw()
+            if robbed_color is None:
+                pass  # do nothing
+            else:
+                player_to_steal_from = self.players_by_color[robbed_color]
+                if robbed_resource is None:
+                    resource = player_to_steal_from.resource_deck.random_draw()
+                    action = Action(
+                        action.player,
+                        action.action_type,
+                        (coordinate, robbed_color, resource),
+                    )
+                else:  # for replay functionality
+                    resource = robbed_resource
+                    player_to_steal_from.resource_deck.draw(1, resource)
                 action.player.resource_deck.replenish(1, resource)
             action.player.mark_played_dev_card(DevelopmentCard.KNIGHT)
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
@@ -328,19 +355,15 @@ class Game:
             self.resource_deck -= cards_selected
             action.player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
         elif action.action_type == ActionType.PLAY_MONOPOLY:
-            card_type_to_steal = action.value
+            mono_resource = action.value
             cards_stolen = ResourceDeck()
             if not action.player.can_play_monopoly():
                 raise ValueError("Player cant play monopoly now")
             for player in self.players:
                 if not action.player.color == player.color:
-                    number_of_cards_to_steal = player.resource_deck.count(
-                        card_type_to_steal
-                    )
-                    cards_stolen.replenish(number_of_cards_to_steal, card_type_to_steal)
-                    player.resource_deck.draw(
-                        number_of_cards_to_steal, card_type_to_steal
-                    )
+                    number_of_cards_to_steal = player.resource_deck.count(mono_resource)
+                    cards_stolen.replenish(number_of_cards_to_steal, mono_resource)
+                    player.resource_deck.draw(number_of_cards_to_steal, mono_resource)
             action.player.resource_deck += cards_stolen
             action.player.mark_played_dev_card(DevelopmentCard.MONOPOLY)
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
@@ -432,6 +455,7 @@ def replay_game(game):
     tmp_game = Game(game_copy.players, seed=game.seed)
     tmp_game.id = game_copy.id
     tmp_game.players = game_copy.players  # use same seating order
+    tmp_game.players_by_color = {p.color: p for p in game_copy.players}
     tmp_game.map = game_copy.map
     tmp_game.board = game_copy.board
     tmp_game.board.buildings = {}
@@ -439,6 +463,12 @@ def replay_game(game):
         lambda coordinate: tmp_game.board.tiles[coordinate].resource == None,
         tmp_game.board.tiles.keys(),
     ).__next__()
+    tmp_game.actions = []  # log of all action taken by players
+    tmp_game.resource_deck = ResourceDeck.starting_bank()
+    tmp_game.development_deck = DevelopmentDeck.starting_bank()
+    tmp_game.tick_queue = initialize_tick_queue(tmp_game.players)
+    tmp_game.current_player_index = 0
+    tmp_game.num_turns = 0
 
     for action in game_copy.actions:
         tmp_game.execute(action)

@@ -1,6 +1,5 @@
 import random
 from enum import Enum
-from collections import defaultdict
 
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 from catanatron.models.enums import DevelopmentCard

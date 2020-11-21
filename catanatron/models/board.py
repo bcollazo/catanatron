@@ -58,8 +58,10 @@ class Board:
                 Whether this is part of initial building phase, so as to skip
                 connectedness validation. Defaults to True.
         """
-        buildable = self.buildable_nodes(color, initial_build_phase=initial_build_phase)
-        if node not in buildable:
+        buildable = self.buildable_node_ids(
+            color, initial_build_phase=initial_build_phase
+        )
+        if node.id not in buildable:
             raise ValueError(
                 "Invalid Settlement Placement: not connected and not initial-placement"
             )
@@ -72,8 +74,8 @@ class Board:
         return building
 
     def build_road(self, color, edge):
-        buildable = self.buildable_edges(color)
-        if edge not in buildable:
+        buildable = self.buildable_edge_ids(color)
+        if edge.id not in buildable:
             raise ValueError("Invalid Road Placement: not connected")
 
         if self.buildings.get(edge) is not None:
@@ -96,7 +98,7 @@ class Board:
         self.buildings[node] = building
         return building
 
-    def buildable_nodes(self, color: Color, initial_build_phase=False):
+    def buildable_node_ids(self, color: Color, initial_build_phase=False):
         buildable = set()
 
         def is_buildable(node):
@@ -114,7 +116,7 @@ class Board:
             for (coordinate, tile) in self.resource_tiles():
                 for (noderef, node) in tile.nodes.items():
                     if is_buildable(node):
-                        buildable.add(node)
+                        buildable.add(node.id)
 
         # if not initial-placement, find all connected components. For each
         #   node in this connected subgraph, iterate checking buildability
@@ -123,11 +125,11 @@ class Board:
             for node in subgraph.keys():
                 # by definition node is "connected", so only need to check buildable
                 if is_buildable(node):
-                    buildable.add(node)
+                    buildable.add(node.id)
 
-        return buildable
+        return sorted(list(buildable))
 
-    def buildable_edges(self, color: Color):
+    def buildable_edge_ids(self, color: Color):
         # A water-edge is an edge where both adjacent tiles are water/ports
         def is_buildable(edge):  # assumes not a water-edge
             a_node, b_node = edge.nodes
@@ -168,9 +170,9 @@ class Board:
         for (coordinate, tile) in self.resource_tiles():
             for (edgeref, edge) in tile.edges.items():
                 if is_buildable(edge):
-                    buildable.add(edge)
+                    buildable.add(edge.id)
 
-        return buildable
+        return sorted(list(buildable))
 
     def resource_tiles(self):
         for (coordinate, tile) in self.tiles.items():
