@@ -21,30 +21,39 @@ class ActionPrompt(Enum):
 
 
 class ActionType(Enum):
-    ROLL = "ROLL"  # value is None or rolled value.
-    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Player|None).
-    DISCARD = "DISCARD"  # value is None or discarded cards
+    """
+    Action types are associated with a "value" that can be seen as the "params"
+    of such action. They usually hold None for to-be-defined values by the
+    execution of the action. After execution, the Actions will be hydrated
+    so that they can be used in reproducing a game.
+    """
+
+    ROLL = "ROLL"  # value is None|(int, int)
+    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None, None|Resource)
+    DISCARD = "DISCARD"  # value is None|Resource[]
 
     # Building/Buying
     BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"  # value is node_id
-    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"  # value is node id
-    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"  # value is edge id
-    BUILD_ROAD = "BUILD_ROAD"  # value is edge id
-    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node id
-    BUILD_CITY = "BUILD_CITY"  # value is node id
-    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None
+    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"  # value is node_id
+    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"  # value is edge_id
+    BUILD_ROAD = "BUILD_ROAD"  # value is edge_id
+    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node_id
+    BUILD_CITY = "BUILD_CITY"  # value is node_id
+    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None|DevelopmentCard
 
     # Dev Card Plays
-    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, player)
-    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"
-    PLAY_MONOPOLY = "PLAY_MONOPOLY"
-    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_1, edge_2)
+    PLAY_KNIGHT_CARD = (
+        "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None, None|Resource)
+    )
+    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is [Resource, Resource]
+    PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
+    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
 
     # Trade
-    MARITIME_TRADE = "MARITIME_TRADE"  # value is TradeOffer
+    MARITIME_TRADE = "MARITIME_TRADE"  # value is TradeOffer(offering=Resource[], asking=Resource, tradee=None)
     # TODO: Domestic trade. Im thinking should contain SUGGEST_TRADE, ACCEPT_TRADE actions...
 
-    END_TURN = "END_TURN"
+    END_TURN = "END_TURN"  # value is None
 
 
 # TODO: Distinguish between PossibleAction and FinalizedAction?
@@ -88,9 +97,10 @@ def road_possible_actions(player, board):
     has_roads_available = player.roads_available > 0
 
     if has_money and has_roads_available:
-        buildable_edges = board.buildable_edges(player.color)
+        buildable_edge_ids = board.buildable_edge_ids(player.color)
         return [
-            Action(player, ActionType.BUILD_ROAD, edge.id) for edge in buildable_edges
+            Action(player, ActionType.BUILD_ROAD, edge_id)
+            for edge_id in buildable_edge_ids
         ]
     else:
         return []
@@ -101,10 +111,10 @@ def settlement_possible_actions(player, board):
     has_settlements_available = player.settlements_available > 0
 
     if has_money and has_settlements_available:
-        buildable_nodes = board.buildable_nodes(player.color)
+        buildable_node_ids = board.buildable_node_ids(player.color)
         return [
-            Action(player, ActionType.BUILD_SETTLEMENT, node.id)
-            for node in buildable_nodes
+            Action(player, ActionType.BUILD_SETTLEMENT, node_id)
+            for node_id in buildable_node_ids
         ]
     else:
         return []
@@ -135,7 +145,7 @@ def robber_possibilities(player, board, players, is_dev_card):
         # each tile can yield a (move-but-cant-steal) action or
         #   several (move-and-steal-from-x) actions.
         to_steal_from = set()  # set of player_indexs
-        for node_ref, node in tile.nodes.items():
+        for _, node in tile.nodes.items():
             building = board.buildings.get(node)
             if building is not None:
                 candidate = players_by_color[building.color]
@@ -146,10 +156,10 @@ def robber_possibilities(player, board, players, is_dev_card):
                     to_steal_from.add(candidate.color)
 
         if len(to_steal_from) == 0:
-            actions.append(Action(player, action_type, (coordinate, None)))
+            actions.append(Action(player, action_type, (coordinate, None, None)))
         else:
             for color in to_steal_from:
-                actions.append(Action(player, action_type, (coordinate, color)))
+                actions.append(Action(player, action_type, (coordinate, color, None)))
 
     return actions
 
@@ -160,8 +170,12 @@ def initial_settlement_possibilites(player, board, is_first):
         if is_first
         else ActionType.BUILD_SECOND_SETTLEMENT
     )
-    buildable_nodes = board.buildable_nodes(player.color, initial_build_phase=True)
-    return list(map(lambda node: Action(player, action_type, node.id), buildable_nodes))
+    buildable_node_ids = board.buildable_node_ids(
+        player.color, initial_build_phase=True
+    )
+    return list(
+        map(lambda node_id: Action(player, action_type, node_id), buildable_node_ids)
+    )
 
 
 def initial_road_possibilities(player, board, actions):
@@ -175,14 +189,14 @@ def initial_road_possibilities(player, board, actions):
     last_settlement_node_id = list(node_building_actions_by_player)[-1].value
     last_settlement_node = board.get_node_by_id(last_settlement_node_id)
 
-    buildable_edges = filter(
-        lambda edge: last_settlement_node in edge.nodes,
-        board.buildable_edges(player.color),
+    buildable_edge_ids = filter(
+        lambda edge_id: last_settlement_node in board.get_edge_by_id(edge_id).nodes,
+        board.buildable_edge_ids(player.color),
     )
     return list(
         map(
-            lambda edge: Action(player, ActionType.BUILD_INITIAL_ROAD, edge.id),
-            buildable_edges,
+            lambda edge_id: Action(player, ActionType.BUILD_INITIAL_ROAD, edge_id),
+            buildable_edge_ids,
         )
     )
 
@@ -260,18 +274,21 @@ def road_building_possibilities(player, board):
     On purpose we _dont_ remove equivalent possibilities, since we need to be
     able to handle high branching degree anyway in AI.
     """
-    first_edges = board.buildable_edges(player.color)
+    first_edge_ids = board.buildable_edge_ids(player.color)
     possibilities = []
-    for first_edge in first_edges:
+    for first_edge_id in first_edge_ids:
         board_copy = copy.deepcopy(board)
-        first_edge_copy = board_copy.get_edge_by_id(first_edge.id)
+        first_edge_copy = board_copy.get_edge_by_id(first_edge_id)
         board_copy.build_road(player.color, first_edge_copy)
-        second_edges_copy = board_copy.buildable_edges(player.color)
+        second_edge_ids_copy = board_copy.buildable_edge_ids(player.color)
 
-        for second_edge_copy in second_edges_copy:
-            second_edge = board.get_edge_by_id(second_edge_copy.id)
+        for second_edge_id_copy in second_edge_ids_copy:
             possibilities.append(
-                Action(player, ActionType.PLAY_ROAD_BUILDING, (first_edge, second_edge))
+                Action(
+                    player,
+                    ActionType.PLAY_ROAD_BUILDING,
+                    (first_edge_id, second_edge_id_copy),
+                )
             )
 
     return possibilities
