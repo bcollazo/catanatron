@@ -72,12 +72,16 @@ def test_moving_robber_steals_correctly():
         initial_build_phase=True,
     )
 
-    action = Action(players[0], ActionType.MOVE_ROBBER, ((2, 0, -2), None))
+    action = Action(players[0], ActionType.MOVE_ROBBER, ((2, 0, -2), None, None))
     game.execute(action)
     assert players[0].resource_deck.num_cards() == 0
     assert players[1].resource_deck.num_cards() == 1
 
-    action = Action(players[0], ActionType.MOVE_ROBBER, ((0, 0, 0), players[1].color))
+    action = Action(
+        players[0],
+        ActionType.MOVE_ROBBER,
+        ((0, 0, 0), players[1].color, Resource.WHEAT),
+    )
     game.execute(action)
     assert players[0].resource_deck.num_cards() == 1
     assert players[1].resource_deck.num_cards() == 0

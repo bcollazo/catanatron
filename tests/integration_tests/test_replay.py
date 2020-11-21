@@ -6,7 +6,7 @@ from catanatron.game import Game, replay_game
 
 
 def test_play_and_replay_games():
-    for _ in range(5):  # play 5 games
+    for _ in range(10):  # play 10 games
         players = [
             SimplePlayer(Color.RED),
             SimplePlayer(Color.BLUE),

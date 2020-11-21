@@ -6,9 +6,9 @@ from catanatron.models.player import Color
 # ===== Buildable nodes
 def test_buildable_nodes():
     board = Board()
-    nodes = board.buildable_nodes(Color.RED)
+    nodes = board.buildable_node_ids(Color.RED)
     assert len(nodes) == 0
-    nodes = board.buildable_nodes(Color.RED, initial_build_phase=True)
+    nodes = board.buildable_node_ids(Color.RED, initial_build_phase=True)
     assert len(nodes) == 54
 
 
@@ -17,11 +17,11 @@ def test_placing_settlement_removes_four_buildable_nodes():
     board.build_settlement(
         Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
     )
-    nodes = board.buildable_nodes(Color.RED)
+    nodes = board.buildable_node_ids(Color.RED)
     assert len(nodes) == 0
-    nodes = board.buildable_nodes(Color.RED, initial_build_phase=True)
+    nodes = board.buildable_node_ids(Color.RED, initial_build_phase=True)
     assert len(nodes) == 50
-    nodes = board.buildable_nodes(Color.BLUE, initial_build_phase=True)
+    nodes = board.buildable_node_ids(Color.BLUE, initial_build_phase=True)
     assert len(nodes) == 50
 
 
@@ -32,13 +32,13 @@ def test_buildable_nodes_respects_distance_two():
     )
 
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
-    nodes = board.buildable_nodes(Color.RED)
+    nodes = board.buildable_node_ids(Color.RED)
     assert len(nodes) == 0
 
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.WEST)])
-    nodes = board.buildable_nodes(Color.RED)
+    nodes = board.buildable_node_ids(Color.RED)
     assert len(nodes) == 1
-    assert nodes.pop() == board.nodes[((0, 0, 0), NodeRef.NORTHWEST)]
+    assert nodes.pop() == board.nodes[((0, 0, 0), NodeRef.NORTHWEST)].id
 
 
 def test_cant_use_enemy_roads_to_connect():
@@ -57,10 +57,10 @@ def test_cant_use_enemy_roads_to_connect():
     board.build_road(Color.BLUE, board.edges[((0, 0, 0), EdgeRef.NORTHEAST)])
     board.build_road(Color.BLUE, board.edges[((1, 0, -1), EdgeRef.WEST)])
 
-    nodes = board.buildable_nodes(Color.RED)
+    nodes = board.buildable_node_ids(Color.RED)
     assert len(nodes) == 0
 
-    nodes = board.buildable_nodes(Color.BLUE)
+    nodes = board.buildable_node_ids(Color.BLUE)
     assert len(nodes) == 1
 
 
@@ -70,7 +70,7 @@ def test_buildable_edges_simple():
     board.build_settlement(
         Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
     )
-    buildable = board.buildable_edges(Color.RED)
+    buildable = board.buildable_edge_ids(Color.RED)
     assert len(buildable) == 3
 
 
@@ -80,7 +80,7 @@ def test_buildable_edges():
         Color.RED, board.nodes[((0, 0, 0), NodeRef.SOUTH)], initial_build_phase=True
     )
     board.build_road(Color.RED, board.edges[((0, 0, 0), EdgeRef.SOUTHWEST)])
-    buildable = board.buildable_edges(Color.RED)
+    buildable = board.buildable_edge_ids(Color.RED)
     assert len(buildable) == 4
 
 
@@ -89,7 +89,7 @@ def test_water_edge_is_not_buildable():
     board.build_settlement(
         Color.RED, board.nodes[((0, 2, -2), NodeRef.NORTH)], initial_build_phase=True
     )
-    buildable = board.buildable_edges(Color.RED)
+    buildable = board.buildable_edge_ids(Color.RED)
     assert len(buildable) == 2
 
 
