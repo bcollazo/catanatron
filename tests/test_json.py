@@ -1,27 +1,3 @@
-import json
-
-from catanatron.game import Game
-from catanatron.models.player import SimplePlayer, Color
-from catanatron.json import GameEncoder
-
-
-def test_serialization():
-    game = Game(
-        players=[
-            SimplePlayer(Color.RED),
-            SimplePlayer(Color.BLUE),
-            SimplePlayer(Color.WHITE),
-            SimplePlayer(Color.ORANGE),
-        ]
-    )
-
-    string = json.dumps(game, cls=GameEncoder)
-    result = json.loads(string)
-
-    # Loosely assert looks like expected
-    assert len(result["players"]) == 4
-    assert isinstance(result["robber_coordinate"], list)
-    assert isinstance(result["tiles"], list)
-    assert isinstance(result["edges"], dict)
-    assert isinstance(result["nodes"], dict)
-    assert isinstance(result["actions"], list)
+version https://git-lfs.github.com/spec/v1
+oid sha256:b4b85336873af132a915522a17f1ea8e150e638164972b5cb194d6da4fcac8c0
+size 776

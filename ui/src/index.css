@@ -1,20 +1,3 @@
-html,
-body,
-#root {
-  margin: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:6141265334d2db2a568e4dd0bd35ad6c06a705b17ab39d2236554f7c73480551
+size 425

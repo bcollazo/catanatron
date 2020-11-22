@@ -1,31 +1,3 @@
-import React, { useCallback, useState } from "react";
-import axios from "axios";
-import { useHistory } from "react-router-dom";
-
-import { API_URL } from "../configuration";
-
-export default function HomePage() {
-  const [disabled, setDisabled] = useState(false);
-  const history = useHistory();
-
-  const onClick = useCallback(async () => {
-    setDisabled(true);
-    const response = await axios.post(API_URL + "/games");
-    const { game_id: gameId } = response.data;
-    setDisabled(false);
-    history.push("/games/" + gameId);
-  }, [history]);
-
-  return (
-    <div className="flex flex-col items-center pt-32">
-      <h1 className="font-bold text-5xl mb-2">Welcome</h1>
-      <button
-        disabled={disabled}
-        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-        onClick={onClick}
-      >
-        Start Game
-      </button>
-    </div>
-  );
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:16fa62edc0a0dc205e2542269813e1f80b6b7599dd85165193080d6c29a611cf
+size 893

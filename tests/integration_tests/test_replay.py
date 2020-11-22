@@ -1,25 +1,3 @@
-import json
-
-from catanatron.models.player import Color, SimplePlayer
-from catanatron.json import GameEncoder
-from catanatron.game import Game, replay_game
-
-
-def test_play_and_replay_games():
-    for _ in range(10):  # play 10 games
-        players = [
-            SimplePlayer(Color.RED),
-            SimplePlayer(Color.BLUE),
-            SimplePlayer(Color.WHITE),
-            SimplePlayer(Color.ORANGE),
-        ]
-        game = Game(players)
-        game.play()
-
-        replayed = None
-        for state in replay_game(game):
-            replayed = state
-
-        og_final_state = json.dumps(game, cls=GameEncoder)
-        final_state = json.dumps(replayed, cls=GameEncoder)
-        assert final_state, og_final_state
+version https://git-lfs.github.com/spec/v1
+oid sha256:5d9c0e396e194f77030c8e49d276b03b00dc3391a61a2f5566403f86a5913c67
+size 723

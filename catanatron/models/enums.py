@@ -1,18 +1,3 @@
-from enum import Enum
-from collections import namedtuple
-
-
-class Resource(Enum):
-    WOOD = "WOOD"
-    BRICK = "BRICK"
-    SHEEP = "SHEEP"
-    WHEAT = "WHEAT"
-    ORE = "ORE"
-
-
-class DevelopmentCard(Enum):
-    KNIGHT = "KNIGHT"
-    YEAR_OF_PLENTY = "YEAR_OF_PLENTY"
-    MONOPOLY = "MONOPOLY"
-    ROAD_BUILDING = "ROAD_BUILDING"
-    VICTORY_POINT = "VICTORY_POINT"
+version https://git-lfs.github.com/spec/v1
+oid sha256:749b36f51e8207c3495a3d97b40361ba6f3ae393ccde4820b7a08be73490fbf7
+size 364
