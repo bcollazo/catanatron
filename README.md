@@ -22,11 +22,37 @@ class MyPlayer(Player):
         raise NotImplementedError
 ```
 
-## Running and Watching a Game
+## Catanatron Core and Catanatron Server
 
-To visualize a game execution, you'll need to run 3 components. A React UI, a Flask
-Web Server, and a PostgreSQL database (provided in docker container). Run the
-following on three different Terminal tabs.
+The code is divided into two python packages for ease of using independently. One is the `catanatron` package which contains
+the core game logic and is a pure-python implementation of Catan,
+with no extra dependencies.
+
+The other is the `catanatron_server` which requires a database and
+is meant to provide the complete system in which one can view the
+games via the browser.
+
+We provide a complete `docker-compose.yml` with everything needed to
+watch bots play. Ensure you have Docker Compose installed, and:
+
+```
+docker build -t catanatron-server:latest .
+docker build -t catanatron-react-ui:latest ui/
+docker-compose up
+```
+
+To run independently:
+
+```
+docker run -it -p 5000:5000 catanatron-server
+docker run -it -p 3000:3000 catanatron-react-ui
+```
+
+## Running Components Individually
+
+The above docker-compose.yml just runs the following 3 components: a React UI, a Flask Web Server, and a PostgreSQL database.
+
+Each can also be run independently in three different Terminal tabs.
 
 ### React UI
 
@@ -58,13 +84,16 @@ Make sure you have `docker-compose` installed (https://docs.docker.com/compose/i
 docker-compose up
 ```
 
-### Running a Game
+### Experimental Folder
+
+The experimental folder contains not-so-well code used to
+run experiments in finding the best possible bot.
 
 After bringing up the three components, you can run the `play.py` script which
 will run a game and print out a link to watch the game.
 
 ```
-python play.py
+python experimental/play.py
 ```
 
 ## Developing for Catanatron
@@ -80,3 +109,38 @@ Or you can run the suite in watch-mode with:
 ```
 ptw --ignore=tests/integration_tests/ --nobeep
 ```
+
+## Machine Learning
+
+To play games and save to database (for experience):
+
+```
+python experimental/play.py --num=100
+```
+
+For watching training progress, use `keras.callbacks.TensorBoard` and open TensorBoard:
+
+```
+tensorboard --logdir logs
+```
+
+### Docker GPU TensorFlow
+
+```
+docker run -it tensorflow/tensorflow:latest-gpu-jupyter bash
+docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensorflow/tensorflow:latest-gpu-jupyter
+```
+
+## For Testing Performance:
+
+```
+python -m cProfile experimental/play.py --num=5 -o profile.pstats
+snakeviz profile.pstats
+```
+
+## Future Work
+
+- Player to player trading
+- Handle Discard high branching factor
+- Learn no matter what the board looks like (board-topology independent features)
+- Better inference on dev-cards (e.g. holding dev likely vp, didnt used road building on opportunity, etc...)

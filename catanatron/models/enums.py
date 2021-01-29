@@ -16,3 +16,9 @@ class DevelopmentCard(Enum):
     MONOPOLY = "MONOPOLY"
     ROAD_BUILDING = "ROAD_BUILDING"
     VICTORY_POINT = "VICTORY_POINT"
+
+
+class BuildingType(Enum):
+    SETTLEMENT = "SETTLEMENT"
+    CITY = "CITY"
+    ROAD = "ROAD"

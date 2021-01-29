@@ -1,13 +1,11 @@
-import copy
-import itertools
+import pickle
 import operator as op
 from functools import reduce
 from enum import Enum
 from collections import namedtuple
 
 from catanatron.models.decks import ResourceDeck
-from catanatron.models.board import BuildingType
-from catanatron.models.enums import Resource
+from catanatron.models.enums import Resource, BuildingType
 
 
 class ActionPrompt(Enum):
@@ -57,7 +55,7 @@ class ActionType(Enum):
 
 
 # TODO: Distinguish between PossibleAction and FinalizedAction?
-Action = namedtuple("Action", ["player", "action_type", "value"])
+Action = namedtuple("Action", ["color", "action_type", "value"])
 
 TradeOffer = namedtuple(
     "TradeOffer", ["offering", "asking", "tradee"]
@@ -66,30 +64,35 @@ TradeOffer = namedtuple(
 
 def monopoly_possible_actions(player):
     return [
-        Action(player, ActionType.PLAY_MONOPOLY, card_type) for card_type in Resource
+        Action(player.color, ActionType.PLAY_MONOPOLY, card_type)
+        for card_type in Resource
     ]
 
 
-def year_of_plenty_possible_actions(player, resource_deck):
-    actions = []
+def year_of_plenty_possible_actions(player, resource_deck: ResourceDeck):
     resource_list = list(Resource)
+
+    options = set()
     for i, first_card in enumerate(resource_list):
         for j in range(i, len(resource_list)):
-            second_card = resource_list[i]  # doing it this way to not repeat
-            if resource_deck.can_draw(1, first_card) and resource_deck.can_draw(
-                1, second_card
-            ):
-                actions.append(
-                    Action(
-                        player,
-                        ActionType.PLAY_YEAR_OF_PLENTY,
-                        [first_card, second_card],
-                    )
-                )
+            second_card = resource_list[j]  # doing it this way to not repeat
+            to_draw = ResourceDeck.from_array([first_card, second_card])
+            if resource_deck.includes(to_draw):
+                options.add((first_card, second_card))
+            else:  # try allowing player select 1 card only.
+                if resource_deck.can_draw(1, first_card):
+                    options.add((first_card,))
+                if resource_deck.can_draw(1, second_card):
+                    options.add((second_card,))
 
-    # TODO: If none of the combinations are possible due to shortages
-    # in the deck, allow player to draw one card
-    return actions
+    return list(
+        map(
+            lambda cards: Action(
+                player.color, ActionType.PLAY_YEAR_OF_PLENTY, list(cards)
+            ),
+            options,
+        )
+    )
 
 
 def road_possible_actions(player, board):
@@ -97,10 +100,10 @@ def road_possible_actions(player, board):
     has_roads_available = player.roads_available > 0
 
     if has_money and has_roads_available:
-        buildable_edge_ids = board.buildable_edge_ids(player.color)
+        buildable_edges = board.buildable_edges(player.color)
         return [
-            Action(player, ActionType.BUILD_ROAD, edge_id)
-            for edge_id in buildable_edge_ids
+            Action(player.color, ActionType.BUILD_ROAD, edge)
+            for edge in buildable_edges
         ]
     else:
         return []
@@ -113,21 +116,21 @@ def settlement_possible_actions(player, board):
     if has_money and has_settlements_available:
         buildable_node_ids = board.buildable_node_ids(player.color)
         return [
-            Action(player, ActionType.BUILD_SETTLEMENT, node_id)
+            Action(player.color, ActionType.BUILD_SETTLEMENT, node_id)
             for node_id in buildable_node_ids
         ]
     else:
         return []
 
 
-def city_possible_actions(player, board):
+def city_possible_actions(player):
     has_money = player.resource_deck.includes(ResourceDeck.city_cost())
     has_cities_available = player.cities_available > 0
 
     if has_money and has_cities_available:
-        settlements = board.get_player_buildings(player.color, BuildingType.SETTLEMENT)
         return [
-            Action(player, ActionType.BUILD_CITY, node.id) for (node, _) in settlements
+            Action(player.color, ActionType.BUILD_CITY, node_id)
+            for node_id in player.buildings[BuildingType.SETTLEMENT]
         ]
     else:
         return []
@@ -145,10 +148,11 @@ def robber_possibilities(player, board, players, is_dev_card):
         # each tile can yield a (move-but-cant-steal) action or
         #   several (move-and-steal-from-x) actions.
         to_steal_from = set()  # set of player_indexs
-        for _, node in tile.nodes.items():
-            building = board.buildings.get(node)
+        for _, node_id in tile.nodes.items():
+            node = board.nxgraph.nodes[node_id]
+            building = node.get("building", None)
             if building is not None:
-                candidate = players_by_color[building.color]
+                candidate = players_by_color[node["color"]]
                 if (
                     candidate.resource_deck.num_cards() >= 1
                     and candidate.color != player.color  # can't play yourself
@@ -156,10 +160,12 @@ def robber_possibilities(player, board, players, is_dev_card):
                     to_steal_from.add(candidate.color)
 
         if len(to_steal_from) == 0:
-            actions.append(Action(player, action_type, (coordinate, None, None)))
+            actions.append(Action(player.color, action_type, (coordinate, None, None)))
         else:
             for color in to_steal_from:
-                actions.append(Action(player, action_type, (coordinate, color, None)))
+                actions.append(
+                    Action(player.color, action_type, (coordinate, color, None))
+                )
 
     return actions
 
@@ -174,35 +180,35 @@ def initial_settlement_possibilites(player, board, is_first):
         player.color, initial_build_phase=True
     )
     return list(
-        map(lambda node_id: Action(player, action_type, node_id), buildable_node_ids)
+        map(
+            lambda node_id: Action(player.color, action_type, node_id),
+            buildable_node_ids,
+        )
     )
 
 
 def initial_road_possibilities(player, board, actions):
     # Must be connected to last settlement
     node_building_actions_by_player = filter(
-        lambda action: action.player == player
+        lambda action: action.color == player.color
         and action.action_type == ActionType.BUILD_FIRST_SETTLEMENT
         or action.action_type == ActionType.BUILD_SECOND_SETTLEMENT,
         actions,
     )
     last_settlement_node_id = list(node_building_actions_by_player)[-1].value
-    last_settlement_node = board.get_node_by_id(last_settlement_node_id)
 
-    buildable_edge_ids = filter(
-        lambda edge_id: last_settlement_node in board.get_edge_by_id(edge_id).nodes,
-        board.buildable_edge_ids(player.color),
+    buildable_edges = filter(
+        lambda edge: last_settlement_node_id in edge,
+        board.buildable_edges(player.color),
     )
-    return list(
-        map(
-            lambda edge_id: Action(player, ActionType.BUILD_INITIAL_ROAD, edge_id),
-            buildable_edge_ids,
-        )
-    )
+    return [
+        Action(player.color, ActionType.BUILD_INITIAL_ROAD, edge)
+        for edge in buildable_edges
+    ]
 
 
 def discard_possibilities(player):
-    return [Action(player, ActionType.DISCARD, None)]
+    return [Action(player.color, ActionType.DISCARD, None)]
     # TODO: Be robust to high dimensionality of DISCARD
     # hand = player.resource_deck.to_array()
     # num_cards = player.resource_deck.num_cards()
@@ -239,7 +245,7 @@ def maritime_trade_possibilities(player, bank, board):
                 if resource != j_resource and bank.count(j_resource) > 0:
                     trade_offer = TradeOffer([resource] * 4, [j_resource], None)
                     possibilities.append(
-                        Action(player, ActionType.MARITIME_TRADE, trade_offer)
+                        Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
                     )
 
     port_resources = board.get_player_port_resources(player.color)
@@ -252,7 +258,9 @@ def maritime_trade_possibilities(player, bank, board):
                         if resource != j_resource and bank.count(j_resource) > 0:
                             trade_offer = TradeOffer([resource] * 3, [j_resource], None)
                             possibilities.append(
-                                Action(player, ActionType.MARITIME_TRADE, trade_offer)
+                                Action(
+                                    player.color, ActionType.MARITIME_TRADE, trade_offer
+                                )
                             )
         else:  # has 2:1
             if player.resource_deck.count(port_resource) >= 2:
@@ -263,7 +271,7 @@ def maritime_trade_possibilities(player, bank, board):
                             [port_resource] * 2, [j_resource], None
                         )
                         possibilities.append(
-                            Action(player, ActionType.MARITIME_TRADE, trade_offer)
+                            Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
                         )
 
     return possibilities
@@ -274,20 +282,19 @@ def road_building_possibilities(player, board):
     On purpose we _dont_ remove equivalent possibilities, since we need to be
     able to handle high branching degree anyway in AI.
     """
-    first_edge_ids = board.buildable_edge_ids(player.color)
+    first_edges = board.buildable_edges(player.color)
     possibilities = []
-    for first_edge_id in first_edge_ids:
-        board_copy = copy.deepcopy(board)
-        first_edge_copy = board_copy.get_edge_by_id(first_edge_id)
-        board_copy.build_road(player.color, first_edge_copy)
-        second_edge_ids_copy = board_copy.buildable_edge_ids(player.color)
+    for first_edge in first_edges:
+        board_copy = pickle.loads(pickle.dumps(board))
+        board_copy.build_road(player.color, first_edge)
 
-        for second_edge_id_copy in second_edge_ids_copy:
+        second_edges_copy = board_copy.buildable_edges(player.color)
+        for second_edge_copy in second_edges_copy:
             possibilities.append(
                 Action(
-                    player,
+                    player.color,
                     ActionType.PLAY_ROAD_BUILDING,
-                    (first_edge_id, second_edge_id_copy),
+                    (first_edge, second_edge_copy),
                 )
             )
 

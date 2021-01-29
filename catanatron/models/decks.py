@@ -125,6 +125,11 @@ class ResourceDeck(Deck):
 
 class DevelopmentDeck(Deck):
     @staticmethod
+    def starting_card_proba(card):
+        starting_deck = DevelopmentDeck.starting_bank()
+        return starting_deck.count(card) / starting_deck.num_cards()
+
+    @staticmethod
     def starting_bank():
         deck = DevelopmentDeck()
         deck.replenish(14, DevelopmentCard.KNIGHT)

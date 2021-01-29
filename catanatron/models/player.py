@@ -1,8 +1,9 @@
+from collections import defaultdict
 import random
 from enum import Enum
 
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
-from catanatron.models.enums import DevelopmentCard
+from catanatron.models.enums import DevelopmentCard, BuildingType
 
 
 class Color(Enum):
@@ -16,6 +17,10 @@ class Player:
     def __init__(self, color, name=None):
         self.name = name
         self.color = color
+
+        self.restart_state()
+
+    def restart_state(self):
         self.public_victory_points = 0
         self.actual_victory_points = 0
 
@@ -32,6 +37,27 @@ class Player:
 
         self.has_rolled = False
         self.playable_development_cards = self.development_deck.to_array()
+
+        self.buildings = defaultdict(list)  # dict of BuildingType => (node_id|edge)[]
+
+    def build_settlement(self, node_id, is_free):
+        self.buildings[BuildingType.SETTLEMENT].append(node_id)
+        self.settlements_available -= 1
+        if not is_free:
+            self.resource_deck -= ResourceDeck.settlement_cost()
+
+    def build_road(self, edge, is_free):
+        self.buildings[BuildingType.ROAD].append(edge)
+        self.roads_available -= 1
+        if not is_free:
+            self.resource_deck -= ResourceDeck.road_cost()
+
+    def build_city(self, node_id):
+        self.buildings[BuildingType.SETTLEMENT].remove(node_id)
+        self.buildings[BuildingType.CITY].append(node_id)
+        self.settlements_available += 1
+        self.cities_available -= 1
+        self.resource_deck -= ResourceDeck.city_cost()
 
     def clean_turn_state(self):
         self.has_rolled = False

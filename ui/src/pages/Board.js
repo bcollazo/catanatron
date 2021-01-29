@@ -56,7 +56,7 @@ export default function Board({ state }) {
   ));
   const edges = Object.values(
     state.edges
-  ).map(({ building, direction, tile_coordinate, id }) => (
+  ).map(({ color, direction, tile_coordinate, id }) => (
     <Edge
       id={id}
       key={id}
@@ -67,12 +67,12 @@ export default function Board({ state }) {
       size={size}
       coordinate={tile_coordinate}
       direction={direction}
-      building={building}
+      color={color}
     />
   ));
   const nodes = Object.values(
     state.nodes
-  ).map(({ building, direction, tile_coordinate, id }) => (
+  ).map(({ color, building, direction, tile_coordinate, id }) => (
     <Node
       id={id}
       key={id}
@@ -84,6 +84,7 @@ export default function Board({ state }) {
       coordinate={tile_coordinate}
       direction={direction}
       building={building}
+      color={color}
     />
   ));
 

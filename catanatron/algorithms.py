@@ -1,11 +1,11 @@
 from collections import defaultdict
-import itertools
 from typing import Iterable
 
+import networkx as nx
+
 from catanatron.models.actions import ActionType, Action
-from catanatron.models.map import Port, Water
-from catanatron.models.board import Board, Graph
-from catanatron.models.player import Player, Color
+from catanatron.models.board import Board
+from catanatron.models.player import Color, Player
 from catanatron.models.enums import DevelopmentCard
 
 
@@ -21,7 +21,7 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
     max_count = 0
     max_paths_by_player = dict()
     for player in players:
-        for path in continuous_roads_by_player(board, player):
+        for path in continuous_roads_by_player(board, player.color):
             count = len(path)
             if count < 5:
                 continue
@@ -39,28 +39,28 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
     road_building_actions_by_candidates = list(
         filter(
             lambda a: a.action_type == ActionType.BUILD_ROAD
-            and a.player.color in max_paths_by_player.keys(),
+            and a.color in max_paths_by_player.keys(),
             actions,
         )
     )
     while len(max_paths_by_player) > 1:
         action = road_building_actions_by_candidates.pop()
-        if action.player.color in max_paths_by_player:
-            del max_paths_by_player[action.player.color]
+        if action.color in max_paths_by_player:
+            del max_paths_by_player[action.color]
     return max_paths_by_player.popitem()
 
 
-def continuous_roads_by_player(board: Board, player: Player):
+def continuous_roads_by_player(board: Board, color: Color):
     paths = []
-    components = board.find_connected_components(player.color)
+    components = board.find_connected_components(color)
     for component in components:
-        paths.append(longest_acyclic_path(component))
+        paths.append(longest_acyclic_path(board, component, color))
     return paths
 
 
-def longest_acyclic_path(subgraph: Graph):
+def longest_acyclic_path(board: Board, subgraph: nx.Graph, color: Color):
     paths = []
-    for start_node, connections in subgraph.items():
+    for start_node in subgraph.nodes:
         # do DFS when reach leaf node, stop and add to paths
         paths_from_this_node = []
         agenda = [(start_node, [])]
@@ -68,7 +68,11 @@ def longest_acyclic_path(subgraph: Graph):
             node, path_thus_far = agenda.pop()
 
             able_to_navigate = False
-            for edge, neighbor_node in subgraph[node].items():
+            for neighbor_node in subgraph[node]:
+                neighbor_color = board.get_node_color(neighbor_node)
+                if neighbor_color is not None and neighbor_color != color:
+                    continue  # enemy-owned, cant use this to navigate.
+                edge = tuple(sorted((node, neighbor_node)))
                 if edge not in path_thus_far:
                     agenda.insert(0, (neighbor_node, path_thus_far + [edge]))
                     able_to_navigate = True
@@ -97,13 +101,13 @@ def largest_army(players: Iterable[Player], actions: Iterable[Action]):
     knight_actions = list(
         filter(
             lambda a: a.action_type == ActionType.PLAY_KNIGHT_CARD
-            and a.player.color in candidates,
+            and a.color in candidates,
             actions,
         )
     )
     while len(candidates) > 1:
         action = knight_actions.pop()
-        if action.player.color in candidates:
-            candidates.remove(action.player.color)
+        if action.color in candidates:
+            candidates.remove(action.color)
 
     return candidates.pop(), max_count

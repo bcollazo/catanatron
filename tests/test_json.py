@@ -22,6 +22,6 @@ def test_serialization():
     assert len(result["players"]) == 4
     assert isinstance(result["robber_coordinate"], list)
     assert isinstance(result["tiles"], list)
-    assert isinstance(result["edges"], dict)
+    assert isinstance(result["edges"], list)
     assert isinstance(result["nodes"], dict)
     assert isinstance(result["actions"], list)

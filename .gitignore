@@ -1,5 +1,9 @@
 # Added by Bryan
 .vscode
+logs/
+pstats
+data/
+profile.pstats
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

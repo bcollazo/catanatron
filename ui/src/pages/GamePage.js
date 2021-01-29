@@ -37,9 +37,9 @@ export default function GamePage() {
       if (automation && !inFlightRequest) {
         await onClickNext();
       }
-    }, 100);
+    }, 50);
     return () => clearInterval(interval);
-  }, [automation, inFlightRequest]);
+  }, [automation, inFlightRequest, onClickNext]);
 
   console.log(state);
   if (state === null) {
@@ -47,7 +47,10 @@ export default function GamePage() {
   }
   return (
     <div className="h-full flex">
-      <div className="w-full h-full flex flex-col bg-blue-600">
+      <div
+        className="w-full h-full flex flex-col"
+        style={{ backgroundColor: "#01c7f4" }}
+      >
         <Board state={state} />
         <ControlPanel
           onClickNext={onClickNext}

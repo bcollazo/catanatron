@@ -3,20 +3,20 @@ import cn from "classnames";
 
 import { tilePixelVector, getNodeDelta } from "../utils/coordinates";
 
-function Building({ building }) {
-  const color = `bg-white bg-${building[0].toLowerCase()}-700`;
-  const city = building[1] === "CITY";
+function Building({ building, color }) {
+  const cssClass = `bg-white bg-${color.toLowerCase()}-700`;
+  const city = building === "CITY";
   const border = city ? "w-8 h-8 border-2" : "w-6 h-6 border-2";
   return (
     <>
       <div
-        className={cn("node-building absolute border-black", color, border)}
+        className={cn("node-building absolute border-black", cssClass, border)}
       ></div>
       {city && (
         <div
           className={cn(
             "node-building absolute border-black",
-            color,
+            cssClass,
             "w-4 h-4 border-2"
           )}
           style={{ transform: "translateY(0.50rem) translateX(0.50rem)" }}
@@ -36,6 +36,7 @@ export default function Node({
   coordinate,
   direction,
   building,
+  color,
 }) {
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
   const [deltaX, deltaY] = getNodeDelta(direction, w, h);
@@ -52,7 +53,7 @@ export default function Node({
       }}
       onClick={() => console.log("Clicked node", id)}
     >
-      {building && <Building building={building} />}
+      {color && <Building building={building} color={color} />}
     </div>
   );
 }

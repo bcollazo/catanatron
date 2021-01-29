@@ -57,3 +57,22 @@ def generate_coordinate_system(num_layers):
         )
         agenda.extend(new_neighbors)
     return visited
+
+
+def cube_to_axial(cube):
+    q = cube[0]
+    r = cube[2]
+    return (q, r)
+
+
+def cube_to_offset(cube):
+    col = cube[0] + (cube[2] - (cube[2] & 1)) / 2
+    row = cube[2]
+    return (col, row)
+
+
+def offset_to_cube(offset):
+    x = offset[0] - (offset[1] - (offset[1] & 1)) / 2
+    z = offset[1]
+    y = -x - z
+    return (x, y, z)

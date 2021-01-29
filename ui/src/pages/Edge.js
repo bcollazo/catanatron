@@ -6,11 +6,11 @@ import {
   getEdgeDeltaAndTransform,
 } from "../utils/coordinates";
 
-function Road({ building }) {
-  const color = `bg-white bg-${building[0].toLowerCase()}-700`;
+function Road({ color }) {
+  const cssClass = `bg-white bg-${color.toLowerCase()}-700`;
   return (
     <div
-      className={cn("road absolute border-2 border-black h-3 w-10", color)}
+      className={cn("road absolute border-2 border-black h-3 w-10", cssClass)}
     ></div>
   );
 }
@@ -24,7 +24,7 @@ export default function Edge({
   size,
   coordinate,
   direction,
-  building,
+  color,
 }) {
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
   const [deltaX, deltaY, transform] = getEdgeDeltaAndTransform(direction, w, h);
@@ -41,7 +41,7 @@ export default function Edge({
       }}
       onClick={() => console.log("Clicked edge", id)}
     >
-      {building && <Road building={building} />}
+      {color && <Road color={color} />}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React from "react";
 import cn from "classnames";
 
-import brickTile from "../assets/tiles/tile_brick.svg";
+import brickTile from "../assets/tiles/tile_brick.png";
 import desertTile from "../assets/tiles/tile_desert.svg";
 import grainTile from "../assets/tiles/tile_grain.svg";
 import lumberTile from "../assets/tiles/tile_lumber.svg";

@@ -1,7 +1,9 @@
-from enum import Enum
-
 from catanatron.models.coordinate_system import generate_coordinate_system, Direction
 from catanatron.models.enums import Resource
+
+NUM_NODES = 54
+NUM_EDGES = 72
+NUM_TILES = 19
 
 
 class Tile:
@@ -10,11 +12,14 @@ class Tile:
 
         self.resource = resource  # None means desert tile
         self.number = number
-        self.nodes = nodes
-        self.edges = edges
+
+        self.nodes = nodes  # node_ref => node_id
+        self.edges = edges  # edge_ref => edge
 
     def __repr__(self):
-        return "Tile:" + str(self.resource)
+        if self.resource is None:
+            return "Tile:Desert"
+        return f"Tile:{self.number}{self.resource.value}"
 
 
 class Port:

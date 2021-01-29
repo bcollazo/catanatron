@@ -1,33 +1,43 @@
-from enum import Enum
-from collections import namedtuple, defaultdict
-from typing import Dict
+from collections import defaultdict
+import functools
+
+import networkx as nx
 
 from catanatron.models.player import Color
-from catanatron.models.map import BaseMap, Water, Port, Tile
-from catanatron.models.board_initializer import (
+from catanatron.models.map import BaseMap, NUM_NODES, Water, Port, Tile
+from catanatron.models.graph import (
     initialize_board,
-    Node,
-    Edge,
     PORT_DIRECTION_TO_NODEREFS,
 )
+from catanatron.models.enums import BuildingType
+
+NODE_DISTANCES = None
 
 
-class BuildingType(Enum):
-    SETTLEMENT = "SETTLEMENT"
-    CITY = "CITY"
-    ROAD = "ROAD"
+def get_node_distances():
+    global NODE_DISTANCES
+    if NODE_DISTANCES is None:
+        board = Board()
+        NODE_DISTANCES = nx.floyd_warshall(board.nxgraph)
+
+    return NODE_DISTANCES
 
 
-Building = namedtuple("Building", ["color", "building_type"])
+EDGES = None
 
 
-Graph = Dict[Node, Dict[Edge, Node]]
+def get_edges():
+    global EDGES
+    if EDGES is None:
+        board = Board()
+        EDGES = board.nxgraph.subgraph(range(NUM_NODES)).edges()
+    return EDGES
 
 
 class Board:
     """Tries to encapsulate all state information regarding the board"""
 
-    def __init__(self, players=[c for c in Color], catan_map=None):
+    def __init__(self, catan_map=None):
         """
         Initializes a new random board, based on the catan_map description.
         It first shuffles tiles, ports, and numbers. Then goes satisfying the
@@ -36,24 +46,26 @@ class Board:
         """
         self.map = catan_map or BaseMap()
 
-        tiles, nodes, edges, graph = initialize_board(self.map)
+        tiles, nxgraph = initialize_board(self.map)
         self.tiles = tiles  # (coordinate) => Tile (with nodes and edges initialized)
-        self.nodes = nodes  # (coordinate, noderef) => node
-        self.edges = edges  # (coordinate, edgeref) => edge
-        self.graph = graph  #  { node => { edge: node }}
-        self.buildings = {}  #  node | edge => None | Building
+        self.nxgraph = nxgraph  # buildings are here too.
+        # color => nxgraph.edge_subgraph[] (nodes in subgraph includes incidental,
+        #   but not-necesarilly owned nodes. might be owned by enemy).
+        self.connected_components = defaultdict(list)
+        # color => node_id => connected component. contains incident nodes (may not be owned)
+        self.color_node_to_subgraphs = defaultdict(dict)
 
         # assumes there is at least one desert:
         self.robber_coordinate = filter(
-            lambda coordinate: tiles[coordinate].resource == None, tiles.keys()
+            lambda coordinate: tiles[coordinate].resource is None, tiles.keys()
         ).__next__()
 
-    def build_settlement(self, color, node, initial_build_phase=False):
+    def build_settlement(self, color, node_id, initial_build_phase=False):
         """Adds a settlement, and ensures is a valid place to build.
 
         Args:
             color (Color): player's color
-            node (Node): where to build
+            node_id (int): where to build
             initial_build_phase (bool, optional):
                 Whether this is part of initial building phase, so as to skip
                 connectedness validation. Defaults to True.
@@ -61,171 +73,254 @@ class Board:
         buildable = self.buildable_node_ids(
             color, initial_build_phase=initial_build_phase
         )
-        if node.id not in buildable:
+        if node_id not in buildable:
             raise ValueError(
                 "Invalid Settlement Placement: not connected and not initial-placement"
             )
 
-        if self.buildings.get(node) is not None:
+        if "building" in self.nxgraph.nodes[node_id]:
             raise ValueError("Invalid Settlement Placement: a building exists there")
 
-        building = Building(color=color, building_type=BuildingType.SETTLEMENT)
-        self.buildings[node] = building
-        return building
+        self.nxgraph.nodes[node_id]["building"] = BuildingType.SETTLEMENT
+        self.nxgraph.nodes[node_id]["color"] = color
+
+        # Update connected components
+        if node_id not in self.color_node_to_subgraphs[color]:
+            subgraph = nx.Graph()  # initialize connected component
+            subgraph.add_node(node_id)
+            self.connected_components[color].append(subgraph)
+            self.color_node_to_subgraphs[color][node_id] = subgraph
+
+        # Handle potentially cut of enemies. if node is in a 3-star, cut enemy subgraphs
+        for enemy_color, node_to_subgraph in self.color_node_to_subgraphs.items():
+            if enemy_color == color:
+                continue
+            if node_id in node_to_subgraph:
+                # take two enemy roads and cut (A, B, C) => (A, B) and (B, C)
+                enemy_edges = list(node_to_subgraph[node_id].edges(node_id))
+                if len(enemy_edges) != 2:
+                    break
+                a = next(filter(lambda n: n != node_id, enemy_edges[0]))
+                b = next(filter(lambda n: n != node_id, enemy_edges[1]))
+
+                # check if removing node disconnects.
+                c_graph = self.color_node_to_subgraphs[enemy_color][node_id]
+                c_graph_copy = nx.Graph(c_graph)
+                c_graph_copy.remove_node(node_id)  # should be ok to remove our edge too
+                connected = list(nx.connected_components(c_graph_copy))
+                if len(connected) == 1:
+                    break  # cut but did not disconnect entity.
+
+                # definitely a cut, then create two new graphs from previous graph
+                a_nodes, b_nodes = connected
+                if a not in a_nodes:
+                    tmp = a_nodes
+                    a_nodes = b_nodes
+                    b_nodes = tmp
+                a_graph = nx.Graph()
+                a_graph.add_edges_from(c_graph.subgraph(a_nodes).edges)
+                a_graph.add_edge(a, node_id)
+                b_graph = nx.Graph()
+                b_graph.add_edges_from(c_graph.subgraph(b_nodes).edges)
+                b_graph.add_edge(b, node_id)
+
+                # update self.connected_components and self.color_node_to_subgraphs
+                self.connected_components[enemy_color].remove(c_graph)
+                self.connected_components[enemy_color].append(a_graph)
+                self.connected_components[enemy_color].append(b_graph)
+                for n in a_nodes:
+                    self.color_node_to_subgraphs[enemy_color][n] = a_graph
+                    assert len(list(nx.connected_components(a_graph))) == 1
+                for n in b_nodes:
+                    self.color_node_to_subgraphs[enemy_color][n] = b_graph
+                    assert len(list(nx.connected_components(b_graph))) == 1
+                del self.color_node_to_subgraphs[enemy_color][node_id]
+                break
 
     def build_road(self, color, edge):
-        buildable = self.buildable_edge_ids(color)
-        if edge.id not in buildable:
+        buildable = self.buildable_edges(color)
+        inverted_edge = (edge[1], edge[0])
+        if edge not in buildable and inverted_edge not in buildable:
             raise ValueError("Invalid Road Placement: not connected")
 
-        if self.buildings.get(edge) is not None:
+        if "color" in self.nxgraph.edges[edge] is not None:
             raise ValueError("Invalid Road Placement: a road exists there")
 
-        building = Building(color=color, building_type=BuildingType.ROAD)
-        self.buildings[edge] = building
-        return building
+        self.nxgraph.edges[edge]["color"] = color
 
-    def build_city(self, color, node):
-        building = self.buildings.get(node)
-        if (
-            building is None
-            or building.color != color
-            or building.building_type != BuildingType.SETTLEMENT
+        # Update connected components
+        a_graph = (
+            None
+            if self.is_enemy_node(edge[0], color)
+            else self.color_node_to_subgraphs[color].get(edge[0], None)
+        )
+        b_graph = (
+            None
+            if self.is_enemy_node(edge[1], color)
+            else self.color_node_to_subgraphs[color].get(edge[1], None)
+        )
+        if a_graph is not None and b_graph is not None and a_graph != b_graph:
+            # merge subgraphs into one (i.e. player 'connected' roads)
+            self.connected_components[color].remove(a_graph)
+            self.connected_components[color].remove(b_graph)
+            c_graph = nx.Graph()
+            c_graph.add_edges_from(a_graph.edges)
+            c_graph.add_edges_from(b_graph.edges)
+            c_graph.add_edge(*edge)
+            self.connected_components[color].append(c_graph)
+            for node_id in c_graph.nodes:
+                self.color_node_to_subgraphs[color][node_id] = c_graph
+                assert len(list(nx.connected_components(c_graph))) == 1
+        elif a_graph is not None and b_graph is not None:  # but a == b
+            # player connected same subgraph (no need to add "other" node)
+            self.color_node_to_subgraphs[color][edge[0]].add_edge(*edge)
+            assert (
+                len(
+                    list(
+                        nx.connected_components(
+                            self.color_node_to_subgraphs[color][edge[0]]
+                        )
+                    )
+                )
+                == 1
+            )
+        elif a_graph is not None:  # but b_graph is None
+            self.color_node_to_subgraphs[color][edge[0]].add_edge(*edge)
+            self.color_node_to_subgraphs[color][edge[1]] = self.color_node_to_subgraphs[
+                color
+            ][edge[0]]
+            assert (
+                len(
+                    list(
+                        nx.connected_components(
+                            self.color_node_to_subgraphs[color][edge[0]]
+                        )
+                    )
+                )
+                == 1
+            )
+        else:  # must be a b_graph edge, a_graph is None
+            self.color_node_to_subgraphs[color][edge[1]].add_edge(*edge)
+            self.color_node_to_subgraphs[color][edge[0]] = self.color_node_to_subgraphs[
+                color
+            ][edge[1]]
+            assert (
+                len(
+                    list(
+                        nx.connected_components(
+                            self.color_node_to_subgraphs[color][edge[0]]
+                        )
+                    )
+                )
+                == 1
+            )
+
+    def build_city(self, color, node_id):
+        node = self.nxgraph.nodes[node_id]
+        if not (
+            node.get("building", None) == BuildingType.SETTLEMENT
+            and node.get("color", None) == color
         ):
             raise ValueError("Invalid City Placement: no player settlement there")
 
-        building = Building(color=color, building_type=BuildingType.CITY)
-        self.buildings[node] = building
-        return building
+        self.nxgraph.nodes[node_id]["building"] = BuildingType.CITY
 
     def buildable_node_ids(self, color: Color, initial_build_phase=False):
         buildable = set()
 
-        def is_buildable(node):
+        def is_buildable(node_id):
             """true if this and neighboring nodes are empty"""
-            under_consideration = [node] + list(self.graph[node].values())
-            has_building = map(
-                lambda n: self.buildings.get(n) is None,
+            under_consideration = [node_id] + list(self.nxgraph.neighbors(node_id))
+            are_empty = map(
+                lambda nid: "building" not in self.nxgraph.nodes[nid],
                 under_consideration,
             )
-            return all(has_building)
+            return all(are_empty)
 
         # if initial-placement, iterate over non-water/port tiles, for each
         # of these nodes check if its a buildable node.
         if initial_build_phase:
-            for (coordinate, tile) in self.resource_tiles():
-                for (noderef, node) in tile.nodes.items():
-                    if is_buildable(node):
-                        buildable.add(node.id)
+            for (_, tile) in self.resource_tiles():
+                for (_, node_id) in tile.nodes.items():
+                    if is_buildable(node_id):
+                        buildable.add(node_id)
 
         # if not initial-placement, find all connected components. For each
         #   node in this connected subgraph, iterate checking buildability
-        connected_components = self.find_connected_components(color)
-        for subgraph in connected_components:
-            for node in subgraph.keys():
+        subgraphs = self.find_connected_components(color)
+        for subgraph in subgraphs:
+            for node_id in subgraph:
                 # by definition node is "connected", so only need to check buildable
-                if is_buildable(node):
-                    buildable.add(node.id)
+                if is_buildable(node_id):
+                    buildable.add(node_id)
 
         return sorted(list(buildable))
 
-    def buildable_edge_ids(self, color: Color):
-        # A water-edge is an edge where both adjacent tiles are water/ports
-        def is_buildable(edge):  # assumes not a water-edge
-            a_node, b_node = edge.nodes
-            a_color = self.get_color(a_node)
-            b_color = self.get_color(b_node)
+    def buildable_edges(self, color: Color):
+        """List of (n1,n2) tuples"""
+        buildable_subgraph = self.nxgraph.subgraph(range(NUM_NODES))
+        expandable = set()
+        for subgraph in self.connected_components[color]:
+            non_enemy_nodes = [
+                node_id
+                for node_id in subgraph
+                if not self.is_enemy_node(node_id, color)
+            ]
+            candidate_edges = buildable_subgraph.edges(non_enemy_nodes)
+            for edge in candidate_edges:
+                if self.get_edge_color(edge) is None:
+                    expandable.add(edge)
 
-            # check if buildable. buildable if nothing there, connected (one end_has_color)
-            nothing_there = self.buildings.get(edge) is None
-            one_end_has_color = self.is_color(a_node, color) or self.is_color(
-                b_node, color
-            )
-            a_connected = any(
-                [
-                    self.is_color(e, color)
-                    for e in self.graph.get(a_node).keys()
-                    if e != edge
-                ]
-            )
-            b_connected = any(
-                [
-                    self.is_color(e, color)
-                    for e in self.graph.get(b_node).keys()
-                    if e != edge
-                ]
-            )
-            enemy_on_a = a_color is not None and a_color != color
-            enemy_on_b = b_color is not None and b_color != color
+        return sorted(list(expandable))
 
-            can_build = nothing_there and (
-                one_end_has_color  # helpful for initial_build_phase
-                or (a_connected and not enemy_on_a)
-                or (b_connected and not enemy_on_b)
-            )
-            return can_build
-
-        buildable = set()
-
-        for (coordinate, tile) in self.resource_tiles():
-            for (edgeref, edge) in tile.edges.items():
-                if is_buildable(edge):
-                    buildable.add(edge.id)
-
-        return sorted(list(buildable))
-
+    @functools.lru_cache
     def resource_tiles(self):
+        tiles = []
         for (coordinate, tile) in self.tiles.items():
             if isinstance(tile, Port) or isinstance(tile, Water):
                 continue
-            yield (coordinate, tile)
+            tiles.append((coordinate, tile))
+        return tiles
 
-    def get_adjacent_tiles(self, node_or_edge):
-        if isinstance(node_or_edge, Node):
-            for coordinate, tile in self.resource_tiles():
-                if node_or_edge in tile.nodes.values():
-                    yield tile
-        else:
-            for coordinate, tile in self.resource_tiles():
-                if node_or_edge in tile.edges.values():
-                    yield tile
+    def get_adjacent_tiles(self, node_id):
+        for _, tile in self.resource_tiles():
+            if node_id in tile.nodes.values():
+                yield tile
 
     def get_player_buildings(self, color, building_type=None):
-        buildings = filter(
-            lambda x: x[1].color == color,
-            self.buildings.items(),
-        )  # (node, building) sequence
+        """Returns list of (node_id, building_type)"""
+        buildings = [
+            (node_id, self.nxgraph.nodes[node_id]["building"])
+            for node_id in self.nxgraph.nodes
+            if self.get_node_color(node_id) == color
+        ]
         if building_type is not None:
-            buildings = filter(lambda x: x[1].building_type == building_type, buildings)
+            buildings = filter(lambda node: node[1] == building_type, buildings)
 
         return list(buildings)
 
+    @functools.lru_cache
     def get_port_nodes(self):
-        """Yields (node, resource) tuples"""
+        """Yields resource => node_ids[], including None for 3:1 port node-ids"""
+        port_nodes = defaultdict(set)
         for (coordinate, value) in self.map.topology.items():
             if not isinstance(value, tuple):
                 continue
 
+            tile = self.tiles[coordinate]
             _, direction = value
             (a_noderef, b_noderef) = PORT_DIRECTION_TO_NODEREFS[direction]
-            yield (self.nodes[(coordinate, a_noderef)], self.tiles[coordinate].resource)
-            yield (self.nodes[(coordinate, b_noderef)], self.tiles[coordinate].resource)
+
+            port_nodes[tile.resource].add(tile.nodes[a_noderef])
+            port_nodes[tile.resource].add(tile.nodes[b_noderef])
+        return port_nodes
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
-        ports = []
-        for node, resource in self.get_port_nodes():
-            building = self.buildings.get(node)
-            if building is not None and building.color == color:
-                yield resource
-
-    def get_edge_by_id(self, edge_id):
-        filtered = filter(lambda e: e.id == edge_id, self.edges.values())
-        return next(filtered, None)
-
-    def get_node_by_id(self, node_id):
-        filtered = filter(lambda n: n.id == node_id, self.nodes.values())
-        return next(filtered, None)
+        for resource, node_ids in self.get_port_nodes().items():
+            for node_id in node_ids:
+                if self.get_node_color(node_id) == color:
+                    yield resource
 
     def get_tile_by_id(self, tile_id):
         filtered = filter(
@@ -240,68 +335,21 @@ class Board:
         return next(filtered, None)
 
     def find_connected_components(self, color: Color):
-        """returns connected subgraphs for a given player
-
-        algorithm goes like: find all nodes where color has buildings.
-        start a BFS from any of these nodes, only following edges color owns,
-        appending to subgraph and eliminating from agenda if builded there.
-        repeat until list of settled_nodes is empty.
-
+        """
         Returns:
-            [list of self.graph-like objects]: connected subgraphs. subgraph
+            nx.Graph[]: connected subgraphs. subgraphs
                 might include nodes that color doesnt own (on the way and on ends),
                 just to make it is "closed" and easier for buildable_nodes to operate.
         """
-        settled_edges = set(
-            edge for edge in self.edges.values() if self.is_color(edge, color)
-        )
-
-        subgraphs = []
-        while len(settled_edges) > 0:
-            tmp_subgraph = defaultdict(dict)
-
-            # start bfs
-            agenda = [settled_edges.pop()]
-            visited = set()
-            while len(agenda) > 0:
-                edge = agenda.pop()
-                visited.add(edge)
-                if edge in settled_edges:
-                    settled_edges.remove(edge)
-
-                # add to subgraph
-                tmp_subgraph[edge.nodes[0]][edge] = edge.nodes[1]
-                tmp_subgraph[edge.nodes[1]][edge] = edge.nodes[0]
-
-                # edges to add to exploration are ones we are connected to.
-                candidates = set()  # will be explorable "5-edge star" around edge
-                a_color = self.get_color(edge.nodes[0])
-                if a_color is None or a_color == color:  # enemy is not blocking
-                    for candidate_edge in self.graph[edge.nodes[0]].keys():
-                        candidates.add(candidate_edge)
-                b_color = self.get_color(edge.nodes[1])
-                if b_color is None or b_color == color:  # enemy is not blocking
-                    for candidate_edge in self.graph[edge.nodes[1]].keys():
-                        candidates.add(candidate_edge)
-
-                for candidate_edge in candidates:
-                    if (
-                        candidate_edge not in visited
-                        and candidate_edge not in agenda
-                        and candidate_edge != edge
-                        and self.is_color(candidate_edge, color)
-                    ):
-                        agenda.append(candidate_edge)
-
-            subgraphs.append(dict(tmp_subgraph))
-        return subgraphs
+        return self.connected_components[color]
 
     # ===== Helper functions
-    def get_color(self, node_or_edge):
-        """None if no one has built here, else builder's color"""
-        building = self.buildings.get(node_or_edge)
-        return None if building is None else building.color
+    def get_node_color(self, node_id):
+        return self.nxgraph.nodes[node_id].get("color", None)
 
-    def is_color(self, node_or_edge, color):
-        """boolean on whether this color has built here (edge or node)"""
-        return self.get_color(node_or_edge) == color
+    def get_edge_color(self, edge):
+        return self.nxgraph.edges[edge].get("color", None)
+
+    def is_enemy_node(self, node_id, color):
+        node_color = self.get_node_color(node_id)
+        return node_color is not None and node_color != color

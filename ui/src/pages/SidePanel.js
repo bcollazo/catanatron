@@ -10,8 +10,7 @@ export default function SidePanel({ state }) {
     }
   }, [state.actions]);
 
-  const actions = state.actions.map(([player, action_type, value], index) => {
-    const { color } = player;
+  const actions = state.actions.map(([color, action_type, value], index) => {
     let text = action_type + " " + value;
     if (action_type === "ROLL") {
       const number = value[0] + value[1];

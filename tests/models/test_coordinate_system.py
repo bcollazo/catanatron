@@ -1,4 +1,7 @@
 from catanatron.models.coordinate_system import (
+    cube_to_axial,
+    cube_to_offset,
+    offset_to_cube,
     num_tiles_for,
     generate_coordinate_system,
 )
@@ -55,3 +58,23 @@ def test_generate_coordinate_system_two_layer():
             (2, -1, -1),
         ]
     )
+
+
+def test_cube_to_axial():
+    assert cube_to_axial((0, 0, 0)) == (0, 0)
+    assert cube_to_axial((2, 0, -2)) == (2, -2)
+    assert cube_to_axial((0, 1, -1)) == (0, -1)
+
+
+def test_cube_to_offset():
+    assert cube_to_offset((0, 0, 0)) == (0, 0)
+    assert cube_to_offset((1, -1, 0)) == (1, 0)
+    assert cube_to_offset((0, 1, -1)) == (-1, -1)
+    assert cube_to_offset((0, -2, 2)) == (1, 2)
+
+
+def test_offset_to_cube():
+    assert offset_to_cube((0, 0)) == (0, 0, 0)
+    assert offset_to_cube((1, 0)) == (1, -1, 0)
+    assert offset_to_cube((-1, -1)) == (0, 1, -1)
+    assert offset_to_cube((1, 2)) == (0, -2, 2)

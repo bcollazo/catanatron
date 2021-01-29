@@ -9,14 +9,23 @@ coverage = "*"
 black = "*"
 pytest = "*"
 coveralls = "*"
+snakeviz = "*"
+pytest-benchmark = "*"
+ipython = "*"
 
 [packages]
 flask = "*"
 flask-cors = "*"
-psycopg2 = "*"
-catanatron = {editable = true, path = "."}
 click = "*"
 termplotlib = "*"
+networkx = "*"
+setuptools = "*"
+tensorflow = "*"
+pydot = "*"
+pandas = "*"
+psycopg2-binary = "*"
+psycopg2 = "*"
+tensorflow-data-validation = "*"
 
 [requires]
 python_version = "3.8"

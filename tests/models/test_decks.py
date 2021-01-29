@@ -1,6 +1,6 @@
 import pytest
 
-from catanatron.models.enums import Resource
+from catanatron.models.enums import DevelopmentCard, Resource
 from catanatron.models.decks import ResourceDeck, DevelopmentDeck
 
 
@@ -101,3 +101,8 @@ def test_from_array():
     assert a.num_cards() == 3
     assert a.count(Resource.BRICK) == 2
     assert a.count(Resource.WOOD) == 1
+
+
+def test_deck_proba():
+    assert DevelopmentDeck.starting_card_proba(DevelopmentCard.KNIGHT) == 14 / 25
+    assert DevelopmentDeck.starting_card_proba(DevelopmentCard.VICTORY_POINT) == 5 / 25

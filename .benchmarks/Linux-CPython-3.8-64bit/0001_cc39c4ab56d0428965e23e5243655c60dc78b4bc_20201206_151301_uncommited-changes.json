@@ -1,0 +1,139 @@
+{
+    "machine_info": {
+        "node": "BryanErazer",
+        "processor": "x86_64",
+        "machine": "x86_64",
+        "python_compiler": "GCC 7.5.0",
+        "python_implementation": "CPython",
+        "python_implementation_version": "3.8.5",
+        "python_version": "3.8.5",
+        "python_build": [
+            "default",
+            "Aug  8 2020 22:27:49"
+        ],
+        "release": "4.15.0-118-generic",
+        "system": "Linux",
+        "cpu": {
+            "vendor_id": "unknown",
+            "hardware": "unknown",
+            "brand": "unknown"
+        }
+    },
+    "commit_info": {
+        "id": "cc39c4ab56d0428965e23e5243655c60dc78b4bc",
+        "time": "2020-12-06T11:10:35-04:00",
+        "author_time": "2020-12-06T11:10:35-04:00",
+        "dirty": true,
+        "project": "catanatron",
+        "branch": "bryan/dev"
+    },
+    "benchmarks": [
+        {
+            "group": null,
+            "name": "test__to_json_speed",
+            "fullname": "tests/test_speed.py::test__to_json_speed",
+            "params": null,
+            "param": null,
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.0009283059916924685,
+                "max": 0.0020867610001005232,
+                "mean": 0.0009830693527350597,
+                "stddev": 0.00011202999980997996,
+                "rounds": 759,
+                "median": 0.000955544994212687,
+                "iqr": 4.62212337879464e-05,
+                "q1": 0.0009348080129711889,
+                "q3": 0.0009810292467591353,
+                "iqr_outliers": 77,
+                "stddev_outliers": 36,
+                "outliers": "36;77",
+                "ld15iqr": 0.0009283059916924685,
+                "hd15iqr": 0.0010527659906074405,
+                "ops": 1017.2222307793813,
+                "total": 0.7461496387259103,
+                "iterations": 1
+            }
+        },
+        {
+            "group": null,
+            "name": "test_copy_speed",
+            "fullname": "tests/test_speed.py::test_copy_speed",
+            "params": null,
+            "param": null,
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.0009527789952699095,
+                "max": 0.01663936601835303,
+                "mean": 0.0010844057107271736,
+                "stddev": 0.0010064070953569265,
+                "rounds": 841,
+                "median": 0.0009839549893513322,
+                "iqr": 4.8978981794789433e-05,
+                "q1": 0.0009671815059846267,
+                "q3": 0.0010161604877794161,
+                "iqr_outliers": 84,
+                "stddev_outliers": 4,
+                "outliers": "4;84",
+                "ld15iqr": 0.0009527789952699095,
+                "hd15iqr": 0.0010913540027104318,
+                "ops": 922.164084998618,
+                "total": 0.9119852027215529,
+                "iterations": 1
+            }
+        },
+        {
+            "group": null,
+            "name": "test_create_sample_speed",
+            "fullname": "tests/test_speed.py::test_create_sample_speed",
+            "params": null,
+            "param": null,
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 0.002244624978629872,
+                "max": 0.004765761987073347,
+                "mean": 0.0023447242085508618,
+                "stddev": 0.00015009365373135777,
+                "rounds": 379,
+                "median": 0.0023202009906526655,
+                "iqr": 8.760923083173111e-05,
+                "q1": 0.0022826737695140764,
+                "q3": 0.0023702830003458075,
+                "iqr_outliers": 15,
+                "stddev_outliers": 16,
+                "outliers": "16;15",
+                "ld15iqr": 0.002244624978629872,
+                "hd15iqr": 0.0025085119996219873,
+                "ops": 426.48939109902483,
+                "total": 0.8886504750407767,
+                "iterations": 1
+            }
+        }
+    ],
+    "datetime": "2020-12-06T15:13:08.105915",
+    "version": "3.2.3"
+}
