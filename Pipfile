@@ -1,3 +1,34 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:3c4cb75ae0cfdd0d9ed26c174c83226b9e5fe74bc54dc4f93652db1be380415b
-size 503
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest-watch = "*"
+coverage = "*"
+black = "*"
+pytest = "*"
+coveralls = "*"
+snakeviz = "*"
+pytest-benchmark = "*"
+ipython = "*"
+
+[packages]
+flask = "*"
+flask-cors = "*"
+click = "*"
+termplotlib = "*"
+networkx = "*"
+setuptools = "*"
+tensorflow = "*"
+pydot = "*"
+pandas = "*"
+psycopg2-binary = "*"
+psycopg2 = "*"
+tensorflow-data-validation = "*"
+
+[requires]
+python_version = "3.8"
+
+[pipenv]
+allow_prereleases = true
