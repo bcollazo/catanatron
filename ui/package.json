@@ -1,3 +1,43 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9756d0a74d88f962b752143c8b20fb8ef8309033717bca7dea51a7d3325c3400
-size 1098
+{
+  "name": "ui",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^4.2.4",
+    "@testing-library/react": "^9.3.2",
+    "@testing-library/user-event": "^7.1.2",
+    "axios": "^0.20.0",
+    "classnames": "^2.2.6",
+    "node-sass": "^4.14.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-router-dom": "^5.2.0",
+    "react-scripts": "^3.4.3",
+    "styled-components": "^5.1.1",
+    "tailwindcss": "^1.8.4"
+  },
+  "scripts": {
+    "build:tailwind": "tailwindcss build src/tailwind.css -o src/tailwind.output.css",
+    "prestart": "npm run build:tailwind",
+    "prebuild": "npm run build:tailwind",
+    "start": "PORT=3000 react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

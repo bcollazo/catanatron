@@ -1,3 +1,49 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ffd7682450304370be0250f8cf564dcd9373cb3732a67f3103f3a1a893084a83
-size 1299
+import json
+
+from catanatron.json import GameEncoder
+from catanatron.game import Game
+from catanatron.models.player import SimplePlayer, Color
+from experimental.machine_learning.features import create_sample
+
+
+# Things to benchmark. create_sample(), game.play() (random game), .to_json(), .copy()
+def test__to_json_speed(benchmark):
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.ORANGE),
+        SimplePlayer(Color.WHITE),
+    ]
+    game = Game(players)
+
+    result = benchmark(json.dumps, game, cls=GameEncoder)
+    assert isinstance(result, str)
+
+
+def test_copy_speed(benchmark):
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.ORANGE),
+        SimplePlayer(Color.WHITE),
+    ]
+    game = Game(players)
+
+    result = benchmark(game.copy)
+    assert result.seed == game.seed
+
+
+def test_create_sample_speed(benchmark):
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+    for _ in range(30):
+        game.play_tick()
+
+    sample = benchmark(create_sample, game, players[1])
+    assert isinstance(sample, dict)
+    assert len(sample) > 0

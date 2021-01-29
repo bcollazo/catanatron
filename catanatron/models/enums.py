@@ -1,3 +1,24 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e1cf404ce5ec205c506d0d1808e90a5f4eab90fb2325f0ee979b6d97bc8f1fe6
-size 458
+from enum import Enum
+from collections import namedtuple
+
+
+class Resource(Enum):
+    WOOD = "WOOD"
+    BRICK = "BRICK"
+    SHEEP = "SHEEP"
+    WHEAT = "WHEAT"
+    ORE = "ORE"
+
+
+class DevelopmentCard(Enum):
+    KNIGHT = "KNIGHT"
+    YEAR_OF_PLENTY = "YEAR_OF_PLENTY"
+    MONOPOLY = "MONOPOLY"
+    ROAD_BUILDING = "ROAD_BUILDING"
+    VICTORY_POINT = "VICTORY_POINT"
+
+
+class BuildingType(Enum):
+    SETTLEMENT = "SETTLEMENT"
+    CITY = "CITY"
+    ROAD = "ROAD"

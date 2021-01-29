@@ -1,3 +1,27 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:43a68c827b7d6384e3000ab8c6b56a88dd284f1d73f539dd34cd1ef44a147169
-size 571
+version: "3.3"
+services:
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=catanatron
+      - POSTGRES_PASSWORD=victorypoint
+      - POSTGRES_DB=catanatron_db
+    ports:
+      - 5432:5432
+  server:
+    image: catanatron-server
+    environment:
+      - DATABASE_URL=postgresql://catanatron:victorypoint@db:5432/catanatron_db
+    ports:
+      - "5000:5000"
+    stdin_open: true
+    volumes:
+      - .:/app
+  react-ui:
+    image: catanatron-react-ui
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    volumes:
+      - /app/node_modules
+      - ./ui:/app

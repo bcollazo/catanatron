@@ -1,3 +1,67 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:0a575aed407332f2412370ff71f73858ca8a4f553f36253240dcec79568c6b06
-size 1961
+import copy
+import json
+
+from catanatron.models.player import Color, SimplePlayer
+from catanatron.json import GameEncoder
+from catanatron.game import Game, replay_game
+from catanatron.models.enums import Resource
+from catanatron.models.actions import Action, ActionType
+
+
+def test_play_and_replay_games():
+    for _ in range(10):  # play 10 games
+        players = [
+            SimplePlayer(Color.RED),
+            SimplePlayer(Color.BLUE),
+            SimplePlayer(Color.WHITE),
+            SimplePlayer(Color.ORANGE),
+        ]
+        game = Game(players)
+        game.play()
+
+        replayed = None
+        for state, _ in replay_game(game):
+            replayed = state
+
+        og_final_state = json.dumps(game, cls=GameEncoder)
+        final_state = json.dumps(replayed, cls=GameEncoder)
+        assert final_state, og_final_state
+
+
+def test_copy():
+    """Play 30 moves, copy game, ensure they look the same but not the same."""
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+    for i in range(30):
+        game.play_tick()
+
+    game_copy = game.copy()
+    assert json.dumps(game, cls=GameEncoder) == json.dumps(game_copy, cls=GameEncoder)
+    assert game_copy != game
+
+
+def test_execute_action_on_copies_doesnt_conflict():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+    game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 0))
+    players[0].resource_deck.replenish(2, Resource.WHEAT)
+    players[0].resource_deck.replenish(3, Resource.ORE)
+    action = Action(players[0].color, ActionType.BUILD_CITY, 0)
+
+    game_copy = game.copy()
+    game_copy.execute(action)
+
+    game_copy = game.copy()
+    game_copy.execute(action)
+
+    game.execute(action)
