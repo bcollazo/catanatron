@@ -250,6 +250,15 @@ def test_resource_proba_planes():
         tf.math.equal(middle_wood_node[wood_channel], total_proba)
     ).numpy()
 
+    # assert brick tile has 6 non-zero node as expected
+    four_proba = number_probability(4)
+    tf.assert_equal(tensor[6, 2, 9], four_proba)
+    tf.assert_equal(tensor[8, 2, 9], four_proba)
+    tf.assert_equal(tensor[10, 2, 9], four_proba)
+    tf.assert_equal(tensor[6, 4, 9], four_proba)
+    tf.assert_equal(tensor[8, 4, 9], four_proba)
+    tf.assert_equal(tensor[10, 4, 9], four_proba)
+
 
 def test_port_planes():
     players = [
