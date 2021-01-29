@@ -98,6 +98,7 @@ def play_batch(num_games, players, games_directory):
     turns = []
     durations = []
     games = []
+    branching_factors = []
     for i in range(num_games):
         for player in players:
             player.restart_state()
@@ -109,12 +110,17 @@ def play_batch(num_games, players, games_directory):
                     "samples": [],
                     "actions": [],
                     "board_tensors": [],
+                    # These are for practicing ML with simpler problems
                     "OWS_ONLY_LABEL": [],
                     "OWS_LABEL": [],
+                    "settlements": [],
+                    "cities": [],
+                    "prod_vps": [],
                 }
             )
             action_callback = build_action_callback(data)
             game, duration = play_and_time(players, action_callback)
+            branching_factors.extend(game.branching_factors)
             if game.winning_player() is not None:
                 flush_to_matrices(game, data, games_directory)
         else:
@@ -131,6 +137,8 @@ def play_batch(num_games, players, games_directory):
         durations.append(duration)
         games.append(game)
 
+    print("Branching Factor Stats:")
+    print(pd.Series(branching_factors).describe())
     print("AVG Turns:", sum(turns) / len(turns))
     print("AVG Duration:", sum(durations) / len(durations))
     # Print Winners graph in command line:
@@ -234,6 +242,15 @@ def flush_to_matrices(game, data, games_directory):
         return_matrix = np.concatenate(
             (return_matrix, np.transpose([player_data["OWS_LABEL"]])), axis=1
         )
+        return_matrix = np.concatenate(
+            (return_matrix, np.transpose([player_data["settlements"]])), axis=1
+        )
+        return_matrix = np.concatenate(
+            (return_matrix, np.transpose([player_data["cities"]])), axis=1
+        )
+        return_matrix = np.concatenate(
+            (return_matrix, np.transpose([player_data["prod_vps"]])), axis=1
+        )
         labels.extend(return_matrix)
 
     # Build Q-learning Design Matrix
@@ -252,6 +269,9 @@ def flush_to_matrices(game, data, games_directory):
             "VICTORY_POINTS_RETURN",
             "OWS_ONLY_LABEL",
             "OWS_LABEL",
+            "settlements",
+            "cities",
+            "prod_vps",
         ],
     ).astype("float64")
     print(rewards_df.describe())

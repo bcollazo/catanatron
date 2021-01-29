@@ -14,18 +14,14 @@ from experimental.machine_learning.board_tensor_features import (
 
 # ===== Configuration
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 3
 PREFETCH_BUFFER_SIZE = None
 LABEL_COLUMN = "OWS_LABEL"
 DATA_SIZE = 800 * 100  # estimate: 800 samples per game.
-DATA_DIRECTORY = "data/random-games-ows-label-testing"
-DATA_DIRECTORY = "data/random-games-separate-edge-nodes-simple-problem"
-DATA_DIRECTORY = "data/random-games-separate-edge-nodes-simple-problem-big"
+DATA_DIRECTORY = "data/random-games"
 STEPS_PER_EPOCH = DATA_SIZE / BATCH_SIZE
-CHANNELS = 13
 VALIDATION_DATA_SIZE = 800 * 10
-VALIDATION_DATA_DIRECTORY = "data/random-games-ows-label-validation"
-VALIDATION_DATA_DIRECTORY = "data/random-games-separate-edge-nodes-simple-problem"
+VALIDATION_DATA_DIRECTORY = "data/random-games"
 SHUFFLE = True
 SHUFFLE_SEED = 123
 # CLASS_WEIGHT = {0: 0.05, 1: 0.95}
@@ -60,7 +56,7 @@ def preprocess_samples(samples_batch):
 def build_generator(dataset):
     def generator():
         for input1, label in dataset:
-            # breakpoint()
+            breakpoint()
             yield input1, label
 
     return generator
@@ -120,17 +116,6 @@ test_dataset = tf.data.Dataset.from_generator(
     ),
 )
 
-# import numpy as np
-
-# print("SUMMING")
-# total_samples = 0
-# total_sum = 0
-# for input, label in train_dataset.take(10):
-#     total_samples += label.shape[0]
-#     total_sum += np.sum(label)
-# print(total_sum, total_samples)
-# breakpoint()
-
 
 # ==== Multi-model
 print("Building model...")
@@ -148,92 +133,96 @@ METRICS = [
 ]
 
 # # the first branch operates on the first input
-# input_1 = tf.keras.layers.Input(shape=(WIDTH, HEIGHT, CHANNELS))
-# x = input_1
-# # x = tf.keras.layers.BatchNormalization()(x)
+input_1 = tf.keras.layers.Input(shape=(WIDTH, HEIGHT, CHANNELS))
+x = input_1
+# x = tf.keras.layers.BatchNormalization()(x)
+x = tf.keras.layers.Conv2D(
+    1,
+    kernel_size=3,
+    # activation="linear",
+    # kernel_constraint=tf.keras.constraints.unit_norm(),
+    # kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
+)(x)
+# x = tf.keras.layers.BatchNormalization()(x)
 # x = tf.keras.layers.Conv2D(
-#     1,
-#     kernel_size=3,
-#     # activation="linear",
-#     # kernel_constraint=tf.keras.constraints.unit_norm(),
-#     # kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
+#     32,
+#     kernel_size=5,
+#     activation="linear",
+#     kernel_constraint=tf.keras.constraints.unit_norm(),
+#     kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
 # )(x)
-# # x = tf.keras.layers.BatchNormalization()(x)
-# # x = tf.keras.layers.Conv2D(
-# #     32,
-# #     kernel_size=5,
-# #     activation="linear",
-# #     kernel_constraint=tf.keras.constraints.unit_norm(),
-# #     kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
-# # )(x)
 
-# x = tf.keras.layers.MaxPool2D(pool_size=(3, 3))(x)
-# x = tf.keras.layers.Flatten()(x)
-# x = tf.keras.layers.Dropout(0.4)(x)
-# x = tf.keras.layers.Dense(32, activation="relu")(x)
-# x = tf.keras.layers.Dropout(0.4)(x)
-# x = tf.keras.layers.Dense(1, activation="sigmoid")(x)
-# model = tf.keras.Model(inputs=[input_1], outputs=x)
-# model.compile(
-#     optimizer=tf.keras.optimizers.Adam(lr=1e-3, clipnorm=1.0),
-#     metrics=METRICS,
-#     loss="binary_crossentropy",
+x = tf.keras.layers.MaxPool2D(pool_size=(3, 3))(x)
+x = tf.keras.layers.Flatten()(x)
+x = tf.keras.layers.Dropout(0.4)(x)
+x = tf.keras.layers.Dense(32, activation="relu")(x)
+x = tf.keras.layers.Dropout(0.4)(x)
+x = tf.keras.layers.Dense(1, activation="sigmoid")(x)
+model = tf.keras.Model(inputs=[input_1], outputs=x)
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(lr=1e-3, clipnorm=1.0),
+    metrics=METRICS,
+    loss="binary_crossentropy",
+)
+model.summary()
+
+
+# def model_builder(hp):
+#     model = tf.keras.Sequential()
+#     model.add(tf.keras.layers.Flatten(input_shape=SHAPE))
+
+#     # Tune the number of units in the first Dense layer
+#     # Choose an optimal value between 32-512
+#     hp_units = hp.Int("units", min_value=32, max_value=512, step=32)
+#     hp_activation = hp.Choice("activation", values=["relu", "linear"])
+#     model.add(tf.keras.layers.Dense(units=hp_units, activation=hp_activation))
+#     model.add(tf.keras.layers.Dense(1, activation="sigmoid"))  # TODO:
+
+#     # Tune the learning rate for the optimizer
+#     # Choose an optimal value from 0.01, 0.001, or 0.0001
+#     hp_learning_rate = hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])
+
+#     model.compile(
+#         optimizer=tf.keras.optimizers.Adam(learning_rate=hp_learning_rate),
+#         loss=tf.keras.losses.BinaryCrossentropy(),  # TODO:
+#         metrics=METRICS,
+#     )
+#     return model
+
+
+# tuner = kt.Hyperband(
+#     model_builder,
+#     objective="val_accuracy",
+#     max_epochs=10,
+#     factor=3,
+#     directory="my_dir_shuffled",
+#     project_name="intro_to_kt",
 # )
-# model.summary()
-def model_builder(hp):
-    model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Flatten(input_shape=SHAPE))
+# tuner.search(
+#     train_dataset,
+#     steps_per_epoch=STEPS_PER_EPOCH,
+#     epochs=EPOCHS,
+#     validation_data=test_dataset,
+#     validation_steps=VALIDATION_DATA_SIZE / BATCH_SIZE,
+#     callbacks=[tf.keras.callbacks.EarlyStopping(patience=1)],
+# )
+# # Get the optimal hyperparameters
+# best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
 
-    # Tune the number of units in the first Dense layer
-    # Choose an optimal value between 32-512
-    hp_units = hp.Int("units", min_value=32, max_value=512, step=32)
-    hp_activation = hp.Choice("activation", values=["relu", "linear"])
-    model.add(tf.keras.layers.Dense(units=hp_units, activation=hp_activation))
-    model.add(tf.keras.layers.Dense(1, activation="sigmoid"))  # TODO:
-
-    # Tune the learning rate for the optimizer
-    # Choose an optimal value from 0.01, 0.001, or 0.0001
-    hp_learning_rate = hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])
-
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=hp_learning_rate),
-        loss=tf.keras.losses.BinaryCrossentropy(),  # TODO:
-        metrics=METRICS,
-    )
-    return model
+# print(
+#     f"""
+# The hyperparameter search is complete. The optimal number of units in the first densely-connected
+# layer is {best_hps.get('units')} and the optimal learning rate for the optimizer
+# is {best_hps.get('learning_rate')}.
+# """
+# )
+# # Show a summary of the search
+# tuner.results_summary()
+# breakpoint()
+# # Build the model with the optimal hyperparameters and train it on the data
+# model = tuner.hypermodel.build(best_hps)
 
 
-tuner = kt.Hyperband(
-    model_builder,
-    objective="val_accuracy",
-    max_epochs=10,
-    factor=3,
-    directory="my_dir_shuffled",
-    project_name="intro_to_kt",
-)
-tuner.search(
-    train_dataset,
-    steps_per_epoch=STEPS_PER_EPOCH,
-    epochs=EPOCHS,
-    validation_data=test_dataset,
-    validation_steps=VALIDATION_DATA_SIZE / BATCH_SIZE,
-    callbacks=[tf.keras.callbacks.EarlyStopping(patience=1)],
-)
-# Get the optimal hyperparameters
-best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-
-print(
-    f"""
-The hyperparameter search is complete. The optimal number of units in the first densely-connected
-layer is {best_hps.get('units')} and the optimal learning rate for the optimizer
-is {best_hps.get('learning_rate')}.
-"""
-)
-# Show a summary of the search
-tuner.results_summary()
-breakpoint()
-# Build the model with the optimal hyperparameters and train it on the data
-model = tuner.hypermodel.build(best_hps)
 model.fit(
     train_dataset,
     steps_per_epoch=STEPS_PER_EPOCH,
@@ -315,3 +304,6 @@ print(predict(model, "944a2d03-926f-4e6f-865a-93c55d6103b7", Color.ORANGE), 0)
 print(predict(model, "944a2d03-926f-4e6f-865a-93c55d6103b7", Color.RED), 1)
 breakpoint()
 print(model.get_weights())
+
+
+# TODO: Evaluate bot by playing with randoms.
