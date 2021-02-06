@@ -1,9 +1,15 @@
 import numpy as np
-import keras.backend.tensorflow_backend as backend
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Activation, Flatten
-from keras.optimizers import Adam
-from keras.callbacks import TensorBoard
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (
+    Dense,
+    Dropout,
+    Conv2D,
+    MaxPooling2D,
+    Activation,
+    Flatten,
+)
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import TensorBoard
 import tensorflow as tf
 from collections import deque
 import time
@@ -200,7 +206,7 @@ ep_rewards = [-200]
 # For more repetitive results
 random.seed(1)
 np.random.seed(1)
-tf.set_random_seed(1)
+tf.random.set_seed(1)
 
 # Memory fraction, used mostly when trai8ning multiple agents
 # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=MEMORY_FRACTION)
@@ -209,39 +215,6 @@ tf.set_random_seed(1)
 # Create models folder
 if not os.path.isdir("models"):
     os.makedirs("models")
-
-
-# Own Tensorboard class
-class ModifiedTensorBoard(TensorBoard):
-
-    # Overriding init to set initial step and writer (we want one log file for all .fit() calls)
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.step = 1
-        self.writer = tf.summary.FileWriter(self.log_dir)
-
-    # Overriding this method to stop creating default log writer
-    def set_model(self, model):
-        pass
-
-    # Overrided, saves logs with our step number
-    # (otherwise every .fit() will start writing from 0th step)
-    def on_epoch_end(self, epoch, logs=None):
-        self.update_stats(**logs)
-
-    # Overrided
-    # We train for one batch only, no need to save anything at epoch end
-    def on_batch_end(self, batch, logs=None):
-        pass
-
-    # Overrided, so won't close writer
-    def on_train_end(self, _):
-        pass
-
-    # Custom method for saving own metrics
-    # Creates writer, writes custom metrics and closes writer
-    def update_stats(self, **stats):
-        self._write_logs(stats, self.step)
 
 
 # Agent class
@@ -257,11 +230,6 @@ class DQNAgent:
 
         # An array with last n steps for training
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
-
-        # Custom tensorboard object
-        self.tensorboard = ModifiedTensorBoard(
-            log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time()))
-        )
 
         # Used to count when to update target network with main network's weights
         self.target_update_counter = 0
@@ -349,7 +317,6 @@ class DQNAgent:
             batch_size=MINIBATCH_SIZE,
             verbose=0,
             shuffle=False,
-            callbacks=[self.tensorboard] if terminal_state else None,
         )
 
         # Update target network counter every episode
@@ -372,7 +339,7 @@ agent = DQNAgent()
 for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit="episodes"):
 
     # Update tensorboard step every episode
-    agent.tensorboard.step = episode
+    # agent.tensorboard.step = episode
 
     # Restarting episode - reset episode reward and step number
     episode_reward = 0
@@ -416,12 +383,12 @@ for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit="episodes"):
         )
         min_reward = min(ep_rewards[-AGGREGATE_STATS_EVERY:])
         max_reward = max(ep_rewards[-AGGREGATE_STATS_EVERY:])
-        agent.tensorboard.update_stats(
-            reward_avg=average_reward,
-            reward_min=min_reward,
-            reward_max=max_reward,
-            epsilon=epsilon,
-        )
+        # agent.tensorboard.update_stats(
+        #     reward_avg=average_reward,
+        #     reward_min=min_reward,
+        #     reward_max=max_reward,
+        #     epsilon=epsilon,
+        # )
 
         # Save model, but only when min reward is greater or equal a set value
         if min_reward >= MIN_REWARD:
