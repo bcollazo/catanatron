@@ -120,11 +120,11 @@ def play_batch(num_games, players, games_directory):
             )
             action_callback = build_action_callback(data)
             game, duration = play_and_time(players, action_callback)
-            branching_factors.extend(game.branching_factors)
             if game.winning_player() is not None:
                 flush_to_matrices(game, data, games_directory)
         else:
             game, duration = play_and_time(players, None)
+        branching_factors.extend(game.branching_factors)
         print("Took", duration, "seconds")
         print({str(p): p.actual_victory_points for p in players})
         save_game_state(game)

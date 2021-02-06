@@ -253,10 +253,16 @@ def test_resource_proba_planes():
     # assert brick tile has 6 non-zero node as expected
     four_proba = number_probability(4)
     tf.assert_equal(tensor[6, 2, 9], four_proba)
+    tf.assert_equal(tensor[7, 2, 9], 0.0)
     tf.assert_equal(tensor[8, 2, 9], four_proba)
+    tf.assert_equal(tensor[9, 2, 9], 0.0)
     tf.assert_equal(tensor[10, 2, 9], four_proba)
+    for i in range(5):
+        tf.assert_equal(tensor[6 + i, 3, 9], 0.0)
     tf.assert_equal(tensor[6, 4, 9], four_proba)
+    tf.assert_equal(tensor[7, 4, 9], 0.0)
     tf.assert_equal(tensor[8, 4, 9], four_proba)
+    tf.assert_equal(tensor[9, 4, 9], 0.0)
     tf.assert_equal(tensor[10, 4, 9], four_proba)
 
 

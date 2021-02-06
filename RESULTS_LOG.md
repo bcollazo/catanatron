@@ -123,6 +123,7 @@ ________________________________________________________________________________
   2-32-relu layers gets mae: 0.6571, val_mae: 0.0301. Default Adam, with loss=mse.
   With 1 more order of magnitude of data, we can get 1 order of magnitude less error. (val_mae: 0.0034)
   Next steps:
+
   - Use auto keras to see how much better can we get.
     This achieved val_mae: 0.0496. Not much significant improvement.
   - Use CNN to see how it affects counting.
@@ -140,28 +141,53 @@ ________________________________________________________________________________
   - Next step: What if we add some 2s as well... (here we prove we could learn count-vp-problem)
     Yes. Can learn (without noise channels), to val_mae: 0.1147.
 
+- We fixed a bug in the tensor board representation. Using only the first 13 planes
+  allows a CNN to learn if a player has OWS successfully (88% val_accuracy). Results:
+
+```
+Trial 27 Complete [00h 10m 37s]
+val_accuracy: 0.8878348469734192
+
+Best val_accuracy So Far: 0.888144850730896
+Total elapsed time: 05h 03m 43s
+
+Search: Running Trial #28
+
+Hyperparameter |Value |Best Value So Far
+filters |9 |17
+num_flat_layers |3 |1
+learning_rate |0.0001 |0.001
+units_0 |16 |24
+units_1 |24 |32
+units_2 |8 |None
+tuner/epochs |10 |4
+tuner/initial_e...|0 |2
+tuner/bracket |0 |2
+tuner/round |0 |1
+```
+
+- Regroup on Jan 2021.
+  - We achieve mae: 5.4591e-11, val_mae: 2.4891e-04 with a deep model on RepA,
+    and DISCOUNTED_RETURN. But model doesnt perform well in games. 50 game
+    epochs, aiming to use 1K games, but early stopping.
+    loss: 1.2714e-20 - mae: 5.4591e-11 - val_loss: 3.2321e-07 - val_mae: 2.4807e-04
+  - Similar results with Rep B. But it played terribly...
+
 ## Future Work:
 
 ### Toy problems
 
-- Understand if mixed-data works. To practice mixed-data learning. Practice:
-  - action => cost mapping.
-  - state => victory points plain.
 - Idea: hot-encode 5 layers per player (one per resource) to denote income and buildings.
   then use 3D convolution of size WxHx5 and stride=5 (to not overlap)
-- Understand if 2D filters mix layers.
 - An easier problem would be to count house/city VPs (only uses 1 plane). count-vp-problem.
 - Next medium problem will be, guess wheat production (to see if combining the two planes).
-- Does adding extra features distract the network?
-- Use KerasTuner.
-- Next steps would like to separate
-  edges and nodes from channels (it seems it confuses these two), and add
-  max-pooling in an attempt to learn hierarchy (OWS-node, variaty-node, etc...).
+- Does adding extra features distract the network? Yes
 
 ### Actual Catan
 
+- Try Online - DQN approach (using PythonProgramming Tutorial).
+- Use Value-Estimator with a tree-lookahead alpha-beta pruning.
 - Try CNN-action space. (i.e. BUILD_SETTLEMENT at 3 means plane-board-tensor)
-- Try better board_tensor representation. (different channels, more 0s)
 - Try policy-learning and q-learning on simpler action space.
 - Try Cross-Entropy approach (using only top X features and dropping END TURNs).
 - Try AlphaZero single-neural network learning (state) => (value, action).
@@ -204,3 +230,34 @@ kerastuner = {git = "https://github.com/keras-team/keras-tuner.git", ref = "1.0.
 - Used auto-keras, auto-scikit.
 - Basic how CNNs work. How LSTM (RNNs in general) work.
 - Epochs, steps, generator datasets. GZIP compression.
+
+## Catan State Space Analysis
+
+- Each tile can be any resource = 19. So 19! resource-tile decisions.
+- Each tile must be one of the numbers. So 18! (desert has no number)
+- There are 9 ports so: 9! ways of ordering them.
+  Finally, there are 19! \* 18! \* 9! boards in Catan. So like 10^38 boards.
+
+Configurations states inside it are upper bounded by:
+
+- Each player has at most 5 houses. 54 choose 5 are ways of putting all 5 houses.
+  54 choose 4 are ways of putting 4 houses. Sum\_{i in [0, 5]} (54 choose i) = 3.5M.
+  Actually, better ignore colors and consider all 20 houses. So:
+  `sum([comb(54, i) for i in range(21)]) = 683689022885551`.
+  Actually, including cities, then there are 9 pieces per player that can be in board.
+  `sum([comb(54, i) for i in range(4*9 + 1)]) = 17932673125137243`
+- There are 14 roads per player so 56 roads in total. 72 possible locations so:
+  `sum([comb(72, i) for i in range(56)]) = 4722360822358286581300`
+
+If we include number of cards that makes the state space much much bigger,
+but in practice its a lot less (its rare for a player to have 20+ cards). So
+just using the Board States we see there are:
+10^38 boards. Each with 17932673125137243 \* 4722360822358286581300 configurations,
+which is almost like 10^37, so we are talking around 10^68 just possible board-states.
+
+In terms of cards-in-hand state. Assuming on average players have 5 cards in hand,
+then out of the 19*5 resource cards we start with, we are talking about:
+`comb(19*4, 20) = 1090013712241956540` (or 10^18).
+
+Grand-ballpark estimate is ~**10^100** states in Catan. Chess is 10^123. Number of
+atoms in the Universe is 10^78.

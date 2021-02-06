@@ -224,12 +224,11 @@ class VRLPlayer(Player):
         # Make copy of each action, and take one that takes to most value.
         samples = []
         for action in playable_actions:
-            action_copy = copy.deepcopy(action)
             game_copy = game.copy()
             player_copy = next(
                 player for player in game_copy.players if player.color == self.color
             )
-            game_copy.execute(action_copy)
+            game_copy.execute(action)
 
             sample = create_sample(game_copy, player_copy)
             state = [float(sample[i]) for i in get_feature_ordering()]
@@ -258,12 +257,11 @@ class TensorRLPlayer(Player):
         inputs1 = []
         inputs2 = []
         for action in playable_actions:
-            action_copy = copy.deepcopy(action)
             game_copy = game.copy()
             player_copy = next(
                 player for player in game_copy.players if player.color == self.color
             )
-            game_copy.execute(action_copy)
+            game_copy.execute(action)
 
             board_tensor = create_board_tensor(game_copy, player_copy)
             inputs1.append(board_tensor)
