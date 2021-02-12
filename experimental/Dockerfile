@@ -1,5 +1,6 @@
 # This is a Container we can use to run Experiments in Paperspace.
 #   Edit, build, and publish to DockerHub.
+#   `docker build . -t bcollazo/paperspace-rl` to build.
 #   `docker push bcollazo/paperspace-rl` to publish.
 FROM paperspace/tensorflow:2.0.0-gpu-py3-jupyter-lab
 
