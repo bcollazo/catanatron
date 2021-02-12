@@ -7,12 +7,12 @@ workflows:
         command: experiment.run_single_node
         params:
           command: nvidia-smi
-          container: bcollazo/paperspace-rl
+          container: tensorflow/tensorflow:1.13.1-gpu-py3
           experimentEnv:
-            EPOCHS_EVAL: 2
+            EPOCHS_EVAL: 5
             EVAL_SECS: 10
-            MAX_STEPS: 100
-            TRAIN_EPOCHS: 3
+            MAX_STEPS: 1000
+            TRAIN_EPOCHS: 10
           machineType: p2.xlarge
           modelPath: /artifacts
           modelType: Tensorflow
@@ -26,4 +26,8 @@ workflows:
             precision: 3
       triggers:
         branches:
-          only: master
+          ignore: irrelevant-branch
+        tags:
+          only:
+            - v.*
+            - latest
