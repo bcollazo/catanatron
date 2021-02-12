@@ -12,7 +12,7 @@ import tensorflow as tf
 from catanatron.models.enums import BuildingType, Resource
 from catanatron_server.database import save_game_state
 from catanatron.game import Game
-from catanatron.models.player import RandomPlayer, Color
+from catanatron.models.player import HumanPlayer, RandomPlayer, Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from experimental.machine_learning.players.reinforcement import (
     QRLPlayer,
@@ -41,7 +41,7 @@ from experimental.machine_learning.utils import (
 )
 
 
-PLAYER_REGEX = re.compile("(R|W|M[0-9]+|V.*|P.*|Q.*|T.*)")
+PLAYER_REGEX = re.compile("(R|H|W|M[0-9]+|V.*|P.*|Q.*|T.*)")
 
 
 @click.command()
@@ -60,7 +60,15 @@ PLAYER_REGEX = re.compile("(R|W|M[0-9]+|V.*|P.*|Q.*|T.*)")
     default=None,
     help="Path where to save ML csvs.",
 )
-def simulate(num, players, outpath):
+@click.option(
+    "--watch/--no-watch",
+    default=False,
+    help="""
+        Whether to save intermediate states to database to allow for viewing.
+        This will artificially slow down the game by 1s per move.
+        """,
+)
+def simulate(num, players, outpath, watch):
     """Simple program simulates NUM Catan games."""
     player_keys = players.split(",")
     assert len(player_keys) == 4, "Must specify 4 players."
@@ -74,6 +82,8 @@ def simulate(num, players, outpath):
         param = key[1:]
         if player_type == "R":
             initialized_players.append(RandomPlayer(colors[i], pseudonyms[i]))
+        elif player_type == "H":
+            initialized_players.append(HumanPlayer(colors[i], pseudonyms[i]))
         elif player_type == "W":
             initialized_players.append(WeightedRandomPlayer(colors[i], pseudonyms[i]))
         elif player_type == "V":
@@ -89,10 +99,10 @@ def simulate(num, players, outpath):
         else:
             raise ValueError("Invalid player key")
 
-    play_batch(num, initialized_players, outpath)
+    play_batch(num, initialized_players, outpath, watch)
 
 
-def play_batch(num_games, players, games_directory):
+def play_batch(num_games, players, games_directory, watch):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
     wins = defaultdict(int)
     turns = []
@@ -101,32 +111,34 @@ def play_batch(num_games, players, games_directory):
     for i in range(num_games):
         for player in players:
             player.restart_state()
+        game = Game(players)
 
         print(f"Playing game {i} / {num_games}:", players)
+        action_callbacks = []
         if games_directory:
-            data = defaultdict(
-                lambda: {
-                    "samples": [],
-                    "actions": [],
-                    "board_tensors": [],
-                    # These are for practicing ML with simpler problems
-                    "OWS_ONLY_LABEL": [],
-                    "OWS_LABEL": [],
-                    "settlements": [],
-                    "cities": [],
-                    "prod_vps": [],
-                }
-            )
-            action_callback = build_action_callback(data)
-            game, duration = play_and_time(players, action_callback)
-            if game.winning_player() is not None:
-                flush_to_matrices(game, data, games_directory)
-        else:
-            game, duration = play_and_time(players, None)
+            action_callbacks.append(build_action_callback(games_directory))
+        if watch:
+            save_game_state(game)
+
+            def callback(game):
+                save_game_state(game)
+                time.sleep(0.25)
+
+            action_callbacks.append(callback)
+            print("Watch game by refreshing http://localhost:3000/games/" + game.id)
+
+        start = time.time()
+        try:
+            game.play(action_callbacks)
+        except Exception as e:
+            traceback.print_exc()
+        finally:
+            duration = time.time() - start
         print("Took", duration, "seconds")
         print({str(p): p.actual_victory_points for p in players})
-        save_game_state(game)
-        print("Saved in db. See result at http://localhost:3000/games/" + game.id)
+        if not watch:
+            save_game_state(game)
+            print("Saved in db. See result at http://localhost:3000/games/" + game.id)
         print("")
 
         winner = game.winning_player()
@@ -145,21 +157,27 @@ def play_batch(num_games, players, games_directory):
     return games
 
 
-def play_and_time(players, action_callback):
-    game = Game(players)
-    start = time.time()
-    try:
-        game.play(action_callback)
-    except Exception as e:
-        traceback.print_exc()
-    finally:
-        duration = time.time() - start
-        return game, duration
+def build_action_callback(games_directory):
+    data = defaultdict(
+        lambda: {
+            "samples": [],
+            "actions": [],
+            "board_tensors": [],
+            # These are for practicing ML with simpler problems
+            "OWS_ONLY_LABEL": [],
+            "OWS_LABEL": [],
+            "settlements": [],
+            "cities": [],
+            "prod_vps": [],
+        }
+    )
 
-
-def build_action_callback(data):
     def action_callback(game: Game):
         if len(game.actions) == 0:
+            return
+
+        if game.winning_player() is not None:
+            flush_to_matrices(game, data, games_directory)
             return
 
         action = game.actions[-1]

@@ -101,6 +101,24 @@ class SimplePlayer(Player):
         return playable_actions[0]
 
 
+class HumanPlayer(Player):
+    def decide(self, game, playable_actions):
+        print(self.resource_deck.to_array())
+        print(self.development_deck.to_array())
+        for i, action in enumerate(playable_actions):
+            print(f"{i}: {action.action_type} {action.value}")
+        i = None
+        while i is None or (i < 0 or i >= len(playable_actions)):
+            print("Please enter a valid index:")
+            try:
+                x = input(">>> ")
+                i = int(x)
+            except ValueError:
+                pass
+
+        return playable_actions[i]
+
+
 class RandomPlayer(Player):
     def decide(self, game, playable_actions):
         index = random.randrange(0, len(playable_actions))

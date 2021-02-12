@@ -9,6 +9,9 @@ class Resource(Enum):
     WHEAT = "WHEAT"
     ORE = "ORE"
 
+    def __repr__(self) -> str:
+        return self.value
+
 
 class DevelopmentCard(Enum):
     KNIGHT = "KNIGHT"

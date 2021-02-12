@@ -137,10 +137,10 @@ class Game:
         self.road_color = None
         self.army_color = None
 
-    def play(self, action_callback=None, decide_fn=None):
+    def play(self, action_callbacks=[], decide_fn=None):
         """Runs the game until the end"""
         while self.winning_player() is None and self.num_turns < TURNS_LIMIT:
-            self.play_tick(action_callback=action_callback, decide_fn=decide_fn)
+            self.play_tick(action_callbacks=action_callbacks, decide_fn=decide_fn)
 
     def winning_player(self):
         for player in self.players:
@@ -164,7 +164,7 @@ class Game:
             )
         return player, action_prompt
 
-    def play_tick(self, action_callback=None, decide_fn=None):
+    def play_tick(self, action_callbacks=[], decide_fn=None):
         """
         Consume from queue (player, decision) to support special building phase,
             discarding, and other decisions out-of-turn.
@@ -178,7 +178,7 @@ class Game:
             if decide_fn is not None
             else player.decide(self, actions)
         )
-        return self.execute(action, action_callback=action_callback)
+        return self.execute(action, action_callbacks=action_callbacks)
 
     def playable_actions(self, player, action_prompt):
         if action_prompt == ActionPrompt.BUILD_FIRST_SETTLEMENT:
@@ -236,7 +236,7 @@ class Game:
         else:
             raise RuntimeError("Unknown ActionPrompt")
 
-    def execute(self, action, action_callback=None):
+    def execute(self, action, action_callbacks=[]):
         outcome_proba = None
         if action.action_type == ActionType.END_TURN:
             next_player_index = (self.current_player_index + 1) % len(self.players)
@@ -461,8 +461,8 @@ class Game:
         self.actions.append(action)
         self.count_victory_points()
 
-        if action_callback:
-            action_callback(self)
+        for callback in action_callbacks:
+            callback(self)
 
         return outcome_proba
 
