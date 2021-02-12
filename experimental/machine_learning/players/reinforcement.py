@@ -39,6 +39,7 @@ ACTIONS_ARRAY = [
         for i, first_card in enumerate(RESOURCE_LIST)
         for j in range(i, len(RESOURCE_LIST))
     ],
+    *[(ActionType.PLAY_YEAR_OF_PLENTY, [first_card]) for first_card in RESOURCE_LIST],
     *[
         (ActionType.PLAY_ROAD_BUILDING, (tuple(sorted(i)), tuple(sorted(j))))
         for i in get_edges()

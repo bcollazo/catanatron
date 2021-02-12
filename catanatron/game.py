@@ -150,12 +150,12 @@ class Game:
                 return player
         return None
 
-    def play_tick(self, action_callback=None, decide_fn=None):
-        """
-        Consume from queue (player, decision) to support special building phase,
-            discarding, and other decisions out-of-turn.
-        If nothing there, fall back to (current, playable()) for current-turn.
-        """
+    def winning_color(self):
+        player = self.winning_player()
+        return None if player is None else player.color
+
+    def pop_from_queue(self):
+        """Important: dont call this without consuming results. O/W illegal state"""
         if len(self.tick_queue) > 0:
             (seating, action_prompt) = self.tick_queue.pop(0)
             player = self.players[seating]
@@ -164,6 +164,15 @@ class Game:
             action_prompt = (
                 ActionPrompt.PLAY_TURN if player.has_rolled else ActionPrompt.ROLL
             )
+        return player, action_prompt
+
+    def play_tick(self, action_callback=None, decide_fn=None):
+        """
+        Consume from queue (player, decision) to support special building phase,
+            discarding, and other decisions out-of-turn.
+        If nothing there, fall back to (current, playable()) for current-turn.
+        """
+        player, action_prompt = self.pop_from_queue()
 
         actions = self.playable_actions(player, action_prompt)
         self.branching_factors.append(len(actions))  # for analytics
