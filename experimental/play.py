@@ -98,7 +98,6 @@ def play_batch(num_games, players, games_directory):
     turns = []
     durations = []
     games = []
-    branching_factors = []
     for i in range(num_games):
         for player in players:
             player.restart_state()
@@ -124,7 +123,6 @@ def play_batch(num_games, players, games_directory):
                 flush_to_matrices(game, data, games_directory)
         else:
             game, duration = play_and_time(players, None)
-        branching_factors.extend(game.branching_factors)
         print("Took", duration, "seconds")
         print({str(p): p.actual_victory_points for p in players})
         save_game_state(game)
@@ -137,8 +135,6 @@ def play_batch(num_games, players, games_directory):
         durations.append(duration)
         games.append(game)
 
-    print("Branching Factor Stats:")
-    print(pd.Series(branching_factors).describe())
     print("AVG Turns:", sum(turns) / len(turns))
     print("AVG Duration:", sum(durations) / len(durations))
     # Print Winners graph in command line:

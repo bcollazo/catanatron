@@ -137,8 +137,6 @@ class Game:
         self.road_color = None
         self.army_color = None
 
-        self.branching_factors = []  # for analytics
-
     def play(self, action_callback=None, decide_fn=None):
         """Runs the game until the end"""
         while self.winning_player() is None and self.num_turns < TURNS_LIMIT:
@@ -175,7 +173,6 @@ class Game:
         player, action_prompt = self.pop_from_queue()
 
         actions = self.playable_actions(player, action_prompt)
-        self.branching_factors.append(len(actions))  # for analytics
         action = (
             decide_fn(player, self, actions)
             if decide_fn is not None
