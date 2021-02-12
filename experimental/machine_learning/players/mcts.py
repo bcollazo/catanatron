@@ -1,11 +1,10 @@
 import time
 import random
-import copy
-from multiprocessing import Pool
 import multiprocessing
+from collections import Counter
 
 from catanatron.game import Game
-from catanatron.models.player import Player, RandomPlayer
+from catanatron.models.player import Player
 
 DEFAULT_NUM_PLAYOUTS = 25
 NUM_WORKERS = 8
@@ -29,14 +28,12 @@ class MCTSPlayer(Player):
         best_action = None
         max_wins = None
         for action in playable_actions:
-            params = []
-            game_copy = game.copy()
-            action_copy = copy.deepcopy(action)
-            game_copy.execute(action_copy)
-            for _ in range(self.num_playouts):
-                params.append((game_copy.copy(), self.color))
-            with multiprocessing.Pool(NUM_WORKERS) as p:
-                wins = sum(p.map(run_playouts, params))
+            action_applied_game_copy = game.copy()
+            action_applied_game_copy.execute(action)
+
+            counter = run_playouts(action_applied_game_copy, self.num_playouts)
+
+            wins = counter[self.color]
             if max_wins is None or wins > max_wins:
                 best_action = action
                 max_wins = wins
@@ -44,11 +41,22 @@ class MCTSPlayer(Player):
         return best_action
 
 
-def run_playouts(params):
-    game_copy, color = params
+def run_playouts(action_applied_game_copy, num_playouts):
+    start = time.time()
+    params = []
+    for _ in range(num_playouts):
+        params.append(action_applied_game_copy)
+    with multiprocessing.Pool(NUM_WORKERS) as p:
+        counter = Counter(p.map(run_playout, params))
+    duration = time.time() - start
+    print(f"{num_playouts} playouts took: {duration}. Results: {counter}")
+    return counter
+
+
+def run_playout(action_applied_game_copy):
+    game_copy = action_applied_game_copy.copy()
     game_copy.play(decide_fn=decide_fn)
-    winner = game_copy.winning_player()
-    return winner is not None and winner.color == color
+    return game_copy.winning_color()
 
 
 def decide_fn(self, game, playable_actions):
