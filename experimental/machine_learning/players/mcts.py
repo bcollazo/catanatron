@@ -7,7 +7,7 @@ from catanatron.game import Game
 from catanatron.models.player import Player
 
 DEFAULT_NUM_PLAYOUTS = 25
-NUM_WORKERS = 8
+NUM_WORKERS = multiprocessing.cpu_count()
 
 # Single threaded NUM_PLAYOUTS=25 takes ~185.3893163204193 secs on initial placement
 #   10.498431205749512 secs to do initial road (3 playable actions)

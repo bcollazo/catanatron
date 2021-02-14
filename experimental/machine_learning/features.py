@@ -36,7 +36,7 @@ def is_road(game, edge, player):
 
 def iter_players(game: Game, p0: Player) -> Generator[Tuple[int, Player], any, any]:
     """Iterator: for i, player in iter_players(game, p0)"""
-    p0_index = game.players.index(p0)
+    p0_index = next(i for i, p in enumerate(game.players) if p.color == p0.color)
     for i in range(len(game.players)):
         player_index = (p0_index + i) % len(game.players)
         yield i, game.players[player_index]
@@ -318,6 +318,11 @@ def create_sample(game, p0):
     for extractor in feature_extractors:
         record.update(extractor(game, p0))
     return record
+
+
+def create_sample_vector(game, p0):
+    sample_dict = create_sample(game, p0)
+    return [float(sample_dict[i]) for i in get_feature_ordering()]
 
 
 FEATURE_ORDERING = None

@@ -9,6 +9,7 @@ from catanatron.models.player import SimplePlayer, Color
 from experimental.machine_learning.features import (
     create_sample,
     expansion_features,
+    iter_players,
     port_distance_features,
     tile_features,
     graph_features,
@@ -282,3 +283,34 @@ def test_port_planes():
 
     # assert that 3:1 ports there are 4 * 2 nodes on.
     assert tf.math.reduce_sum(tensor[:, :, -1]) == 2 * 4
+
+
+def test_iter_players():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+
+    # Test the firsts look good.
+    for i in range(4):
+        j, p = next(iter_players(game, game.players[i]))
+        print(game.players, i, j, p)
+        assert p.color == game.players[i].color
+
+    # Test a specific case (p0=game.players[0])
+    iterator = iter_players(game, game.players[0])
+    i, p = next(iterator)
+    assert i == 0
+    assert p.color == game.players[0].color
+    i, p = next(iterator)
+    assert i == 1
+    assert p.color == game.players[1].color
+    i, p = next(iterator)
+    assert i == 2
+    assert p.color == game.players[2].color
+    i, p = next(iterator)
+    assert i == 3
+    assert p.color == game.players[3].color
