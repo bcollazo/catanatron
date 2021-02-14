@@ -167,11 +167,18 @@ tuner/round |0 |1
 ```
 
 - Regroup on Jan 2021.
+
   - We achieve mae: 5.4591e-11, val_mae: 2.4891e-04 with a deep model on RepA,
     and DISCOUNTED_RETURN. But model doesnt perform well in games. 50 game
     epochs, aiming to use 1K games, but early stopping.
     loss: 1.2714e-20 - mae: 5.4591e-11 - val_loss: 3.2321e-07 - val_mae: 2.4807e-04
   - Similar results with Rep B. But it played terribly...
+
+- Online MCTS is looking promising. Did a first run with a 1-neuron model (normalizing
+  features), playouts=25, training everytime there are >1K samples in batches of 64.
+  There was a bug in the data as well (was creating samples like root-node => mcts result
+  for all branches, instead of branch-node => mcts result). It didn't win games,
+  but there seemed to be VP improvement from 2 VP avg to 5 VP avg, in 100 games.
 
 ## Future Work:
 
@@ -181,9 +188,25 @@ tuner/round |0 |1
   then use 3D convolution of size WxHx5 and stride=5 (to not overlap)
 - An easier problem would be to count house/city VPs (only uses 1 plane). count-vp-problem.
 - Next medium problem will be, guess wheat production (to see if combining the two planes).
-- Does adding extra features distract the network? Yes
 
 ### Actual Catan
+
+- Do a Data Audit to ensure no data bugs on Rep B.
+  - Write some tests on data output.
+- Learn an offline DQN (using VPs) with Rep B. That is, use Reward as label (
+  so that early moves don't get a 1
+  )
+- Attempt an Classical Chess mini-max value function approach (with Heuristics).
+
+- Actually use MCTS result to improve network. Do online so that we can
+  see progress.
+
+- Attempt DQN Tutorial with TF2.0 Summary Module, to see progress. If works,
+  adapt to Catan-DQN Tutorial.
+
+- Paperspace: Dockerfile: Install catanatron, and Pipenv dependencies, so that we can
+  experiment/play.py, have a Game in the Overview.ipyn and run a catan-dqn.py job faster
+  (should only do when can confirm Data and DQN approach improves...).
 
 - Try Online - DQN approach (using PythonProgramming Tutorial).
 - Use Value-Estimator with a tree-lookahead alpha-beta pruning.
@@ -201,6 +224,8 @@ tuner/round |0 |1
 - Using autokeras with whole 1Gb dataset is better?
 - Does playing against your V1 self, training on that, improve?
 - Try Q-Learning but, iterate on playing, learning, playing, learning... e-greedy.
+
+- Learn no matter what the board looks like (board-topology independent features)
 
 Performance:
 
@@ -229,7 +254,10 @@ kerastuner = {git = "https://github.com/keras-team/keras-tuner.git", ref = "1.0.
 - Basic toy problems on Keras.
 - Used auto-keras, auto-scikit.
 - Basic how CNNs work. How LSTM (RNNs in general) work.
-- Epochs, steps, generator datasets. GZIP compression.
+- Epochs, steps, generator datasets. GZIP compression.\
+- Paperspace.
+- DQN Algorithm.
+- Noise can mislead a NN.
 
 ## Catan State Space Analysis
 
@@ -261,3 +289,21 @@ then out of the 19*5 resource cards we start with, we are talking about:
 
 Grand-ballpark estimate is ~**10^100** states in Catan. Chess is 10^123. Number of
 atoms in the Universe is 10^78.
+
+### Branching Factor
+
+The following stats suggests the decision tree players navigate usually has
+around ~5 branches, and very few times something huge like 279 branches
+(trading options after a monopoly(?), late road-building card(?)).
+
+```
+Branching Factor Stats:
+count    94010.000000
+mean         4.643772
+std          7.684072
+min          1.000000
+25%          1.000000
+50%          1.000000
+75%          5.000000
+max        279.000000
+```

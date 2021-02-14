@@ -22,6 +22,7 @@ from experimental.machine_learning.players.reinforcement import (
     hot_one_encode_action,
 )
 from experimental.machine_learning.players.mcts import MCTSPlayer
+from experimental.machine_learning.players.online_mcts_dqn import OnlineMCTSDQNPlayer
 from experimental.machine_learning.features import (
     create_sample,
     get_feature_ordering,
@@ -41,7 +42,8 @@ from experimental.machine_learning.utils import (
 )
 
 
-PLAYER_REGEX = re.compile("(R|H|W|M[0-9]+|V.*|P.*|Q.*|T.*)")
+PLAYER_REGEX = re.compile("(R|H|W|M[0-9]+|V.*|P.*|Q.*|T.*|O)")
+RUNNING_AVG_LENGTH = 10
 
 
 @click.command()
@@ -96,6 +98,8 @@ def simulate(num, players, outpath, watch):
             initialized_players.append(TensorRLPlayer(colors[i], pseudonyms[i], param))
         elif player_type == "M":
             initialized_players.append(MCTSPlayer(colors[i], pseudonyms[i], int(param)))
+        elif player_type == "O":
+            initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
         else:
             raise ValueError("Invalid player key")
 
@@ -108,6 +112,8 @@ def play_batch(num_games, players, games_directory, watch):
     turns = []
     durations = []
     games = []
+    results_by_player = defaultdict(list)
+    writer = tf.summary.create_file_writer(f"logs/play/{int(time.time())}")
     for i in range(num_games):
         for player in players:
             player.restart_state()
@@ -146,6 +152,18 @@ def play_batch(num_games, players, games_directory, watch):
         turns.append(game.num_turns)
         durations.append(duration)
         games.append(game)
+        for player in players:
+            results_by_player[player.color].append(player.actual_victory_points)
+        with writer.as_default():
+            for player in players:
+                results = results_by_player[player.color]
+                last_results = results[len(results) - RUNNING_AVG_LENGTH :]
+                if len(last_results) >= RUNNING_AVG_LENGTH:
+                    running_avg = sum(last_results) / len(last_results)
+                    tf.summary.scalar(
+                        f"{player.color}-vp-running-avg", running_avg, step=i
+                    )
+            writer.flush()
 
     print("AVG Turns:", sum(turns) / len(turns))
     print("AVG Duration:", sum(durations) / len(durations))
