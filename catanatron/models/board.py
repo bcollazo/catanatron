@@ -257,7 +257,7 @@ class Board:
         return sorted(list(buildable))
 
     def buildable_edges(self, color: Color):
-        """List of (n1,n2) tuples"""
+        """List of (n1,n2) tuples. Edges are in n1 < n2 order. Result is also ordered."""
         buildable_subgraph = self.nxgraph.subgraph(range(NUM_NODES))
         expandable = set()
         for subgraph in self.connected_components[color]:
@@ -269,7 +269,7 @@ class Board:
             candidate_edges = buildable_subgraph.edges(non_enemy_nodes)
             for edge in candidate_edges:
                 if self.get_edge_color(edge) is None:
-                    expandable.add(edge)
+                    expandable.add(tuple(sorted(edge)))
 
         return sorted(list(expandable))
 

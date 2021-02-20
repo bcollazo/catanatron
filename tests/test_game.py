@@ -404,3 +404,19 @@ def test_can_trade_with_port():
     trade_offer = TradeOffer([resource_out] * num_out, resource_in, None)
     assert len(actions) == 5
     # assert Action(players[0].color, ActionType.MARITIME_TRADE, trade_offer) in actions?
+
+
+def test_second_placement_takes_cards_from_bank():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+    assert len(game.resource_deck.to_array()) == 19 * 5
+
+    action = Action(Color.RED, ActionType.BUILD_SECOND_SETTLEMENT, 0)
+    game.execute(action)
+
+    assert len(game.resource_deck.to_array()) < 19 * 5

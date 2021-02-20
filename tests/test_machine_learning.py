@@ -5,6 +5,7 @@ from catanatron.models.board import Board, get_edges
 from catanatron.models.map import NUM_NODES
 from catanatron.models.actions import Action, ActionType
 from catanatron.game import Game, number_probability
+from catanatron.models.graph import NodeRef
 from catanatron.models.player import SimplePlayer, Color
 from experimental.machine_learning.features import (
     create_sample,
@@ -16,6 +17,7 @@ from experimental.machine_learning.features import (
 )
 from experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
+    get_node_and_edge_maps,
     init_board_tensor_map,
     init_tile_coordinate_map,
 )
@@ -283,6 +285,32 @@ def test_port_planes():
 
     # assert that 3:1 ports there are 4 * 2 nodes on.
     assert tf.math.reduce_sum(tensor[:, :, -1]) == 2 * 4
+
+
+def test_robber_plane():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+    tensor = create_board_tensor(game, players[0])
+
+    node_map, _ = get_node_and_edge_maps()
+    robber_tile = game.board.tiles[game.board.robber_coordinate]
+    nw_desert_node = robber_tile.nodes[NodeRef.NORTHWEST]
+    i, j = node_map[nw_desert_node]
+
+    robber_plane_channel = 13
+    expected = [
+        [1.0, 0.0, 1.0, 0.0, 1.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0],
+        [1.0, 0.0, 1.0, 0.0, 1.0],
+    ]
+    tf.assert_equal(
+        tf.transpose(tensor[i : i + 5, j : j + 3, robber_plane_channel]), expected
+    )
 
 
 def test_iter_players():

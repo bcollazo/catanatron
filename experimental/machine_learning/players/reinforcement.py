@@ -19,6 +19,35 @@ from experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
 )
 
+
+# Taken from correlation analysis
+FEATURES = [
+    "P0_ACTUAL_VPS",
+    "P0_CITIES_LEFT",
+    "P0_HAS_ROAD",
+    "P0_ORE_AT_DISTANCE_0",
+    "P0_ORE_AT_DISTANCE_3",
+    "P0_ORE_PRODUCTION",
+    "P0_PUBLIC_VPS",
+    "P0_SETTLEMENTS_LEFT",
+    "P0_WHEAT_AT_DISTANCE_0",
+    "P0_WHEAT_PRODUCTION",
+    "P0_WOOD_AT_DISTANCE_2",
+    "P0_WOOD_IN_HAND",
+    "P0_WOOD_PRODUCTION",
+    "P1_WHEAT_PRODUCTION",
+    "P1_WOOD_AT_DISTANCE_1",
+    "P1_WOOD_AT_DISTANCE_2",
+    "P2_ORE_AT_DISTANCE_1",
+    "P2_WHEAT_AT_DISTANCE_1",
+    "P2_WHEAT_AT_DISTANCE_2",
+    "P3_BRICK_PRODUCTION",
+    "P3_MONOPOLY_PLAYED",
+    "P3_SHEEP_AT_DISTANCE_0",
+    "P3_SHEEP_PRODUCTION",
+]
+
+
 BASE_TOPOLOGY = BaseMap().topology
 TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == Tile]
 RESOURCE_LIST = list(Resource)
@@ -33,6 +62,7 @@ ACTIONS_ARRAY = [
     *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
     *[(ActionType.BUILD_CITY, node_id) for node_id in range(NUM_NODES)],
     (ActionType.BUY_DEVELOPMENT_CARD, None),
+    # TODO: Should we use a heuristic for this?
     (ActionType.PLAY_KNIGHT_CARD, None),
     *[
         (ActionType.PLAY_YEAR_OF_PLENTY, [first_card, RESOURCE_LIST[j]])
@@ -40,6 +70,7 @@ ACTIONS_ARRAY = [
         for j in range(i, len(RESOURCE_LIST))
     ],
     *[(ActionType.PLAY_YEAR_OF_PLENTY, [first_card]) for first_card in RESOURCE_LIST],
+    # TODO: consider simetric options to reduce complexity by half.
     *[
         (ActionType.PLAY_ROAD_BUILDING, (tuple(sorted(i)), tuple(sorted(j))))
         for i in get_edges()
@@ -232,7 +263,7 @@ class VRLPlayer(Player):
             game_copy.execute(action)
 
             sample = create_sample(game_copy, player_copy)
-            state = [float(sample[i]) for i in get_feature_ordering()]
+            state = [float(sample[i]) for i in FEATURES]
             samples.append(state)
 
         scores = get_v_model(self.model_path).call(tf.convert_to_tensor(samples))

@@ -187,3 +187,11 @@ docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensor
 python -m cProfile experimental/play.py --num=5 -o profile.pstats
 snakeviz profile.pstats
 ```
+
+### Head Large Datasets with Pandas
+
+```
+In [1]: import pandas as pd
+In [2]: x = pd.read_csv("data/mcts-playouts-labeling-2/labels.csv.gzip", compression="gzip", iterator=True)
+In [3]: x.get_chunk(10)
+```

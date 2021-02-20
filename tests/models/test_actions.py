@@ -173,8 +173,8 @@ def test_road_building_possibilities():
 
     result = road_building_possibilities(player, board)
 
-    # 6 length-2 paths, 3 * 2 combinations
-    assert len(result) == 6 + 6
+    # 6 length-2 paths, (3 * 2 combinations) / (2  b.c. of symmetry)
+    assert len(result) == 6 + 6 / 2
 
 
 def test_road_building_two_houses():
@@ -185,10 +185,10 @@ def test_road_building_two_houses():
     board.build_settlement(Color.RED, 0, initial_build_phase=True)
 
     result = road_building_possibilities(player, board)
-    # 6 length-2 paths in first house,
-    # 6 length-2 paths in second house,
-    # 6 * 5 combinations of length-1 paths
-    assert len(result) == 6 + 6 + 6 * 5
+    # 6 length-2 paths in first house
+    # 6 length-2 paths in second house
+    # 6 * 5 combinations of length-1 paths, divided by 2 b.c. of symmetry
+    assert len(result) == 6 + 6 + (6 * 5) / 2
 
 
 def test_year_of_plenty_same_resource():

@@ -9,11 +9,20 @@ from catanatron.game import Game
 from catanatron.json import GameEncoder
 from catanatron.models.player import RandomPlayer, Color
 from experimental.machine_learning.players.mcts import MCTSPlayer
-from experimental.machine_learning.features import create_sample, get_feature_ordering
+from experimental.machine_learning.features import (
+    create_sample,
+    create_sample_vector,
+    get_feature_ordering,
+)
+# from experimental.machine_learning.players.online_mcts_dqn import get_model
 from experimental.machine_learning.players.reinforcement import (
     TensorRLPlayer,
     VRLPlayer,
     get_v_model,
+)
+from experimental.machine_learning.board_tensor_features import (
+    NUMERIC_FEATURES,
+    create_board_tensor,
 )
 
 
@@ -28,7 +37,7 @@ def tick_game(game_id):
         abort(404, description="Resource not found")
 
     if game.winning_player() is None:
-        game.play_tick(lambda g: save_game_state(g))
+        game.play_tick([lambda g: save_game_state(g)])
     return json.dumps(game, cls=GameEncoder)
 
 
@@ -49,12 +58,21 @@ def get_game_value_function(game_id):
     if game is None:
         abort(404, description="Resource not found")
 
+    # model = tf.keras.models.load_model("experimental/models/mcts-rep-a")
+    model2 = tf.keras.models.load_model("experimental/models/mcts-rep-b")
+    feature_ordering = get_feature_ordering()
+    indices = [feature_ordering.index(f) for f in NUMERIC_FEATURES]
     data = {}
-    for player_index in range(4):
-        sample = create_sample(game, game.players[player_index])
-        sample = [float(sample[i]) for i in get_feature_ordering()]
-        scores = get_v_model("vmodel-testing").call(tf.convert_to_tensor([sample]))
-        data[player_index] = float(scores.numpy()[0][0])
+    for player in game.players:
+        sample = create_sample_vector(game, player)
+        # scores = model.call(tf.convert_to_tensor([sample]))
+
+        inputs1 = [create_board_tensor(game, player)]
+        inputs2 = [[float(sample[i]) for i in indices]]
+        scores2 = model2.call(
+            [tf.convert_to_tensor(inputs1), tf.convert_to_tensor(inputs2)]
+        )
+        data[player.color.value] = float(scores2.numpy()[0][0])
 
     return data
 

@@ -7,7 +7,7 @@ from experimental.machine_learning.features import create_sample
 
 
 # Things to benchmark. create_sample(), game.play() (random game), .to_json(), .copy()
-def test__to_json_speed(benchmark):
+def test_to_json_speed(benchmark):
     players = [
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),

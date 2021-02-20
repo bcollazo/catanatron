@@ -1,8 +1,10 @@
+import time
 import os
 import random
 
 import tensorflow as tf
 import kerastuner as kt
+from tensorflow.python.framework.tensor_conversion_registry import get
 
 from experimental.machine_learning.features import get_feature_ordering
 from experimental.machine_learning.board_tensor_features import (
@@ -15,23 +17,24 @@ from experimental.machine_learning.board_tensor_features import (
 
 # ===== Configuration
 BATCH_SIZE = 256
-EPOCHS = 1
+EPOCHS = 10
 PREFETCH_BUFFER_SIZE = 10
-LABEL_COLUMN = "DISCOUNTED_RETURN"
-LABEL_COLUMN = "VICTORY_POINTS_RETURN"
-DATA_SIZE = 800 * 3000  # estimate: 800 samples per game.
-DATA_DIRECTORY = "data/random-games-10k"
+LABEL_COLUMN = "0"
+DATA_SIZE = 104501  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+DATA_DIRECTORY = "data/mcts-playouts"
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
-VALIDATION_DATA_SIZE = 800 * 100
-VALIDATION_DATA_DIRECTORY = "data/validation-random-games"
+VALIDATION_DATA_SIZE = 1000
+VALIDATION_DATA_DIRECTORY = "data/mcts-playouts"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
 SHUFFLE = True
 SHUFFLE_SEED = random.randint(0, 20000)
 SHUFFLE_SEED = 1
 SHUFFLE_BUFFER_SIZE = 1000
 STRIDES = (2, 2, 1)
-LOG_DIR = "./logs/rep-b-mixed-data-model"
-MODEL_PATH = "experimental/models/dreturn-rep-b"
+
+MODEL_NAME = "mcts-rep-b"
+MODEL_PATH = f"experimental/models/{MODEL_NAME}"
+LOG_DIR = f"logs/rep-b-mixed-data-model/{MODEL_NAME}/{int(time.time())}"
 
 
 # ===== Building Dataset Generator
@@ -39,7 +42,7 @@ def preprocess(board_tensors_batch, samples_batch, rewards_batch):
     """Input are dictionary of tensors"""
     input1 = preprocess_board_tensors(board_tensors_batch)
     input2 = preprocess_samples(samples_batch)
-    label = rewards_batch[LABEL_COLUMN] / 10.0
+    label = rewards_batch[LABEL_COLUMN]
     return (input1, input2, label)
 
 
@@ -51,12 +54,10 @@ def preprocess_board_tensors(board_tensors_batch):
 
 
 def preprocess_samples(samples_batch):
+    # feature_ordering = get_feature_ordering()
+    # indices = [str(feature_ordering.index(f)) for f in NUMERIC_FEATURES]
     return tf.stack(
-        [
-            tensor
-            for feature_name, tensor in samples_batch.items()
-            if feature_name in NUMERIC_FEATURES
-        ],
+        [samples_batch[feature_name] for feature_name in NUMERIC_FEATURES],
         axis=1,
     )
 
@@ -89,7 +90,7 @@ samples = tf.data.experimental.make_csv_dataset(
     shuffle_buffer_size=SHUFFLE_BUFFER_SIZE,
 )
 rewards = tf.data.experimental.make_csv_dataset(
-    os.path.join(DATA_DIRECTORY, "rewards.csv.gzip"),
+    os.path.join(DATA_DIRECTORY, "labels.csv.gzip"),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -130,7 +131,7 @@ samples = tf.data.experimental.make_csv_dataset(
     shuffle_buffer_size=SHUFFLE_BUFFER_SIZE,
 )
 rewards = tf.data.experimental.make_csv_dataset(
-    os.path.join(VALIDATION_DATA_DIRECTORY, "rewards.csv.gzip"),
+    os.path.join(VALIDATION_DATA_DIRECTORY, "labels.csv.gzip"),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -156,7 +157,7 @@ test_dataset = tf.data.Dataset.from_generator(
 input_1 = tf.keras.layers.Input(shape=(WIDTH, HEIGHT, CHANNELS, 1))
 x = input_1
 # NOTE: I think last stride doestn matter
-filters_1 = 128
+filters_1 = 64
 DROPOUT_RATE = 0.2
 x = tf.keras.layers.Conv3D(
     filters_1,
@@ -187,7 +188,7 @@ input_2 = tf.keras.layers.Input(shape=(NUM_NUMERIC_FEATURES,))
 y = tf.keras.Model(inputs=input_2, outputs=input_2)
 
 combined = tf.keras.layers.concatenate([x.output, y.output])
-z = tf.keras.layers.Dense(32, activation="relu")(combined)
+z = tf.keras.layers.Dense(8, activation="relu")(combined)
 # z = tf.keras.layers.Dense(32, activation="relu")(z)
 z = tf.keras.layers.Dense(1, activation="linear")(z)
 model = tf.keras.Model(inputs=[x.input, y.input], outputs=z)
@@ -207,9 +208,9 @@ model.fit(
     validation_data=test_dataset,
     validation_steps=VALIDATION_STEPS,
     callbacks=[
-        tf.keras.callbacks.EarlyStopping(
-            monitor="val_mae", patience=10, min_delta=1e-6
-        ),
+        # tf.keras.callbacks.EarlyStopping(
+        #     monitor="val_mae", patience=10, min_delta=1e-6
+        # ),
         tf.keras.callbacks.TensorBoard(
             log_dir=LOG_DIR, histogram_freq=1, write_graph=True
         ),

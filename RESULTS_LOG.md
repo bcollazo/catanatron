@@ -201,6 +201,12 @@ tuner/round |0 |1
 - Actually use MCTS result to improve network. Do online so that we can
   see progress.
 
+  - Add epsilon-playing to ensure we are exploring space. (Well, I think the fact
+    that we have random players fixed does this job for now, since we collect
+    samples from their perspective as well).
+
+- Do HeuristicValueFunctionPlayer to use as benchmark.
+
 - Attempt DQN Tutorial with TF2.0 Summary Module, to see progress. If works,
   adapt to Catan-DQN Tutorial.
 
@@ -306,4 +312,18 @@ min          1.000000
 50%          1.000000
 75%          5.000000
 max        279.000000
+```
+
+### Performance Bits
+
+- Creating an array with `np.array` is much faster than `tf.convert_to_tensor` and
+  `pd.DataFrame` or `pd.Series`.
+
+```
+In [1]: timeit.timeit("np.array(array)", setup="import numpy as np; array = list([i for i in range(1000)])", number=1000)
+Out[1]: 0.055867002985905856
+In [2]: timeit.timeit("tf.convert_to_tensor(array)", setup="import tensorflow as tf; array = list([i for i in range(1000)])", number=1000)
+Out[2]: 0.20465714897727594
+In [3]: timeit.timeit("pd.DataFrame(array)", setup="import pandas as pd; array = list([i for i in range(1000)])", number=1000)
+Out[3]: 0.333771405974403
 ```

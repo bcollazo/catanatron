@@ -279,23 +279,33 @@ def maritime_trade_possibilities(player, bank, board):
 
 def road_building_possibilities(player, board):
     """
-    On purpose we _dont_ remove equivalent possibilities, since we need to be
-    able to handle high branching degree anyway in AI.
+    We remove equivalent possibilities, to simplify branching factor.
     """
     first_edges = board.buildable_edges(player.color)
-    possibilities = []
+    possibilities = set()
     for first_edge in first_edges:
         board_copy = pickle.loads(pickle.dumps(board))
         board_copy.build_road(player.color, first_edge)
 
         second_edges_copy = board_copy.buildable_edges(player.color)
         for second_edge_copy in second_edges_copy:
-            possibilities.append(
-                Action(
-                    player.color,
-                    ActionType.PLAY_ROAD_BUILDING,
-                    (first_edge, second_edge_copy),
-                )
-            )
+            possibilities.add((first_edge, second_edge_copy))
 
-    return possibilities
+    # Remove duplicate possibilities (when second road doesnt depend on first).
+    dedupped = set()
+    for (first, second) in possibilities:
+        if second in first_edges:  # deduppable-pair
+            dedupped.add(tuple(sorted((first, second))))
+        else:
+            dedupped.add((first, second))
+
+    return list(
+        map(
+            lambda possibility: Action(
+                player.color,
+                ActionType.PLAY_ROAD_BUILDING,
+                (possibility[0], possibility[1]),
+            ),
+            dedupped,
+        )
+    )

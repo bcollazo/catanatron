@@ -43,7 +43,7 @@ from experimental.machine_learning.utils import (
 
 
 PLAYER_REGEX = re.compile("(R|H|W|M[0-9]+|V.*|P.*|Q.*|T.*|O)")
-RUNNING_AVG_LENGTH = 10
+RUNNING_AVG_LENGTH = 1
 
 
 @click.command()
@@ -110,6 +110,7 @@ def play_batch(num_games, players, games_directory, watch):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
     wins = defaultdict(int)
     turns = []
+    ticks = []
     durations = []
     games = []
     results_by_player = defaultdict(list)
@@ -119,7 +120,7 @@ def play_batch(num_games, players, games_directory, watch):
             player.restart_state()
         game = Game(players)
 
-        print(f"Playing game {i} / {num_games}:", players)
+        print(f"Playing game {i + 1} / {num_games}. Seating:", game.players)
         action_callbacks = []
         if games_directory:
             action_callbacks.append(build_action_callback(games_directory))
@@ -150,6 +151,7 @@ def play_batch(num_games, players, games_directory, watch):
         winner = game.winning_player()
         wins[str(winner)] += 1
         turns.append(game.num_turns)
+        ticks.append(len(game.actions))
         durations.append(duration)
         games.append(game)
         for player in players:
@@ -165,8 +167,14 @@ def play_batch(num_games, players, games_directory, watch):
                     )
             writer.flush()
 
+    print("AVG Ticks:", sum(ticks) / len(ticks))
     print("AVG Turns:", sum(turns) / len(turns))
     print("AVG Duration:", sum(durations) / len(durations))
+
+    for player in players:
+        vps = results_by_player[player.color]
+        print("AVG VPS:", player, sum(vps) / len(vps))
+
     # Print Winners graph in command line:
     fig = tpl.figure()
     fig.barh([wins[str(p)] for p in players], players, force_ascii=False)

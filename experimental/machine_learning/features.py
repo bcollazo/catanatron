@@ -8,6 +8,7 @@ from catanatron.models.map import NUM_NODES, NUM_TILES
 from catanatron.models.player import Color, Player, SimplePlayer
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
 from catanatron.game import Game, number_probability
+from catanatron.algorithms import continuous_roads_by_player
 
 
 # ===== Helpers
@@ -44,10 +45,11 @@ def iter_players(game: Game, p0: Player) -> Generator[Tuple[int, Player], any, a
 
 # ===== Extractors
 def player_features(game, p0):
-    # P0_PUBLIC_VPS, P1_PUBLIC_VPS, ..., and a special P0_ACTUAL_VPS
-    # P0_HAS_ARMY, P0_HAS_ROAD, P1_HAS_ARMY, ...
-    # P0_ROADS_LEFT, P0_SETTLEMENTS_LEFT, P0_CITIES_LEFT, P1_...
-    # P0_HAS_ROLLED
+    # P0_ACTUAL_VPS
+    # P{i}_PUBLIC_VPS, P1_PUBLIC_VPS, ...
+    # P{i}_HAS_ARMY, P{i}_HAS_ROAD, P1_HAS_ARMY, ...
+    # P{i}_ROADS_LEFT, P{i}_SETTLEMENTS_LEFT, P{i}_CITIES_LEFT, P1_...
+    # P{i}_HAS_ROLLED, P{i}_LONGEST_ROAD_LENGTH
     features = {
         "P0_ACTUAL_VPS": p0.actual_victory_points,
     }
@@ -59,7 +61,12 @@ def player_features(game, p0):
         features[f"P{i}_SETTLEMENTS_LEFT"] = player.settlements_available
         features[f"P{i}_CITIES_LEFT"] = player.cities_available
         features[f"P{i}_HAS_ROLLED"] = player.has_rolled
-        # TODO: Longest Road
+
+        paths = continuous_roads_by_player(game.board, player.color)
+        path_lengths = map(lambda path: len(path), paths)
+        features[f"P{i}_LONGEST_ROAD_LENGTH"] = (
+            0 if len(paths) == 0 else max(path_lengths)
+        )
 
     return features
 
@@ -79,9 +86,10 @@ def resource_hand_features(game, p0):
         features[f"P0_{resource.value}_IN_HAND"] = p0.resource_deck.count(resource)
         for card in DevelopmentCard:
             features[f"P0_{card.value}_IN_HAND"] = p0.development_deck.count(card)
-            features[f"P0_{card.value}_PLAYABLE"] = (
-                card in p0.playable_development_cards
-            )
+            if card != DevelopmentCard.VICTORY_POINT:
+                features[f"P0_{card.value}_PLAYABLE"] = (
+                    card in p0.playable_development_cards
+                )
     for i, player in iter_players(game, p0):
         for card in DevelopmentCard:
             if card == DevelopmentCard.VICTORY_POINT:
@@ -194,7 +202,7 @@ def get_player_expandable_nodes(game, player):
 
 
 def expansion_features(game, p0):
-    MAX_EXPANSION_DISTANCE = 6  # exclusive
+    MAX_EXPANSION_DISTANCE = 4  # exclusive
 
     features = {}
 
@@ -302,8 +310,8 @@ feature_extractors = [
     player_features,
     resource_hand_features,
     # TRANSFERABLE BOARD FEATURES =====
-    # production_features,
-    # expansion_features,
+    production_features,
+    expansion_features,
     # RAW BASE-MAP FEATURES =====
     tile_features,
     port_features,

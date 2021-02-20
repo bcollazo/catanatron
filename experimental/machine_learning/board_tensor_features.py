@@ -21,30 +21,33 @@ TILE_COORDINATE_MAP = None
 
 NUMERIC_FEATURES = set(
     # Player features
-    # ["P0_ACTUAL_VPS"]
-    # + [f"P{i}_PUBLIC_VPS" for i in range(4)]
-    []
+    ["P0_ACTUAL_VPS"]
+    + [f"P{i}_PUBLIC_VPS" for i in range(4)]
     + [f"P{i}_HAS_ARMY" for i in range(4)]
     + [f"P{i}_HAS_ROAD" for i in range(4)]
-    # + [f"P{i}_ROADS_LEFT" for i in range(4)]
-    # + [f"P{i}_SETTLEMENTS_LEFT" for i in range(4)]
-    # + [f"P{i}_CITIES_LEFT" for i in range(4)]
-    # + [f"P{i}_HAS_ROLLED" for i in range(4)]
+    + [f"P{i}_ROADS_LEFT" for i in range(4)]
+    + [f"P{i}_SETTLEMENTS_LEFT" for i in range(4)]
+    + [f"P{i}_CITIES_LEFT" for i in range(4)]
+    + [f"P{i}_HAS_ROLLED" for i in range(4)]
     # Player Hand Features
-    # + [
-    #     f"P{i}_{card.value}_PLAYED"
-    #     for i in range(4)
-    #     for card in DevelopmentCard
-    #     if card != DevelopmentCard.VICTORY_POINT
-    # ]
+    + [
+        f"P{i}_{card.value}_PLAYED"
+        for i in range(4)
+        for card in DevelopmentCard
+        if card != DevelopmentCard.VICTORY_POINT
+    ]
     + [f"P{i}_NUM_RESOURCES_IN_HAND" for i in range(4)]
     + [f"P{i}_NUM_DEVS_IN_HAND" for i in range(4)]
     + [f"P0_{card.value}_IN_HAND" for card in DevelopmentCard]
-    + [f"P0_{card.value}_PLAYABLE" for card in DevelopmentCard]
+    + [
+        f"P0_{card.value}_PLAYABLE"
+        for card in DevelopmentCard
+        if card != DevelopmentCard.VICTORY_POINT
+    ]
     + [f"P0_{resource.value}_IN_HAND" for resource in Resource]
     # Game Features
-    # + ["BANK_DEV_CARDS"]
-    # + [f"BANK_{resource.value}" for resource in Resource]
+    + ["BANK_DEV_CARDS"]
+    + [f"BANK_{resource.value}" for resource in Resource]
 )
 NUM_NUMERIC_FEATURES = len(NUMERIC_FEATURES)
 
@@ -188,8 +191,8 @@ def create_board_tensor(game: Game, p0: Player):
     # add 1 robber channel
     robber_plane = tf.zeros((WIDTH, HEIGHT, 1))
     (y, x) = tile_map[game.board.robber_coordinate]
-    indices = [[x + i, y + j, 0] for i in range(5) for j in range(3)]
-    updates = [1 for _ in range(5 * 3)]
+    indices = [[x + i, y + j, 0] for j in range(3) for i in range(5)]
+    updates = [1, 0, 1, 0, 1] + [0, 0, 0, 0, 0] + [1, 0, 1, 0, 1]
     robber_plane = tf.tensor_scatter_nd_add(robber_plane, indices, updates)
 
     # add 6 port channels (5 resources + 1 for 3:1 ports)
