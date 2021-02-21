@@ -34,8 +34,7 @@ from catanatron_server.database import get_finished_games_ids, get_game_states
 # samples = []
 # for game_id in get_finished_games_ids(limit=100):
 #     for game in get_game_states(game_id):
-#         p0 = next(player for player in game.players if player.color == Color.WHITE)
-#         samples.append(create_sample_vector(game, p0))
+#         samples.append(create_sample_vector(game, Color.WHITE))
 # print("DONE")
 
 # Ensure replay funcionality works.

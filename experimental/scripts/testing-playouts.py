@@ -40,11 +40,11 @@ from experimental.machine_learning.players.reinforcement import get_t_model, get
 # inputs2 = []
 # samples = []
 # for player in game.players:
-#     sample = create_sample(game, player)
+#     sample = create_sample(game, player.color)
 #     state = [float(sample[i]) for i in get_feature_ordering()]
 #     samples.append(state)
 
-#     board_tensor = create_board_tensor(game, player)
+#     board_tensor = create_board_tensor(game, player.color)
 #     inputs1.append(board_tensor)
 
 #     input2 = [float(sample[i]) for i in get_feature_ordering() if i in NUMERIC_FEATURES]

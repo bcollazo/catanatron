@@ -44,6 +44,6 @@ def test_create_sample_speed(benchmark):
     for _ in range(30):
         game.play_tick()
 
-    sample = benchmark(create_sample, game, players[1])
+    sample = benchmark(create_sample, game, players[1].color)
     assert isinstance(sample, dict)
     assert len(sample) > 0

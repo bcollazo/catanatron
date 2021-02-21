@@ -14,6 +14,7 @@ from experimental.machine_learning.features import (
     create_sample_vector,
     get_feature_ordering,
 )
+
 # from experimental.machine_learning.players.online_mcts_dqn import get_model
 from experimental.machine_learning.players.reinforcement import (
     TensorRLPlayer,
@@ -49,7 +50,7 @@ def get_game_feature_vector(game_id, player_index):
     if game is None:
         abort(404, description="Resource not found")
 
-    return create_sample(game, game.players[player_index])
+    return create_sample(game, game.players[player_index].color)
 
 
 @app.route("/games/<string:game_id>/value-function", methods=["GET"])
@@ -64,10 +65,10 @@ def get_game_value_function(game_id):
     indices = [feature_ordering.index(f) for f in NUMERIC_FEATURES]
     data = {}
     for player in game.players:
-        sample = create_sample_vector(game, player)
+        sample = create_sample_vector(game, player.color)
         # scores = model.call(tf.convert_to_tensor([sample]))
 
-        inputs1 = [create_board_tensor(game, player)]
+        inputs1 = [create_board_tensor(game, player.color)]
         inputs2 = [[float(sample[i]) for i in indices]]
         scores2 = model2.call(
             [tf.convert_to_tensor(inputs1), tf.convert_to_tensor(inputs2)]

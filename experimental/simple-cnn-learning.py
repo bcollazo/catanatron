@@ -267,7 +267,7 @@ model.fit(
 
 from catanatron.models.player import Color
 from catanatron_server.database import get_last_game_state
-from experimental.machine_learning.features import create_sample, get_feature_ordering
+from experimental.machine_learning.features import create_sample
 from experimental.machine_learning.board_tensor_features import create_board_tensor
 import tensorflow as tf
 
@@ -276,11 +276,11 @@ def predict(model, game_id, color):
     game = get_last_game_state(game_id)
     player = game.players_by_color[color]
 
-    board_tensor = create_board_tensor(game, player)
+    board_tensor = create_board_tensor(game, player.color)
     inputs1 = [board_tensor]
 
-    sample = create_sample(game, player)
-    input2 = [float(sample[i]) for i in get_feature_ordering() if i in NUMERIC_FEATURES]
+    sample = create_sample(game, player.color)
+    input2 = [float(sample[i]) for i in NUMERIC_FEATURES]
     inputs2 = [input2]
 
     # return model.call([tf.convert_to_tensor(inputs1), tf.convert_to_tensor(inputs2)])

@@ -18,7 +18,7 @@ game.play()
 
 NUMBER = 1000  # usually a game has around 300 turns and 1000 ticks
 result = timeit.timeit(
-    "create_sample_vector(game, game.players[0])", setup=setup, number=NUMBER
+    "create_sample_vector(game, game.players[0].color)", setup=setup, number=NUMBER
 )
 print(result / NUMBER, "secs")
 

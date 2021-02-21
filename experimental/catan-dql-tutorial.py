@@ -19,7 +19,10 @@ import os
 
 from catanatron.game import Game
 from catanatron.models.player import RandomPlayer, Color, SimplePlayer, Player
-from experimental.machine_learning.features import create_sample, get_feature_ordering
+from experimental.machine_learning.features import (
+    create_sample_vector,
+    get_feature_ordering,
+)
 from experimental.machine_learning.board_tensor_features import create_board_tensor
 from experimental.machine_learning.players.reinforcement import (
     ACTIONS_ARRAY,
@@ -106,9 +109,8 @@ class CatanEnv:
         pass
 
     def _get_state(self):
-        sample_dict = create_sample(self.game, self.p0)
-        sample = [float(sample_dict[i]) for i in get_feature_ordering()]
-        board_tensor = create_board_tensor(self.game, self.p0)
+        sample = create_sample_vector(self.game, self.p0.color)
+        board_tensor = create_board_tensor(self.game, self.p0.color)
 
         return (sample, board_tensor)  # each observation/state is a tuple.
 

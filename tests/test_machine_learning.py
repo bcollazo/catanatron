@@ -32,7 +32,7 @@ def test_create_sample():
     ]
     game = Game(players)
 
-    sample = create_sample(game, players[1])
+    sample = create_sample(game, players[1].color)
     assert isinstance(sample, dict)
     assert len(sample) > 0
 
@@ -52,7 +52,7 @@ def test_port_distance_features():
     se_port_resource = next(filter(lambda entry: 29 in entry[1], ports.items()))[0]
     port_name = "3:1" if se_port_resource is None else se_port_resource.value
 
-    features = port_distance_features(game, players[0])
+    features = port_distance_features(game, players[0].color)
     assert features["P0_HAS_WHEAT_PORT"] == False
     assert features[f"P0_{port_name}_PORT_DISTANCE"] == 3
 
@@ -72,7 +72,7 @@ def test_expansion_features():
     if neighbor_tile_resource is None:
         neighbor_tile_resource = game.board.tiles[(0, -1, 1)].resource
 
-    features = expansion_features(game, players[0])
+    features = expansion_features(game, players[0].color)
     assert features["P0_WHEAT_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource.value}_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource.value}_AT_DISTANCE_1"] > 0
@@ -87,7 +87,7 @@ def test_tile_features():
     ]
     game = Game(players)
 
-    features = tile_features(game, players[0])
+    features = tile_features(game, players[0].color)
     tile = game.board.tiles[(0, 0, 0)]
     resource = tile.resource
     value = resource.value if resource is not None else "DESERT"
@@ -107,7 +107,7 @@ def test_graph_features():
     game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
     game.execute(Action(players[0].color, ActionType.BUILD_INITIAL_ROAD, (3, 2)))
 
-    features = graph_features(game, players[0])
+    features = graph_features(game, players[0].color)
     assert features[f"NODE3_P0_SETTLEMENT"]
     assert features[f"EDGE(2, 3)_P0_ROAD"]
     assert not features[f"NODE3_P1_SETTLEMENT"]
@@ -170,7 +170,7 @@ def test_create_board_tensor():
     p0 = game.players[0]
 
     # assert starts with no settlement/cities
-    tensor = create_board_tensor(game, p0)
+    tensor = create_board_tensor(game, p0.color)
     assert tensor.shape == (21, 11, 20)
     assert tensor[0][0][0] == 0
     assert tensor[10][6][0] == 0
@@ -178,20 +178,20 @@ def test_create_board_tensor():
 
     # assert settlement marks a 1 in the spot
     game.execute(Action(p0.color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    tensor = create_board_tensor(game, p0)
+    tensor = create_board_tensor(game, p0.color)
     assert tensor.shape == (21, 11, 20)
     assert tensor[10][6][0] == 1
     assert tensor[9][6][0] == 0
 
     game.execute(Action(p0.color, ActionType.BUILD_INITIAL_ROAD, (3, 4)))
-    tensor = create_board_tensor(game, p0)
+    tensor = create_board_tensor(game, p0.color)
     assert tensor[10][6][0] == 1
     assert tensor[9][6][1] == 1
 
     p0.resource_deck.replenish(2, Resource.WHEAT)
     p0.resource_deck.replenish(3, Resource.ORE)
     game.execute(Action(p0.color, ActionType.BUILD_CITY, 3))
-    tensor = create_board_tensor(game, p0)
+    tensor = create_board_tensor(game, p0.color)
     assert tensor[10][6][0] == 2
     assert tensor[9][6][1] == 1
 
@@ -206,7 +206,7 @@ def test_robber_plane():
     game = Game(players)
 
     robber_channel = 13
-    tensor = create_board_tensor(game, players[0])
+    tensor = create_board_tensor(game, players[0].color)
 
     assert tf.math.reduce_sum(tensor[:, :, robber_channel]) == 5 * 3
     assert tf.math.reduce_max(tensor[:, :, robber_channel]) == 1
@@ -221,7 +221,7 @@ def test_resource_proba_planes():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players, seed=123)
-    tensor = create_board_tensor(game, players[0])
+    tensor = create_board_tensor(game, players[0].color)
     assert tensor[0][0][0] == 0
 
     # Top left should be 0 for all resources. (water tile)
@@ -278,7 +278,7 @@ def test_port_planes():
     ]
     game = Game(players)
 
-    tensor = create_board_tensor(game, players[0])
+    tensor = create_board_tensor(game, players[0].color)
 
     # assert there are 18 port nodes (4 3:1 and 5 resource)
     assert tf.math.reduce_sum(tensor[:, :, -6:]) == 2 * 9
@@ -295,7 +295,7 @@ def test_robber_plane():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    tensor = create_board_tensor(game, players[0])
+    tensor = create_board_tensor(game, players[0].color)
 
     node_map, _ = get_node_and_edge_maps()
     robber_tile = game.board.tiles[game.board.robber_coordinate]
@@ -324,12 +324,11 @@ def test_iter_players():
 
     # Test the firsts look good.
     for i in range(4):
-        j, p = next(iter_players(game, game.players[i]))
-        print(game.players, i, j, p)
+        j, p = next(iter_players(game, game.players[i].color))
         assert p.color == game.players[i].color
 
     # Test a specific case (p0=game.players[0])
-    iterator = iter_players(game, game.players[0])
+    iterator = iter_players(game, game.players[0].color)
     i, p = next(iterator)
     assert i == 0
     assert p.color == game.players[0].color

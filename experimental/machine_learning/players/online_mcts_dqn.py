@@ -116,7 +116,7 @@ class OnlineMCTSDQNPlayer(Player):
             print("Considering", action)
             action_applied_game_copy = game.copy()
             action_applied_game_copy.execute(action)
-            sample = create_sample_vector(action_applied_game_copy, self)
+            sample = create_sample_vector(action_applied_game_copy, self.color)
             samples.append(sample)
 
             if TRAIN:

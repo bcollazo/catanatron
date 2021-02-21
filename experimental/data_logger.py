@@ -31,10 +31,10 @@ class DataLogger:
         self.log_lines = []
 
     def consume(self, game, mcts_labels):
-        for _, player in iter_players(game, game.players[0]):
-            sample = create_sample_vector(game, player)
+        for player in game.players:
+            sample = create_sample_vector(game, player.color)
             flattened_board_tensor = tf.reshape(
-                create_board_tensor(game, player),
+                create_board_tensor(game, player.color),
                 (WIDTH * HEIGHT * CHANNELS,),
             ).numpy()
             label = mcts_labels.get(player.color, 0)

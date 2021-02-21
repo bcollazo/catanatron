@@ -8,12 +8,15 @@ import tensorflow as tf
 from tensorflow import keras
 
 from catanatron.game import Game
-from catanatron.models.player import Player, Color
+from catanatron.models.player import Player
 from catanatron.models.actions import Action, ActionType, TradeOffer
 from catanatron.models.map import BaseMap, NUM_NODES, Tile
 from catanatron.models.board import get_edges
 from catanatron.models.enums import Resource
-from experimental.machine_learning.features import create_sample, get_feature_ordering
+from experimental.machine_learning.features import (
+    create_sample,
+    create_sample_vector,
+)
 from experimental.machine_learning.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
@@ -195,8 +198,7 @@ class PRLPlayer(Player):
         mask[possible_indices] = 1
 
         # Get action probabilities with neural network.
-        sample = create_sample(game, self)
-        X = [[float(sample[i]) for i in get_feature_ordering()]]
+        X = [create_sample_vector(game, self.color)]
         result = P_MODEL.predict(X)
 
         # Multiply mask with output, and take max.
@@ -226,8 +228,7 @@ class QRLPlayer(Player):
         #     return playable_actions[index]
 
         # Create sample matrix of state + action vectors.
-        sample = create_sample(game, self)
-        state = [float(sample[i]) for i in get_feature_ordering()]
+        state = create_sample_vector(game, self.color)
         samples = []
         for action in playable_actions:
             samples.append(np.concatenate((state, hot_one_encode_action(action))))
@@ -257,12 +258,9 @@ class VRLPlayer(Player):
         samples = []
         for action in playable_actions:
             game_copy = game.copy()
-            player_copy = next(
-                player for player in game_copy.players if player.color == self.color
-            )
             game_copy.execute(action)
 
-            sample = create_sample(game_copy, player_copy)
+            sample = create_sample(game_copy, self.color)
             state = [float(sample[i]) for i in FEATURES]
             samples.append(state)
 
@@ -290,20 +288,13 @@ class TensorRLPlayer(Player):
         inputs2 = []
         for action in playable_actions:
             game_copy = game.copy()
-            player_copy = next(
-                player for player in game_copy.players if player.color == self.color
-            )
             game_copy.execute(action)
 
-            board_tensor = create_board_tensor(game_copy, player_copy)
+            board_tensor = create_board_tensor(game_copy, self.color)
             inputs1.append(board_tensor)
 
-            sample = create_sample(game_copy, player_copy)
-            input2 = [
-                float(sample[i])
-                for i in get_feature_ordering()
-                if i in NUMERIC_FEATURES
-            ]
+            sample = create_sample(game_copy, self.color)
+            input2 = [float(sample[i]) for i in NUMERIC_FEATURES]
             inputs2.append(input2)
 
         scores = get_t_model(self.model_path).call(
@@ -360,13 +351,8 @@ class MCTSRLPlayer(Player):
                     compounded_proba *= proba
                 # print("Time rolling TICKS_IN_THE_FUTURE", time.time() - time2)
                 # now we have an advanced leaf with proba "cp". score it.
-                # TODO: Change create_sample to accept p0_index instead.
                 time3 = time.time()
-                player_copy = next(
-                    p for p in game_copy_copy.players if p.color == self.color
-                )
-                sample = create_sample(game_copy_copy, player_copy)
-                sample = [float(sample[i]) for i in get_feature_ordering()]
+                sample = create_sample_vector(game_copy_copy, self.color)
                 score = get_v_model(self.model_path).call(
                     tf.convert_to_tensor([sample])
                 )[0]
@@ -432,15 +418,10 @@ def build_simulation_decide(model_path):
 
         samples = []
         for action in guessable_actions:
-            action_copy = copy.deepcopy(action)
             game_copy = game.copy()
-            player_copy = next(
-                player for player in game_copy.players if player.color == self.color
-            )
-            game_copy.execute(action_copy)
+            game_copy.execute(action)
 
-            sample = create_sample(game_copy, player_copy)
-            state = [float(sample[i]) for i in get_feature_ordering()]
+            state = create_sample_vector(game_copy, self.color)
             samples.append(state)
 
         scores = get_v_model(model_path).call(tf.convert_to_tensor(samples))

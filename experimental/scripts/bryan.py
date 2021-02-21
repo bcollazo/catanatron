@@ -75,7 +75,7 @@ from catanatron.json import GameEncoder
 
 # x = time.time()
 # for _ in range(1000):
-#     create_sample(game, game.players[0])
+#     create_sample(game, game.players[0].color)
 # print("create_sample TOOK", time.time() - x)
 
 # breakpoint()

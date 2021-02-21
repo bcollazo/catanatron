@@ -208,11 +208,11 @@ def build_action_callback(games_directory):
 
         action = game.actions[-1]
         player = game.players_by_color[action.color]
-        data[player.color]["samples"].append(create_sample(game, player))
+        data[player.color]["samples"].append(create_sample(game, player.color))
         data[player.color]["actions"].append(hot_one_encode_action(action))
 
         flattened_tensor = tf.reshape(
-            create_board_tensor(game, player), (WIDTH * HEIGHT * CHANNELS,)
+            create_board_tensor(game, player.color), (WIDTH * HEIGHT * CHANNELS,)
         ).numpy()
         data[player.color]["board_tensors"].append(flattened_tensor)
 

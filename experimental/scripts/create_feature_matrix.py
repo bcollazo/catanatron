@@ -4,7 +4,11 @@ import pandas as pd
 import numpy as np
 import click
 
-from catanatron_server.database import get_finished_games_ids, get_last_game_state, get_game_states
+from catanatron_server.database import (
+    get_finished_games_ids,
+    get_last_game_state,
+    get_game_states,
+)
 from experimental.machine_learning.plot import plot_feature_importances, train
 from experimental.machine_learning.features import feature_extractors, create_sample
 
@@ -28,19 +32,9 @@ def create_feature_matrix(number):
 
         label = game.players[0] == winner
         for state in get_game_states(game_id):
-            samples.append(create_sample(game))
+            # TODO: Do for each player
+            samples.append(create_sample(game, game.players[0].color))
             labels.append(label)
-            # for i, player in enumerate(players):
-            #     p1, p2, p3 = [
-            #         players[(i + 1) % len(players)],
-            #         players[(i + 2) % len(players)],
-            #         players[(i + 3) % len(players)],
-            #     ]
-            #     samples.append(create_sample(game, player, p1, p2, p3))
-
-            # for i, player in enumerate(players):
-            #     label = player == winner
-            #     labels.append(label)
 
     print(len(samples))
     if len(samples) > 0:

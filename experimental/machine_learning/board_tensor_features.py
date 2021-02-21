@@ -1,7 +1,7 @@
 import networkx as nx
 import tensorflow as tf
 
-from catanatron.models.player import Player
+from catanatron.models.player import Color
 from catanatron.game import Game, number_probability
 from catanatron.models.enums import BuildingType, Resource
 from catanatron.models.coordinate_system import offset_to_cube
@@ -19,35 +19,37 @@ NODE_ID_MAP = None
 EDGE_MAP = None
 TILE_COORDINATE_MAP = None
 
-NUMERIC_FEATURES = set(
-    # Player features
-    ["P0_ACTUAL_VPS"]
-    + [f"P{i}_PUBLIC_VPS" for i in range(4)]
-    + [f"P{i}_HAS_ARMY" for i in range(4)]
-    + [f"P{i}_HAS_ROAD" for i in range(4)]
-    + [f"P{i}_ROADS_LEFT" for i in range(4)]
-    + [f"P{i}_SETTLEMENTS_LEFT" for i in range(4)]
-    + [f"P{i}_CITIES_LEFT" for i in range(4)]
-    + [f"P{i}_HAS_ROLLED" for i in range(4)]
-    # Player Hand Features
-    + [
-        f"P{i}_{card.value}_PLAYED"
-        for i in range(4)
-        for card in DevelopmentCard
-        if card != DevelopmentCard.VICTORY_POINT
-    ]
-    + [f"P{i}_NUM_RESOURCES_IN_HAND" for i in range(4)]
-    + [f"P{i}_NUM_DEVS_IN_HAND" for i in range(4)]
-    + [f"P0_{card.value}_IN_HAND" for card in DevelopmentCard]
-    + [
-        f"P0_{card.value}_PLAYABLE"
-        for card in DevelopmentCard
-        if card != DevelopmentCard.VICTORY_POINT
-    ]
-    + [f"P0_{resource.value}_IN_HAND" for resource in Resource]
-    # Game Features
-    + ["BANK_DEV_CARDS"]
-    + [f"BANK_{resource.value}" for resource in Resource]
+NUMERIC_FEATURES = sorted(
+    set(
+        # Player features
+        ["P0_ACTUAL_VPS"]
+        + [f"P{i}_PUBLIC_VPS" for i in range(4)]
+        + [f"P{i}_HAS_ARMY" for i in range(4)]
+        + [f"P{i}_HAS_ROAD" for i in range(4)]
+        + [f"P{i}_ROADS_LEFT" for i in range(4)]
+        + [f"P{i}_SETTLEMENTS_LEFT" for i in range(4)]
+        + [f"P{i}_CITIES_LEFT" for i in range(4)]
+        + [f"P{i}_HAS_ROLLED" for i in range(4)]
+        # Player Hand Features
+        + [
+            f"P{i}_{card.value}_PLAYED"
+            for i in range(4)
+            for card in DevelopmentCard
+            if card != DevelopmentCard.VICTORY_POINT
+        ]
+        + [f"P{i}_NUM_RESOURCES_IN_HAND" for i in range(4)]
+        + [f"P{i}_NUM_DEVS_IN_HAND" for i in range(4)]
+        + [f"P0_{card.value}_IN_HAND" for card in DevelopmentCard]
+        + [
+            f"P0_{card.value}_PLAYABLE"
+            for card in DevelopmentCard
+            if card != DevelopmentCard.VICTORY_POINT
+        ]
+        + [f"P0_{resource.value}_IN_HAND" for resource in Resource]
+        # Game Features
+        + ["BANK_DEV_CARDS"]
+        + [f"BANK_{resource.value}" for resource in Resource]
+    )
 )
 NUM_NUMERIC_FEATURES = len(NUMERIC_FEATURES)
 
@@ -122,7 +124,7 @@ def init_tile_coordinate_map():
     return tile_map
 
 
-def create_board_tensor(game: Game, p0: Player):
+def create_board_tensor(game: Game, p0_color: Color):
     """Creates a tensor of shape (WIDTH, HEIGHT, CHANNELS).
 
     We have one hot-encoded multiplier planes (2 and 1s for city/settlements) per
@@ -138,7 +140,7 @@ def create_board_tensor(game: Game, p0: Player):
     # add 4 hot-encoded color multiplier planes (nodes), and 4 edge planes. 8 planes
     color_multiplier_planes = []
     node_map, edge_map = get_node_and_edge_maps()
-    for _, player in iter_players(game, p0):
+    for _, player in iter_players(game, p0_color):
         node_plane = tf.zeros((WIDTH, HEIGHT))
         edge_plane = tf.zeros((WIDTH, HEIGHT))
 
