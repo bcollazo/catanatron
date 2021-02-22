@@ -273,7 +273,8 @@ class Board:
 
         return sorted(list(expandable))
 
-    @functools.lru_cache
+    # Commented out since creates memory leak when creating multiple game copies
+    # @functools.lru_cache
     def resource_tiles(self):
         tiles = []
         for (coordinate, tile) in self.tiles.items():
@@ -282,10 +283,13 @@ class Board:
             tiles.append((coordinate, tile))
         return tiles
 
+    # @functools.lru_cache
     def get_adjacent_tiles(self, node_id):
+        tiles = []
         for _, tile in self.resource_tiles():
             if node_id in tile.nodes.values():
-                yield tile
+                tiles.append(tile)
+        return tiles
 
     def get_player_buildings(self, color, building_type=None):
         """Returns list of (node_id, building_type)"""
@@ -299,7 +303,7 @@ class Board:
 
         return list(buildings)
 
-    @functools.lru_cache
+    # @functools.lru_cache
     def get_port_nodes(self):
         """Yields resource => node_ids[], including None for 3:1 port node-ids"""
         port_nodes = defaultdict(set)

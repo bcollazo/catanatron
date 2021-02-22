@@ -180,16 +180,19 @@ tuner/round |0 |1
   for all branches, instead of branch-node => mcts result). It didn't win games,
   but there seemed to be VP improvement from 2 VP avg to 5 VP avg, in 100 games.
 
+- A heuristic player plays better than WeightedRandom (but we have a memory leak)
+
+- Simple MiniMax Algorithm takes too long... ~20segs per decision,
+  which makes for 30 min games. Even if de-bugged the implementation seems pretty slow.
+
+- Using PyPy (removing TF and other Python 3.9 features), speeds up playing random
+  games by around 33%s. (1000s games w/CPython3.9 took 2m52s and 1000s games
+  w/PyPy3.7 took 1m52s).
+
 ## Future Work:
 
-### Toy problems
-
-- Idea: hot-encode 5 layers per player (one per resource) to denote income and buildings.
-  then use 3D convolution of size WxHx5 and stride=5 (to not overlap)
-- An easier problem would be to count house/city VPs (only uses 1 plane). count-vp-problem.
-- Next medium problem will be, guess wheat production (to see if combining the two planes).
-
-### Actual Catan
+- Consider implementing AlphaBetaPruning to speed up game. Although
+  it seems speedup at best might be 1/2 the time, which still doesn't cut it. Unless we speed up game copying...
 
 - Do a Data Audit to ensure no data bugs on Rep B.
   - Write some tests on data output.
@@ -204,8 +207,6 @@ tuner/round |0 |1
   - Add epsilon-playing to ensure we are exploring space. (Well, I think the fact
     that we have random players fixed does this job for now, since we collect
     samples from their perspective as well).
-
-- Do HeuristicValueFunctionPlayer to use as benchmark.
 
 - Attempt DQN Tutorial with TF2.0 Summary Module, to see progress. If works,
   adapt to Catan-DQN Tutorial.
@@ -231,13 +232,15 @@ tuner/round |0 |1
 - Does playing against your V1 self, training on that, improve?
 - Try Q-Learning but, iterate on playing, learning, playing, learning... e-greedy.
 
-- Learn no matter what the board looks like (board-topology independent features)
+- Separate immutable state from Board (Map?), so that copying is a lot faster, and
+  can cache functions (say node-production) globally (across game copies).
 
-Performance:
+### Toy problems
 
-- Consider memoizing feature vector computation (many stay the same). Would need
-  serializable / primitive datastructure state.
-- Faster game.copy()
+- Idea: hot-encode 5 layers per player (one per resource) to denote income and buildings.
+  then use 3D convolution of size WxHx5 and stride=5 (to not overlap)
+- An easier problem would be to count house/city VPs (only uses 1 plane). count-vp-problem.
+- Next medium problem will be, guess wheat production (to see if combining the two planes).
 
 ## Appendix
 
@@ -313,6 +316,22 @@ min          1.000000
 75%          5.000000
 max        279.000000
 ```
+
+### Average Num Turns and Num Decisions
+
+1000 Random Games result in:
+
+```
+AVG Ticks: 959.049
+AVG Turns: 275.261
+AVG Duration: 0.18782643032073976
+AVG VPS: RandomPlayer:Foo[RED] 5.851
+AVG VPS: RandomPlayer:Bar[BLUE] 5.871
+AVG VPS: RandomPlayer:Baz[ORANGE] 5.766
+AVG VPS: RandomPlayer:Qux[WHITE] 6.086
+```
+
+So each player makes around 70 decisions per game. Averages around 5.9 VPs per game.
 
 ### Performance Bits
 

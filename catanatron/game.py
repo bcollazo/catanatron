@@ -4,7 +4,6 @@ import random
 import sys
 from typing import Iterable
 from collections import defaultdict
-from math import comb
 
 from catanatron.algorithms import longest_road, largest_army
 from catanatron.models.graph import initialize_board
@@ -244,12 +243,10 @@ class Game:
             self.players[next_player_index].clean_turn_state()
             self.tick_queue.append((next_player_index, ActionPrompt.ROLL))
             self.num_turns += 1
-            outcome_proba = 1
         elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
             player, node_id = self.players_by_color[action.color], action.value
             self.board.build_settlement(player.color, node_id, True)
             player.build_settlement(node_id, True)
-            outcome_proba = 1
         elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
             player, node_id = self.players_by_color[action.color], action.value
             self.board.build_settlement(player.color, node_id, True)
@@ -259,32 +256,27 @@ class Game:
                 if tile.resource != None:
                     self.resource_deck.draw(1, tile.resource)
                     player.resource_deck.replenish(1, tile.resource)
-            outcome_proba = 1
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
             player, node_id = self.players_by_color[action.color], action.value
             self.board.build_settlement(player.color, node_id, False)
             player.build_settlement(node_id, False)
             self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
             self.road_color = longest_road(self.board, self.players, self.actions)[0]
-            outcome_proba = 1
         elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
             player, edge = self.players_by_color[action.color], action.value
             self.board.build_road(player.color, edge)
             player.build_road(edge, True)
-            outcome_proba = 1
         elif action.action_type == ActionType.BUILD_ROAD:
             player, edge = self.players_by_color[action.color], action.value
             self.board.build_road(player.color, edge)
             player.build_road(edge, False)
             self.resource_deck += ResourceDeck.road_cost()  # replenish bank
             self.road_color = longest_road(self.board, self.players, self.actions)[0]
-            outcome_proba = 1
         elif action.action_type == ActionType.BUILD_CITY:
             player, node_id = self.players_by_color[action.color], action.value
             self.board.build_city(player.color, node_id)
             player.build_city(node_id)
             self.resource_deck += ResourceDeck.city_cost()  # replenish bank
-            outcome_proba = 1
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
             player = self.players_by_color[action.color]
             if self.development_deck.num_cards() == 0:
@@ -303,7 +295,6 @@ class Game:
             self.resource_deck += ResourceDeck.development_card_cost()
 
             action = Action(action.color, action.action_type, card)
-            outcome_proba = DevelopmentDeck.starting_card_proba(card)
         elif action.action_type == ActionType.ROLL:
             player = self.players_by_color[action.color]
             dices = action.value or roll_dice()
@@ -333,7 +324,6 @@ class Game:
             action = Action(action.color, action.action_type, dices)
             self.tick_queue.append((self.current_player_index, ActionPrompt.PLAY_TURN))
             player.has_rolled = True
-            outcome_proba = number_probability(number)
         elif action.action_type == ActionType.DISCARD:
             player = self.players_by_color[action.color]
             hand = player.resource_deck.to_array()
@@ -348,14 +338,11 @@ class Game:
             player.resource_deck -= to_discard
             self.resource_deck += to_discard
             action = Action(action.color, action.action_type, discarded)
-            outcome_proba = comb(len(hand), num_to_discard)
         elif action.action_type == ActionType.MOVE_ROBBER:
             player = self.players_by_color[action.color]
             (coordinate, robbed_color, robbed_resource) = action.value
             self.board.robber_coordinate = coordinate
-            if robbed_color is None:
-                outcome_proba = 1  # do nothing, with proba 1
-            else:
+            if robbed_color is not None:
                 player_to_steal_from = self.players_by_color[robbed_color]
                 enemy_cards = player_to_steal_from.resource_deck.num_cards()
                 if robbed_resource is None:
@@ -369,16 +356,13 @@ class Game:
                     resource = robbed_resource
                     player_to_steal_from.resource_deck.draw(1, resource)
                 player.resource_deck.replenish(1, resource)
-                outcome_proba = 1 / enemy_cards
         elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
             player = self.players_by_color[action.color]
             if not player.can_play_knight():
                 raise ValueError("Player cant play knight card now")
             (coordinate, robbed_color, robbed_resource) = action.value
             self.board.robber_coordinate = coordinate
-            if robbed_color is None:
-                outcome_proba = 1  # do nothing, with proba 1
-            else:
+            if robbed_color is not None:
                 player_to_steal_from = self.players_by_color[robbed_color]
                 enemy_cards = player_to_steal_from.resource_deck.num_cards()
                 if robbed_resource is None:
@@ -392,7 +376,6 @@ class Game:
                     resource = robbed_resource
                     player_to_steal_from.resource_deck.draw(1, resource)
                 player.resource_deck.replenish(1, resource)
-                outcome_proba = 1 / enemy_cards
             player.mark_played_dev_card(DevelopmentCard.KNIGHT)
             self.army_color = largest_army(self.players, self.actions)[0]
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
@@ -407,7 +390,6 @@ class Game:
             player.resource_deck += cards_selected
             self.resource_deck -= cards_selected
             player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
-            outcome_proba = 1
         elif action.action_type == ActionType.PLAY_MONOPOLY:
             player, mono_resource = self.players_by_color[action.color], action.value
             cards_stolen = ResourceDeck()
@@ -422,9 +404,6 @@ class Game:
                     total_enemy_cards += p.resource_deck.num_cards()
             player.resource_deck += cards_stolen
             player.mark_played_dev_card(DevelopmentCard.MONOPOLY)
-            outcome_proba = (
-                total_enemy_cards / 5
-            )  # rough estimate (1/5) for ea candidate
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
             player, (first_edge, second_edge) = (
                 self.players_by_color[action.color],
@@ -439,7 +418,6 @@ class Game:
             player.build_road(second_edge, True)
             player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
             self.road_color = longest_road(self.board, self.players, self.actions)[0]
-            outcome_proba = 1
         elif action.action_type == ActionType.MARITIME_TRADE:
             player, trade_offer = self.players_by_color[action.color], action.value
             offering = ResourceDeck.from_array(trade_offer.offering)
@@ -453,7 +431,6 @@ class Game:
             tradee.resource_deck += offering
             player.resource_deck += asking
             tradee.resource_deck -= asking
-            outcome_proba = 1
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 
@@ -465,6 +442,83 @@ class Game:
             callback(self)
 
         return outcome_proba
+
+    def execute_spectrum(self, action, action_callbacks=[]):
+        """Returns [(game_copy, proba)] tuples for result of given action.
+        Result probas should add up to 1."""
+        deterministic_actions = set(
+            [
+                ActionType.END_TURN,
+                ActionType.BUILD_FIRST_SETTLEMENT,
+                ActionType.BUILD_SECOND_SETTLEMENT,
+                ActionType.BUILD_SETTLEMENT,
+                ActionType.BUILD_INITIAL_ROAD,
+                ActionType.BUILD_ROAD,
+                ActionType.BUILD_CITY,
+                ActionType.PLAY_YEAR_OF_PLENTY,
+                ActionType.PLAY_ROAD_BUILDING,
+                ActionType.MARITIME_TRADE,
+                ActionType.DISCARD,  # for simplicity... ok if reality is slightly different
+                ActionType.PLAY_MONOPOLY,  # for simplicity... we assume good card-counting and bank is visible...
+            ]
+        )
+        if action.action_type in deterministic_actions:
+            copy = self.copy()
+            copy.execute(action)
+            return [(copy, 1)]
+        elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
+            results = []
+            for card in DevelopmentCard:
+                option_action = Action(action.color, action.action_type, card)
+                option_game = self.copy()
+                try:
+                    option_game.execute(option_action)
+                except Exception:
+                    # ignore exceptions, since player might imagine impossible outcomes.
+                    # ignoring means the value function of this node will be flattened,
+                    # to the one before.
+                    pass
+                results.append((option_game, DevelopmentDeck.starting_card_proba(card)))
+            return results
+        elif action.action_type == ActionType.ROLL:
+            results = []
+            for outcome_a in range(1, 7):
+                for outcome_b in range(1, 7):
+                    outcome = (outcome_a, outcome_b)
+                    option_action = Action(action.color, action.action_type, outcome)
+                    option_game = self.copy()
+                    option_game.execute(option_action)
+                    results.append((option_game, number_probability(sum(outcome))))
+            return results
+        elif action.action_type in [
+            ActionType.MOVE_ROBBER,
+            ActionType.PLAY_KNIGHT_CARD,
+        ]:
+            (coordinate, robbed_color, _) = action.value
+            if robbed_color is None:  # no one to steal, then deterministic
+                copy = self.copy()
+                copy.execute(action)
+                return [(copy, 1)]
+            else:
+                results = []
+                for card in Resource:
+                    option_action = Action(
+                        action.color,
+                        action.action_type,
+                        (coordinate, robbed_color, card),
+                    )
+                    option_game = self.copy()
+                    try:
+                        option_game.execute(option_action)
+                    except Exception:
+                        # ignore exceptions, since player might imagine impossible outcomes.
+                        # ignoring means the value function of this node will be flattened,
+                        # to the one before.
+                        pass
+                    results.append((option_game, 1 / 5.0))
+                return results
+        else:
+            raise RuntimeError("Unknown ActionType " + str(action.action_type))
 
     def current_player(self):
         return self.players[self.current_player_index]

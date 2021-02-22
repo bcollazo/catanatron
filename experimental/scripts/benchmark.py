@@ -4,7 +4,7 @@ import numpy as np
 import copy
 import networkx as nx
 
-from database import get_last_game_state
+from catanatron_server.database import get_last_game_state
 
 import sys
 from types import ModuleType, FunctionType
@@ -45,12 +45,6 @@ start = time.time()
 copy.deepcopy(game)
 end = time.time()
 print("copy.deepcopy(game) took", end - start, "seconds")
-
-
-start = time.time()
-game.count_victory_points()
-end = time.time()
-print("Count VPs took", end - start, "seconds")
 
 
 start = time.time()

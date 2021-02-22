@@ -1,3 +1,4 @@
+from experimental.machine_learning.players.scikit import ScikitPlayer
 import re
 import traceback
 import time
@@ -21,6 +22,10 @@ from experimental.machine_learning.players.reinforcement import (
     PRLPlayer,
     hot_one_encode_action,
 )
+from experimental.machine_learning.players.minimax import (
+    MiniMaxPlayer,
+    ValueFunctionPlayer,
+)
 from experimental.machine_learning.players.mcts import MCTSPlayer
 from experimental.machine_learning.players.online_mcts_dqn import OnlineMCTSDQNPlayer
 from experimental.machine_learning.features import (
@@ -42,7 +47,7 @@ from experimental.machine_learning.utils import (
 )
 
 
-PLAYER_REGEX = re.compile("(R|H|W|M[0-9]+|V.*|P.*|Q.*|T.*|O)")
+PLAYER_REGEX = re.compile("(R|H|W|M[0-9]+|V.*|P.*|Q.*|T.*|O|X|F|S)")
 RUNNING_AVG_LENGTH = 1
 
 
@@ -100,6 +105,12 @@ def simulate(num, players, outpath, watch):
             initialized_players.append(MCTSPlayer(colors[i], pseudonyms[i], int(param)))
         elif player_type == "O":
             initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
+        elif player_type == "X":
+            initialized_players.append(MiniMaxPlayer(colors[i], pseudonyms[i]))
+        elif player_type == "F":
+            initialized_players.append(ValueFunctionPlayer(colors[i], pseudonyms[i]))
+        elif player_type == "S":
+            initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
         else:
             raise ValueError("Invalid player key")
 
