@@ -51,14 +51,14 @@ class ValueFunctionPlayer(Player):
         if len(playable_actions) == 1:
             return playable_actions[0]
 
-        best_value = None
+        best_value = float("-inf")
         best_action = None
         for action in playable_actions:
             game_copy = game.copy()
             game_copy.execute(action)
 
             value = value_fn(game_copy, self.color)
-            if best_value is None or value > best_value:
+            if value > best_value:
                 best_value = value
                 best_action = action
 
