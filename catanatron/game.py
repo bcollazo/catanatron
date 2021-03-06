@@ -111,6 +111,23 @@ def initialize_tick_queue(players):
     return tick_queue
 
 
+class State:
+    """Small container object to group dynamic variables in state"""
+
+    def __init__(self, players):
+        self.players = random.sample(players, len(players))
+        self.players_by_color = {p.color: p for p in players}
+        # self.board = Board(self.map)
+        # self.actions = []  # log of all action taken by players
+        # self.resource_deck = ResourceDeck.starting_bank()
+        # self.development_deck = DevelopmentDeck.starting_bank()
+        # self.tick_queue = initialize_tick_queue(self.players)
+        # self.current_player_index = 0
+        # self.num_turns = 0
+        # self.road_color = None
+        # self.army_color = None
+
+
 class Game:
     """
     This contains the complete state of the game (board + players) and the
@@ -122,15 +139,19 @@ class Game:
         random.seed(self.seed)
 
         self.id = str(uuid.uuid4())
-        self.players = random.sample(players, len(players))
-        self.players_by_color = {p.color: p for p in players}
+
         self.map = BaseMap()
+
+        self.state = State(players)
+
+        # State
+        # self.players = random.sample(players, len(players))
+        # self.state.players_by_color = {p.color: p for p in players}
         self.board = Board(self.map)
-        self.actions = []  # log of all action taken by players
+        # self.actions = []  # log of all action taken by players
         self.resource_deck = ResourceDeck.starting_bank()
         self.development_deck = DevelopmentDeck.starting_bank()
-
-        self.tick_queue = initialize_tick_queue(self.players)
+        self.tick_queue = initialize_tick_queue(self.state.players)
         self.current_player_index = 0
         self.num_turns = 0
         self.road_color = None
@@ -142,7 +163,7 @@ class Game:
             self.play_tick(action_callbacks=action_callbacks, decide_fn=decide_fn)
 
     def winning_player(self):
-        for player in self.players:
+        for player in self.state.players:
             if player.actual_victory_points >= 10:
                 return player
         return None
@@ -155,7 +176,7 @@ class Game:
         """Important: dont call this without consuming results. O/W illegal state"""
         if len(self.tick_queue) > 0:
             (seating, action_prompt) = self.tick_queue.pop(0)
-            player = self.players[seating]
+            player = self.state.players[seating]
         else:
             player = self.current_player()
             action_prompt = (
@@ -187,12 +208,12 @@ class Game:
         elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
             return initial_road_possibilities(player, self.board, self.actions)
         elif action_prompt == ActionPrompt.MOVE_ROBBER:
-            return robber_possibilities(player, self.board, self.players, False)
+            return robber_possibilities(player, self.board, self.state.players, False)
         elif action_prompt == ActionPrompt.ROLL:
             actions = [Action(player.color, ActionType.ROLL, None)]
             if player.can_play_knight():
                 actions.extend(
-                    robber_possibilities(player, self.board, self.players, True)
+                    robber_possibilities(player, self.board, self.state.players, True)
                 )
             return actions
         elif action_prompt == ActionPrompt.DISCARD:
@@ -221,7 +242,7 @@ class Game:
                 actions.extend(monopoly_possible_actions(player))
             if player.can_play_knight():
                 actions.extend(
-                    robber_possibilities(player, self.board, self.players, True)
+                    robber_possibilities(player, self.board, self.state.players, True)
                 )
             if player.can_play_road_building():
                 actions.extend(road_building_possibilities(player, self.board))
@@ -238,17 +259,19 @@ class Game:
     def execute(self, action, action_callbacks=[]):
         outcome_proba = None
         if action.action_type == ActionType.END_TURN:
-            next_player_index = (self.current_player_index + 1) % len(self.players)
+            next_player_index = (self.current_player_index + 1) % len(
+                self.state.players
+            )
             self.current_player_index = next_player_index
-            self.players[next_player_index].clean_turn_state()
+            self.state.players[next_player_index].clean_turn_state()
             self.tick_queue.append((next_player_index, ActionPrompt.ROLL))
             self.num_turns += 1
         elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
-            player, node_id = self.players_by_color[action.color], action.value
+            player, node_id = self.state.players_by_color[action.color], action.value
             self.board.build_settlement(player.color, node_id, True)
             player.build_settlement(node_id, True)
         elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
-            player, node_id = self.players_by_color[action.color], action.value
+            player, node_id = self.state.players_by_color[action.color], action.value
             self.board.build_settlement(player.color, node_id, True)
             player.build_settlement(node_id, True)
             # yield resources of second settlement
@@ -257,28 +280,32 @@ class Game:
                     self.resource_deck.draw(1, tile.resource)
                     player.resource_deck.replenish(1, tile.resource)
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
-            player, node_id = self.players_by_color[action.color], action.value
+            player, node_id = self.state.players_by_color[action.color], action.value
             self.board.build_settlement(player.color, node_id, False)
             player.build_settlement(node_id, False)
             self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
-            self.road_color = longest_road(self.board, self.players, self.actions)[0]
+            self.road_color = longest_road(
+                self.board, self.state.players, self.actions
+            )[0]
         elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
-            player, edge = self.players_by_color[action.color], action.value
+            player, edge = self.state.players_by_color[action.color], action.value
             self.board.build_road(player.color, edge)
             player.build_road(edge, True)
         elif action.action_type == ActionType.BUILD_ROAD:
-            player, edge = self.players_by_color[action.color], action.value
+            player, edge = self.state.players_by_color[action.color], action.value
             self.board.build_road(player.color, edge)
             player.build_road(edge, False)
             self.resource_deck += ResourceDeck.road_cost()  # replenish bank
-            self.road_color = longest_road(self.board, self.players, self.actions)[0]
+            self.road_color = longest_road(
+                self.board, self.state.players, self.actions
+            )[0]
         elif action.action_type == ActionType.BUILD_CITY:
-            player, node_id = self.players_by_color[action.color], action.value
+            player, node_id = self.state.players_by_color[action.color], action.value
             self.board.build_city(player.color, node_id)
             player.build_city(node_id)
             self.resource_deck += ResourceDeck.city_cost()  # replenish bank
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-            player = self.players_by_color[action.color]
+            player = self.state.players_by_color[action.color]
             if self.development_deck.num_cards() == 0:
                 raise ValueError("No more development cards")
             if not player.resource_deck.includes(ResourceDeck.development_card_cost()):
@@ -296,14 +323,14 @@ class Game:
 
             action = Action(action.color, action.action_type, card)
         elif action.action_type == ActionType.ROLL:
-            player = self.players_by_color[action.color]
+            player = self.state.players_by_color[action.color]
             dices = action.value or roll_dice()
             number = dices[0] + dices[1]
 
             if number == 7:
                 seatings_to_discard = [
                     seating
-                    for seating, player in enumerate(self.players)
+                    for seating, player in enumerate(self.state.players)
                     if player.resource_deck.num_cards() > 7
                 ]
                 self.tick_queue.extend(
@@ -315,7 +342,7 @@ class Game:
             else:
                 payout, _ = yield_resources(self.board, self.resource_deck, number)
                 for color, resource_deck in payout.items():
-                    player = self.players_by_color[color]
+                    player = self.state.players_by_color[color]
 
                     # Atomically add to player's hand and remove from bank
                     player.resource_deck += resource_deck
@@ -325,7 +352,7 @@ class Game:
             self.tick_queue.append((self.current_player_index, ActionPrompt.PLAY_TURN))
             player.has_rolled = True
         elif action.action_type == ActionType.DISCARD:
-            player = self.players_by_color[action.color]
+            player = self.state.players_by_color[action.color]
             hand = player.resource_deck.to_array()
             num_to_discard = len(hand) // 2
             if action.value is None:
@@ -339,11 +366,11 @@ class Game:
             self.resource_deck += to_discard
             action = Action(action.color, action.action_type, discarded)
         elif action.action_type == ActionType.MOVE_ROBBER:
-            player = self.players_by_color[action.color]
+            player = self.state.players_by_color[action.color]
             (coordinate, robbed_color, robbed_resource) = action.value
             self.board.robber_coordinate = coordinate
             if robbed_color is not None:
-                player_to_steal_from = self.players_by_color[robbed_color]
+                player_to_steal_from = self.state.players_by_color[robbed_color]
                 enemy_cards = player_to_steal_from.resource_deck.num_cards()
                 if robbed_resource is None:
                     resource = player_to_steal_from.resource_deck.random_draw()
@@ -357,13 +384,13 @@ class Game:
                     player_to_steal_from.resource_deck.draw(1, resource)
                 player.resource_deck.replenish(1, resource)
         elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
-            player = self.players_by_color[action.color]
+            player = self.state.players_by_color[action.color]
             if not player.can_play_knight():
                 raise ValueError("Player cant play knight card now")
             (coordinate, robbed_color, robbed_resource) = action.value
             self.board.robber_coordinate = coordinate
             if robbed_color is not None:
-                player_to_steal_from = self.players_by_color[robbed_color]
+                player_to_steal_from = self.state.players_by_color[robbed_color]
                 enemy_cards = player_to_steal_from.resource_deck.num_cards()
                 if robbed_resource is None:
                     resource = player_to_steal_from.resource_deck.random_draw()
@@ -377,9 +404,9 @@ class Game:
                     player_to_steal_from.resource_deck.draw(1, resource)
                 player.resource_deck.replenish(1, resource)
             player.mark_played_dev_card(DevelopmentCard.KNIGHT)
-            self.army_color = largest_army(self.players, self.actions)[0]
+            self.army_color = largest_army(self.state.players, self.actions)[0]
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
-            player = self.players_by_color[action.color]
+            player = self.state.players_by_color[action.color]
             cards_selected = ResourceDeck.from_array(action.value)
             if not player.can_play_year_of_plenty():
                 raise ValueError("Player cant play year of plenty now")
@@ -391,12 +418,15 @@ class Game:
             self.resource_deck -= cards_selected
             player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
         elif action.action_type == ActionType.PLAY_MONOPOLY:
-            player, mono_resource = self.players_by_color[action.color], action.value
+            player, mono_resource = (
+                self.state.players_by_color[action.color],
+                action.value,
+            )
             cards_stolen = ResourceDeck()
             if not player.can_play_monopoly():
                 raise ValueError("Player cant play monopoly now")
             total_enemy_cards = 0
-            for p in self.players:
+            for p in self.state.players:
                 if not p.color == action.color:
                     number_of_cards_to_steal = p.resource_deck.count(mono_resource)
                     cards_stolen.replenish(number_of_cards_to_steal, mono_resource)
@@ -406,7 +436,7 @@ class Game:
             player.mark_played_dev_card(DevelopmentCard.MONOPOLY)
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
             player, (first_edge, second_edge) = (
-                self.players_by_color[action.color],
+                self.state.players_by_color[action.color],
                 action.value,
             )
             if not player.can_play_road_building():
@@ -417,9 +447,14 @@ class Game:
             player.build_road(first_edge, True)
             player.build_road(second_edge, True)
             player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
-            self.road_color = longest_road(self.board, self.players, self.actions)[0]
+            self.road_color = longest_road(
+                self.board, self.state.players, self.actions
+            )[0]
         elif action.action_type == ActionType.MARITIME_TRADE:
-            player, trade_offer = self.players_by_color[action.color], action.value
+            player, trade_offer = (
+                self.state.players_by_color[action.color],
+                action.value,
+            )
             offering = ResourceDeck.from_array(trade_offer.offering)
             asking = ResourceDeck.from_array(trade_offer.asking)
             tradee = trade_offer.tradee or self  # self means bank
@@ -521,25 +556,25 @@ class Game:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 
     def current_player(self):
-        return self.players[self.current_player_index]
+        return self.state.players[self.current_player_index]
 
     def count_victory_points(self):
-        for player in self.players:
+        for player in self.state.players:
             player.has_road = False
             player.has_army = False
-        for player in self.players:
+        for player in self.state.players:
             public_vps = 0
             public_vps += len(player.buildings[BuildingType.SETTLEMENT])
             public_vps += 2 * len(player.buildings[BuildingType.CITY])
             if (
                 self.road_color != None
-                and self.players_by_color[self.road_color] == player
+                and self.state.players_by_color[self.road_color] == player
             ):
                 public_vps += 2  # road
                 player.has_road = True
             if (
                 self.army_color != None
-                and self.players_by_color[self.army_color] == player
+                and self.state.players_by_color[self.army_color] == player
             ):
                 public_vps += 2  # army
                 player.has_army = True

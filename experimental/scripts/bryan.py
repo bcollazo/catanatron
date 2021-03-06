@@ -80,7 +80,7 @@ print(timeit.timeit("json.dumps(game, cls=GameEncoder)", setup=setup, number=10)
 
 # x = time.time()
 # for _ in range(1000):
-#     create_sample(game, game.players[0].color)
+#     create_sample(game, game.state.players[0].color)
 # print("create_sample TOOK", time.time() - x)
 
 # breakpoint()

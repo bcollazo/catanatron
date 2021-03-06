@@ -50,7 +50,7 @@ def get_game_feature_vector(game_id, player_index):
     if game is None:
         abort(404, description="Resource not found")
 
-    return create_sample(game, game.players[player_index].color)
+    return create_sample(game, game.state.players[player_index].color)
 
 
 @app.route("/games/<string:game_id>/value-function", methods=["GET"])
@@ -64,7 +64,7 @@ def get_game_value_function(game_id):
     feature_ordering = get_feature_ordering()
     indices = [feature_ordering.index(f) for f in NUMERIC_FEATURES]
     data = {}
-    for player in game.players:
+    for player in game.state.players:
         sample = create_sample_vector(game, player.color)
         # scores = model.call(tf.convert_to_tensor([sample]))
 

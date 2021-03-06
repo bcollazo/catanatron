@@ -128,7 +128,7 @@ def play_batch(num_games, players, games_directory, watch):
             player.restart_state()
         game = Game(players)
 
-        print(f"Playing game {i + 1} / {num_games}. Seating:", game.players)
+        print(f"Playing game {i + 1} / {num_games}. Seating:", game.state.players)
         action_callbacks = []
         if games_directory:
             action_callbacks.append(build_action_callback(games_directory))
@@ -258,7 +258,7 @@ def flush_to_matrices(game, data, games_directory):
     actions = []
     board_tensors = []
     labels = []
-    for player in game.players:
+    for player in game.state.players:
         player_data = data[player.color]
         samples.extend(player_data["samples"])
         actions.extend(player_data["actions"])

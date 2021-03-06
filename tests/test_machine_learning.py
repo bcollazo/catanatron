@@ -167,7 +167,7 @@ def test_create_board_tensor():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    p0 = game.players[0]
+    p0 = game.state.players[0]
 
     # assert starts with no settlement/cities
     tensor = create_board_tensor(game, p0.color)
@@ -324,20 +324,20 @@ def test_iter_players():
 
     # Test the firsts look good.
     for i in range(4):
-        j, p = next(iter_players(game, game.players[i].color))
-        assert p.color == game.players[i].color
+        j, p = next(iter_players(game, game.state.players[i].color))
+        assert p.color == game.state.players[i].color
 
-    # Test a specific case (p0=game.players[0])
-    iterator = iter_players(game, game.players[0].color)
+    # Test a specific case (p0=game.state.players[0])
+    iterator = iter_players(game, game.state.players[0].color)
     i, p = next(iterator)
     assert i == 0
-    assert p.color == game.players[0].color
+    assert p.color == game.state.players[0].color
     i, p = next(iterator)
     assert i == 1
-    assert p.color == game.players[1].color
+    assert p.color == game.state.players[1].color
     i, p = next(iterator)
     assert i == 2
-    assert p.color == game.players[2].color
+    assert p.color == game.state.players[2].color
     i, p = next(iterator)
     assert i == 3
-    assert p.color == game.players[3].color
+    assert p.color == game.state.players[3].color

@@ -45,7 +45,7 @@ class GameEncoder(json.JSONEncoder):
                 "nodes": nodes,
                 "edges": list(edges.values()),
                 "actions": [self.default(a) for a in obj.actions],
-                "players": [self.default(p) for p in obj.players],
+                "players": [self.default(p) for p in obj.state.players],
                 "robber_coordinate": obj.board.robber_coordinate,
             }
         if isinstance(obj, Deck):

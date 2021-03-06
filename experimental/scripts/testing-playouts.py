@@ -39,7 +39,7 @@ from experimental.machine_learning.players.reinforcement import get_t_model, get
 # inputs1 = []
 # inputs2 = []
 # samples = []
-# for player in game.players:
+# for player in game.state.players:
 #     sample = create_sample(game, player.color)
 #     state = [float(sample[i]) for i in get_feature_ordering()]
 #     samples.append(state)
@@ -59,7 +59,7 @@ from experimental.machine_learning.players.reinforcement import get_t_model, get
 #     [tf.convert_to_tensor(inputs1), tf.convert_to_tensor(inputs2)]
 # )
 # print(scores)
-# print(game.players)
+# print(game.state.players)
 
 
 # ===== Start a game from scratch. In a specific board. is there better position?

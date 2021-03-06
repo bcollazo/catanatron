@@ -39,10 +39,10 @@ def iter_players(
     game: Game, p0_color: Color
 ) -> Generator[Tuple[int, Player], any, any]:
     """Iterator: for i, player in iter_players(game, p0.color)"""
-    p0_index = next(i for i, p in enumerate(game.players) if p.color == p0_color)
-    for i in range(len(game.players)):
-        player_index = (p0_index + i) % len(game.players)
-        yield i, game.players[player_index]
+    p0_index = next(i for i, p in enumerate(game.state.players) if p.color == p0_color)
+    for i in range(len(game.state.players)):
+        player_index = (p0_index + i) % len(game.state.players)
+        yield i, game.state.players[player_index]
 
 
 # ===== Extractors
@@ -191,7 +191,7 @@ def get_player_expandable_nodes(game, player):
     subgraphs = game.board.find_connected_components(
         player.color
     )  # TODO: Can maintain internally (instead of re-compute).
-    enemies = [enemy for enemy in game.players if enemy.color != player.color]
+    enemies = [enemy for enemy in game.state.players if enemy.color != player.color]
     enemy_node_ids = set()
     for enemy in enemies:
         enemy_node_ids.update(enemy.buildings[BuildingType.SETTLEMENT])

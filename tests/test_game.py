@@ -88,7 +88,7 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    blue_seating = game.players.index(players[1])
+    blue_seating = game.state.players.index(players[1])
 
     players[1].resource_deck = ResourceDeck()
     players[1].resource_deck.replenish(7, Resource.WHEAT)
@@ -108,7 +108,7 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    blue_seating = game.players.index(players[1])
+    blue_seating = game.state.players.index(players[1])
     for _ in range(8):
         game.play_tick()  # run initial placements
 

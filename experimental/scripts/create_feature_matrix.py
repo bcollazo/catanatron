@@ -24,16 +24,16 @@ def create_feature_matrix(number):
         game = get_last_game_state(game_id)
         print(game_id, game)
 
-        players = game.players
+        players = game.state.players
         winner = game.winning_player()
         if winner is None:
             print("SKIPPING NOT FINISHED GAME", game)
             continue
 
-        label = game.players[0] == winner
+        label = game.state.players[0] == winner
         for state in get_game_states(game_id):
             # TODO: Do for each player
-            samples.append(create_sample(game, game.players[0].color))
+            samples.append(create_sample(game, game.state.players[0].color))
             labels.append(label)
 
     print(len(samples))
