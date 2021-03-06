@@ -159,7 +159,7 @@ def play_batch(num_games, players, games_directory, watch):
         winner = game.winning_player()
         wins[str(winner)] += 1
         turns.append(game.num_turns)
-        ticks.append(len(game.actions))
+        ticks.append(len(game.state.actions))
         durations.append(duration)
         games.append(game)
         for player in players:
@@ -207,14 +207,14 @@ def build_action_callback(games_directory):
     )
 
     def action_callback(game: Game):
-        if len(game.actions) == 0:
+        if len(game.state.actions) == 0:
             return
 
         if game.winning_player() is not None:
             flush_to_matrices(game, data, games_directory)
             return
 
-        action = game.actions[-1]
+        action = game.state.actions[-1]
         player = game.players_by_color[action.color]
         data[player.color]["samples"].append(create_sample(game, player.color))
         data[player.color]["actions"].append(hot_one_encode_action(action))

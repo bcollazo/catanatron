@@ -43,7 +43,11 @@ class DataLogger:
             self.board_tensors.append(flattened_board_tensor)
             self.labels.append(label)
             self.log_lines.append(
-                [game.id, len(game.actions), "http://localhost:3000/games/" + game.id]
+                [
+                    game.id,
+                    len(game.state.actions),
+                    "http://localhost:3000/games/" + game.id,
+                ]
             )
 
     def get_replay_buffer(self):

@@ -118,7 +118,7 @@ class State:
         self.players = random.sample(players, len(players))
         self.players_by_color = {p.color: p for p in players}
         # self.board = Board(self.map)
-        # self.actions = []  # log of all action taken by players
+        self.actions = []  # log of all action taken by players
         # self.resource_deck = ResourceDeck.starting_bank()
         # self.development_deck = DevelopmentDeck.starting_bank()
         # self.tick_queue = initialize_tick_queue(self.players)
@@ -148,7 +148,7 @@ class Game:
         # self.players = random.sample(players, len(players))
         # self.state.players_by_color = {p.color: p for p in players}
         self.board = Board(self.map)
-        # self.actions = []  # log of all action taken by players
+        # self.state.actions = []  # log of all action taken by players
         self.resource_deck = ResourceDeck.starting_bank()
         self.development_deck = DevelopmentDeck.starting_bank()
         self.tick_queue = initialize_tick_queue(self.state.players)
@@ -206,7 +206,7 @@ class Game:
         elif action_prompt == ActionPrompt.BUILD_SECOND_SETTLEMENT:
             return initial_settlement_possibilites(player, self.board, False)
         elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
-            return initial_road_possibilities(player, self.board, self.actions)
+            return initial_road_possibilities(player, self.board, self.state.actions)
         elif action_prompt == ActionPrompt.MOVE_ROBBER:
             return robber_possibilities(player, self.board, self.state.players, False)
         elif action_prompt == ActionPrompt.ROLL:
@@ -285,7 +285,7 @@ class Game:
             player.build_settlement(node_id, False)
             self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
             self.road_color = longest_road(
-                self.board, self.state.players, self.actions
+                self.board, self.state.players, self.state.actions
             )[0]
         elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
             player, edge = self.state.players_by_color[action.color], action.value
@@ -297,7 +297,7 @@ class Game:
             player.build_road(edge, False)
             self.resource_deck += ResourceDeck.road_cost()  # replenish bank
             self.road_color = longest_road(
-                self.board, self.state.players, self.actions
+                self.board, self.state.players, self.state.actions
             )[0]
         elif action.action_type == ActionType.BUILD_CITY:
             player, node_id = self.state.players_by_color[action.color], action.value
@@ -404,7 +404,7 @@ class Game:
                     player_to_steal_from.resource_deck.draw(1, resource)
                 player.resource_deck.replenish(1, resource)
             player.mark_played_dev_card(DevelopmentCard.KNIGHT)
-            self.army_color = largest_army(self.state.players, self.actions)[0]
+            self.army_color = largest_army(self.state.players, self.state.actions)[0]
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
             player = self.state.players_by_color[action.color]
             cards_selected = ResourceDeck.from_array(action.value)
@@ -448,7 +448,7 @@ class Game:
             player.build_road(second_edge, True)
             player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
             self.road_color = longest_road(
-                self.board, self.state.players, self.actions
+                self.board, self.state.players, self.state.actions
             )[0]
         elif action.action_type == ActionType.MARITIME_TRADE:
             player, trade_offer = (
@@ -470,7 +470,7 @@ class Game:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 
         # TODO: Think about possible-action/idea vs finalized-action design
-        self.actions.append(action)
+        self.state.actions.append(action)
         self.count_victory_points()
 
         for callback in action_callbacks:

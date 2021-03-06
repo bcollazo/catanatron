@@ -359,3 +359,5 @@ Out[2]: 0.20465714897727594
 In [3]: timeit.timeit("pd.DataFrame(array)", setup="import pandas as pd; array = list([i for i in range(1000)])", number=1000)
 Out[3]: 0.333771405974403
 ```
+
+- Game.copy() took 45% of the time when using ValueFunctionPlayer (5.7s).

@@ -61,7 +61,7 @@ def save_game_state(game):
     try:
         get_cursor().execute(
             INSERT_STATE_QUERY,
-            (game.id, len(game.actions), state, pickle_data),
+            (game.id, len(game.state.actions), state, pickle_data),
         )
         connection.commit()
     except (Exception, psycopg2.DatabaseError) as error:
