@@ -139,11 +139,11 @@ class Game:
 
         self.id = str(uuid.uuid4())
 
-        # State
-        self.state = State(players)
-
         # Static State (no need to copy)
         self.map = BaseMap()
+
+        # State
+        self.state = State(players)
         self.board = Board(self.map)
 
     def play(self, action_callbacks=[], decide_fn=None):
@@ -591,16 +591,14 @@ def replay_game(game):
     game_copy = game.copy()
 
     # reset game state re-using the board (map really)
-    for player in game_copy.state.players:
-        player.reset_state()
-
-    tmp_game = Game(game_copy.players, seed=game.seed)
+    tmp_game = Game(game_copy.state.players, seed=game.seed)
     tmp_game.id = game_copy.id
     tmp_game.map = game_copy.map
     tmp_game.board = Board(tmp_game.map)
-    tmp_game.state.players = game_copy.state.players
     tmp_game.state.tick_queue = initialize_tick_queue(tmp_game.state.players)
+    for player in tmp_game.state.players:
+        player.restart_state()
 
-    for action in game_copy.actions:
+    for action in game_copy.state.actions:
         tmp_game.execute(action)
         yield tmp_game, action
