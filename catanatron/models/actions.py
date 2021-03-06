@@ -141,7 +141,7 @@ def robber_possibilities(player, board, players, is_dev_card):
 
     players_by_color = {p.color: p for p in players}
     actions = []
-    for coordinate, tile in board.resource_tiles():
+    for coordinate, tile in board.map.resource_tiles():
         if coordinate == board.robber_coordinate:
             continue  # ignore. must move robber.
 

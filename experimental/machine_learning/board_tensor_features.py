@@ -171,7 +171,7 @@ def create_board_tensor(game: Game, p0_color: Color):
     resource_proba_planes = tf.zeros((WIDTH, HEIGHT, 5))
     resources = [i for i in Resource]
     tile_map = get_tile_coordinate_map()
-    for (coordinate, tile) in game.board.resource_tiles():
+    for (coordinate, tile) in game.board.map.resource_tiles():
         if tile.resource is None:
             continue  # there is already a 3x5 zeros matrix there (everything started as a 0!).
 

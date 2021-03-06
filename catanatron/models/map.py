@@ -1,3 +1,5 @@
+import functools
+
 from catanatron.models.coordinate_system import generate_coordinate_system, Direction
 from catanatron.models.enums import Resource
 
@@ -134,3 +136,22 @@ class BaseMap:
             (3, -1, -2): (Port, Direction.SOUTHWEST),
             (3, -2, -1): Water,
         }
+
+        self.tiles = None  # to be initialized and set externally
+
+    @functools.lru_cache
+    def resource_tiles(self):
+        tiles = []
+        for (coordinate, tile) in self.tiles.items():
+            if isinstance(tile, Port) or isinstance(tile, Water):
+                continue
+            tiles.append((coordinate, tile))
+        return tiles
+
+    @functools.lru_cache
+    def get_adjacent_tiles(self, node_id):
+        tiles = []
+        for _, tile in self.resource_tiles():
+            if node_id in tile.nodes.values():
+                tiles.append(tile)
+        return tiles

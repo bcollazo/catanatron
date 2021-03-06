@@ -183,7 +183,7 @@ def production_features(game, p0_color):
 
 @functools.lru_cache(maxsize=None)
 def get_node_production(board, node_id, resource):
-    tiles = board.get_adjacent_tiles(node_id)
+    tiles = board.map.get_adjacent_tiles(node_id)
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 
@@ -304,7 +304,7 @@ def port_distance_features(game, p0_color):
 
 def game_features(game, p0_color):
     # BANK_WOODS, BANK_WHEATS, ..., BANK_DEV_CARDS
-    features = {"BANK_DEV_CARDS": game.development_deck.num_cards()}
+    features = {"BANK_DEV_CARDS": game.state.development_deck.num_cards()}
     for resource in Resource:
         features[f"BANK_{resource.value}"] = game.state.resource_deck.count(resource)
     return features

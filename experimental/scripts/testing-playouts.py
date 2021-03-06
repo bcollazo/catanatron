@@ -31,7 +31,7 @@ from experimental.machine_learning.players.reinforcement import get_t_model, get
 #     print(i, winner)
 #     wins[winner] += 1
 
-# print(game.num_turns)
+# print(game.state.num_turns)
 # pprint(dict(wins))
 # print("took", time.time() - time1)
 

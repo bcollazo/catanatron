@@ -13,7 +13,7 @@ from catanatron.models.decks import ResourceDeck
 def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    for i in range(len(game.tick_queue) - 1):
+    for i in range(len(game.state.tick_queue) - 1):
         game.play_tick()
 
     # assert there are 4 houses and 4 roads
@@ -97,7 +97,7 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     discarding_ticks = list(
         filter(
             lambda a: a[0] == blue_seating and a[1] == ActionPrompt.DISCARD,
-            game.tick_queue,
+            game.state.tick_queue,
         )
     )
     assert len(discarding_ticks) == 0
@@ -119,7 +119,7 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     discarding_ticks = list(
         filter(
             lambda a: a[0] == blue_seating and a[1] == ActionPrompt.DISCARD,
-            game.tick_queue,
+            game.state.tick_queue,
         )
     )
     assert len(discarding_ticks) == 1

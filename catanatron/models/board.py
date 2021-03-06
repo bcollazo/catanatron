@@ -1,5 +1,4 @@
 from collections import defaultdict
-import functools
 
 import networkx as nx
 
@@ -45,8 +44,11 @@ class Board:
         neighbor tiles. (no repeated nodes or edges objects).
         """
         self.map = catan_map or BaseMap()
+        # self.map.initialize()
 
         tiles, nxgraph = initialize_board(self.map)
+        self.map.tiles = tiles
+        # breakpoint()
         self.tiles = tiles  # (coordinate) => Tile (with nodes and edges initialized)
         self.nxgraph = nxgraph  # buildings are here too.
         # color => nxgraph.edge_subgraph[] (nodes in subgraph includes incidental,
@@ -240,7 +242,7 @@ class Board:
         # if initial-placement, iterate over non-water/port tiles, for each
         # of these nodes check if its a buildable node.
         if initial_build_phase:
-            for (_, tile) in self.resource_tiles():
+            for (_, tile) in self.map.resource_tiles():
                 for (_, node_id) in tile.nodes.items():
                     if is_buildable(node_id):
                         buildable.add(node_id)
@@ -272,24 +274,6 @@ class Board:
                     expandable.add(tuple(sorted(edge)))
 
         return sorted(list(expandable))
-
-    # Commented out since creates memory leak when creating multiple game copies
-    # @functools.lru_cache
-    def resource_tiles(self):
-        tiles = []
-        for (coordinate, tile) in self.tiles.items():
-            if isinstance(tile, Port) or isinstance(tile, Water):
-                continue
-            tiles.append((coordinate, tile))
-        return tiles
-
-    # @functools.lru_cache
-    def get_adjacent_tiles(self, node_id):
-        tiles = []
-        for _, tile in self.resource_tiles():
-            if node_id in tile.nodes.values():
-                tiles.append(tile)
-        return tiles
 
     def get_player_buildings(self, color, building_type=None):
         """Returns list of (node_id, building_type)"""
