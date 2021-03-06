@@ -58,7 +58,7 @@ def test_buying_road_is_payed_for():
 
     assert players[0].resource_deck.count(Resource.WOOD) == 0
     assert players[0].resource_deck.count(Resource.BRICK) == 0
-    assert game.resource_deck.count(Resource.WOOD) == 20  # since we didnt yield
+    assert game.state.resource_deck.count(Resource.WOOD) == 20  # since we didnt yield
 
 
 def test_moving_robber_steals_correctly():
@@ -173,10 +173,10 @@ def test_play_year_of_plenty_gives_player_resources():
     for card_type in Resource:
         if card_type == Resource.ORE or card_type == Resource.WHEAT:
             assert player_to_act.resource_deck.count(card_type) == 1
-            assert game.resource_deck.count(card_type) == 18
+            assert game.state.resource_deck.count(card_type) == 18
         else:
             assert player_to_act.resource_deck.count(card_type) == 0
-            assert game.resource_deck.count(card_type) == 19
+            assert game.state.resource_deck.count(card_type) == 19
     assert player_to_act.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) == 0
 
 
@@ -184,7 +184,7 @@ def test_play_year_of_plenty_not_enough_resources():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     player_to_act = players[0]
     game = Game(players)
-    game.resource_deck = ResourceDeck()
+    game.state.resource_deck = ResourceDeck()
     player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
 
     player_to_act.clean_turn_state()
@@ -377,7 +377,7 @@ def test_trade_execution():
     game.execute(action)
 
     assert players[0].resource_deck.num_cards() == 1
-    assert game.resource_deck.num_cards() == 19 * 5 + 4 - 1
+    assert game.state.resource_deck.num_cards() == 19 * 5 + 4 - 1
 
 
 def test_can_trade_with_port():
@@ -414,9 +414,9 @@ def test_second_placement_takes_cards_from_bank():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    assert len(game.resource_deck.to_array()) == 19 * 5
+    assert len(game.state.resource_deck.to_array()) == 19 * 5
 
     action = Action(Color.RED, ActionType.BUILD_SECOND_SETTLEMENT, 0)
     game.execute(action)
 
-    assert len(game.resource_deck.to_array()) < 19 * 5
+    assert len(game.state.resource_deck.to_array()) < 19 * 5

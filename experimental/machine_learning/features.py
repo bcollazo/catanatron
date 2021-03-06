@@ -306,7 +306,7 @@ def game_features(game, p0_color):
     # BANK_WOODS, BANK_WHEATS, ..., BANK_DEV_CARDS
     features = {"BANK_DEV_CARDS": game.development_deck.num_cards()}
     for resource in Resource:
-        features[f"BANK_{resource.value}"] = game.resource_deck.count(resource)
+        features[f"BANK_{resource.value}"] = game.state.resource_deck.count(resource)
     return features
 
 

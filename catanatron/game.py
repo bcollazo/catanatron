@@ -119,7 +119,7 @@ class State:
         self.players_by_color = {p.color: p for p in players}
         # self.board = Board(self.map)
         self.actions = []  # log of all action taken by players
-        # self.resource_deck = ResourceDeck.starting_bank()
+        self.resource_deck = ResourceDeck.starting_bank()
         # self.development_deck = DevelopmentDeck.starting_bank()
         # self.tick_queue = initialize_tick_queue(self.players)
         # self.current_player_index = 0
@@ -149,7 +149,7 @@ class Game:
         # self.state.players_by_color = {p.color: p for p in players}
         self.board = Board(self.map)
         # self.state.actions = []  # log of all action taken by players
-        self.resource_deck = ResourceDeck.starting_bank()
+        self.state.resource_deck = ResourceDeck.starting_bank()
         self.development_deck = DevelopmentDeck.starting_bank()
         self.tick_queue = initialize_tick_queue(self.state.players)
         self.current_player_index = 0
@@ -236,7 +236,7 @@ class Game:
             # Play Dev Cards
             if player.can_play_year_of_plenty():
                 actions.extend(
-                    year_of_plenty_possible_actions(player, self.resource_deck)
+                    year_of_plenty_possible_actions(player, self.state.resource_deck)
                 )
             if player.can_play_monopoly():
                 actions.extend(monopoly_possible_actions(player))
@@ -249,7 +249,9 @@ class Game:
 
             # Trade
             actions.extend(
-                maritime_trade_possibilities(player, self.resource_deck, self.board)
+                maritime_trade_possibilities(
+                    player, self.state.resource_deck, self.board
+                )
             )
 
             return actions
@@ -277,13 +279,13 @@ class Game:
             # yield resources of second settlement
             for tile in self.board.get_adjacent_tiles(node_id):
                 if tile.resource != None:
-                    self.resource_deck.draw(1, tile.resource)
+                    self.state.resource_deck.draw(1, tile.resource)
                     player.resource_deck.replenish(1, tile.resource)
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
             player, node_id = self.state.players_by_color[action.color], action.value
             self.board.build_settlement(player.color, node_id, False)
             player.build_settlement(node_id, False)
-            self.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
+            self.state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
             self.road_color = longest_road(
                 self.board, self.state.players, self.state.actions
             )[0]
@@ -295,7 +297,7 @@ class Game:
             player, edge = self.state.players_by_color[action.color], action.value
             self.board.build_road(player.color, edge)
             player.build_road(edge, False)
-            self.resource_deck += ResourceDeck.road_cost()  # replenish bank
+            self.state.resource_deck += ResourceDeck.road_cost()  # replenish bank
             self.road_color = longest_road(
                 self.board, self.state.players, self.state.actions
             )[0]
@@ -303,7 +305,7 @@ class Game:
             player, node_id = self.state.players_by_color[action.color], action.value
             self.board.build_city(player.color, node_id)
             player.build_city(node_id)
-            self.resource_deck += ResourceDeck.city_cost()  # replenish bank
+            self.state.resource_deck += ResourceDeck.city_cost()  # replenish bank
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
             player = self.state.players_by_color[action.color]
             if self.development_deck.num_cards() == 0:
@@ -319,7 +321,7 @@ class Game:
 
             player.development_deck.replenish(1, card)
             player.resource_deck -= ResourceDeck.development_card_cost()
-            self.resource_deck += ResourceDeck.development_card_cost()
+            self.state.resource_deck += ResourceDeck.development_card_cost()
 
             action = Action(action.color, action.action_type, card)
         elif action.action_type == ActionType.ROLL:
@@ -340,13 +342,15 @@ class Game:
                     (self.current_player_index, ActionPrompt.MOVE_ROBBER)
                 )
             else:
-                payout, _ = yield_resources(self.board, self.resource_deck, number)
+                payout, _ = yield_resources(
+                    self.board, self.state.resource_deck, number
+                )
                 for color, resource_deck in payout.items():
                     player = self.state.players_by_color[color]
 
                     # Atomically add to player's hand and remove from bank
                     player.resource_deck += resource_deck
-                    self.resource_deck -= resource_deck
+                    self.state.resource_deck -= resource_deck
 
             action = Action(action.color, action.action_type, dices)
             self.tick_queue.append((self.current_player_index, ActionPrompt.PLAY_TURN))
@@ -363,7 +367,7 @@ class Game:
             to_discard = ResourceDeck.from_array(discarded)
 
             player.resource_deck -= to_discard
-            self.resource_deck += to_discard
+            self.state.resource_deck += to_discard
             action = Action(action.color, action.action_type, discarded)
         elif action.action_type == ActionType.MOVE_ROBBER:
             player = self.state.players_by_color[action.color]
@@ -410,12 +414,12 @@ class Game:
             cards_selected = ResourceDeck.from_array(action.value)
             if not player.can_play_year_of_plenty():
                 raise ValueError("Player cant play year of plenty now")
-            if not self.resource_deck.includes(cards_selected):
+            if not self.state.resource_deck.includes(cards_selected):
                 raise ValueError(
                     "Not enough resources of this type (these types?) in bank"
                 )
             player.resource_deck += cards_selected
-            self.resource_deck -= cards_selected
+            self.state.resource_deck -= cards_selected
             player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
         elif action.action_type == ActionType.PLAY_MONOPOLY:
             player, mono_resource = (
@@ -460,12 +464,14 @@ class Game:
             tradee = trade_offer.tradee or self  # self means bank
             if not player.resource_deck.includes(offering):
                 raise ValueError("Trying to trade without money")
-            if not tradee.resource_deck.includes(asking):
+            if not isinstance(tradee, Game):
+                raise ValueError("Non-bank tradee not supported")
+            if not tradee.state.resource_deck.includes(asking):
                 raise ValueError("Tradee doenst have those cards")
             player.resource_deck -= offering
-            tradee.resource_deck += offering
+            tradee.state.resource_deck += offering
             player.resource_deck += asking
-            tradee.resource_deck -= asking
+            tradee.state.resource_deck -= asking
         else:
             raise RuntimeError("Unknown ActionType " + str(action.action_type))
 
