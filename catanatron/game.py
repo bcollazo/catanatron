@@ -6,7 +6,6 @@ from typing import Iterable
 from collections import defaultdict
 
 from catanatron.algorithms import longest_road, largest_army
-from catanatron.models.graph import initialize_board
 from catanatron.models.map import BaseMap
 from catanatron.models.board import Board
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
@@ -592,43 +591,15 @@ def replay_game(game):
     game_copy = game.copy()
 
     # reset game state re-using the board (map really)
-    # Can't use player.__class__(player.color, player.name) b.c. actions tied to player instances
-    for player in game_copy.players:
-        player.public_victory_points = 0
-        player.actual_victory_points = 0
+    for player in game_copy.state.players:
+        player.reset_state()
 
-        player.resource_deck = ResourceDeck()
-        player.development_deck = DevelopmentDeck()
-        player.played_development_cards = DevelopmentDeck()
-
-        player.has_road = False
-        player.has_army = False
-
-        player.roads_available = 15
-        player.settlements_available = 5
-        player.cities_available = 4
-
-        player.has_rolled = False
-        player.playable_development_cards = player.development_deck.to_array()
-
-    # TODO: Revisit
     tmp_game = Game(game_copy.players, seed=game.seed)
     tmp_game.id = game_copy.id
-    tmp_game.players = game_copy.players  # use same seating order
-    tmp_game.players_by_color = {p.color: p for p in game_copy.players}
     tmp_game.map = game_copy.map
-    tmp_game.board = game_copy.board
-    tmp_game.board.nxgraph = initialize_board(game_copy.map)[1]
-    tmp_game.board.robber_coordinate = filter(
-        lambda coordinate: tmp_game.board.tiles[coordinate].resource is None,
-        tmp_game.board.tiles.keys(),
-    ).__next__()
-    tmp_game.actions = []  # log of all action taken by players
-    tmp_game.resource_deck = ResourceDeck.starting_bank()
-    tmp_game.development_deck = DevelopmentDeck.starting_bank()
-    tmp_game.tick_queue = initialize_tick_queue(tmp_game.players)
-    tmp_game.current_player_index = 0
-    tmp_game.num_turns = 0
+    tmp_game.board = Board(tmp_game.map)
+    tmp_game.state.players = game_copy.state.players
+    tmp_game.state.tick_queue = initialize_tick_queue(tmp_game.state.players)
 
     for action in game_copy.actions:
         tmp_game.execute(action)

@@ -2,10 +2,9 @@ import tensorflow as tf
 
 from catanatron.models.enums import Resource
 from catanatron.models.board import Board, get_edges
-from catanatron.models.map import NUM_NODES
+from catanatron.models.map import NUM_NODES, NodeRef
 from catanatron.models.actions import Action, ActionType
 from catanatron.game import Game, number_probability
-from catanatron.models.graph import NodeRef
 from catanatron.models.player import SimplePlayer, Color
 from experimental.machine_learning.features import (
     create_sample,
@@ -48,7 +47,7 @@ def test_port_distance_features():
     game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
     game.execute(Action(players[0].color, ActionType.BUILD_INITIAL_ROAD, (3, 2)))
 
-    ports = game.board.get_port_nodes()
+    ports = game.board.map.get_port_nodes()
     se_port_resource = next(filter(lambda entry: 29 in entry[1], ports.items()))[0]
     port_name = "3:1" if se_port_resource is None else se_port_resource.value
 
@@ -68,9 +67,9 @@ def test_expansion_features():
     game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
     game.execute(Action(players[0].color, ActionType.BUILD_INITIAL_ROAD, (3, 2)))
 
-    neighbor_tile_resource = game.board.tiles[(1, -1, 0)].resource
+    neighbor_tile_resource = game.board.map.tiles[(1, -1, 0)].resource
     if neighbor_tile_resource is None:
-        neighbor_tile_resource = game.board.tiles[(0, -1, 1)].resource
+        neighbor_tile_resource = game.board.map.tiles[(0, -1, 1)].resource
 
     features = expansion_features(game, players[0].color)
     assert features["P0_WHEAT_AT_DISTANCE_0"] == 0
@@ -88,7 +87,7 @@ def test_tile_features():
     game = Game(players)
 
     features = tile_features(game, players[0].color)
-    tile = game.board.tiles[(0, 0, 0)]
+    tile = game.board.map.tiles[(0, 0, 0)]
     resource = tile.resource
     value = resource.value if resource is not None else "DESERT"
     proba = number_probability(tile.number) if resource is not None else 0
@@ -298,7 +297,7 @@ def test_robber_plane():
     tensor = create_board_tensor(game, players[0].color)
 
     node_map, _ = get_node_and_edge_maps()
-    robber_tile = game.board.tiles[game.board.robber_coordinate]
+    robber_tile = game.board.map.tiles[game.board.robber_coordinate]
     nw_desert_node = robber_tile.nodes[NodeRef.NORTHWEST]
     i, j = node_map[nw_desert_node]
 

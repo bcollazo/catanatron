@@ -18,7 +18,7 @@ class GameEncoder(json.JSONEncoder):
         if isinstance(obj, Game):
             nodes = {}
             edges = {}
-            for coordinate, tile in obj.board.tiles.items():
+            for coordinate, tile in obj.board.map.tiles.items():
                 for direction, node_id in tile.nodes.items():
                     building = obj.board.nxgraph.nodes[node_id].get("building", None)
                     color = obj.board.nxgraph.nodes[node_id].get("color", None)
@@ -40,7 +40,7 @@ class GameEncoder(json.JSONEncoder):
             return {
                 "tiles": [
                     {"coordinate": coordinate, "tile": self.default(tile)}
-                    for coordinate, tile in obj.board.tiles.items()
+                    for coordinate, tile in obj.board.map.tiles.items()
                 ],
                 "nodes": nodes,
                 "edges": list(edges.values()),

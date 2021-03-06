@@ -13,12 +13,12 @@ from catanatron.algorithms import continuous_roads_by_player
 
 # ===== Helpers
 def port_is_resource(game, port_id, resource):
-    port = game.board.get_port_by_id(port_id)
+    port = game.board.map.get_port_by_id(port_id)
     return port.resource == resource
 
 
 def port_is_threetoone(game, port_id):
-    port = game.board.get_port_by_id(port_id)
+    port = game.board.map.get_port_by_id(port_id)
     return port.resource is None
 
 
@@ -117,17 +117,17 @@ def tile_features(game, p0_color):
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
     # TODO: Cacheable
     def f(game, tile_id, resource):
-        tile = game.board.get_tile_by_id(tile_id)
+        tile = game.board.map.get_tile_by_id(tile_id)
         return tile.resource == resource
 
     # TODO: Cacheable
     def g(game, tile_id):
-        tile = game.board.get_tile_by_id(tile_id)
+        tile = game.board.map.get_tile_by_id(tile_id)
         return 0 if tile.resource is None else number_probability(tile.number)
 
     def h(game, tile_id):
-        tile = game.board.get_tile_by_id(tile_id)
-        return game.board.tiles[game.board.robber_coordinate] == tile
+        tile = game.board.map.get_tile_by_id(tile_id)
+        return game.board.map.tiles[game.board.robber_coordinate] == tile
 
     features = {}
     for tile_id in range(NUM_TILES):
@@ -280,7 +280,7 @@ def expansion_features(game, p0_color):
 def port_distance_features(game, p0_color):
     # P0_HAS_WHEAT_PORT, P0_WHEAT_PORT_DISTANCE, ..., P1_HAS_WHEAT_PORT,
     features = {}
-    ports = game.board.get_port_nodes()
+    ports = game.board.map.get_port_nodes()
     distances = get_node_distances()
     for resource_or_none in list(Resource) + [None]:
         port_name = "3:1" if resource_or_none is None else resource_or_none.value

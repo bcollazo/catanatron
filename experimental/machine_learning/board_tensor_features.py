@@ -200,7 +200,7 @@ def create_board_tensor(game: Game, p0_color: Color):
     # add 6 port channels (5 resources + 1 for 3:1 ports)
     # for each port, take index and take node_id coordinates
     port_planes = tf.zeros((WIDTH, HEIGHT, 6))
-    for resource, node_ids in game.board.get_port_nodes().items():
+    for resource, node_ids in game.board.map.get_port_nodes().items():
         channel_idx = 5 if resource is None else resources.index(resource)
         indices = []
         updates = []

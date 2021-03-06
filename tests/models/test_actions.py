@@ -126,7 +126,7 @@ def test_robber_possibilities():
     blue.resource_deck.replenish(1, Resource.WHEAT)
     possibilities = len(robber_possibilities(red, board, players, False))
     assert possibilities == 19 or (
-        possibilities == 18 and board.tiles[(0, 0, 0)].resource is None
+        possibilities == 18 and board.map.tiles[(0, 0, 0)].resource is None
     )
 
 

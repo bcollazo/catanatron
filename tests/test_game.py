@@ -256,15 +256,15 @@ def test_yield_resources():
     board = Board()
     resource_deck = ResourceDeck.starting_bank()
 
-    tile = board.tiles[(0, 0, 0)]
+    tile = board.map.tiles[(0, 0, 0)]
     if tile.resource is None:  # is desert
-        tile = board.tiles[(-1, 0, 1)]
+        tile = board.map.tiles[(-1, 0, 1)]
 
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     payout, depleted = yield_resources(board, resource_deck, tile.number)
     print(tile)
     print(payout, depleted)
-    print(board.tiles)
+    print(board.map.tiles)
     assert len(depleted) == 0
     assert payout[Color.RED].count(tile.resource) >= 1
 
@@ -273,9 +273,9 @@ def test_yield_resources_two_settlements():
     board = Board()
     resource_deck = ResourceDeck.starting_bank()
 
-    tile, edge2, node2 = board.tiles[(0, 0, 0)], (4, 5), 5
+    tile, edge2, node2 = board.map.tiles[(0, 0, 0)], (4, 5), 5
     if tile.resource is None:  # is desert
-        tile, edge2, node2 = board.tiles[(-1, 0, 1)], (4, 15), 15
+        tile, edge2, node2 = board.map.tiles[(-1, 0, 1)], (4, 15), 15
 
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     board.build_road(Color.RED, (3, 4))
@@ -291,7 +291,7 @@ def test_yield_resources_two_players_and_city():
     resource_deck = ResourceDeck.starting_bank()
 
     tile, edge1, edge2, red_node, blue_node = (
-        board.tiles[(0, 0, 0)],
+        board.map.tiles[(0, 0, 0)],
         (2, 3),
         (3, 4),
         4,
@@ -299,7 +299,7 @@ def test_yield_resources_two_players_and_city():
     )
     if tile.resource is None:  # is desert
         tile, edge1, edge2, red_node, blue_node = (
-            board.tiles[(1, -1, 0)],
+            board.map.tiles[(1, -1, 0)],
             (9, 2),
             (9, 8),
             8,
@@ -326,16 +326,16 @@ def test_empty_payout_if_not_enough_resources():
     board = Board()
     resource_deck = ResourceDeck.starting_bank()
 
-    tile = board.tiles[(0, 0, 0)]
+    tile = board.map.tiles[(0, 0, 0)]
     if tile.resource is None:  # is desert
-        tile = board.tiles[(-1, 0, 1)]
+        tile = board.map.tiles[(-1, 0, 1)]
 
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     board.build_city(Color.RED, 3)
     resource_deck.draw(18, tile.resource)
 
     payout, depleted = yield_resources(board, resource_deck, tile.number)
-    print(board.tiles)
+    print(board.map.tiles)
     print(payout, depleted)
     print(resource_deck)
     assert depleted == [tile.resource]
@@ -391,7 +391,7 @@ def test_can_trade_with_port():
 
     # Find port at (3, -3, 0), West.
     port_node_id = 25
-    port = game.board.tiles[(3, -3, 0)]
+    port = game.board.map.tiles[(3, -3, 0)]
     action = Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, port_node_id)
     game.execute(action)
 

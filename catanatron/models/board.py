@@ -3,11 +3,7 @@ from collections import defaultdict
 import networkx as nx
 
 from catanatron.models.player import Color
-from catanatron.models.map import BaseMap, NUM_NODES, Water, Port, Tile
-from catanatron.models.graph import (
-    initialize_board,
-    PORT_DIRECTION_TO_NODEREFS,
-)
+from catanatron.models.map import BaseMap, NUM_NODES, Port, Tile
 from catanatron.models.enums import BuildingType
 
 NODE_DISTANCES = None
@@ -44,13 +40,14 @@ class Board:
         neighbor tiles. (no repeated nodes or edges objects).
         """
         self.map = catan_map or BaseMap()
-        # self.map.initialize()
 
-        tiles, nxgraph = initialize_board(self.map)
-        self.map.tiles = tiles
-        # breakpoint()
-        self.tiles = tiles  # (coordinate) => Tile (with nodes and edges initialized)
+        # Init graph to hold board dynamic state (buildings).
+        nxgraph = nx.Graph()
+        for tile in self.map.tiles.values():
+            nxgraph.add_nodes_from(tile.nodes.values())
+            nxgraph.add_edges_from(tile.edges.values())
         self.nxgraph = nxgraph  # buildings are here too.
+
         # color => nxgraph.edge_subgraph[] (nodes in subgraph includes incidental,
         #   but not-necesarilly owned nodes. might be owned by enemy).
         self.connected_components = defaultdict(list)
@@ -59,7 +56,8 @@ class Board:
 
         # assumes there is at least one desert:
         self.robber_coordinate = filter(
-            lambda coordinate: tiles[coordinate].resource is None, tiles.keys()
+            lambda coordinate: self.map.tiles[coordinate].resource is None,
+            self.map.tiles.keys(),
         ).__next__()
 
     def build_settlement(self, color, node_id, initial_build_phase=False):
@@ -287,40 +285,12 @@ class Board:
 
         return list(buildings)
 
-    # @functools.lru_cache
-    def get_port_nodes(self):
-        """Yields resource => node_ids[], including None for 3:1 port node-ids"""
-        port_nodes = defaultdict(set)
-        for (coordinate, value) in self.map.topology.items():
-            if not isinstance(value, tuple):
-                continue
-
-            tile = self.tiles[coordinate]
-            _, direction = value
-            (a_noderef, b_noderef) = PORT_DIRECTION_TO_NODEREFS[direction]
-
-            port_nodes[tile.resource].add(tile.nodes[a_noderef])
-            port_nodes[tile.resource].add(tile.nodes[b_noderef])
-        return port_nodes
-
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
-        for resource, node_ids in self.get_port_nodes().items():
+        for resource, node_ids in self.map.get_port_nodes().items():
             for node_id in node_ids:
                 if self.get_node_color(node_id) == color:
                     yield resource
-
-    def get_tile_by_id(self, tile_id):
-        filtered = filter(
-            lambda t: isinstance(t, Tile) and t.id == tile_id, self.tiles.values()
-        )
-        return next(filtered, None)
-
-    def get_port_by_id(self, port_id):
-        filtered = filter(
-            lambda t: isinstance(t, Port) and t.id == port_id, self.tiles.values()
-        )
-        return next(filtered, None)
 
     def find_connected_components(self, color: Color):
         """
