@@ -47,7 +47,6 @@ from experimental.machine_learning.utils import (
 )
 
 
-PLAYER_REGEX = re.compile("(R|H|W|M[0-9]+|V.*|P.*|Q.*|T.*|O|X|F|S)")
 RUNNING_AVG_LENGTH = 1
 
 
@@ -78,8 +77,6 @@ RUNNING_AVG_LENGTH = 1
 def simulate(num, players, outpath, watch):
     """Simple program simulates NUM Catan games."""
     player_keys = players.split(",")
-    assert len(player_keys) == 4, "Must specify 4 players."
-    assert all([PLAYER_REGEX.match(x) for x in player_keys]), "Invalid --players"
 
     initialized_players = []
     colors = [c for c in Color]
