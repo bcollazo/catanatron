@@ -25,7 +25,7 @@ from experimental.machine_learning.features import create_sample, create_sample_
 from experimental.datasets import (
     preprocess_samples,
     read_dataset,
-    build_board_tensors_preprocess,
+    preprocess_board_tensors,
 )
 from catanatron_server.database import get_finished_games_ids, get_game_states
 
@@ -56,7 +56,7 @@ def build_generator(dataset):
 data_directory = "data/mcts-playouts-labeling-2"
 samples = read_dataset(f"{data_directory}/samples.csv.gzip")
 # board_tensors = read_dataset(f"{data_directory}/board_tensors.csv.gzip")
-# board_tensors_dataset = board_tensors.map(build_board_tensors_preprocess(32))
+# board_tensors_dataset = board_tensors.map(lambda d: preprocess_board_tensors(d, 32))
 labels = read_dataset(f"{data_directory}/labels.csv.gzip")
 
 # test_dataset = tf.data.Dataset.from_generator(

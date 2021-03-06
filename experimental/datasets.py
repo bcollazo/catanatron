@@ -69,22 +69,20 @@ def read_dataset(
     )
 
 
-def preprocess_samples(samples_batch):
-    return tf.stack([tensor for _, tensor in samples_batch.items()], axis=1)
+def preprocess_samples(samples_batch, features=None):
+    features = features or samples_batch.keys()
+    return tf.stack([samples_batch[k] for k in features], axis=1)
 
 
 def preprocess_actions(actions_batch):
     return tf.stack([tensor for _, tensor in actions_batch.items()], axis=1)
 
 
-def build_board_tensors_preprocess(batch_size):
-    def preprocess_board_tensors(board_tensors_batch):
-        return tf.reshape(
-            tf.stack([v for _, v in board_tensors_batch.items()], axis=1),
-            (batch_size, WIDTH, HEIGHT, CHANNELS, 1),
-        )
-
-    return preprocess_board_tensors
+def preprocess_board_tensors(board_tensors_batch, batch_size):
+    return tf.reshape(
+        tf.stack([v for _, v in board_tensors_batch.items()], axis=1),
+        (batch_size, WIDTH, HEIGHT, CHANNELS, 1),
+    )
 
 
 def head_dataset(path, chunk=10):

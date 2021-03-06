@@ -12,14 +12,14 @@ from experimental.machine_learning.players.reinforcement import FEATURES
 
 # ===== Configuration
 BATCH_SIZE = 32
-EPOCHS = 2
+EPOCHS = 10
 PREFETCH_BUFFER_SIZE = 10
 LABEL_COLUMN = "0"
-DATA_SIZE = 204501  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+DATA_SIZE = 304833  # use zcat data/mcts-playouts/labels.csv.gzip | wc
 DATA_DIRECTORY = "data/mcts-playouts"
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
-VALIDATION_DATA_SIZE = 1000
-VALIDATION_DATA_DIRECTORY = "data/mcts-playouts"
+VALIDATION_DATA_SIZE = 30665
+VALIDATION_DATA_DIRECTORY = "data/mcts-playouts-validation"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
 NORMALIZATION_DIRECTORY = "data/random-games"
 NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "mean.npy")
@@ -126,19 +126,19 @@ outputs = inputs
 
 # outputs = normalizer_layer(outputs)
 # outputs = tf.keras.layers.BatchNormalization()(outputs)
-# outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(320, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(160, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(512, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(64, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(32, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(8, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(320, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(160, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(512, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(64, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(32, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(8, activation=tf.nn.relu)(outputs)
 outputs = tf.keras.layers.Dense(units=1)(outputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 model.compile(
     metrics=["mae"],
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.000001),
     loss="mean_squared_error",
 )
 model.summary()
@@ -205,8 +205,6 @@ model.fit(
     ],
 )
 
-print(model.get_weights())
-breakpoint()
 
 model.save(MODEL_PATH)
 print("Saved model at:", MODEL_PATH)

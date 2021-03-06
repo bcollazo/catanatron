@@ -26,6 +26,7 @@ pandas = "*"
 psycopg2-binary = "*"
 psycopg2 = "*"
 tensorflow-data-validation = "*"
+gym = "*"
 
 [requires]
 python_version = "3.8"

@@ -180,26 +180,47 @@ tuner/round |0 |1
   for all branches, instead of branch-node => mcts result). It didn't win games,
   but there seemed to be VP improvement from 2 VP avg to 5 VP avg, in 100 games.
 
-- A heuristic player plays better than WeightedRandom (but we have a memory leak)
+- A heuristic player plays better than WeightedRandom (but we have a memory leak).
+  Memory leak was due to @functools.lru with copied boards.
 
 - Simple MiniMax Algorithm takes too long... ~20segs per decision,
   which makes for 30 min games. Even if de-bugged the implementation seems pretty slow.
+  As such, alpha-pruning doesnt seem wont help much (even if cuts time by half).
 
 - Using PyPy (removing TF and other Python 3.9 features), speeds up playing random
   games by around 33%s. (1000s games w/CPython3.9 took 2m52s and 1000s games
   w/PyPy3.7 took 1m52s).
 
+- Looked at RL Python Frameworks. keras-rl doesn't work with TF2.0, same with
+  stable-baselines. Many undocumented or hard to use. Best one seems to be
+  tensorforce. TF-Agents seems possible, but pretty raw API right now.
+  Hard to use tensorforce because not clear how to specify Rep B mixed model.
+
 ## Future Work:
 
-- Consider implementing AlphaBetaPruning to speed up game. Although
-  it seems speedup at best might be 1/2 the time, which still doesn't cut it. Unless we speed up game copying...
+- Attempt DQN Tutorial with TF2.0 Summary Module, to see progress. If works,
+  adapt to Catan-DQN Tutorial.
 
-- Do a Data Audit to ensure no data bugs on Rep B.
-  - Write some tests on data output.
+- Paperspace: Dockerfile: Install catanatron, and Pipenv dependencies, so that we can
+  experiment/play.py, have a Game in the Overview.ipyn and run a catan-dqn.py job faster
+  (should only do when can confirm Data and DQN approach improves...).
+
+- Simplify problem. Learn 1v1. Simplify ROBBER_ACTIONS to "Play Knight" to player with most points.
+
+- Learn from offline MCTS data, using Rep B. (Seems slow to generate MCTS labeled data).
+
+- Use tensorforce (since TF2.0 compatible and DQN Agent will be bug-free).
+  Seems hard because API is not too easy.
+
 - Learn an offline DQN (using VPs) with Rep B. That is, use Reward as label (
-  so that early moves don't get a 1
-  )
-- Attempt an Classical Chess mini-max value function approach (with Heuristics).
+  so that early moves don't get a 1)
+
+- Separate immutable state from Board (Map?), so that copying is a lot faster, and
+  can cache functions (say node-production) globally (across game copies).
+
+- Consider implementing AlphaBetaPruning to speed up game. Although
+  it seems speedup at best might be 1/2 the time, which still doesn't cut it.
+  Unless we speed up game copying...
 
 - Actually use MCTS result to improve network. Do online so that we can
   see progress.
@@ -208,12 +229,9 @@ tuner/round |0 |1
     that we have random players fixed does this job for now, since we collect
     samples from their perspective as well).
 
-- Attempt DQN Tutorial with TF2.0 Summary Module, to see progress. If works,
-  adapt to Catan-DQN Tutorial.
+- Play a game against MCTS player. Play against MCTS with look-ahead.
 
-- Paperspace: Dockerfile: Install catanatron, and Pipenv dependencies, so that we can
-  experiment/play.py, have a Game in the Overview.ipyn and run a catan-dqn.py job faster
-  (should only do when can confirm Data and DQN approach improves...).
+- Idea: Sum up "enemy features". Make it look like its 1 enemy.
 
 - Try Online - DQN approach (using PythonProgramming Tutorial).
 - Use Value-Estimator with a tree-lookahead alpha-beta pruning.
@@ -224,16 +242,11 @@ tuner/round |0 |1
 
   - Use in tree-search (take N top actions to explore via RollOuts).
 
-- Understand how to improve tree-search approaches.
-
 - Try putting in features back. Is this VPlayer better than Raw Features one?
 - Can autokeras use tf.Dataset?
 - Using autokeras with whole 1Gb dataset is better?
 - Does playing against your V1 self, training on that, improve?
 - Try Q-Learning but, iterate on playing, learning, playing, learning... e-greedy.
-
-- Separate immutable state from Board (Map?), so that copying is a lot faster, and
-  can cache functions (say node-production) globally (across game copies).
 
 ### Toy problems
 
@@ -296,8 +309,8 @@ In terms of cards-in-hand state. Assuming on average players have 5 cards in han
 then out of the 19*5 resource cards we start with, we are talking about:
 `comb(19*4, 20) = 1090013712241956540` (or 10^18).
 
-Grand-ballpark estimate is ~**10^100** states in Catan. Chess is 10^123. Number of
-atoms in the Universe is 10^78.
+Grand-ballpark estimate is ~**10^100** states in Catan. Chess is 10^123.
+Go is 10^360. Number of atoms in the Universe is 10^78.
 
 ### Branching Factor
 

@@ -44,7 +44,7 @@ BATCH_SIZE = 64
 FLUSH_EVERY = 1  # decisions. what takes a while is to generate samples via MCTS
 TRAIN = True
 OVERWRITE_MODEL = False
-DATA_PATH = "data/mcts-playouts"
+DATA_PATH = "data/mcts-playouts-validation"
 NORMALIZATION_MEAN_PATH = Path(DATA_PATH, "mean.npy")
 NORMALIZATION_VARIANCE_PATH = Path(DATA_PATH, "variance.npy")
 

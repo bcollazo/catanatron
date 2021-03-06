@@ -316,7 +316,7 @@ feature_extractors = [
     resource_hand_features,
     # TRANSFERABLE BOARD FEATURES =====
     production_features,
-    expansion_features,
+    # expansion_features,
     # RAW BASE-MAP FEATURES =====
     tile_features,
     port_features,
@@ -333,9 +333,10 @@ def create_sample(game, p0_color):
     return record
 
 
-def create_sample_vector(game, p0_color):
+def create_sample_vector(game, p0_color, features=None):
+    features = features or get_feature_ordering()
     sample_dict = create_sample(game, p0_color)
-    return [float(sample_dict[i]) for i in get_feature_ordering()]
+    return [float(sample_dict[i]) for i in features]
 
 
 FEATURE_ORDERING = None

@@ -22,32 +22,58 @@ from experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
 )
 
+# from experimental.rep_b_model import build_model
 
 # Taken from correlation analysis
 FEATURES = [
-    "P0_ACTUAL_VPS",
-    "P0_CITIES_LEFT",
     "P0_HAS_ROAD",
-    "P0_ORE_AT_DISTANCE_0",
-    "P0_ORE_AT_DISTANCE_3",
+    "P1_HAS_ROAD",
+    "P2_HAS_ROAD",
+    "P3_HAS_ROAD",
+    "P0_HAS_ARMY",
+    "P1_HAS_ARMY",
+    "P2_HAS_ARMY",
+    "P3_HAS_ARMY",
     "P0_ORE_PRODUCTION",
-    "P0_PUBLIC_VPS",
-    "P0_SETTLEMENTS_LEFT",
-    "P0_WHEAT_AT_DISTANCE_0",
-    "P0_WHEAT_PRODUCTION",
-    "P0_WOOD_AT_DISTANCE_2",
-    "P0_WOOD_IN_HAND",
     "P0_WOOD_PRODUCTION",
+    "P0_WHEAT_PRODUCTION",
+    "P0_SHEEP_PRODUCTION",
+    "P0_BRICK_PRODUCTION",
+    "P0_LONGEST_ROAD_LENGTH",
+    "P1_ORE_PRODUCTION",
+    "P1_WOOD_PRODUCTION",
     "P1_WHEAT_PRODUCTION",
-    "P1_WOOD_AT_DISTANCE_1",
-    "P1_WOOD_AT_DISTANCE_2",
-    "P2_ORE_AT_DISTANCE_1",
-    "P2_WHEAT_AT_DISTANCE_1",
-    "P2_WHEAT_AT_DISTANCE_2",
-    "P3_BRICK_PRODUCTION",
-    "P3_MONOPOLY_PLAYED",
-    "P3_SHEEP_AT_DISTANCE_0",
+    "P1_SHEEP_PRODUCTION",
+    "P1_BRICK_PRODUCTION",
+    "P1_LONGEST_ROAD_LENGTH",
+    "P2_ORE_PRODUCTION",
+    "P2_WOOD_PRODUCTION",
+    "P2_WHEAT_PRODUCTION",
+    "P2_SHEEP_PRODUCTION",
+    "P2_BRICK_PRODUCTION",
+    "P2_LONGEST_ROAD_LENGTH",
+    "P3_ORE_PRODUCTION",
+    "P3_WOOD_PRODUCTION",
+    "P3_WHEAT_PRODUCTION",
     "P3_SHEEP_PRODUCTION",
+    "P3_BRICK_PRODUCTION",
+    "P3_LONGEST_ROAD_LENGTH",
+    "P0_PUBLIC_VPS",
+    "P1_PUBLIC_VPS",
+    "P2_PUBLIC_VPS",
+    "P3_PUBLIC_VPS",
+    "P0_SETTLEMENTS_LEFT",
+    "P1_SETTLEMENTS_LEFT",
+    "P2_SETTLEMENTS_LEFT",
+    "P3_SETTLEMENTS_LEFT",
+    "P0_CITIES_LEFT",
+    "P1_CITIES_LEFT",
+    "P2_CITIES_LEFT",
+    "P3_CITIES_LEFT",
+    "P0_KNIGHT_PLAYED",
+    "P1_KNIGHT_PLAYED",
+    "P2_KNIGHT_PLAYED",
+    "P3_KNIGHT_PLAYED",
 ]
 
 
@@ -139,6 +165,7 @@ def get_t_model(model_path):
     global T_MODEL
     if T_MODEL is None:
         T_MODEL = keras.models.load_model(model_path)
+        # T_MODEL = build_model()
     return T_MODEL
 
 
@@ -178,39 +205,40 @@ def normalize_action(action):
 
 
 class PRLPlayer(Player):
-    def __init__(self, color, name, version=1):
+    def __init__(self, color, name, model_path):
         super(PRLPlayer, self).__init__(color, name)
-        self.version = version
         global P_MODEL
-        P_MODEL = keras.models.load_model(p_model_path(version))
+        P_MODEL = keras.models.load_model(model_path)
 
     def decide(self, game, playable_actions):
+        if len(playable_actions) == 1:
+            return playable_actions[0]
         # epsilon-greedy: with EPSILON probability play at random.
-        if random.random() < EPSILON:
-            print("DOING EPSILON GUESS")
-            index = random.randrange(0, len(playable_actions))
-            return playable_actions[index]
+        # if random.random() < EPSILON:
+        #     print("DOING EPSILON GUESS")
+        #     index = random.randrange(0, len(playable_actions))
+        #     return playable_actions[index]
 
         # Create array like [0,0,1,0,0,0,1,...] representing possible actions
-        possibilities = [(a.action_type, a.value) for a in playable_actions]
+        normalized_playable = [normalize_action(a) for a in playable_actions]
+        possibilities = [(a.action_type, a.value) for a in normalized_playable]
         possible_indices = [ACTIONS_ARRAY.index(x) for x in possibilities]
-        mask = np.zeros(ACTION_SPACE_SIZE, dtype=int)
+        mask = np.zeros(ACTION_SPACE_SIZE, dtype=np.int)
         mask[possible_indices] = 1
 
+        # possibilities = [(a.action_type, a.value) for a in playable_actions]
+        # possible_indices = [ACTIONS_ARRAY.index(x) for x in possibilities]
+        # mask = np.zeros(ACTION_SPACE_SIZE, dtype=int)
+        # mask[possible_indices] = 1
+
         # Get action probabilities with neural network.
-        X = [create_sample_vector(game, self.color)]
-        result = P_MODEL.predict(X)
+        X = [create_sample_vector(game, self.color, FEATURES)]
+        result = P_MODEL.call(tf.convert_to_tensor(X))
 
         # Multiply mask with output, and take max.
         clipped_probabilities = np.multiply(mask, result[0])
         action_index = np.argmax(clipped_probabilities)
         playable_actions_index = possibilities.index(ACTIONS_ARRAY[action_index])
-        print(
-            "Predicting",
-            playable_actions_index,
-            len(playable_actions),
-            playable_actions[playable_actions_index],
-        )
         return playable_actions[playable_actions_index]
 
 
@@ -222,6 +250,8 @@ class QRLPlayer(Player):
         Q_MODEL = keras.models.load_model(q_model_path(version))
 
     def decide(self, game, playable_actions):
+        if len(playable_actions) == 1:
+            return playable_actions[0]
         # epsilon-greedy: with EPSILON probability play at random.
         # if random.random() < EPSILON:
         #     index = random.randrange(0, len(playable_actions))
@@ -249,6 +279,8 @@ class VRLPlayer(Player):
         self.model_path = model_path
 
     def decide(self, game, playable_actions):
+        if len(playable_actions) == 1:
+            return playable_actions[0]
         # epsilon-greedy: with EPSILON probability play at random.
         # if random.random() < EPSILON:
         #     index = random.randrange(0, len(playable_actions))
@@ -278,6 +310,9 @@ class TensorRLPlayer(Player):
         self.model_path = model_path
 
     def decide(self, game, playable_actions):
+        if len(playable_actions) == 1:
+            return playable_actions[0]
+
         # epsilon-greedy: with EPSILON probability play at random.
         # if random.random() < EPSILON:
         #     index = random.randrange(0, len(playable_actions))
