@@ -139,11 +139,11 @@ class Game:
 
         self.id = str(uuid.uuid4())
 
-        # Static State (no need to copy)
-        self.map = BaseMap()
-
-        # State
+        # NOTE: Sadly for test_resource_proba_planes, we use a particular board
+        #   that only works if the random was seeded with 123, and the players
+        #   randomness (State) was done before self.map.
         self.state = State(players)
+        self.map = BaseMap()  # Static State (no need to copy)
         self.board = Board(self.map)
 
     def play(self, action_callbacks=[], decide_fn=None):
