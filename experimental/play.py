@@ -236,7 +236,7 @@ def build_action_callback(games_directory):
             player.buildings[BuildingType.SETTLEMENT]
             + player.buildings[BuildingType.CITY]
         ):
-            for tile in game.board.map.get_adjacent_tiles(node_id):
+            for tile in game.state.board.map.get_adjacent_tiles(node_id):
                 player_tiles.add(tile.resource)
         data[player.color]["OWS_ONLY_LABEL"].append(
             player_tiles == set([Resource.ORE, Resource.WHEAT, Resource.SHEEP])

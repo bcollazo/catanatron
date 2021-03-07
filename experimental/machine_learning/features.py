@@ -13,17 +13,17 @@ from catanatron.algorithms import continuous_roads_by_player
 
 # ===== Helpers
 def port_is_resource(game, port_id, resource):
-    port = game.board.map.get_port_by_id(port_id)
+    port = game.state.board.map.get_port_by_id(port_id)
     return port.resource == resource
 
 
 def port_is_threetoone(game, port_id):
-    port = game.board.map.get_port_by_id(port_id)
+    port = game.state.board.map.get_port_by_id(port_id)
     return port.resource is None
 
 
 def is_building(game, node_id, player, building_type):
-    node = game.board.nxgraph.nodes[node_id]
+    node = game.state.board.nxgraph.nodes[node_id]
     building = node.get("building", None)
     if building is None:
         return False
@@ -32,7 +32,7 @@ def is_building(game, node_id, player, building_type):
 
 
 def is_road(game, edge, player):
-    return game.board.get_edge_color(edge) == player.color
+    return game.state.board.get_edge_color(edge) == player.color
 
 
 def iter_players(
@@ -65,7 +65,7 @@ def player_features(game, p0_color):
         features[f"P{i}_CITIES_LEFT"] = player.cities_available
         features[f"P{i}_HAS_ROLLED"] = player.has_rolled
 
-        paths = continuous_roads_by_player(game.board, player.color)
+        paths = continuous_roads_by_player(game.state.board, player.color)
         path_lengths = map(lambda path: len(path), paths)
         features[f"P{i}_LONGEST_ROAD_LENGTH"] = (
             0 if len(paths) == 0 else max(path_lengths)
@@ -117,17 +117,17 @@ def tile_features(game, p0_color):
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
     # TODO: Cacheable
     def f(game, tile_id, resource):
-        tile = game.board.map.get_tile_by_id(tile_id)
+        tile = game.state.board.map.get_tile_by_id(tile_id)
         return tile.resource == resource
 
     # TODO: Cacheable
     def g(game, tile_id):
-        tile = game.board.map.get_tile_by_id(tile_id)
+        tile = game.state.board.map.get_tile_by_id(tile_id)
         return 0 if tile.resource is None else number_probability(tile.number)
 
     def h(game, tile_id):
-        tile = game.board.map.get_tile_by_id(tile_id)
-        return game.board.map.tiles[game.board.robber_coordinate] == tile
+        tile = game.state.board.map.get_tile_by_id(tile_id)
+        return game.state.board.map.tiles[game.state.board.robber_coordinate] == tile
 
     features = {}
     for tile_id in range(NUM_TILES):
@@ -173,9 +173,11 @@ def production_features(game, p0_color):
         for i, player in iter_players(game, p0_color):
             production = 0
             for node_id in player.buildings[BuildingType.SETTLEMENT]:
-                production += get_node_production(game.board, node_id, resource)
+                production += get_node_production(game.state.board, node_id, resource)
             for node_id in player.buildings[BuildingType.CITY]:
-                production += 2 * get_node_production(game.board, node_id, resource)
+                production += 2 * get_node_production(
+                    game.state.board, node_id, resource
+                )
             features[f"P{i}_{resource.value}_PRODUCTION"] = production
 
     return features
@@ -188,9 +190,7 @@ def get_node_production(board, node_id, resource):
 
 
 def get_player_expandable_nodes(game, player):
-    subgraphs = game.board.find_connected_components(
-        player.color
-    )  # TODO: Can maintain internally (instead of re-compute).
+    subgraphs = game.state.board.find_connected_components(player.color)
     enemies = [enemy for enemy in game.state.players if enemy.color != player.color]
     enemy_node_ids = set()
     for enemy in enemies:
@@ -215,9 +215,9 @@ def expansion_features(game, p0_color):
     empty_edges = set(get_edges())
     for i, player in iter_players(game, p0_color):
         empty_edges.difference_update(player.buildings[BuildingType.ROAD])
-    searchable_subgraph = game.board.nxgraph.edge_subgraph(empty_edges)
+    searchable_subgraph = game.state.board.nxgraph.edge_subgraph(empty_edges)
 
-    board_buildable_node_ids = game.board.buildable_node_ids(
+    board_buildable_node_ids = game.state.board.buildable_node_ids(
         p0_color, True
     )  # this should be the same for all players. TODO: Can maintain internally (instead of re-compute).
 
@@ -238,7 +238,9 @@ def expansion_features(game, p0_color):
         for node_id in expandable_node_ids:
             if node_id in board_buildable_node_ids:  # node itself is buildable
                 for resource in Resource:
-                    production = get_node_production(game.board, node_id, resource)
+                    production = get_node_production(
+                        game.state.board, node_id, resource
+                    )
                     dis_res_prod[0][resource] = max(
                         production, dis_res_prod[0][resource]
                     )
@@ -265,7 +267,7 @@ def expansion_features(game, p0_color):
 
                 # means we can get to node b, at distance=d, starting from path[0]
                 for resource in Resource:
-                    production = get_node_production(game.board, b, resource)
+                    production = get_node_production(game.state.board, b, resource)
                     dis_res_prod[distance][resource] = max(
                         production, dis_res_prod[distance][resource]
                     )
@@ -280,7 +282,7 @@ def expansion_features(game, p0_color):
 def port_distance_features(game, p0_color):
     # P0_HAS_WHEAT_PORT, P0_WHEAT_PORT_DISTANCE, ..., P1_HAS_WHEAT_PORT,
     features = {}
-    ports = game.board.map.get_port_nodes()
+    ports = game.state.board.map.get_port_nodes()
     distances = get_node_distances()
     for resource_or_none in list(Resource) + [None]:
         port_name = "3:1" if resource_or_none is None else resource_or_none.value

@@ -18,10 +18,12 @@ class GameEncoder(json.JSONEncoder):
         if isinstance(obj, Game):
             nodes = {}
             edges = {}
-            for coordinate, tile in obj.board.map.tiles.items():
+            for coordinate, tile in obj.state.board.map.tiles.items():
                 for direction, node_id in tile.nodes.items():
-                    building = obj.board.nxgraph.nodes[node_id].get("building", None)
-                    color = obj.board.nxgraph.nodes[node_id].get("color", None)
+                    building = obj.state.board.nxgraph.nodes[node_id].get(
+                        "building", None
+                    )
+                    color = obj.state.board.nxgraph.nodes[node_id].get("color", None)
                     nodes[node_id] = {
                         "id": node_id,
                         "tile_coordinate": coordinate,
@@ -30,7 +32,7 @@ class GameEncoder(json.JSONEncoder):
                         "color": self.default(color),
                     }
                 for direction, edge in tile.edges.items():
-                    color = obj.board.nxgraph.edges[edge].get("color", None)
+                    color = obj.state.board.nxgraph.edges[edge].get("color", None)
                     edges[edge] = {
                         "id": edge,
                         "tile_coordinate": coordinate,
@@ -40,13 +42,13 @@ class GameEncoder(json.JSONEncoder):
             return {
                 "tiles": [
                     {"coordinate": coordinate, "tile": self.default(tile)}
-                    for coordinate, tile in obj.board.map.tiles.items()
+                    for coordinate, tile in obj.state.board.map.tiles.items()
                 ],
                 "nodes": nodes,
                 "edges": list(edges.values()),
                 "actions": [self.default(a) for a in obj.state.actions],
                 "players": [self.default(p) for p in obj.state.players],
-                "robber_coordinate": obj.board.robber_coordinate,
+                "robber_coordinate": obj.state.board.robber_coordinate,
             }
         if isinstance(obj, Deck):
             return {resource.value: count for resource, count in obj.cards.items()}

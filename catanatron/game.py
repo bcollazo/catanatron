@@ -113,10 +113,10 @@ def initialize_tick_queue(players):
 class State:
     """Small container object to group dynamic variables in state"""
 
-    def __init__(self, players):
+    def __init__(self, players, map):
         self.players = random.sample(players, len(players))
         self.players_by_color = {p.color: p for p in players}
-        # self.board = Board(self.map)
+        self.board = Board(map)
         self.actions = []  # log of all action taken by players
         self.resource_deck = ResourceDeck.starting_bank()
         self.development_deck = DevelopmentDeck.starting_bank()
@@ -133,18 +133,13 @@ class Game:
     core turn-by-turn controlling logic.
     """
 
-    def __init__(self, players: Iterable[Player], seed=None):
+    def __init__(self, players: Iterable[Player], seed=None, map=None):
         self.seed = seed or random.randrange(sys.maxsize)
         random.seed(self.seed)
 
         self.id = str(uuid.uuid4())
-
-        # NOTE: Sadly for test_resource_proba_planes, we use a particular board
-        #   that only works if the random was seeded with 123, and the players
-        #   randomness (State) was done before self.map.
-        self.state = State(players)
-        self.map = BaseMap()  # Static State (no need to copy)
-        self.board = Board(self.map)
+        self.map = map or BaseMap()  # Static State (no need to copy)
+        self.state = State(players, self.map)
 
     def play(self, action_callbacks=[], decide_fn=None):
         """Runs the game until the end"""
@@ -191,18 +186,24 @@ class Game:
 
     def playable_actions(self, player, action_prompt):
         if action_prompt == ActionPrompt.BUILD_FIRST_SETTLEMENT:
-            return initial_settlement_possibilites(player, self.board, True)
+            return initial_settlement_possibilites(player, self.state.board, True)
         elif action_prompt == ActionPrompt.BUILD_SECOND_SETTLEMENT:
-            return initial_settlement_possibilites(player, self.board, False)
+            return initial_settlement_possibilites(player, self.state.board, False)
         elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
-            return initial_road_possibilities(player, self.board, self.state.actions)
+            return initial_road_possibilities(
+                player, self.state.board, self.state.actions
+            )
         elif action_prompt == ActionPrompt.MOVE_ROBBER:
-            return robber_possibilities(player, self.board, self.state.players, False)
+            return robber_possibilities(
+                player, self.state.board, self.state.players, False
+            )
         elif action_prompt == ActionPrompt.ROLL:
             actions = [Action(player.color, ActionType.ROLL, None)]
             if player.can_play_knight():
                 actions.extend(
-                    robber_possibilities(player, self.board, self.state.players, True)
+                    robber_possibilities(
+                        player, self.state.board, self.state.players, True
+                    )
                 )
             return actions
         elif action_prompt == ActionPrompt.DISCARD:
@@ -210,8 +211,8 @@ class Game:
         elif action_prompt == ActionPrompt.PLAY_TURN:
             # Buy / Build
             actions = [Action(player.color, ActionType.END_TURN, None)]
-            actions.extend(road_possible_actions(player, self.board))
-            actions.extend(settlement_possible_actions(player, self.board))
+            actions.extend(road_possible_actions(player, self.state.board))
+            actions.extend(settlement_possible_actions(player, self.state.board))
             actions.extend(city_possible_actions(player))
             can_buy_dev_card = (
                 player.resource_deck.includes(ResourceDeck.development_card_cost())
@@ -231,15 +232,17 @@ class Game:
                 actions.extend(monopoly_possible_actions(player))
             if player.can_play_knight():
                 actions.extend(
-                    robber_possibilities(player, self.board, self.state.players, True)
+                    robber_possibilities(
+                        player, self.state.board, self.state.players, True
+                    )
                 )
             if player.can_play_road_building():
-                actions.extend(road_building_possibilities(player, self.board))
+                actions.extend(road_building_possibilities(player, self.state.board))
 
             # Trade
             actions.extend(
                 maritime_trade_possibilities(
-                    player, self.state.resource_deck, self.board
+                    player, self.state.resource_deck, self.state.board
                 )
             )
 
@@ -259,40 +262,40 @@ class Game:
             self.state.num_turns += 1
         elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
             player, node_id = self.state.players_by_color[action.color], action.value
-            self.board.build_settlement(player.color, node_id, True)
+            self.state.board.build_settlement(player.color, node_id, True)
             player.build_settlement(node_id, True)
         elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
             player, node_id = self.state.players_by_color[action.color], action.value
-            self.board.build_settlement(player.color, node_id, True)
+            self.state.board.build_settlement(player.color, node_id, True)
             player.build_settlement(node_id, True)
             # yield resources of second settlement
-            for tile in self.board.map.get_adjacent_tiles(node_id):
+            for tile in self.state.board.map.get_adjacent_tiles(node_id):
                 if tile.resource != None:
                     self.state.resource_deck.draw(1, tile.resource)
                     player.resource_deck.replenish(1, tile.resource)
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
             player, node_id = self.state.players_by_color[action.color], action.value
-            self.board.build_settlement(player.color, node_id, False)
+            self.state.board.build_settlement(player.color, node_id, False)
             player.build_settlement(node_id, False)
             self.state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
             self.state.road_color = longest_road(
-                self.board, self.state.players, self.state.actions
+                self.state.board, self.state.players, self.state.actions
             )[0]
         elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
             player, edge = self.state.players_by_color[action.color], action.value
-            self.board.build_road(player.color, edge)
+            self.state.board.build_road(player.color, edge)
             player.build_road(edge, True)
         elif action.action_type == ActionType.BUILD_ROAD:
             player, edge = self.state.players_by_color[action.color], action.value
-            self.board.build_road(player.color, edge)
+            self.state.board.build_road(player.color, edge)
             player.build_road(edge, False)
             self.state.resource_deck += ResourceDeck.road_cost()  # replenish bank
             self.state.road_color = longest_road(
-                self.board, self.state.players, self.state.actions
+                self.state.board, self.state.players, self.state.actions
             )[0]
         elif action.action_type == ActionType.BUILD_CITY:
             player, node_id = self.state.players_by_color[action.color], action.value
-            self.board.build_city(player.color, node_id)
+            self.state.board.build_city(player.color, node_id)
             player.build_city(node_id)
             self.state.resource_deck += ResourceDeck.city_cost()  # replenish bank
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
@@ -332,7 +335,7 @@ class Game:
                 )
             else:
                 payout, _ = yield_resources(
-                    self.board, self.state.resource_deck, number
+                    self.state.board, self.state.resource_deck, number
                 )
                 for color, resource_deck in payout.items():
                     player = self.state.players_by_color[color]
@@ -363,7 +366,7 @@ class Game:
         elif action.action_type == ActionType.MOVE_ROBBER:
             player = self.state.players_by_color[action.color]
             (coordinate, robbed_color, robbed_resource) = action.value
-            self.board.robber_coordinate = coordinate
+            self.state.board.robber_coordinate = coordinate
             if robbed_color is not None:
                 player_to_steal_from = self.state.players_by_color[robbed_color]
                 enemy_cards = player_to_steal_from.resource_deck.num_cards()
@@ -383,7 +386,7 @@ class Game:
             if not player.can_play_knight():
                 raise ValueError("Player cant play knight card now")
             (coordinate, robbed_color, robbed_resource) = action.value
-            self.board.robber_coordinate = coordinate
+            self.state.board.robber_coordinate = coordinate
             if robbed_color is not None:
                 player_to_steal_from = self.state.players_by_color[robbed_color]
                 enemy_cards = player_to_steal_from.resource_deck.num_cards()
@@ -439,13 +442,13 @@ class Game:
             if not player.can_play_road_building():
                 raise ValueError("Player cant play road building now")
 
-            self.board.build_road(player.color, first_edge)
-            self.board.build_road(player.color, second_edge)
+            self.state.board.build_road(player.color, first_edge)
+            self.state.board.build_road(player.color, second_edge)
             player.build_road(first_edge, True)
             player.build_road(second_edge, True)
             player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
             self.state.road_color = longest_road(
-                self.board, self.state.players, self.state.actions
+                self.state.board, self.state.players, self.state.actions
             )[0]
         elif action.action_type == ActionType.MARITIME_TRADE:
             player, trade_offer = (
@@ -584,18 +587,17 @@ class Game:
             )
 
     def copy(self) -> "Game":
-        return pickle.loads(pickle.dumps(self))
+        game_copy = pickle.loads(pickle.dumps(self))
+        game_copy.map = self.map  # re-use map to benefit from functools cache
+        return game_copy
 
 
 def replay_game(game):
     game_copy = game.copy()
 
     # reset game state re-using the board (map really)
-    tmp_game = Game(game_copy.state.players, seed=game.seed)
-    tmp_game.id = game_copy.id
-    tmp_game.map = game_copy.map
-    tmp_game.board = Board(tmp_game.map)
-    tmp_game.state.tick_queue = initialize_tick_queue(tmp_game.state.players)
+    tmp_game = Game(game_copy.state.players, seed=game.seed, map=game_copy.map)
+    tmp_game.id = game_copy.id  # TODO: needed?
     for player in tmp_game.state.players:
         player.restart_state()
 

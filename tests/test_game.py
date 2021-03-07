@@ -19,13 +19,14 @@ def test_initial_build_phase():
     # assert there are 4 houses and 4 roads
     settlements = [
         i
-        for i in game.board.nxgraph.nodes
-        if game.board.nxgraph.nodes[i].get("building", None) == BuildingType.SETTLEMENT
+        for i in game.state.board.nxgraph.nodes
+        if game.state.board.nxgraph.nodes[i].get("building", None)
+        == BuildingType.SETTLEMENT
     ]
     assert len(settlements) == 4
 
     # assert should be house-road pairs, or together
-    paths = continuous_roads_by_player(game.board, players[0].color)
+    paths = continuous_roads_by_player(game.state.board, players[0].color)
     assert len(paths) == 1 or (
         len(paths) == 2 and len(paths[0]) == 1 and len(paths[1]) == 1
     )
@@ -47,7 +48,7 @@ def test_buying_road_is_payed_for():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
-    game.board.build_road = MagicMock()
+    game.state.board.build_road = MagicMock()
     action = Action(players[0].color, ActionType.BUILD_ROAD, (3, 4))
     with pytest.raises(ValueError):  # not enough money
         game.execute(action)
@@ -66,7 +67,7 @@ def test_moving_robber_steals_correctly():
     game = Game(players)
 
     players[1].resource_deck.replenish(1, Resource.WHEAT)
-    game.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
+    game.state.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
 
     action = Action(players[0].color, ActionType.MOVE_ROBBER, ((2, 0, -2), None, None))
     game.execute(action)
@@ -391,7 +392,7 @@ def test_can_trade_with_port():
 
     # Find port at (3, -3, 0), West.
     port_node_id = 25
-    port = game.board.map.tiles[(3, -3, 0)]
+    port = game.state.board.map.tiles[(3, -3, 0)]
     action = Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, port_node_id)
     game.execute(action)
 

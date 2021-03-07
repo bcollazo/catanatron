@@ -22,7 +22,7 @@ game = Game(players)
 game.play()
 
 # You can now explore the game state any way you want.
-# e.g. game.state.actions, game.board, game.state.players[0].buildings, etc...
+# e.g. game.state.actions, game.state.board, game.state.players[0].buildings, etc...
 open_game(game)  # or open the game in a browser
 ```
 

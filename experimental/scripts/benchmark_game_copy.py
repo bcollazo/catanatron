@@ -25,9 +25,9 @@ result = timeit.timeit(
     """
 players = pickle.loads(pickle.dumps(game.state.players))
 state = {
-'a': game.board.nxgraph.copy(),
-'b': pickle.loads(pickle.dumps(game.board.connected_components)),
-'c': pickle.loads(pickle.dumps(game.board.color_node_to_subgraphs)),
+'a': game.state.board.nxgraph.copy(),
+'b': pickle.loads(pickle.dumps(game.state.board.connected_components)),
+'c': pickle.loads(pickle.dumps(game.state.board.color_node_to_subgraphs)),
 'd': players,
 'e': {p.color: p for p in players},
 'f': game.state.actions.copy(),

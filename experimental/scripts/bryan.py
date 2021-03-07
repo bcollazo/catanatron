@@ -25,7 +25,7 @@ from catanatron.json import GameEncoder
 #     seed=123,
 # )
 # game.play()
-# pprint(game.board.map.tiles)
+# pprint(game.state.board.map.tiles)
 
 setup = """
 import numpy as np

@@ -171,7 +171,7 @@ def create_board_tensor(game: Game, p0_color: Color):
     resource_proba_planes = tf.zeros((WIDTH, HEIGHT, 5))
     resources = [i for i in Resource]
     tile_map = get_tile_coordinate_map()
-    for (coordinate, tile) in game.board.map.resource_tiles():
+    for (coordinate, tile) in game.state.board.map.resource_tiles():
         if tile.resource is None:
             continue  # there is already a 3x5 zeros matrix there (everything started as a 0!).
 
@@ -192,7 +192,7 @@ def create_board_tensor(game: Game, p0_color: Color):
 
     # add 1 robber channel
     robber_plane = tf.zeros((WIDTH, HEIGHT, 1))
-    (y, x) = tile_map[game.board.robber_coordinate]
+    (y, x) = tile_map[game.state.board.robber_coordinate]
     indices = [[x + i, y + j, 0] for j in range(3) for i in range(5)]
     updates = [1, 0, 1, 0, 1] + [0, 0, 0, 0, 0] + [1, 0, 1, 0, 1]
     robber_plane = tf.tensor_scatter_nd_add(robber_plane, indices, updates)
@@ -200,7 +200,7 @@ def create_board_tensor(game: Game, p0_color: Color):
     # add 6 port channels (5 resources + 1 for 3:1 ports)
     # for each port, take index and take node_id coordinates
     port_planes = tf.zeros((WIDTH, HEIGHT, 6))
-    for resource, node_ids in game.board.map.get_port_nodes().items():
+    for resource, node_ids in game.state.board.map.get_port_nodes().items():
         channel_idx = 5 if resource is None else resources.index(resource)
         indices = []
         updates = []

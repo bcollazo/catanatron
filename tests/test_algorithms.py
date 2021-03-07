@@ -18,7 +18,7 @@ def test_longest_road_simple():
     game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 3))
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (3, 2)))
 
-    color, path = longest_road(game.board, game.state.players, game.state.actions)
+    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color is None
 
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (2, 1)))
@@ -26,7 +26,7 @@ def test_longest_road_simple():
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (0, 5)))
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (5, 4)))
 
-    color, path = longest_road(game.board, game.state.players, game.state.actions)
+    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color == Color.RED
     assert len(path) == 5
 
@@ -54,12 +54,12 @@ def test_longest_road_tie():
     game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (45, 47)))
     game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (47, 43)))
 
-    color, path = longest_road(game.board, game.state.players, game.state.actions)
+    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color == Color.RED  # even if blue also has 5-road. red had it first
     assert len(path) == 5
 
     game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (43, 21)))
-    color, path = longest_road(game.board, game.state.players, game.state.actions)
+    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color == Color.BLUE
     assert len(path) == 6
 
@@ -87,13 +87,13 @@ def test_complicated_road():  # classic 8-like roads
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (7, 6)))
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (6, 1)))
 
-    color, path = longest_road(game.board, game.state.players, game.state.actions)
+    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color == Color.RED
     assert len(path) == 11
 
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (8, 27)))
 
-    color, path = longest_road(game.board, game.state.players, game.state.actions)
+    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color == Color.RED
     assert len(path) == 11
 
@@ -132,7 +132,7 @@ def test_triple_longest_road_tie():
     game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (42, 40)))
     game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (40, 18)))
 
-    color, path = longest_road(game.board, game.state.players, game.state.actions)
+    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color == Color.RED
     assert len(path) == 6
 

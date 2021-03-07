@@ -26,7 +26,7 @@ def value_fn(game, p0_color, verbose=False):
     prod_sum = sum([production[f] for f in features])
     prod_variety = sum([production[f] != 0 for f in features]) * 4 * proba_point
 
-    paths = continuous_roads_by_player(game.board, p0_color)
+    paths = continuous_roads_by_player(game.state.board, p0_color)
     path_lengths = map(lambda path: len(path), paths)
     longest_road_length = 0 if len(paths) == 0 else max(path_lengths)
 

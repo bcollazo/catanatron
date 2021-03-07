@@ -77,6 +77,6 @@ end = time.time()
 print("nxgraph = nx.DiGraph(a)", end - start, "seconds")
 
 start = time.time()
-game.board.nxgraph.copy()
+game.state.board.nxgraph.copy()
 end = time.time()
 print("nxgraph.copy()", end - start, "seconds")
