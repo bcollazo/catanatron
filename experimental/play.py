@@ -67,6 +67,13 @@ RUNNING_AVG_LENGTH = 1
     help="Path where to save ML csvs.",
 )
 @click.option(
+    "--save-in-db/--no-save-in-db",
+    default=False,
+    help="""
+        Whether to save final state to database to allow for viewing.
+        """,
+)
+@click.option(
     "--watch/--no-watch",
     default=False,
     help="""
@@ -74,7 +81,7 @@ RUNNING_AVG_LENGTH = 1
         This will artificially slow down the game by 1s per move.
         """,
 )
-def simulate(num, players, outpath, watch):
+def simulate(num, players, outpath, save_in_db, watch):
     """Simple program simulates NUM Catan games."""
     player_keys = players.split(",")
 
@@ -111,10 +118,10 @@ def simulate(num, players, outpath, watch):
         else:
             raise ValueError("Invalid player key")
 
-    play_batch(num, initialized_players, outpath, watch)
+    play_batch(num, initialized_players, outpath, save_in_db, watch)
 
 
-def play_batch(num_games, players, games_directory, watch):
+def play_batch(num_games, players, games_directory, save_in_db, watch):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
     wins = defaultdict(int)
     turns = []
@@ -151,7 +158,7 @@ def play_batch(num_games, players, games_directory, watch):
             duration = time.time() - start
         print("Took", duration, "seconds")
         print({str(p): p.actual_victory_points for p in players})
-        if not watch:
+        if save_in_db and not watch:
             save_game_state(game)
             print("Saved in db. See result at http://localhost:3000/games/" + game.id)
         print("")
