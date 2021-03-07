@@ -1,10 +1,12 @@
+import pickle
 import time
 import sys
 import numpy as np
 import copy
 import networkx as nx
 
-from catanatron_server.database import get_last_game_state
+from catanatron.game import Game
+from catanatron.models.player import RandomPlayer, Color
 
 import sys
 from types import ModuleType, FunctionType
@@ -34,9 +36,15 @@ def getsize(obj):
     return size
 
 
-# game_id = "2fd02825-1abb-48dd-953d-a385ee601c45"
-game_id = "d9d8e4a8-232d-4f55-b4d3-8dccf6ee84ef"
-game = get_last_game_state(game_id)
+game = Game(
+    [
+        RandomPlayer(Color.RED),
+        RandomPlayer(Color.BLUE),
+        RandomPlayer(Color.WHITE),
+        RandomPlayer(Color.ORANGE),
+    ]
+)
+game.play()
 print(sys.getsizeof(game))
 print(getsize(game))
 print(game)
@@ -46,6 +54,10 @@ copy.deepcopy(game)
 end = time.time()
 print("copy.deepcopy(game) took", end - start, "seconds")
 
+start = time.time()
+game.copy()
+end = time.time()
+print("game.copy() took", end - start, "seconds")
 
 start = time.time()
 a = np.random.randint(0, 2, size=(500, 500))
@@ -59,48 +71,12 @@ np.copy(a)
 end = time.time()
 print("np.copy(a) took", end - start, "seconds")
 
+start = time.time()
+nxgraph = nx.DiGraph(a)
+end = time.time()
+print("nxgraph = nx.DiGraph(a)", end - start, "seconds")
 
 start = time.time()
-D = nx.DiGraph(a)
+game.board.nxgraph.copy()
 end = time.time()
-print("Create Graph from Vector", end - start, "seconds")
-
-
-D = nx.to_networkx_graph(a, create_using=nx.Graph)
-print(D)
-
-out = nx.to_numpy_array(D)
-print(out)
-
-out = nx.to_numpy_matrix(D)
-print(out)
-
-G = nx.Graph()
-
-
-import pandas as pd
-
-ids = [11, 22, 33, 44, 55, 66, 77]
-countries = ["Spain", "France", "Spain", "Germany", "France"]
-
-df = pd.DataFrame(list(zip(ids, countries)), columns=["Ids", "Countries"])
-print(df)
-print(df.dtypes)
-
-G = nx.Graph()
-G.add_node("C")
-G.add_edge("A", "B", weight=4, color="red")
-print(G)
-print(G.nodes)
-print(G.edges)
-print(G.nodes.data())
-print(G.edges.data())
-print(nx.to_numpy_array(G))
-UG = nx.to_directed(G)
-print(UG)
-print(UG.nodes)
-print(UG.edges)
-print(UG.nodes.data())
-print(UG.edges.data())
-print(nx.to_numpy_array(UG))
-print(nx.dag_longest_path(UG))
+print("nxgraph.copy()", end - start, "seconds")
