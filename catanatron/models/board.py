@@ -39,7 +39,7 @@ class Board:
         topology (placing tiles on coordinates); ensuring to "attach" these to
         neighbor tiles. (no repeated nodes or edges objects).
         """
-        self.map = catan_map or BaseMap()
+        self.map = catan_map or BaseMap()  # Static State (no need to copy)
 
         # Init graph to hold board dynamic state (buildings).
         nxgraph = nx.Graph()

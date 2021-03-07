@@ -113,18 +113,19 @@ def initialize_tick_queue(players):
 class State:
     """Small container object to group dynamic variables in state"""
 
-    def __init__(self, players, map):
-        self.players = random.sample(players, len(players))
-        self.players_by_color = {p.color: p for p in players}
-        self.board = Board(map)
-        self.actions = []  # log of all action taken by players
-        self.resource_deck = ResourceDeck.starting_bank()
-        self.development_deck = DevelopmentDeck.starting_bank()
-        self.tick_queue = initialize_tick_queue(self.players)
-        self.current_player_index = 0
-        self.num_turns = 0
-        self.road_color = None
-        self.army_color = None
+    def __init__(self, players, map, initialize=True):
+        if initialize:
+            self.players = random.sample(players, len(players))
+            self.players_by_color = {p.color: p for p in players}
+            self.board = Board(map)
+            self.actions = []  # log of all action taken by players
+            self.resource_deck = ResourceDeck.starting_bank()
+            self.development_deck = DevelopmentDeck.starting_bank()
+            self.tick_queue = initialize_tick_queue(self.players)
+            self.current_player_index = 0
+            self.num_turns = 0
+            self.road_color = None
+            self.army_color = None
 
 
 class Game:
@@ -133,13 +134,13 @@ class Game:
     core turn-by-turn controlling logic.
     """
 
-    def __init__(self, players: Iterable[Player], seed=None, map=None):
-        self.seed = seed or random.randrange(sys.maxsize)
-        random.seed(self.seed)
+    def __init__(self, players: Iterable[Player], seed=None, map=None, initialize=True):
+        if initialize:
+            self.seed = seed or random.randrange(sys.maxsize)
+            random.seed(self.seed)
 
-        self.id = str(uuid.uuid4())
-        self.map = map or BaseMap()  # Static State (no need to copy)
-        self.state = State(players, self.map)
+            self.id = str(uuid.uuid4())
+            self.state = State(players, map or BaseMap())
 
     def play(self, action_callbacks=[], decide_fn=None):
         """Runs the game until the end"""
@@ -587,8 +588,29 @@ class Game:
             )
 
     def copy(self) -> "Game":
-        game_copy = pickle.loads(pickle.dumps(self))
-        game_copy.map = self.map  # re-use map to benefit from functools cache
+        players = pickle.loads(pickle.dumps(self.state.players))
+        board = pickle.loads(pickle.dumps(self.state.board))
+        board.map = self.state.board.map  # for caching speedups
+
+        state_copy = State(None, None, initialize=False)
+        state_copy.players = players
+        state_copy.players_by_color = {p.color: p for p in players}
+        state_copy.board = board
+        state_copy.actions = self.state.actions.copy()
+        state_copy.resource_deck = pickle.loads(pickle.dumps(self.state.resource_deck))
+        state_copy.development_deck = pickle.loads(
+            pickle.dumps(self.state.development_deck)
+        )
+        state_copy.tick_queue = self.state.tick_queue.copy()
+        state_copy.current_player_index = self.state.current_player_index
+        state_copy.num_turns = self.state.num_turns
+        state_copy.road_color = self.state.road_color
+        state_copy.army_color = self.state.army_color
+
+        game_copy = Game([], None, None, initialize=False)
+        game_copy.seed = self.seed
+        game_copy.id = self.id
+        game_copy.state = state_copy
         return game_copy
 
 
@@ -596,7 +618,7 @@ def replay_game(game):
     game_copy = game.copy()
 
     # reset game state re-using the board (map really)
-    tmp_game = Game(game_copy.state.players, seed=game.seed, map=game_copy.map)
+    tmp_game = Game(game_copy.state.players, seed=game.seed, map=game_copy.state.board.map)
     tmp_game.id = game_copy.id  # TODO: needed?
     for player in tmp_game.state.players:
         player.restart_state()
