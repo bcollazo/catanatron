@@ -1,4 +1,5 @@
 import pickle
+import timeit
 import time
 import sys
 import numpy as np
@@ -60,17 +61,17 @@ end = time.time()
 print("game.copy() took", end - start, "seconds")
 
 start = time.time()
-a = np.random.randint(0, 2, size=(500, 500))
+state = np.random.random((1500,))
 end = time.time()
 print("Create Numpy Vector", end - start, "seconds")
-print(sys.getsizeof(a))
-print(getsize(a))
+print(sys.getsizeof(state), getsize(state))
 
 start = time.time()
-np.copy(a)
+np.copy(state)
 end = time.time()
 print("np.copy(a) took", end - start, "seconds")
 
+a = np.random.randint(0, 2, size=(500, 500))
 start = time.time()
 nxgraph = nx.DiGraph(a)
 end = time.time()
@@ -80,3 +81,53 @@ start = time.time()
 game.state.board.nxgraph.copy()
 end = time.time()
 print("nxgraph.copy()", end - start, "seconds")
+
+NUMBER = 1000
+setup = """
+import numpy as np
+
+class Container:
+    def __init__(self, initialize=True):
+        if initialize:
+            self.a = 1
+            self.b = 3
+            self.c = 4
+            self.d = 1
+
+class FaseContainer:
+    def __init__(self, initialize=True):
+        if initialize:
+            self.a = np.array([1,3,4,1])
+
+state = Container()
+fast = FaseContainer()
+"""
+result = timeit.timeit(
+    """
+copy = Container(initialize=False)
+copy.a = state.a
+copy.b = state.b
+copy.c = state.c
+copy.d = state.d
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    """
+copy = FaseContainer(initialize=False)
+copy.a = fast.a.copy()
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    """
+{'a': fast.a.copy()}
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
