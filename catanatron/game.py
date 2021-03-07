@@ -618,7 +618,9 @@ def replay_game(game):
     game_copy = game.copy()
 
     # reset game state re-using the board (map really)
-    tmp_game = Game(game_copy.state.players, seed=game.seed, map=game_copy.state.board.map)
+    tmp_game = Game(
+        game_copy.state.players, seed=game.seed, map=game_copy.state.board.map
+    )
     tmp_game.id = game_copy.id  # TODO: needed?
     for player in tmp_game.state.players:
         player.restart_state()
