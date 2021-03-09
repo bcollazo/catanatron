@@ -199,4 +199,4 @@ def test_year_of_plenty_same_resource():
     actions = year_of_plenty_possible_actions(player, bank)
 
     assert len(actions) == 1
-    assert actions[0].value == [Resource.WHEAT]
+    assert actions[0].value[0] == Resource.WHEAT
