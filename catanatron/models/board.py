@@ -32,33 +32,34 @@ def get_edges():
 class Board:
     """Tries to encapsulate all state information regarding the board"""
 
-    def __init__(self, catan_map=None):
+    def __init__(self, catan_map=None, initialize=True):
         """
         Initializes a new random board, based on the catan_map description.
         It first shuffles tiles, ports, and numbers. Then goes satisfying the
         topology (placing tiles on coordinates); ensuring to "attach" these to
         neighbor tiles. (no repeated nodes or edges objects).
         """
-        self.map = catan_map or BaseMap()  # Static State (no need to copy)
+        if initialize:
+            self.map = catan_map or BaseMap()  # Static State (no need to copy)
 
-        # Init graph to hold board dynamic state (buildings).
-        nxgraph = nx.Graph()
-        for tile in self.map.tiles.values():
-            nxgraph.add_nodes_from(tile.nodes.values())
-            nxgraph.add_edges_from(tile.edges.values())
-        self.nxgraph = nxgraph  # buildings are here too.
+            # Init graph to hold board dynamic state (buildings).
+            nxgraph = nx.Graph()
+            for tile in self.map.tiles.values():
+                nxgraph.add_nodes_from(tile.nodes.values())
+                nxgraph.add_edges_from(tile.edges.values())
+            self.nxgraph = nxgraph  # buildings are here too.
 
-        # color => nxgraph.edge_subgraph[] (nodes in subgraph includes incidental,
-        #   but not-necesarilly owned nodes. might be owned by enemy).
-        self.connected_components = defaultdict(list)
-        # color => node_id => connected component. contains incident nodes (may not be owned)
-        self.color_node_to_subgraphs = defaultdict(dict)
+            # color => nxgraph.edge_subgraph[] (nodes in subgraph includes incidental,
+            #   but not-necesarilly owned nodes. might be owned by enemy).
+            self.connected_components = defaultdict(list)
+            # color => node_id => connected component. contains incident nodes (may not be owned)
+            self.color_node_to_subgraphs = defaultdict(dict)
 
-        # assumes there is at least one desert:
-        self.robber_coordinate = filter(
-            lambda coordinate: self.map.tiles[coordinate].resource is None,
-            self.map.tiles.keys(),
-        ).__next__()
+            # assumes there is at least one desert:
+            self.robber_coordinate = filter(
+                lambda coordinate: self.map.tiles[coordinate].resource is None,
+                self.map.tiles.keys(),
+            ).__next__()
 
     def build_settlement(self, color, node_id, initial_build_phase=False):
         """Adds a settlement, and ensures is a valid place to build.

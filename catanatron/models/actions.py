@@ -43,7 +43,7 @@ class ActionType(Enum):
     PLAY_KNIGHT_CARD = (
         "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None, None|Resource)
     )
-    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is [Resource, Resource]
+    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is (Resource, Resource)
     PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
 
@@ -88,7 +88,7 @@ def year_of_plenty_possible_actions(player, resource_deck: ResourceDeck):
     return list(
         map(
             lambda cards: Action(
-                player.color, ActionType.PLAY_YEAR_OF_PLENTY, list(cards)
+                player.color, ActionType.PLAY_YEAR_OF_PLENTY, tuple(cards)
             ),
             options,
         )

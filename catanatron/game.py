@@ -590,7 +590,6 @@ class Game:
     def copy(self) -> "Game":
         players = pickle.loads(pickle.dumps(self.state.players))
         board = pickle.loads(pickle.dumps(self.state.board))
-        board.map = self.state.board.map  # for caching speedups
 
         state_copy = State(None, None, initialize=False)
         state_copy.players = players

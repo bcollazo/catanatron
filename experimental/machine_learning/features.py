@@ -183,7 +183,7 @@ def production_features(game, p0_color):
     return features
 
 
-@functools.lru_cache(maxsize=None)
+# @functools.lru_cache(maxsize=None)
 def get_node_production(board, node_id, resource):
     tiles = board.map.get_adjacent_tiles(node_id)
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])

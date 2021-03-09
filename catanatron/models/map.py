@@ -144,7 +144,7 @@ class BaseMap:
         # (coordinate) => Tile (with nodes and edges initialized)
         self.tiles = initialize_board(self)
 
-    @functools.lru_cache
+    # @functools.lru_cache
     def resource_tiles(self):
         tiles = []
         for (coordinate, tile) in self.tiles.items():
@@ -153,7 +153,7 @@ class BaseMap:
             tiles.append((coordinate, tile))
         return tiles
 
-    @functools.lru_cache
+    # @functools.lru_cache
     def get_adjacent_tiles(self, node_id):
         tiles = []
         for _, tile in self.resource_tiles():
@@ -161,7 +161,7 @@ class BaseMap:
                 tiles.append(tile)
         return tiles
 
-    @functools.lru_cache
+    # @functools.lru_cache
     def get_port_nodes(self):
         """Yields resource => node_ids[], including None for 3:1 port node-ids"""
         port_nodes = defaultdict(set)
@@ -177,14 +177,14 @@ class BaseMap:
             port_nodes[tile.resource].add(tile.nodes[b_noderef])
         return port_nodes
 
-    @functools.lru_cache
+    # @functools.lru_cache
     def get_tile_by_id(self, tile_id):
         filtered = filter(
             lambda t: isinstance(t, Tile) and t.id == tile_id, self.tiles.values()
         )
         return next(filtered, None)
 
-    @functools.lru_cache
+    # @functools.lru_cache
     def get_port_by_id(self, port_id):
         filtered = filter(
             lambda t: isinstance(t, Port) and t.id == port_id, self.tiles.values()
