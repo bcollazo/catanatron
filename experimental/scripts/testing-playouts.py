@@ -1,4 +1,4 @@
-from experimental.machine_learning.players.mcts import MCTSPlayer
+from experimental.machine_learning.players.playouts import GreedyPlayoutsPlayer
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
 from catanatron.game import Game
 import time
@@ -64,7 +64,7 @@ from experimental.machine_learning.players.reinforcement import get_t_model, get
 
 # ===== Start a game from scratch. In a specific board. is there better position?
 players = [
-    MCTSPlayer(Color.RED, "Foo", 10),
+    GreedyPlayoutsPlayer(Color.RED, "Foo", 10),
     RandomPlayer(Color.BLUE),
     RandomPlayer(Color.WHITE),
     RandomPlayer(Color.ORANGE),

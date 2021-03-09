@@ -8,7 +8,7 @@ from catanatron_server.database import save_game_state, get_last_game_state
 from catanatron.game import Game
 from catanatron.json import GameEncoder
 from catanatron.models.player import RandomPlayer, Color
-from experimental.machine_learning.players.mcts import MCTSPlayer
+from experimental.machine_learning.players.playouts import GreedyPlayoutsPlayer
 from experimental.machine_learning.features import (
     create_sample,
     create_sample_vector,

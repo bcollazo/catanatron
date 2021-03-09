@@ -14,7 +14,7 @@ NUM_WORKERS = multiprocessing.cpu_count()
 # Multithreaded, dividing the NUM_PLAYOUTS only (actions serially), takes ~52.22048330307007 secs
 #   on intial placement. 4.187309980392456 secs on initial road.
 # Multithreaded, on different actions
-class MCTSPlayer(Player):
+class GreedyPlayoutsPlayer(Player):
     """For each playable action, play N random playouts."""
 
     def __init__(self, color, name, num_playouts=DEFAULT_NUM_PLAYOUTS):
