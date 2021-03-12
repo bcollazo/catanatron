@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Set
 
 import networkx as nx
 
@@ -242,6 +243,13 @@ class Board:
 
         self.connected_components = components
 
+    def continuous_roads_by_player(self, color: Color):
+        paths = []
+        components = self.find_connected_components(color)
+        for component in components:
+            paths.append(longest_acyclic_path(self, component, color))
+        return paths
+
     # ===== Helper functions
     def get_node_color(self, node_id):
         try:
@@ -258,3 +266,36 @@ class Board:
     def is_enemy_node(self, node_id, color):
         node_color = self.get_node_color(node_id)
         return node_color is not None and node_color != color
+
+
+def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
+    global STATIC_GRAPH
+
+    paths = []
+    for start_node in node_set:
+        # do DFS when reach leaf node, stop and add to paths
+        paths_from_this_node = []
+        agenda = [(start_node, [])]
+        while len(agenda) > 0:
+            node, path_thus_far = agenda.pop()
+
+            able_to_navigate = False
+            for neighbor_node in STATIC_GRAPH.neighbors(node):
+                edge_color = board.get_edge_color((node, neighbor_node))
+                if edge_color != color:
+                    continue
+
+                neighbor_color = board.get_node_color(neighbor_node)
+                if neighbor_color is not None and neighbor_color != color:
+                    continue  # enemy-owned, cant use this to navigate.
+                edge = tuple(sorted((node, neighbor_node)))
+                if edge not in path_thus_far:
+                    agenda.insert(0, (neighbor_node, path_thus_far + [edge]))
+                    able_to_navigate = True
+
+            if not able_to_navigate:  # then it is leaf node
+                paths_from_this_node.append(path_thus_far)
+
+        paths.extend(paths_from_this_node)
+
+    return max(paths, key=len)

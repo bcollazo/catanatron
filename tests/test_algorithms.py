@@ -1,6 +1,6 @@
 from catanatron.models.board import Board
 from catanatron.game import Game
-from catanatron.algorithms import continuous_roads_by_player, longest_road, largest_army
+from catanatron.algorithms import longest_road, largest_army
 from catanatron.models.actions import Action, ActionType
 from catanatron.models.player import SimplePlayer, Color
 from catanatron.models.decks import ResourceDeck
@@ -201,7 +201,7 @@ def test_cut_but_not_disconnected():
     board.build_road(Color.RED, (5, 0))
     board.build_road(Color.RED, (3, 12))
     assert (
-        max(map(lambda path: len(path), continuous_roads_by_player(board, Color.RED)))
+        max(map(lambda path: len(path), board.continuous_roads_by_player(Color.RED)))
         == 7
     )
     assert len(board.find_connected_components(Color.RED)) == 1
@@ -209,6 +209,6 @@ def test_cut_but_not_disconnected():
     board.build_settlement(Color.BLUE, 2, initial_build_phase=True)
     assert len(board.find_connected_components(Color.RED)) == 1
     assert (
-        max(map(lambda path: len(path), continuous_roads_by_player(board, Color.RED)))
+        max(map(lambda path: len(path), board.continuous_roads_by_player(Color.RED)))
         == 6
     )

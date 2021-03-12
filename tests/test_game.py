@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from catanatron.game import Game, yield_resources
-from catanatron.algorithms import continuous_roads_by_player
 from catanatron.models.board import Board
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
 from catanatron.models.actions import ActionType, Action, ActionPrompt, TradeOffer
@@ -25,7 +24,7 @@ def test_initial_build_phase():
     assert len(settlements) == 4
 
     # assert should be house-road pairs, or together
-    paths = continuous_roads_by_player(game.state.board, players[0].color)
+    paths = game.state.board.continuous_roads_by_player(players[0].color)
     assert len(paths) == 1 or (
         len(paths) == 2 and len(paths[0]) == 1 and len(paths[1]) == 1
     )

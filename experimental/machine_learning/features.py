@@ -8,7 +8,6 @@ from catanatron.models.map import NUM_NODES, NUM_TILES
 from catanatron.models.player import Color, Player, SimplePlayer
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
 from catanatron.game import Game, number_probability
-from catanatron.algorithms import continuous_roads_by_player
 
 
 # ===== Helpers
@@ -64,7 +63,7 @@ def player_features(game, p0_color):
         features[f"P{i}_CITIES_LEFT"] = player.cities_available
         features[f"P{i}_HAS_ROLLED"] = player.has_rolled
 
-        paths = continuous_roads_by_player(game.state.board, player.color)
+        paths = game.state.board.continuous_roads_by_player(player.color)
         path_lengths = map(lambda path: len(path), paths)
         features[f"P{i}_LONGEST_ROAD_LENGTH"] = (
             0 if len(paths) == 0 else max(path_lengths)
