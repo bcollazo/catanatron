@@ -67,7 +67,7 @@ def test_calling_the_edge_differently_is_not_a_problem():
 
 def test_get_ports():
     board = Board()
-    ports = board.map.get_port_nodes()
+    ports = board.map.port_nodes
     for resource in Resource:
         assert len(ports[resource]) == 2
     assert len(ports[None]) == 8

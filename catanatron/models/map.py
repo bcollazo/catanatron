@@ -47,6 +47,22 @@ class Water:
         self.edges = edges
 
 
+def init_port_nodes(catan_map):
+    """Yields resource => node_ids[], including None for 3:1 port node-ids"""
+    port_nodes = defaultdict(set)
+    for (coordinate, value) in catan_map.topology.items():
+        if not isinstance(value, tuple):
+            continue
+
+        tile = catan_map.tiles[coordinate]
+        _, direction = value
+        (a_noderef, b_noderef) = PORT_DIRECTION_TO_NODEREFS[direction]
+
+        port_nodes[tile.resource].add(tile.nodes[a_noderef])
+        port_nodes[tile.resource].add(tile.nodes[b_noderef])
+    return port_nodes
+
+
 class BaseMap:
     """
     Describes a basic 4 player map. Includes the tiles, ports, and numbers used.
@@ -143,6 +159,7 @@ class BaseMap:
 
         # (coordinate) => Tile (with nodes and edges initialized)
         self.tiles = initialize_board(self)
+        self.port_nodes = init_port_nodes(self)
 
     # @functools.lru_cache
     def resource_tiles(self):
@@ -160,22 +177,6 @@ class BaseMap:
             if node_id in tile.nodes.values():
                 tiles.append(tile)
         return tiles
-
-    # @functools.lru_cache
-    def get_port_nodes(self):
-        """Yields resource => node_ids[], including None for 3:1 port node-ids"""
-        port_nodes = defaultdict(set)
-        for (coordinate, value) in self.topology.items():
-            if not isinstance(value, tuple):
-                continue
-
-            tile = self.tiles[coordinate]
-            _, direction = value
-            (a_noderef, b_noderef) = PORT_DIRECTION_TO_NODEREFS[direction]
-
-            port_nodes[tile.resource].add(tile.nodes[a_noderef])
-            port_nodes[tile.resource].add(tile.nodes[b_noderef])
-        return port_nodes
 
     # @functools.lru_cache
     def get_tile_by_id(self, tile_id):

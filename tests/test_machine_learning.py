@@ -48,7 +48,7 @@ def test_port_distance_features():
     game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
     game.execute(Action(players[0].color, ActionType.BUILD_INITIAL_ROAD, (3, 2)))
 
-    ports = game.state.board.map.get_port_nodes()
+    ports = game.state.board.map.port_nodes
     se_port_resource = next(filter(lambda entry: 29 in entry[1], ports.items()))[0]
     port_name = "3:1" if se_port_resource is None else se_port_resource.value
 

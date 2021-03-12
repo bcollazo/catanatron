@@ -281,7 +281,7 @@ def expansion_features(game, p0_color):
 def port_distance_features(game, p0_color):
     # P0_HAS_WHEAT_PORT, P0_WHEAT_PORT_DISTANCE, ..., P1_HAS_WHEAT_PORT,
     features = {}
-    ports = game.state.board.map.get_port_nodes()
+    ports = game.state.board.map.port_nodes
     distances = get_node_distances()
     for resource_or_none in list(Resource) + [None]:
         port_name = "3:1" if resource_or_none is None else resource_or_none.value

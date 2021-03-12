@@ -191,7 +191,7 @@ class Board:
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
-        for resource, node_ids in self.map.get_port_nodes().items():
+        for resource, node_ids in self.map.port_nodes.items():
             for node_id in node_ids:
                 if self.get_node_color(node_id) == color:
                     yield resource
