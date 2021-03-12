@@ -7,6 +7,7 @@ from catanatron.game import Game
 from catanatron.models.player import Player
 
 DEFAULT_NUM_PLAYOUTS = 25
+USE_MULTIPROCESSING = False
 NUM_WORKERS = multiprocessing.cpu_count()
 
 # Single threaded NUM_PLAYOUTS=25 takes ~185.3893163204193 secs on initial placement
@@ -46,8 +47,11 @@ def run_playouts(action_applied_game_copy, num_playouts):
     params = []
     for _ in range(num_playouts):
         params.append(action_applied_game_copy)
-    with multiprocessing.Pool(NUM_WORKERS) as p:
-        counter = Counter(p.map(run_playout, params))
+    if USE_MULTIPROCESSING:
+        with multiprocessing.Pool(NUM_WORKERS) as p:
+            counter = Counter(p.map(run_playout, params))
+    else:
+        counter = Counter(map(run_playout, params))
     duration = time.time() - start
     print(f"{num_playouts} playouts took: {duration}. Results: {counter}")
     return counter
