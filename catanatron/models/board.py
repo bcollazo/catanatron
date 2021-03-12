@@ -81,7 +81,12 @@ class Board:
             raise ValueError("Invalid Settlement Placement: a building exists there")
 
         self.buildings[node_id] = (color, BuildingType.SETTLEMENT)
-        self.update_connected_components()
+
+        if initial_build_phase:
+            self.connected_components[color].append(set([node_id]))
+        else:
+            # TODO: Maybe cut connected components
+            self.update_connected_components()
 
     def build_road(self, color, edge):
         buildable = self.buildable_edges(color)
@@ -92,50 +97,34 @@ class Board:
         if self.get_edge_color(edge) is not None:
             raise ValueError("Invalid Road Placement: a road exists there")
 
-        normalized_edge = tuple(sorted(edge))
-        self.roads[normalized_edge] = color
-        self.update_connected_components()
+        self.roads[edge] = color
+        self.roads[inverted_edge] = color
 
-        # # Update connected components (add to right list, add to )
-        # # Check incident nodes are not enemy. If any is enemy, nothing to merge.
-        # # Can I: g = nx.Graph(), g.add_edges(player_edges), remove all enemy-nodes
-        # #   check if connected components is less than?
-        # # IDEA: when enemy builds, can mutate nx.Graph to change edge id. (hacky)
-        # a_graph = (
-        #     None
-        #     if self.is_enemy_node(edge[0], color)
-        #     else self.color_node_to_subgraphs[color].get(edge[0], None)
-        # )
-        # b_graph = (
-        #     None
-        #     if self.is_enemy_node(edge[1], color)
-        #     else self.color_node_to_subgraphs[color].get(edge[1], None)
-        # )
-        # if a_graph is not None and b_graph is not None and a_graph != b_graph:
-        #     # merge subgraphs into one (i.e. player 'connected' roads)
-        #     self.connected_components[color].remove(a_graph)
-        #     self.connected_components[color].remove(b_graph)
-        #     c_graph = nx.Graph()
-        #     c_graph.add_edges_from(a_graph.edges)
-        #     c_graph.add_edges_from(b_graph.edges)
-        #     c_graph.add_edge(*edge)
-        #     self.connected_components[color].append(c_graph)
-        #     for node_id in c_graph.nodes:
-        #         self.color_node_to_subgraphs[color][node_id] = c_graph
-        #         assert len(list(nx.connected_components(c_graph))) == 1
-        # elif a_graph is not None and b_graph is not None:  # but a == b
-        #     # player connected same subgraph (no need to add "other" node)
-        #     self.color_node_to_subgraphs[color][edge[0]].add_edge(*edge)
-        # elif a_graph is not None:  # but b_graph is None
-        #     self.color_node_to_subgraphs[color][edge[0]].add_edge(*edge)
-        #     self.color_node_to_subgraphs[color][edge[1]] = self.color_node_to_subgraphs[
-        #         color
-        #     ][edge[0]]
-        # else:  # must be a b_graph edge, a_graph is None
-        #     self.color_node_to_subgraphs[color][edge[1]].add_edge(*edge)
-        #     self.color_node_to_subgraphs[color][edge[0]] = self.color_node_to_subgraphs[
-        #         color
-        #     ][edge[1]]
+        # Update self.connected_components accordingly
+        a, b = edge
+        a_index = None
+        b_index = None
+        for i, component in enumerate(self.connected_components[color]):
+            if a in component:
+                a_index = i
+            if b in component:
+                b_index = i
+
+        if a_index is None and b_index is not None and not self.is_enemy_node(a, color):
+            self.connected_components[color][b_index].add(a)
+        elif (
+            a_index is not None and b_index is None and not self.is_enemy_node(b, color)
+        ):
+            self.connected_components[color][a_index].add(b)
+        elif a_index is not None and b_index is not None and a_index != b_index:
+            # merge
+            merged_component = self.connected_components[color][a_index].union(
+                self.connected_components[color][b_index]
+            )
+            for index in sorted([a_index, b_index], reverse=True):
+                del self.connected_components[color][index]
+            self.connected_components[color].append(merged_component)
+        # else: both are equal, and got nothing to do (already added)
 
     def build_city(self, color, node_id):
         building = self.buildings.get(node_id, None)
@@ -186,12 +175,7 @@ class Board:
         expandable = set()
 
         # non-enemy-nodes in your connected components
-        expandable_nodes = set(
-            map(
-                lambda x: x[0],
-                filter(lambda x: x[1][0] == color, self.buildings.items()),
-            )
-        )
+        expandable_nodes = set()
         for node_set in self.connected_components[color]:
             for node in node_set:
                 if not self.is_enemy_node(node, color):
@@ -223,7 +207,7 @@ class Board:
     def update_connected_components(self):
         global STATIC_GRAPH
         components = defaultdict(list)
-        edge_agenda = set(self.roads.keys())
+        edge_agenda = set(tuple(sorted(e)) for e in self.roads.keys())
         while len(edge_agenda) != 0:
             seed = edge_agenda.pop()
             color = self.roads[seed]
@@ -241,11 +225,8 @@ class Board:
                     node_color = self.get_node_color(node)
                     if node_color == color or node_color is None:
                         explorable_edges = [
-                            tuple(sorted(e)) for e in STATIC_GRAPH.edges(node)
-                        ]
-                        explorable_edges = [
                             e
-                            for e in explorable_edges
+                            for e in STATIC_GRAPH.edges(node)
                             if e != edge
                             and self.get_edge_color(e) == color
                             and e not in visited
@@ -270,8 +251,7 @@ class Board:
 
     def get_edge_color(self, edge):
         try:
-            normalized_edge = tuple(sorted(edge))
-            return self.roads[normalized_edge]
+            return self.roads[edge]
         except KeyError:
             return None
 

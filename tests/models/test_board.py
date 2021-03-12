@@ -272,7 +272,7 @@ def test_building_road_to_enemy_works_well():
 
     # Test building towards enemy works well.
     assert len(board.find_connected_components(Color.RED)) == 1
-    assert len(board.find_connected_components(Color.RED)[0]) == 4
+    assert len(board.find_connected_components(Color.RED)[0]) == 3
 
 
 def test_building_into_enemy_doesnt_merge_components():
@@ -337,7 +337,7 @@ def test_many_buildings():
     board.build_settlement(Color.WHITE, 27)
 
     assert len(board.find_connected_components(Color.WHITE)) == 2
-    assert len(board.find_connected_components(Color.ORANGE)) == 3
+    assert len(board.find_connected_components(Color.ORANGE)) == 4
 
 
 # TODO: Test super long road, cut at many places, to yield 5+ component graph
