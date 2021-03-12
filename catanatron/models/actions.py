@@ -149,10 +149,9 @@ def robber_possibilities(player, board, players, is_dev_card):
         #   several (move-and-steal-from-x) actions.
         to_steal_from = set()  # set of player_indexs
         for _, node_id in tile.nodes.items():
-            node = board.nxgraph.nodes[node_id]
-            building = node.get("building", None)
+            building = board.buildings.get(node_id, None)
             if building is not None:
-                candidate = players_by_color[node["color"]]
+                candidate = players_by_color[building[0]]
                 if (
                     candidate.resource_deck.num_cards() >= 1
                     and candidate.color != player.color  # can't play yourself

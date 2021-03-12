@@ -19,9 +19,8 @@ def test_initial_build_phase():
     # assert there are 4 houses and 4 roads
     settlements = [
         i
-        for i in game.state.board.nxgraph.nodes
-        if game.state.board.nxgraph.nodes[i].get("building", None)
-        == BuildingType.SETTLEMENT
+        for building in game.state.board.buildings.values()
+        if building[1] == BuildingType.SETTLEMENT
     ]
     assert len(settlements) == 4
 

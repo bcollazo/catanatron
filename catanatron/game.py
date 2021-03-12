@@ -67,15 +67,14 @@ def yield_resources(board, resource_deck, number):
             continue  # doesn't yield
 
         for _, node_id in tile.nodes.items():
-            node = board.nxgraph.nodes[node_id]
-            building = node.get("building", None)
+            building = board.buildings.get(node_id, None)
             if building is None:
                 continue
-            elif building == BuildingType.SETTLEMENT:
-                intented_payout[node["color"]][tile.resource] += 1
+            elif building[1] == BuildingType.SETTLEMENT:
+                intented_payout[building[0]][tile.resource] += 1
                 resource_totals[tile.resource] += 1
-            elif building == BuildingType.CITY:
-                intented_payout[node["color"]][tile.resource] += 2
+            elif building[1] == BuildingType.CITY:
+                intented_payout[building[0]][tile.resource] += 2
                 resource_totals[tile.resource] += 2
 
     # for each resource, check enough in deck to yield.

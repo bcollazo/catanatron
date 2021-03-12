@@ -5,7 +5,7 @@ from catanatron.models.player import Color
 from catanatron.game import Game, number_probability
 from catanatron.models.enums import BuildingType, Resource
 from catanatron.models.coordinate_system import offset_to_cube
-from catanatron.models.board import Board
+from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.enums import DevelopmentCard, Resource
 from experimental.machine_learning.features import iter_players
 
@@ -70,7 +70,7 @@ def get_tile_coordinate_map():
 
 # Create mapping of node_id => i,j and edge => i,j. Respecting (WIDTH, HEIGHT)
 def init_board_tensor_map():
-    board = Board()
+    global STATIC_GRAPH
     pairs = [
         (82, 93),
         (79, 94),
@@ -79,7 +79,7 @@ def init_board_tensor_map():
         (73, 59),
         (72, 60),
     ]
-    paths = [nx.shortest_path(board.nxgraph, a, b) for (a, b) in pairs]
+    paths = [nx.shortest_path(STATIC_GRAPH, a, b) for (a, b) in pairs]
 
     node_map = {}
     edge_map = {}

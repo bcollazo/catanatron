@@ -3,7 +3,7 @@ from typing import Generator, Tuple
 
 import networkx as nx
 
-from catanatron.models.board import get_edges, get_node_distances
+from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.map import NUM_NODES, NUM_TILES
 from catanatron.models.player import Color, Player, SimplePlayer
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
@@ -23,12 +23,11 @@ def port_is_threetoone(game, port_id):
 
 
 def is_building(game, node_id, player, building_type):
-    node = game.state.board.nxgraph.nodes[node_id]
-    building = node.get("building", None)
+    building = game.state.board.buildings.get(node_id, None)
     if building is None:
         return False
     else:
-        return node["color"] == player.color and building == building_type
+        return building[0] == player.color and building[1] == building_type
 
 
 def is_road(game, edge, player):
@@ -190,7 +189,7 @@ def get_node_production(board, node_id, resource):
 
 
 def get_player_expandable_nodes(game, player):
-    subgraphs = game.state.board.find_connected_components(player.color)
+    node_sets = game.state.board.find_connected_components(player.color)
     enemies = [enemy for enemy in game.state.players if enemy.color != player.color]
     enemy_node_ids = set()
     for enemy in enemies:
@@ -199,14 +198,15 @@ def get_player_expandable_nodes(game, player):
 
     expandable_node_ids = [
         node_id
-        for graph in subgraphs
-        for node_id in graph.nodes
+        for node_set in node_sets
+        for node_id in node_set
         if node_id not in enemy_node_ids  # not plowed
     ]  # not exactly "buildable_node_ids" b.c. we could expand from non-buildable nodes
     return expandable_node_ids
 
 
 def expansion_features(game, p0_color):
+    global STATIC_GRAPH
     MAX_EXPANSION_DISTANCE = 4  # exclusive
 
     features = {}
@@ -215,7 +215,7 @@ def expansion_features(game, p0_color):
     empty_edges = set(get_edges())
     for i, player in iter_players(game, p0_color):
         empty_edges.difference_update(player.buildings[BuildingType.ROAD])
-    searchable_subgraph = game.state.board.nxgraph.edge_subgraph(empty_edges)
+    searchable_subgraph = STATIC_GRAPH.edge_subgraph(empty_edges)
 
     board_buildable_node_ids = game.state.board.buildable_node_ids(
         p0_color, True
@@ -223,7 +223,7 @@ def expansion_features(game, p0_color):
 
     def skip_blocked_by_enemy(neighbor_ids):
         for node_id in neighbor_ids:
-            color = searchable_subgraph.nodes[node_id].get("color", None)
+            color = game.state.board.get_node_color(node_id)
             if color is None or color == player.color:
                 yield node_id  # not owned by enemy, can explore
 

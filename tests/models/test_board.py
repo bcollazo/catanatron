@@ -199,61 +199,66 @@ def test_two_connected_components():
 
 def test_three_connected_components_bc_enemy_cut_road():
     board = Board()
+    # Initial Building Phase of 2 players:
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     board.build_road(Color.RED, (3, 4))
 
+    board.build_settlement(Color.BLUE, 15, initial_build_phase=True)
+    board.build_road(Color.BLUE, (15, 4))
+    board.build_settlement(Color.BLUE, 34, initial_build_phase=True)
+    board.build_road(Color.BLUE, (34, 13))
+
     board.build_settlement(Color.RED, 1, initial_build_phase=True)
     board.build_road(Color.RED, (0, 1))
+
+    # Extend road in a risky way
     board.build_road(Color.RED, (5, 0))
     board.build_road(Color.RED, (5, 16))
 
-    board.build_settlement(Color.BLUE, 5, initial_build_phase=True)
+    # Plow </3
+    board.build_road(Color.BLUE, (5, 4))
+    board.build_settlement(Color.BLUE, 5)
+
     components = board.find_connected_components(Color.RED)
     assert len(components) == 3
 
 
 def test_connected_components():
     board = Board()
-    assert board.connected_components[Color.RED] == []
+    assert board.find_connected_components(Color.RED) == []
 
-    # Single settlement counts as connected of length-0
+    # Simple test: roads stay at component, disconnected settlement creates new
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    assert len(board.connected_components[Color.RED]) == 1
-    assert len(board.connected_components[Color.RED][0].nodes) == 1
-    assert len(board.connected_components[Color.RED][0].edges) == 0
-
-    # Simple test
     board.build_road(Color.RED, (3, 2))
-    assert len(board.connected_components[Color.RED]) == 1
-    assert len(board.connected_components[Color.RED][0].nodes) == 2
-    assert len(board.connected_components[Color.RED][0].edges) == 1
+    assert len(board.find_connected_components(Color.RED)) == 1
+    assert len(board.find_connected_components(Color.RED)[0]) == 2
+
+    # This is just to be realistic
+    board.build_settlement(Color.BLUE, 13, initial_build_phase=True)
+    board.build_road(Color.BLUE, (13, 14))
+    board.build_settlement(Color.BLUE, 37, initial_build_phase=True)
+    board.build_road(Color.BLUE, (37, 14))
 
     board.build_settlement(Color.RED, 0, initial_build_phase=True)
     board.build_road(Color.RED, (0, 1))
-    assert len(board.connected_components[Color.RED]) == 2
-    assert len(board.connected_components[Color.RED][0].nodes) == 2
-    assert len(board.connected_components[Color.RED][0].edges) == 1
-    assert len(board.connected_components[Color.RED][1].nodes) == 2
-    assert len(board.connected_components[Color.RED][1].edges) == 1
+    assert len(board.find_connected_components(Color.RED)) == 2
+    assert len(board.find_connected_components(Color.RED)[0]) == 2
+    assert len(board.find_connected_components(Color.RED)[1]) == 2
 
     # Merging subcomponents
     board.build_road(Color.RED, (1, 2))
-    assert len(board.connected_components[Color.RED]) == 1
-    assert len(board.connected_components[Color.RED][0].nodes) == 4
-    assert len(board.connected_components[Color.RED][0].edges) == 3
+    assert len(board.find_connected_components(Color.RED)) == 1
+    assert len(board.find_connected_components(Color.RED)[0]) == 4
 
     board.build_road(Color.RED, (3, 4))
     board.build_road(Color.RED, (4, 15))
     board.build_road(Color.RED, (15, 17))
-    assert len(board.connected_components[Color.RED]) == 1
+    assert len(board.find_connected_components(Color.RED)) == 1
 
     # Enemy cutoff
-    board.build_settlement(Color.BLUE, 15, initial_build_phase=True)
-    assert len(board.connected_components[Color.RED]) == 2
-    for subgraph in board.connected_components[Color.RED]:
-        assert (17, 15) in subgraph.edges or (
-            (15, 4) in subgraph.edges and (4, 3) in subgraph.edges
-        )
+    board.build_road(Color.BLUE, (14, 15))
+    board.build_settlement(Color.BLUE, 15)
+    assert len(board.find_connected_components(Color.RED)) == 2
 
 
 def test_building_road_to_enemy_works_well():
@@ -266,9 +271,8 @@ def test_building_road_to_enemy_works_well():
     board.build_road(Color.RED, (1, 0))
 
     # Test building towards enemy works well.
-    assert len(board.connected_components[Color.RED]) == 1
-    assert len(board.connected_components[Color.RED][0].nodes) == 4
-    assert len(board.connected_components[Color.RED][0].edges) == 3
+    assert len(board.find_connected_components(Color.RED)) == 1
+    assert len(board.find_connected_components(Color.RED)[0]) == 4
 
 
 def test_building_into_enemy_doesnt_merge_components():
@@ -281,7 +285,7 @@ def test_building_into_enemy_doesnt_merge_components():
     board.build_road(Color.RED, (5, 0))
     board.build_road(Color.RED, (6, 1))
     board.build_road(Color.RED, (1, 0))
-    assert len(board.connected_components[Color.RED]) == 2
+    assert len(board.find_connected_components(Color.RED)) == 2
 
 
 def test_enemy_edge_not_buildable():
@@ -309,6 +313,7 @@ def test_many_buildings():
     board.build_road(Color.ORANGE, (12, 13))
     board.build_road(Color.ORANGE, (13, 34))
     board.build_road(Color.ORANGE, (26, 27))
+    assert len(board.find_connected_components(Color.ORANGE)) == 1
 
     board.build_settlement(Color.WHITE, 10, True)
     board.build_road(Color.WHITE, (10, 29))
@@ -331,13 +336,8 @@ def test_many_buildings():
     board.build_road(Color.WHITE, (40, 42))
     board.build_settlement(Color.WHITE, 27)
 
-    for _, subgraphs in board.connected_components.items():
-        for subgraph in subgraphs:
-            assert len(list(nx.connected_components(subgraph))) == 1
-
-    for _, node_to_subgraphs in board.color_node_to_subgraphs.items():
-        for _, subgraph in node_to_subgraphs.items():
-            assert len(list(nx.connected_components(subgraph))) == 1
+    assert len(board.find_connected_components(Color.WHITE)) == 2
+    assert len(board.find_connected_components(Color.ORANGE)) == 3
 
 
 # TODO: Test super long road, cut at many places, to yield 5+ component graph

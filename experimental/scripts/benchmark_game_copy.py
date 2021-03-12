@@ -34,14 +34,9 @@ result = timeit.timeit(
 players = game.state.players.copy()
 
 # board = pickle.loads(pickle.dumps(game.state.board))
-# color => nxgraph.edge_subgraph[] 
-# board['connected_components'] = {
-#     k: [g.copy() for g in v] 
-#     for k, v in game.state.board.connected_components.items()
-# }
 board = dict()
 board['map'] = game.state.board.map  # for caching speedups
-board['nxgraph'] = game.state.board.nxgraph.copy()
+board['buildings'] = game.state.board.buildings.copy()
 board['connected_components'] = game.state.board.connected_components.copy()
 board['color_node_to_subgraphs'] = game.state.board.color_node_to_subgraphs.copy()
 
@@ -77,8 +72,8 @@ players = player_state.copy()
 
 # Graph is tensor board(?)
 board = {
-'map': game.state.board.map,
-# 'nxgraph': game.state.board.nxgraph.copy(),
+    'map': game.state.board.map,
+    'buildings': game.state.board.buildings.copy()
 }
 
 state_copy = {

@@ -1,3 +1,4 @@
+from catanatron.models.board import STATIC_GRAPH
 import pickle
 import timeit
 import time
@@ -73,15 +74,16 @@ print("np.copy(a) took", end - start, "seconds")
 
 a = np.random.randint(0, 2, size=(500, 500))
 start = time.time()
-nxgraph = nx.DiGraph(a)
+graph = nx.DiGraph(a)
 end = time.time()
-print("nxgraph = nx.DiGraph(a)", end - start, "seconds")
+print("graph = nx.DiGraph(a)", end - start, "seconds")
 
 start = time.time()
-game.state.board.nxgraph.copy()
+STATIC_GRAPH.copy()
 end = time.time()
-print("nxgraph.copy()", end - start, "seconds")
+print("graph.copy()", end - start, "seconds")
 
+# ==== Whats faster to hydrate 4 attributes or 1 numpy array attribute?
 NUMBER = 1000
 setup = """
 import numpy as np
@@ -126,6 +128,49 @@ print(result / NUMBER, "secs")
 result = timeit.timeit(
     """
 {'a': fast.a.copy()}
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+# ==== END. creating new dict of 1 numpy array is fastest. 4 attrs is faster.
+
+# === Its faster to copy dict than numpy array
+setup = """
+import numpy as np
+x = {i: (i, i) for i in range(54)}
+x[1] = (3,3)
+y = np.zeros((54,2))
+"""
+result = timeit.timeit(
+    "x.copy()",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    "y.copy()",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+
+# ===== its faster to .get('1', None)  than try catch
+setup = """
+x = {i: (i, i) for i in range(54)}
+"""
+result = timeit.timeit(
+    "x.get(80, None)",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    """
+try:
+    x[80]
+except KeyError as e:
+    None
 """,
     setup=setup,
     number=NUMBER,

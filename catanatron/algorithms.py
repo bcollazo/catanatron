@@ -1,10 +1,8 @@
 from collections import defaultdict
-from typing import Iterable
-
-import networkx as nx
+from typing import Iterable, Set
 
 from catanatron.models.actions import ActionType, Action
-from catanatron.models.board import Board
+from catanatron.models.board import Board, STATIC_GRAPH
 from catanatron.models.player import Color, Player
 from catanatron.models.enums import DevelopmentCard
 
@@ -58,9 +56,11 @@ def continuous_roads_by_player(board: Board, color: Color):
     return paths
 
 
-def longest_acyclic_path(board: Board, subgraph: nx.Graph, color: Color):
+def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
+    global STATIC_GRAPH
+
     paths = []
-    for start_node in subgraph.nodes:
+    for start_node in node_set:
         # do DFS when reach leaf node, stop and add to paths
         paths_from_this_node = []
         agenda = [(start_node, [])]
@@ -68,7 +68,11 @@ def longest_acyclic_path(board: Board, subgraph: nx.Graph, color: Color):
             node, path_thus_far = agenda.pop()
 
             able_to_navigate = False
-            for neighbor_node in subgraph[node]:
+            for neighbor_node in STATIC_GRAPH.neighbors(node):
+                edge_color = board.get_edge_color((node, neighbor_node))
+                if edge_color != color:
+                    continue
+
                 neighbor_color = board.get_node_color(neighbor_node)
                 if neighbor_color is not None and neighbor_color != color:
                     continue  # enemy-owned, cant use this to navigate.

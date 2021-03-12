@@ -204,10 +204,10 @@ def test_cut_but_not_disconnected():
         max(map(lambda path: len(path), continuous_roads_by_player(board, Color.RED)))
         == 7
     )
-    assert len(board.connected_components[Color.RED]) == 1
+    assert len(board.find_connected_components(Color.RED)) == 1
 
     board.build_settlement(Color.BLUE, 2, initial_build_phase=True)
-    assert len(board.connected_components[Color.RED]) == 1
+    assert len(board.find_connected_components(Color.RED)) == 1
     assert (
         max(map(lambda path: len(path), continuous_roads_by_player(board, Color.RED)))
         == 6
