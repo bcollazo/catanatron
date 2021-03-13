@@ -63,6 +63,15 @@ def init_port_nodes(catan_map):
     return port_nodes
 
 
+def init_resource_tiles(catan_map):
+    tiles = []
+    for (coordinate, tile) in catan_map.tiles.items():
+        if isinstance(tile, Port) or isinstance(tile, Water):
+            continue
+        tiles.append((coordinate, tile))
+    return tiles
+
+
 class BaseMap:
     """
     Describes a basic 4 player map. Includes the tiles, ports, and numbers used.
@@ -160,20 +169,12 @@ class BaseMap:
         # (coordinate) => Tile (with nodes and edges initialized)
         self.tiles = initialize_board(self)
         self.port_nodes = init_port_nodes(self)
-
-    # @functools.lru_cache
-    def resource_tiles(self):
-        tiles = []
-        for (coordinate, tile) in self.tiles.items():
-            if isinstance(tile, Port) or isinstance(tile, Water):
-                continue
-            tiles.append((coordinate, tile))
-        return tiles
+        self.resource_tiles = init_resource_tiles(self)
 
     # @functools.lru_cache
     def get_adjacent_tiles(self, node_id):
         tiles = []
-        for _, tile in self.resource_tiles():
+        for _, tile in self.resource_tiles:
             if node_id in tile.nodes.values():
                 tiles.append(tile)
         return tiles

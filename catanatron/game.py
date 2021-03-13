@@ -62,7 +62,7 @@ def yield_resources(board, resource_deck, number):
     """
     intented_payout = defaultdict(lambda: defaultdict(int))
     resource_totals = defaultdict(int)
-    for coordinate, tile in board.map.resource_tiles():
+    for coordinate, tile in board.map.resource_tiles:
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield
 

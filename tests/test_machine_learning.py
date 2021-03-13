@@ -155,7 +155,7 @@ def test_init_tile_map():
 
     assert tile_map[(0, -2, 2)] == (8, 12)  # southeast
 
-    for (coordinate, _) in Board().map.resource_tiles():
+    for (coordinate, _) in Board().map.resource_tiles:
         assert coordinate in tile_map
 
 

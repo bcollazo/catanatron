@@ -1,3 +1,4 @@
+import pickle
 from collections import defaultdict
 from typing import Set
 
@@ -153,7 +154,7 @@ class Board:
         # if initial-placement, iterate over non-water/port tiles, for each
         # of these nodes check if its a buildable node.
         if initial_build_phase:
-            for (_, tile) in self.map.resource_tiles():
+            for (_, tile) in self.map.resource_tiles:
                 for (_, node_id) in tile.nodes.items():
                     if is_buildable(node_id):
                         buildable.add(node_id)
@@ -249,6 +250,9 @@ class Board:
         for component in components:
             paths.append(longest_acyclic_path(self, component, color))
         return paths
+
+    def copy(self):
+        return pickle.loads(pickle.dumps(self))  # TODO: Optimize
 
     # ===== Helper functions
     def get_node_color(self, node_id):

@@ -1,4 +1,3 @@
-import pickle
 import operator as op
 from functools import reduce
 from enum import Enum
@@ -141,7 +140,7 @@ def robber_possibilities(player, board, players, is_dev_card):
 
     players_by_color = {p.color: p for p in players}
     actions = []
-    for coordinate, tile in board.map.resource_tiles():
+    for coordinate, tile in board.map.resource_tiles:
         if coordinate == board.robber_coordinate:
             continue  # ignore. must move robber.
 
@@ -283,7 +282,7 @@ def road_building_possibilities(player, board):
     first_edges = board.buildable_edges(player.color)
     possibilities = set()
     for first_edge in first_edges:
-        board_copy = pickle.loads(pickle.dumps(board))
+        board_copy = board.copy()
         board_copy.build_road(player.color, first_edge)
 
         second_edges_copy = board_copy.buildable_edges(player.color)
