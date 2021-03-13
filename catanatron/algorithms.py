@@ -48,47 +48,6 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
     return max_paths_by_player.popitem()
 
 
-# def continuous_roads_by_player(board: Board, color: Color):
-#     paths = []
-#     components = board.find_connected_components(color)
-#     for component in components:
-#         paths.append(longest_acyclic_path(board, component, color))
-#     return paths
-
-
-# def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
-#     global STATIC_GRAPH
-
-#     paths = []
-#     for start_node in node_set:
-#         # do DFS when reach leaf node, stop and add to paths
-#         paths_from_this_node = []
-#         agenda = [(start_node, [])]
-#         while len(agenda) > 0:
-#             node, path_thus_far = agenda.pop()
-
-#             able_to_navigate = False
-#             for neighbor_node in STATIC_GRAPH.neighbors(node):
-#                 edge_color = board.get_edge_color((node, neighbor_node))
-#                 if edge_color != color:
-#                     continue
-
-#                 neighbor_color = board.get_node_color(neighbor_node)
-#                 if neighbor_color is not None and neighbor_color != color:
-#                     continue  # enemy-owned, cant use this to navigate.
-#                 edge = tuple(sorted((node, neighbor_node)))
-#                 if edge not in path_thus_far:
-#                     agenda.insert(0, (neighbor_node, path_thus_far + [edge]))
-#                     able_to_navigate = True
-
-#             if not able_to_navigate:  # then it is leaf node
-#                 paths_from_this_node.append(path_thus_far)
-
-#         paths.extend(paths_from_this_node)
-
-#     return max(paths, key=len)
-
-
 def largest_army(players: Iterable[Player], actions: Iterable[Action]):
     num_knights_to_players = defaultdict(set)
     for player in players:
