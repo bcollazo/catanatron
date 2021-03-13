@@ -1,5 +1,3 @@
-from experimental.machine_learning.players.scikit import ScikitPlayer
-import re
 import traceback
 import time
 from collections import defaultdict
@@ -26,6 +24,8 @@ from experimental.machine_learning.players.minimax import (
     MiniMaxPlayer,
     ValueFunctionPlayer,
 )
+from experimental.machine_learning.players.mcts import MCTSPlayer
+from experimental.machine_learning.players.scikit import ScikitPlayer
 from experimental.machine_learning.players.playouts import GreedyPlayoutsPlayer
 from experimental.machine_learning.players.online_mcts_dqn import OnlineMCTSDQNPlayer
 from experimental.machine_learning.features import (
@@ -109,6 +109,8 @@ def simulate(num, players, outpath, save_in_db, watch):
             initialized_players.append(
                 GreedyPlayoutsPlayer(colors[i], pseudonyms[i], int(param))
             )
+        elif player_type == "M":
+            initialized_players.append(MCTSPlayer(colors[i], pseudonyms[i], int(param)))
         elif player_type == "O":
             initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
         elif player_type == "X":

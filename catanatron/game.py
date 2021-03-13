@@ -481,8 +481,8 @@ class Game:
         return outcome_proba
 
     def execute_spectrum(self, action, action_callbacks=[]):
-        """Returns [(game_copy, proba)] tuples for result of given action.
-        Result probas should add up to 1."""
+        """Returns [(game_copy, proba), ...] tuples for result of given action.
+        Result probas should add up to 1. Does not modify self"""
         deterministic_actions = set(
             [
                 ActionType.END_TURN,
@@ -525,7 +525,7 @@ class Game:
                     option_action = Action(action.color, action.action_type, outcome)
                     option_game = self.copy()
                     option_game.execute(option_action)
-                    results.append((option_game, number_probability(sum(outcome))))
+                    results.append((option_game, 1 / 36.0))
             return results
         elif action.action_type in [
             ActionType.MOVE_ROBBER,
