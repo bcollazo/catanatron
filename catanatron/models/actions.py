@@ -241,7 +241,7 @@ def maritime_trade_possibilities(player, bank, board):
             for j_resource in Resource:
                 # cant trade for same resource, and bank must have enough
                 if resource != j_resource and bank.count(j_resource) > 0:
-                    trade_offer = TradeOffer([resource] * 4, [j_resource], None)
+                    trade_offer = TradeOffer(tuple([resource] * 4), (j_resource,), None)
                     possibilities.append(
                         Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
                     )
@@ -254,7 +254,9 @@ def maritime_trade_possibilities(player, bank, board):
                     for j_resource in Resource:
                         # cant trade for same resource, and bank must have enough
                         if resource != j_resource and bank.count(j_resource) > 0:
-                            trade_offer = TradeOffer([resource] * 3, [j_resource], None)
+                            trade_offer = TradeOffer(
+                                tuple([resource] * 3), (j_resource,), None
+                            )
                             possibilities.append(
                                 Action(
                                     player.color, ActionType.MARITIME_TRADE, trade_offer
@@ -266,7 +268,7 @@ def maritime_trade_possibilities(player, bank, board):
                     # cant trade for same resource, and bank must have enough
                     if port_resource != j_resource and bank.count(j_resource) > 0:
                         trade_offer = TradeOffer(
-                            [port_resource] * 2, [j_resource], None
+                            tuple([port_resource] * 2), (j_resource,), None
                         )
                         possibilities.append(
                             Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
