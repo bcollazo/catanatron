@@ -94,11 +94,11 @@ ACTIONS_ARRAY = [
     # TODO: Should we use a heuristic for this?
     (ActionType.PLAY_KNIGHT_CARD, None),
     *[
-        (ActionType.PLAY_YEAR_OF_PLENTY, [first_card, RESOURCE_LIST[j]])
+        (ActionType.PLAY_YEAR_OF_PLENTY, (first_card, RESOURCE_LIST[j]))
         for i, first_card in enumerate(RESOURCE_LIST)
         for j in range(i, len(RESOURCE_LIST))
     ],
-    *[(ActionType.PLAY_YEAR_OF_PLENTY, [first_card]) for first_card in RESOURCE_LIST],
+    *[(ActionType.PLAY_YEAR_OF_PLENTY, (first_card,)) for first_card in RESOURCE_LIST],
     # TODO: consider simetric options to reduce complexity by half.
     *[
         (ActionType.PLAY_ROAD_BUILDING, (tuple(sorted(i)), tuple(sorted(j))))

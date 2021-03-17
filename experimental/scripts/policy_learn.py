@@ -7,7 +7,9 @@ BASE_RETURN = 1000  # minimum G_t to consider for Policy Learning.
 
 
 def find_player_by_class(game, player_class):
-    return next(player for player in game.players if player.__class__ == player_class)
+    return next(
+        player for player in game.state.players if player.__class__ == player_class
+    )
 
 
 def build_policy_network():

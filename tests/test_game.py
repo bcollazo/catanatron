@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from catanatron.game import Game, yield_resources
-from catanatron.algorithms import continuous_roads_by_player
 from catanatron.models.board import Board
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
 from catanatron.models.actions import ActionType, Action, ActionPrompt, TradeOffer
@@ -13,19 +12,19 @@ from catanatron.models.decks import ResourceDeck
 def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    for i in range(len(game.tick_queue) - 1):
+    for i in range(len(game.state.tick_queue) - 1):
         game.play_tick()
 
     # assert there are 4 houses and 4 roads
     settlements = [
         i
-        for i in game.board.nxgraph.nodes
-        if game.board.nxgraph.nodes[i].get("building", None) == BuildingType.SETTLEMENT
+        for building in game.state.board.buildings.values()
+        if building[1] == BuildingType.SETTLEMENT
     ]
     assert len(settlements) == 4
 
     # assert should be house-road pairs, or together
-    paths = continuous_roads_by_player(game.board, players[0].color)
+    paths = game.state.board.continuous_roads_by_player(players[0].color)
     assert len(paths) == 1 or (
         len(paths) == 2 and len(paths[0]) == 1 and len(paths[1]) == 1
     )
@@ -47,7 +46,7 @@ def test_buying_road_is_payed_for():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
-    game.board.build_road = MagicMock()
+    game.state.board.build_road = MagicMock()
     action = Action(players[0].color, ActionType.BUILD_ROAD, (3, 4))
     with pytest.raises(ValueError):  # not enough money
         game.execute(action)
@@ -58,7 +57,7 @@ def test_buying_road_is_payed_for():
 
     assert players[0].resource_deck.count(Resource.WOOD) == 0
     assert players[0].resource_deck.count(Resource.BRICK) == 0
-    assert game.resource_deck.count(Resource.WOOD) == 20  # since we didnt yield
+    assert game.state.resource_deck.count(Resource.WOOD) == 20  # since we didnt yield
 
 
 def test_moving_robber_steals_correctly():
@@ -66,7 +65,7 @@ def test_moving_robber_steals_correctly():
     game = Game(players)
 
     players[1].resource_deck.replenish(1, Resource.WHEAT)
-    game.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
+    game.state.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
 
     action = Action(players[0].color, ActionType.MOVE_ROBBER, ((2, 0, -2), None, None))
     game.execute(action)
@@ -88,7 +87,7 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    blue_seating = game.players.index(players[1])
+    blue_seating = game.state.players.index(players[1])
 
     players[1].resource_deck = ResourceDeck()
     players[1].resource_deck.replenish(7, Resource.WHEAT)
@@ -97,7 +96,7 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     discarding_ticks = list(
         filter(
             lambda a: a[0] == blue_seating and a[1] == ActionPrompt.DISCARD,
-            game.tick_queue,
+            game.state.tick_queue,
         )
     )
     assert len(discarding_ticks) == 0
@@ -108,7 +107,7 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    blue_seating = game.players.index(players[1])
+    blue_seating = game.state.players.index(players[1])
     for _ in range(8):
         game.play_tick()  # run initial placements
 
@@ -119,7 +118,7 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     discarding_ticks = list(
         filter(
             lambda a: a[0] == blue_seating and a[1] == ActionPrompt.DISCARD,
-            game.tick_queue,
+            game.state.tick_queue,
         )
     )
     assert len(discarding_ticks) == 1
@@ -173,10 +172,10 @@ def test_play_year_of_plenty_gives_player_resources():
     for card_type in Resource:
         if card_type == Resource.ORE or card_type == Resource.WHEAT:
             assert player_to_act.resource_deck.count(card_type) == 1
-            assert game.resource_deck.count(card_type) == 18
+            assert game.state.resource_deck.count(card_type) == 18
         else:
             assert player_to_act.resource_deck.count(card_type) == 0
-            assert game.resource_deck.count(card_type) == 19
+            assert game.state.resource_deck.count(card_type) == 19
     assert player_to_act.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) == 0
 
 
@@ -184,7 +183,7 @@ def test_play_year_of_plenty_not_enough_resources():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     player_to_act = players[0]
     game = Game(players)
-    game.resource_deck = ResourceDeck()
+    game.state.resource_deck = ResourceDeck()
     player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
 
     player_to_act.clean_turn_state()
@@ -256,15 +255,15 @@ def test_yield_resources():
     board = Board()
     resource_deck = ResourceDeck.starting_bank()
 
-    tile = board.tiles[(0, 0, 0)]
+    tile = board.map.tiles[(0, 0, 0)]
     if tile.resource is None:  # is desert
-        tile = board.tiles[(-1, 0, 1)]
+        tile = board.map.tiles[(-1, 0, 1)]
 
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     payout, depleted = yield_resources(board, resource_deck, tile.number)
     print(tile)
     print(payout, depleted)
-    print(board.tiles)
+    print(board.map.tiles)
     assert len(depleted) == 0
     assert payout[Color.RED].count(tile.resource) >= 1
 
@@ -273,9 +272,9 @@ def test_yield_resources_two_settlements():
     board = Board()
     resource_deck = ResourceDeck.starting_bank()
 
-    tile, edge2, node2 = board.tiles[(0, 0, 0)], (4, 5), 5
+    tile, edge2, node2 = board.map.tiles[(0, 0, 0)], (4, 5), 5
     if tile.resource is None:  # is desert
-        tile, edge2, node2 = board.tiles[(-1, 0, 1)], (4, 15), 15
+        tile, edge2, node2 = board.map.tiles[(-1, 0, 1)], (4, 15), 15
 
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     board.build_road(Color.RED, (3, 4))
@@ -291,7 +290,7 @@ def test_yield_resources_two_players_and_city():
     resource_deck = ResourceDeck.starting_bank()
 
     tile, edge1, edge2, red_node, blue_node = (
-        board.tiles[(0, 0, 0)],
+        board.map.tiles[(0, 0, 0)],
         (2, 3),
         (3, 4),
         4,
@@ -299,7 +298,7 @@ def test_yield_resources_two_players_and_city():
     )
     if tile.resource is None:  # is desert
         tile, edge1, edge2, red_node, blue_node = (
-            board.tiles[(1, -1, 0)],
+            board.map.tiles[(1, -1, 0)],
             (9, 2),
             (9, 8),
             8,
@@ -326,16 +325,16 @@ def test_empty_payout_if_not_enough_resources():
     board = Board()
     resource_deck = ResourceDeck.starting_bank()
 
-    tile = board.tiles[(0, 0, 0)]
+    tile = board.map.tiles[(0, 0, 0)]
     if tile.resource is None:  # is desert
-        tile = board.tiles[(-1, 0, 1)]
+        tile = board.map.tiles[(-1, 0, 1)]
 
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     board.build_city(Color.RED, 3)
     resource_deck.draw(18, tile.resource)
 
     payout, depleted = yield_resources(board, resource_deck, tile.number)
-    print(board.tiles)
+    print(board.map.tiles)
     print(payout, depleted)
     print(resource_deck)
     assert depleted == [tile.resource]
@@ -377,7 +376,7 @@ def test_trade_execution():
     game.execute(action)
 
     assert players[0].resource_deck.num_cards() == 1
-    assert game.resource_deck.num_cards() == 19 * 5 + 4 - 1
+    assert game.state.resource_deck.num_cards() == 19 * 5 + 4 - 1
 
 
 def test_can_trade_with_port():
@@ -391,7 +390,7 @@ def test_can_trade_with_port():
 
     # Find port at (3, -3, 0), West.
     port_node_id = 25
-    port = game.board.tiles[(3, -3, 0)]
+    port = game.state.board.map.tiles[(3, -3, 0)]
     action = Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, port_node_id)
     game.execute(action)
 
@@ -414,9 +413,9 @@ def test_second_placement_takes_cards_from_bank():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    assert len(game.resource_deck.to_array()) == 19 * 5
+    assert len(game.state.resource_deck.to_array()) == 19 * 5
 
     action = Action(Color.RED, ActionType.BUILD_SECOND_SETTLEMENT, 0)
     game.execute(action)
 
-    assert len(game.resource_deck.to_array()) < 19 * 5
+    assert len(game.state.resource_deck.to_array()) < 19 * 5

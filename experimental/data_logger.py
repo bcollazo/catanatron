@@ -31,7 +31,7 @@ class DataLogger:
         self.log_lines = []
 
     def consume(self, game, mcts_labels):
-        for player in game.players:
+        for player in game.state.players:
             sample = create_sample_vector(game, player.color)
             flattened_board_tensor = tf.reshape(
                 create_board_tensor(game, player.color),
@@ -43,7 +43,11 @@ class DataLogger:
             self.board_tensors.append(flattened_board_tensor)
             self.labels.append(label)
             self.log_lines.append(
-                [game.id, len(game.actions), "http://localhost:3000/games/" + game.id]
+                [
+                    game.id,
+                    len(game.state.actions),
+                    "http://localhost:3000/games/" + game.id,
+                ]
             )
 
     def get_replay_buffer(self):

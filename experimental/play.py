@@ -1,5 +1,3 @@
-from experimental.machine_learning.players.scikit import ScikitPlayer
-import re
 import traceback
 import time
 from collections import defaultdict
@@ -27,6 +25,8 @@ from experimental.machine_learning.players.minimax import (
     ValueFunctionPlayer,
 )
 from experimental.machine_learning.players.mcts import MCTSPlayer
+from experimental.machine_learning.players.scikit import ScikitPlayer
+from experimental.machine_learning.players.playouts import GreedyPlayoutsPlayer
 from experimental.machine_learning.players.online_mcts_dqn import OnlineMCTSDQNPlayer
 from experimental.machine_learning.features import (
     create_sample,
@@ -67,6 +67,13 @@ RUNNING_AVG_LENGTH = 1
     help="Path where to save ML csvs.",
 )
 @click.option(
+    "--save-in-db/--no-save-in-db",
+    default=False,
+    help="""
+        Whether to save final state to database to allow for viewing.
+        """,
+)
+@click.option(
     "--watch/--no-watch",
     default=False,
     help="""
@@ -74,7 +81,7 @@ RUNNING_AVG_LENGTH = 1
         This will artificially slow down the game by 1s per move.
         """,
 )
-def simulate(num, players, outpath, watch):
+def simulate(num, players, outpath, save_in_db, watch):
     """Simple program simulates NUM Catan games."""
     player_keys = players.split(",")
 
@@ -98,6 +105,10 @@ def simulate(num, players, outpath, watch):
             initialized_players.append(PRLPlayer(colors[i], pseudonyms[i], param))
         elif player_type == "T":
             initialized_players.append(TensorRLPlayer(colors[i], pseudonyms[i], param))
+        elif player_type == "G":
+            initialized_players.append(
+                GreedyPlayoutsPlayer(colors[i], pseudonyms[i], int(param))
+            )
         elif player_type == "M":
             initialized_players.append(MCTSPlayer(colors[i], pseudonyms[i], int(param)))
         elif player_type == "O":
@@ -111,10 +122,10 @@ def simulate(num, players, outpath, watch):
         else:
             raise ValueError("Invalid player key")
 
-    play_batch(num, initialized_players, outpath, watch)
+    play_batch(num, initialized_players, outpath, save_in_db, watch)
 
 
-def play_batch(num_games, players, games_directory, watch):
+def play_batch(num_games, players, games_directory, save_in_db, watch):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
     wins = defaultdict(int)
     turns = []
@@ -128,7 +139,7 @@ def play_batch(num_games, players, games_directory, watch):
             player.restart_state()
         game = Game(players)
 
-        print(f"Playing game {i + 1} / {num_games}. Seating:", game.players)
+        print(f"Playing game {i + 1} / {num_games}. Seating:", game.state.players)
         action_callbacks = []
         if games_directory:
             action_callbacks.append(build_action_callback(games_directory))
@@ -151,15 +162,15 @@ def play_batch(num_games, players, games_directory, watch):
             duration = time.time() - start
         print("Took", duration, "seconds")
         print({str(p): p.actual_victory_points for p in players})
-        if not watch:
+        if save_in_db and not watch:
             save_game_state(game)
             print("Saved in db. See result at http://localhost:3000/games/" + game.id)
         print("")
 
         winner = game.winning_player()
         wins[str(winner)] += 1
-        turns.append(game.num_turns)
-        ticks.append(len(game.actions))
+        turns.append(game.state.num_turns)
+        ticks.append(len(game.state.actions))
         durations.append(duration)
         games.append(game)
         for player in players:
@@ -207,14 +218,14 @@ def build_action_callback(games_directory):
     )
 
     def action_callback(game: Game):
-        if len(game.actions) == 0:
+        if len(game.state.actions) == 0:
             return
 
         if game.winning_player() is not None:
             flush_to_matrices(game, data, games_directory)
             return
 
-        action = game.actions[-1]
+        action = game.state.actions[-1]
         player = game.players_by_color[action.color]
         data[player.color]["samples"].append(create_sample(game, player.color))
         data[player.color]["actions"].append(hot_one_encode_action(action))
@@ -229,7 +240,7 @@ def build_action_callback(games_directory):
             player.buildings[BuildingType.SETTLEMENT]
             + player.buildings[BuildingType.CITY]
         ):
-            for tile in game.board.get_adjacent_tiles(node_id):
+            for tile in game.state.board.map.get_adjacent_tiles(node_id):
                 player_tiles.add(tile.resource)
         data[player.color]["OWS_ONLY_LABEL"].append(
             player_tiles == set([Resource.ORE, Resource.WHEAT, Resource.SHEEP])
@@ -258,7 +269,7 @@ def flush_to_matrices(game, data, games_directory):
     actions = []
     board_tensors = []
     labels = []
-    for player in game.players:
+    for player in game.state.players:
         player_data = data[player.color]
         samples.extend(player_data["samples"])
         actions.extend(player_data["actions"])

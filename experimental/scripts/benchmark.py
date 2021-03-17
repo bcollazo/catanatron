@@ -1,10 +1,14 @@
+from catanatron.models.board import STATIC_GRAPH
+import pickle
+import timeit
 import time
 import sys
 import numpy as np
 import copy
 import networkx as nx
 
-from catanatron_server.database import get_last_game_state
+from catanatron.game import Game
+from catanatron.models.player import RandomPlayer, Color
 
 import sys
 from types import ModuleType, FunctionType
@@ -34,9 +38,15 @@ def getsize(obj):
     return size
 
 
-# game_id = "2fd02825-1abb-48dd-953d-a385ee601c45"
-game_id = "d9d8e4a8-232d-4f55-b4d3-8dccf6ee84ef"
-game = get_last_game_state(game_id)
+game = Game(
+    [
+        RandomPlayer(Color.RED),
+        RandomPlayer(Color.BLUE),
+        RandomPlayer(Color.WHITE),
+        RandomPlayer(Color.ORANGE),
+    ]
+)
+game.play()
 print(sys.getsizeof(game))
 print(getsize(game))
 print(game)
@@ -46,61 +56,123 @@ copy.deepcopy(game)
 end = time.time()
 print("copy.deepcopy(game) took", end - start, "seconds")
 
+start = time.time()
+game.copy()
+end = time.time()
+print("game.copy() took", end - start, "seconds")
 
 start = time.time()
-a = np.random.randint(0, 2, size=(500, 500))
+state = np.random.random((1500,))
 end = time.time()
 print("Create Numpy Vector", end - start, "seconds")
-print(sys.getsizeof(a))
-print(getsize(a))
+print(sys.getsizeof(state), getsize(state))
 
 start = time.time()
-np.copy(a)
+np.copy(state)
 end = time.time()
 print("np.copy(a) took", end - start, "seconds")
 
+a = np.random.randint(0, 2, size=(500, 500))
+start = time.time()
+graph = nx.DiGraph(a)
+end = time.time()
+print("graph = nx.DiGraph(a)", end - start, "seconds")
 
 start = time.time()
-D = nx.DiGraph(a)
+STATIC_GRAPH.copy()
 end = time.time()
-print("Create Graph from Vector", end - start, "seconds")
+print("graph.copy()", end - start, "seconds")
 
+# ==== Whats faster to hydrate 4 attributes or 1 numpy array attribute?
+NUMBER = 1000
+setup = """
+import numpy as np
 
-D = nx.to_networkx_graph(a, create_using=nx.Graph)
-print(D)
+class Container:
+    def __init__(self, initialize=True):
+        if initialize:
+            self.a = 1
+            self.b = 3
+            self.c = 4
+            self.d = 1
 
-out = nx.to_numpy_array(D)
-print(out)
+class FaseContainer:
+    def __init__(self, initialize=True):
+        if initialize:
+            self.a = np.array([1,3,4,1])
 
-out = nx.to_numpy_matrix(D)
-print(out)
+state = Container()
+fast = FaseContainer()
+"""
+result = timeit.timeit(
+    """
+copy = Container(initialize=False)
+copy.a = state.a
+copy.b = state.b
+copy.c = state.c
+copy.d = state.d
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    """
+copy = FaseContainer(initialize=False)
+copy.a = fast.a.copy()
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    """
+{'a': fast.a.copy()}
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+# ==== END. creating new dict of 1 numpy array is fastest. 4 attrs is faster.
 
-G = nx.Graph()
+# === Its faster to copy dict than numpy array
+setup = """
+import numpy as np
+x = {i: (i, i) for i in range(54)}
+x[1] = (3,3)
+y = np.zeros((54,2))
+"""
+result = timeit.timeit(
+    "x.copy()",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    "y.copy()",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
 
-
-import pandas as pd
-
-ids = [11, 22, 33, 44, 55, 66, 77]
-countries = ["Spain", "France", "Spain", "Germany", "France"]
-
-df = pd.DataFrame(list(zip(ids, countries)), columns=["Ids", "Countries"])
-print(df)
-print(df.dtypes)
-
-G = nx.Graph()
-G.add_node("C")
-G.add_edge("A", "B", weight=4, color="red")
-print(G)
-print(G.nodes)
-print(G.edges)
-print(G.nodes.data())
-print(G.edges.data())
-print(nx.to_numpy_array(G))
-UG = nx.to_directed(G)
-print(UG)
-print(UG.nodes)
-print(UG.edges)
-print(UG.nodes.data())
-print(UG.edges.data())
-print(nx.to_numpy_array(UG))
-print(nx.dag_longest_path(UG))
+# ===== its faster to .get('1', None)  than try catch
+setup = """
+x = {i: (i, i) for i in range(54)}
+"""
+result = timeit.timeit(
+    "x.get(80, None)",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")
+result = timeit.timeit(
+    """
+try:
+    x[80]
+except KeyError as e:
+    None
+""",
+    setup=setup,
+    number=NUMBER,
+)
+print(result / NUMBER, "secs")

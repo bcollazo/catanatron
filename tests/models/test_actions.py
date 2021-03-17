@@ -126,7 +126,7 @@ def test_robber_possibilities():
     blue.resource_deck.replenish(1, Resource.WHEAT)
     possibilities = len(robber_possibilities(red, board, players, False))
     assert possibilities == 19 or (
-        possibilities == 18 and board.tiles[(0, 0, 0)].resource is None
+        possibilities == 18 and board.map.tiles[(0, 0, 0)].resource is None
     )
 
 
@@ -199,4 +199,4 @@ def test_year_of_plenty_same_resource():
     actions = year_of_plenty_possible_actions(player, bank)
 
     assert len(actions) == 1
-    assert actions[0].value == [Resource.WHEAT]
+    assert actions[0].value[0] == Resource.WHEAT

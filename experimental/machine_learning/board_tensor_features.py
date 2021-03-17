@@ -5,7 +5,7 @@ from catanatron.models.player import Color
 from catanatron.game import Game, number_probability
 from catanatron.models.enums import BuildingType, Resource
 from catanatron.models.coordinate_system import offset_to_cube
-from catanatron.models.board import Board
+from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.enums import DevelopmentCard, Resource
 from experimental.machine_learning.features import iter_players
 
@@ -70,7 +70,7 @@ def get_tile_coordinate_map():
 
 # Create mapping of node_id => i,j and edge => i,j. Respecting (WIDTH, HEIGHT)
 def init_board_tensor_map():
-    board = Board()
+    global STATIC_GRAPH
     pairs = [
         (82, 93),
         (79, 94),
@@ -79,7 +79,7 @@ def init_board_tensor_map():
         (73, 59),
         (72, 60),
     ]
-    paths = [nx.shortest_path(board.nxgraph, a, b) for (a, b) in pairs]
+    paths = [nx.shortest_path(STATIC_GRAPH, a, b) for (a, b) in pairs]
 
     node_map = {}
     edge_map = {}
@@ -171,7 +171,7 @@ def create_board_tensor(game: Game, p0_color: Color):
     resource_proba_planes = tf.zeros((WIDTH, HEIGHT, 5))
     resources = [i for i in Resource]
     tile_map = get_tile_coordinate_map()
-    for (coordinate, tile) in game.board.resource_tiles():
+    for (coordinate, tile) in game.state.board.map.resource_tiles:
         if tile.resource is None:
             continue  # there is already a 3x5 zeros matrix there (everything started as a 0!).
 
@@ -192,7 +192,7 @@ def create_board_tensor(game: Game, p0_color: Color):
 
     # add 1 robber channel
     robber_plane = tf.zeros((WIDTH, HEIGHT, 1))
-    (y, x) = tile_map[game.board.robber_coordinate]
+    (y, x) = tile_map[game.state.board.robber_coordinate]
     indices = [[x + i, y + j, 0] for j in range(3) for i in range(5)]
     updates = [1, 0, 1, 0, 1] + [0, 0, 0, 0, 0] + [1, 0, 1, 0, 1]
     robber_plane = tf.tensor_scatter_nd_add(robber_plane, indices, updates)
@@ -200,7 +200,7 @@ def create_board_tensor(game: Game, p0_color: Color):
     # add 6 port channels (5 resources + 1 for 3:1 ports)
     # for each port, take index and take node_id coordinates
     port_planes = tf.zeros((WIDTH, HEIGHT, 6))
-    for resource, node_ids in game.board.get_port_nodes().items():
+    for resource, node_ids in game.state.board.map.port_nodes.items():
         channel_idx = 5 if resource is None else resources.index(resource)
         indices = []
         updates = []

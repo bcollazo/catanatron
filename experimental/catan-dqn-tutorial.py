@@ -1,3 +1,6 @@
+import os
+import time
+import random
 import sys, traceback
 from pathlib import Path
 
@@ -15,10 +18,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import TensorBoard
 import tensorflow as tf
 from collections import deque
-import time
-import random
 from tqdm import tqdm
-import os
 
 from catanatron.game import Game
 from catanatron.models.player import Color, Player
@@ -37,12 +37,12 @@ from experimental.machine_learning.players.reinforcement import (
 FEATURES = [
     "P0_HAS_ROAD",
     "P1_HAS_ROAD",
-    "P2_HAS_ROAD",
-    "P3_HAS_ROAD",
+    # "P2_HAS_ROAD",
+    # "P3_HAS_ROAD",
     "P0_HAS_ARMY",
     "P1_HAS_ARMY",
-    "P2_HAS_ARMY",
-    "P3_HAS_ARMY",
+    # "P2_HAS_ARMY",
+    # "P3_HAS_ARMY",
     "P0_ORE_PRODUCTION",
     "P0_WOOD_PRODUCTION",
     "P0_WHEAT_PRODUCTION",
@@ -55,41 +55,41 @@ FEATURES = [
     "P1_SHEEP_PRODUCTION",
     "P1_BRICK_PRODUCTION",
     "P1_LONGEST_ROAD_LENGTH",
-    "P2_ORE_PRODUCTION",
-    "P2_WOOD_PRODUCTION",
-    "P2_WHEAT_PRODUCTION",
-    "P2_SHEEP_PRODUCTION",
-    "P2_BRICK_PRODUCTION",
-    "P2_LONGEST_ROAD_LENGTH",
-    "P3_ORE_PRODUCTION",
-    "P3_WOOD_PRODUCTION",
-    "P3_WHEAT_PRODUCTION",
-    "P3_SHEEP_PRODUCTION",
-    "P3_BRICK_PRODUCTION",
-    "P3_LONGEST_ROAD_LENGTH",
+    # "P2_ORE_PRODUCTION",
+    # "P2_WOOD_PRODUCTION",
+    # "P2_WHEAT_PRODUCTION",
+    # "P2_SHEEP_PRODUCTION",
+    # "P2_BRICK_PRODUCTION",
+    # "P2_LONGEST_ROAD_LENGTH",
+    # "P3_ORE_PRODUCTION",
+    # "P3_WOOD_PRODUCTION",
+    # "P3_WHEAT_PRODUCTION",
+    # "P3_SHEEP_PRODUCTION",
+    # "P3_BRICK_PRODUCTION",
+    # "P3_LONGEST_ROAD_LENGTH",
     "P0_PUBLIC_VPS",
     "P1_PUBLIC_VPS",
-    "P2_PUBLIC_VPS",
-    "P3_PUBLIC_VPS",
+    # "P2_PUBLIC_VPS",
+    # "P3_PUBLIC_VPS",
     "P0_SETTLEMENTS_LEFT",
     "P1_SETTLEMENTS_LEFT",
-    "P2_SETTLEMENTS_LEFT",
-    "P3_SETTLEMENTS_LEFT",
+    # "P2_SETTLEMENTS_LEFT",
+    # "P3_SETTLEMENTS_LEFT",
     "P0_CITIES_LEFT",
     "P1_CITIES_LEFT",
-    "P2_CITIES_LEFT",
-    "P3_CITIES_LEFT",
+    # "P2_CITIES_LEFT",
+    # "P3_CITIES_LEFT",
     "P0_KNIGHT_PLAYED",
     "P1_KNIGHT_PLAYED",
-    "P2_KNIGHT_PLAYED",
-    "P3_KNIGHT_PLAYED",
+    # "P2_KNIGHT_PLAYED",
+    # "P3_KNIGHT_PLAYED",
 ]
 
 NUM_FEATURES = len(FEATURES)
 
 DISCOUNT = 0.99
 REPLAY_MEMORY_SIZE = 50_000  # How many last steps to keep for model training
-MIN_REPLAY_MEMORY_SIZE = 1_000  # Minimum number of steps in a memory to start training
+MIN_REPLAY_MEMORY_SIZE = 1_000  # Min number of steps in a memory to start training
 MINIBATCH_SIZE = 64  # How many steps (samples) to use for training
 UPDATE_TARGET_EVERY = 1  # Terminal states (end of episodes)
 MODEL_NAME = f"mbs={MINIBATCH_SIZE}"
@@ -131,8 +131,6 @@ class CatanEnv:
         players = [
             p0,
             Player(Color.RED),
-            Player(Color.BLUE),
-            Player(Color.ORANGE),
         ]
         game = Game(players=players)
         self.game = game
@@ -164,7 +162,7 @@ class CatanEnv:
 
         new_state = self._get_state()
         reward = int(winning_color == self.p0.color)
-        done = winning_color is not None  # TODO: Or too many turns.
+        done = winning_color is not None or self.game.state.num_turns > 500
         return new_state, reward, done
 
     def render(self):
@@ -422,7 +420,9 @@ def main():
 
         # Append episode reward to a list and log stats (every given number of episodes)
         ep_rewards.append(episode_reward)
-        ep_vps.append(env.game.players_by_color[Color.WHITE].actual_victory_points)
+        ep_vps.append(
+            env.game.state.players_by_color[Color.WHITE].actual_victory_points
+        )
         if not episode % AGGREGATE_STATS_EVERY or episode == 1:
             average_reward = sum(ep_rewards[-AGGREGATE_STATS_EVERY:]) / len(
                 ep_rewards[-AGGREGATE_STATS_EVERY:]

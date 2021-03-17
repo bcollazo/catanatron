@@ -1,4 +1,3 @@
-import pickle
 import operator as op
 from functools import reduce
 from enum import Enum
@@ -43,7 +42,7 @@ class ActionType(Enum):
     PLAY_KNIGHT_CARD = (
         "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None, None|Resource)
     )
-    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is [Resource, Resource]
+    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is (Resource, Resource)
     PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
 
@@ -88,7 +87,7 @@ def year_of_plenty_possible_actions(player, resource_deck: ResourceDeck):
     return list(
         map(
             lambda cards: Action(
-                player.color, ActionType.PLAY_YEAR_OF_PLENTY, list(cards)
+                player.color, ActionType.PLAY_YEAR_OF_PLENTY, tuple(cards)
             ),
             options,
         )
@@ -141,7 +140,7 @@ def robber_possibilities(player, board, players, is_dev_card):
 
     players_by_color = {p.color: p for p in players}
     actions = []
-    for coordinate, tile in board.resource_tiles():
+    for coordinate, tile in board.map.resource_tiles:
         if coordinate == board.robber_coordinate:
             continue  # ignore. must move robber.
 
@@ -149,10 +148,9 @@ def robber_possibilities(player, board, players, is_dev_card):
         #   several (move-and-steal-from-x) actions.
         to_steal_from = set()  # set of player_indexs
         for _, node_id in tile.nodes.items():
-            node = board.nxgraph.nodes[node_id]
-            building = node.get("building", None)
+            building = board.buildings.get(node_id, None)
             if building is not None:
-                candidate = players_by_color[node["color"]]
+                candidate = players_by_color[building[0]]
                 if (
                     candidate.resource_deck.num_cards() >= 1
                     and candidate.color != player.color  # can't play yourself
@@ -243,7 +241,7 @@ def maritime_trade_possibilities(player, bank, board):
             for j_resource in Resource:
                 # cant trade for same resource, and bank must have enough
                 if resource != j_resource and bank.count(j_resource) > 0:
-                    trade_offer = TradeOffer([resource] * 4, [j_resource], None)
+                    trade_offer = TradeOffer(tuple([resource] * 4), (j_resource,), None)
                     possibilities.append(
                         Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
                     )
@@ -256,7 +254,9 @@ def maritime_trade_possibilities(player, bank, board):
                     for j_resource in Resource:
                         # cant trade for same resource, and bank must have enough
                         if resource != j_resource and bank.count(j_resource) > 0:
-                            trade_offer = TradeOffer([resource] * 3, [j_resource], None)
+                            trade_offer = TradeOffer(
+                                tuple([resource] * 3), (j_resource,), None
+                            )
                             possibilities.append(
                                 Action(
                                     player.color, ActionType.MARITIME_TRADE, trade_offer
@@ -268,7 +268,7 @@ def maritime_trade_possibilities(player, bank, board):
                     # cant trade for same resource, and bank must have enough
                     if port_resource != j_resource and bank.count(j_resource) > 0:
                         trade_offer = TradeOffer(
-                            [port_resource] * 2, [j_resource], None
+                            tuple([port_resource] * 2), (j_resource,), None
                         )
                         possibilities.append(
                             Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
@@ -284,7 +284,7 @@ def road_building_possibilities(player, board):
     first_edges = board.buildable_edges(player.color)
     possibilities = set()
     for first_edge in first_edges:
-        board_copy = pickle.loads(pickle.dumps(board))
+        board_copy = board.copy()
         board_copy.build_road(player.color, first_edge)
 
         second_edges_copy = board_copy.buildable_edges(player.color)
