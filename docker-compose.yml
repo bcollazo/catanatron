@@ -9,7 +9,7 @@ services:
     ports:
       - 5432:5432
   server:
-    image: catanatron-server
+    build: .
     environment:
       - DATABASE_URL=postgresql://catanatron:victorypoint@db:5432/catanatron_db
     ports:
@@ -18,7 +18,7 @@ services:
     volumes:
       - .:/app
   react-ui:
-    image: catanatron-react-ui
+    build: ./ui
     ports:
       - "3000:3000"
     stdin_open: true

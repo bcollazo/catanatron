@@ -21,12 +21,10 @@ termplotlib = "*"
 networkx = "*"
 setuptools = "*"
 tensorflow = "*"
-pydot = "*"
 pandas = "*"
 psycopg2-binary = "*"
-psycopg2 = "*"
-tensorflow-data-validation = "*"
-gym = "*"
+catanatron = {editable = true, path = "."}
+scikit-learn = "==0.24.0"
 
 [requires]
 python_version = "3.8"
