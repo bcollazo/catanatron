@@ -3,36 +3,30 @@
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Gradient](https://assets.paperspace.io/img/gradient-badge.svg)](https://console.paperspace.com/github/bcollazo/catanatron/blob/master/experimental/notebooks/Overview.ipynb?clone=true&runtime=bcollazo/paperspace-rl)
 
-Settlers of Catan simluation environment in Python and Machine-Learning player.
+Settlers of Catan Python implementation and Machine-Learning player.
 
 ## Usage
 
-```python
-from catanatron.game import Game
-from catanatron.models.player import RandomPlayer, Color
-from catanatron_server.utils import open_game
+Create a virtualenv with [Pipenv](https://pipenv.pypa.io/en/latest/) (or use the provided `requirements.txt`):
 
-players = [
-    RandomPlayer(Color.RED),
-    RandomPlayer(Color.BLUE),
-    RandomPlayer(Color.WHITE),
-    RandomPlayer(Color.ORANGE),
-]
-game = Game(players)
-game.play()
-
-# You can now explore the game state any way you want.
-# e.g. game.state.actions, game.state.board, game.state.players[0].buildings, etc...
-open_game(game)  # or open the game in a browser
+```
+pip install pipenv
+pipenv install
 ```
 
-For `open_game` to work correctly, you must run `docker-compose up` in another tab. The docker-compose contains the web-server infrastructure needed to render the game in a browser.
+Run games with the `play.py` script. It provides extra options you can explore with `--help`:
 
-### Implementing your own bot
+```
+python experimental/play.py --num=100
+```
+
+### Make your own bot
 
 You can create your own AI bots/players by implementing the following API:
 
 ```python
+from catanatron.game import Game
+from catanatron.models.actions import Action
 from catanatron.models.players import Player
 
 class MyPlayer(Player):
@@ -48,13 +42,46 @@ class MyPlayer(Player):
         raise NotImplementedError
 ```
 
-### Running Games in Bulk
+See examples in `players.py`. You can then modify `play.py` to import your bot and test it against others.
 
-After `docker-compose up`, you can run many games with the `play.py` script. It provides extra options you can explore with `--help`.
+### Library API
+
+You can use catanatron as a stand-alone module.
+
+```python
+from catanatron.game import Game
+from catanatron.models.player import RandomPlayer, Color
+
+players = [
+    RandomPlayer(Color.RED),
+    RandomPlayer(Color.BLUE),
+    RandomPlayer(Color.WHITE),
+    RandomPlayer(Color.ORANGE),
+]
+game = Game(players)
+game.play()
+```
+
+You can then inspect the game state any way you want
+(e.g. `game.state.actions`, `game.state.board`, `game.state.players[0].buildings`, etc...).
+
+### Watching Games
+
+We provide a complete `docker-compose.yml` with everything needed to
+watch games (watching random bots is very enteraining!). Ensure you have [Docker Compose](https://docs.docker.com/compose/install/) installed, and run:
 
 ```
-python experimental/play.py --num=1000
+docker-compose up
 ```
+
+You can also use a handy `open_game` function to create a link for a particular game:
+
+```python
+from catanatron_server.utils import open_game
+open_game(game)  # prints a link to open in browser
+```
+
+For `open_game` to work correctly, you must run `docker-compose up` in another tab. The docker-compose contains the web-server infrastructure needed to render the game in a browser.
 
 ## Architecture
 
@@ -73,15 +100,6 @@ To achieve this, we separated the code into three components:
   game states from a database to a Web UI. The idea of using a database, is to ease watching games from different processes (you can play a game in a standalone Python script and save it for viewing).
 
 - **React Web UI**: A web UI to render games. The `ui` folder.
-
-We provide a complete `docker-compose.yml` with everything needed to
-watch games (watching random bots is very enteraining!). Ensure you have [Docker Compose](https://docs.docker.com/compose/install/) installed, and run:
-
-```
-docker build -t catanatron-server:latest .
-docker build -t catanatron-react-ui:latest ui/
-docker-compose up
-```
 
 ### Experimental Folder
 
@@ -133,6 +151,7 @@ yarn start
 This can also be run via Docker independetly like (after building):
 
 ```
+docker build -t catanatron-react-ui:latest ui/
 docker run -it -p 3000:3000 catanatron-react-ui
 ```
 
@@ -151,6 +170,7 @@ flask run
 This can also be run via Docker independetly like (after building):
 
 ```
+docker build -t catanatron-server:latest .
 docker run -it -p 5000:5000 catanatron-server
 ```
 
