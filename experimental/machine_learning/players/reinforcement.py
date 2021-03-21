@@ -109,21 +109,21 @@ ACTIONS_ARRAY = [
     *[(ActionType.PLAY_MONOPOLY, r) for r in Resource],
     # 4:1 with bank
     *[
-        (ActionType.MARITIME_TRADE, TradeOffer(4 * [i], [j], None))
+        (ActionType.MARITIME_TRADE, TradeOffer(tuple(4 * [i]), tuple([j]), None))
         for i in Resource
         for j in Resource
         if i != j
     ],
     # 3:1 with port
     *[
-        (ActionType.MARITIME_TRADE, TradeOffer(3 * [i], [j], None))
+        (ActionType.MARITIME_TRADE, TradeOffer(tuple(3 * [i]), tuple([j]), None))
         for i in Resource
         for j in Resource
         if i != j
     ],
     # 2:1 with port
     *[
-        (ActionType.MARITIME_TRADE, TradeOffer(2 * [i], [j], None))
+        (ActionType.MARITIME_TRADE, TradeOffer(tuple(2 * [i]), tuple([j]), None))
         for i in Resource
         for j in Resource
         if i != j

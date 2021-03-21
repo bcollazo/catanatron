@@ -221,17 +221,15 @@ def build_action_callback(games_directory):
         if len(game.state.actions) == 0:
             return
 
-        if game.winning_player() is not None:
-            flush_to_matrices(game, data, games_directory)
-            return
-
         action = game.state.actions[-1]
-        player = game.players_by_color[action.color]
+        player = game.state.players_by_color[action.color]
         data[player.color]["samples"].append(create_sample(game, player.color))
         data[player.color]["actions"].append(hot_one_encode_action(action))
 
+        board_tensor = create_board_tensor(game, player.color)
+        shape = board_tensor.shape
         flattened_tensor = tf.reshape(
-            create_board_tensor(game, player.color), (WIDTH * HEIGHT * CHANNELS,)
+            board_tensor, (shape[0] * shape[1] * shape[2],)
         ).numpy()
         data[player.color]["board_tensors"].append(flattened_tensor)
 
@@ -258,6 +256,10 @@ def build_action_callback(games_directory):
             len(player.buildings[BuildingType.SETTLEMENT])
             + len(player.buildings[BuildingType.CITY])
         )
+
+        if game.winning_player() is not None:
+            flush_to_matrices(game, data, games_directory)
+            return
 
     return action_callback
 
@@ -314,7 +316,7 @@ def flush_to_matrices(game, data, games_directory):
 
     # Build Q-learning Design Matrix
     samples_df = pd.DataFrame.from_records(
-        samples, columns=get_feature_ordering()  # this must be in sync with features.
+        samples, columns=sorted(samples[0].keys())
     ).astype("float64")
     board_tensors_df = pd.DataFrame(board_tensors).astype("float64")
     actions_df = pd.DataFrame(actions).astype("float64").add_prefix("ACTION_")

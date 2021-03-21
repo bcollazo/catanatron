@@ -9,48 +9,60 @@ from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.enums import DevelopmentCard, Resource
 from experimental.machine_learning.features import iter_players
 
+# These assume 4 players
 WIDTH = 21
 HEIGHT = 11
 # CHANNELS = 16  # 4 color multiplier, 5 resource probas, 1 robber, 6 port
 # CHANNELS = 9  # 4 color multiplier, 5 resource probas
 # CHANNELS = 13  # 8 color multiplier, 5 resource probas
 CHANNELS = 20  # 8 color multiplier, 5 resource probas, 1 robber, 6 port
+
+
+def get_channels(num_players):
+    return num_players * 2 + 5 + 1 + 6
+
+
 NODE_ID_MAP = None
 EDGE_MAP = None
 TILE_COORDINATE_MAP = None
 
-NUMERIC_FEATURES = sorted(
-    set(
-        # Player features
-        ["P0_ACTUAL_VPS"]
-        + [f"P{i}_PUBLIC_VPS" for i in range(4)]
-        + [f"P{i}_HAS_ARMY" for i in range(4)]
-        + [f"P{i}_HAS_ROAD" for i in range(4)]
-        + [f"P{i}_ROADS_LEFT" for i in range(4)]
-        + [f"P{i}_SETTLEMENTS_LEFT" for i in range(4)]
-        + [f"P{i}_CITIES_LEFT" for i in range(4)]
-        + [f"P{i}_HAS_ROLLED" for i in range(4)]
-        # Player Hand Features
-        + [
-            f"P{i}_{card.value}_PLAYED"
-            for i in range(4)
-            for card in DevelopmentCard
-            if card != DevelopmentCard.VICTORY_POINT
-        ]
-        + [f"P{i}_NUM_RESOURCES_IN_HAND" for i in range(4)]
-        + [f"P{i}_NUM_DEVS_IN_HAND" for i in range(4)]
-        + [f"P0_{card.value}_IN_HAND" for card in DevelopmentCard]
-        + [
-            f"P0_{card.value}_PLAYABLE"
-            for card in DevelopmentCard
-            if card != DevelopmentCard.VICTORY_POINT
-        ]
-        + [f"P0_{resource.value}_IN_HAND" for resource in Resource]
-        # Game Features
-        + ["BANK_DEV_CARDS"]
-        + [f"BANK_{resource.value}" for resource in Resource]
+
+def get_numeric_features(num_players):
+    return sorted(
+        set(
+            # Player features
+            ["P0_ACTUAL_VPS"]
+            + [f"P{i}_PUBLIC_VPS" for i in range(num_players)]
+            + [f"P{i}_HAS_ARMY" for i in range(num_players)]
+            + [f"P{i}_HAS_ROAD" for i in range(num_players)]
+            + [f"P{i}_ROADS_LEFT" for i in range(num_players)]
+            + [f"P{i}_SETTLEMENTS_LEFT" for i in range(num_players)]
+            + [f"P{i}_CITIES_LEFT" for i in range(num_players)]
+            + [f"P{i}_HAS_ROLLED" for i in range(num_players)]
+            # Player Hand Features
+            + [
+                f"P{i}_{card.value}_PLAYED"
+                for i in range(num_players)
+                for card in DevelopmentCard
+                if card != DevelopmentCard.VICTORY_POINT
+            ]
+            + [f"P{i}_NUM_RESOURCES_IN_HAND" for i in range(num_players)]
+            + [f"P{i}_NUM_DEVS_IN_HAND" for i in range(num_players)]
+            + [f"P0_{card.value}_IN_HAND" for card in DevelopmentCard]
+            + [
+                f"P0_{card.value}_PLAYABLE"
+                for card in DevelopmentCard
+                if card != DevelopmentCard.VICTORY_POINT
+            ]
+            + [f"P0_{resource.value}_IN_HAND" for resource in Resource]
+            # Game Features
+            + ["BANK_DEV_CARDS"]
+            + [f"BANK_{resource.value}" for resource in Resource]
+        )
     )
-)
+
+
+NUMERIC_FEATURES = get_numeric_features(4)
 NUM_NUMERIC_FEATURES = len(NUMERIC_FEATURES)
 
 
@@ -197,6 +209,7 @@ def create_board_tensor(game: Game, p0_color: Color):
     updates = [1, 0, 1, 0, 1] + [0, 0, 0, 0, 0] + [1, 0, 1, 0, 1]
     robber_plane = tf.tensor_scatter_nd_add(robber_plane, indices, updates)
 
+    # Q: Would this be simpler as boolean features for each player?
     # add 6 port channels (5 resources + 1 for 3:1 ports)
     # for each port, take index and take node_id coordinates
     port_planes = tf.zeros((WIDTH, HEIGHT, 6))

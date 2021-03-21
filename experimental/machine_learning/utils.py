@@ -115,16 +115,16 @@ def get_discounted_return(game, p0, discount_factor):
     Taking r_i = 0 for all i < T. And r_T = 1 if wins
     """
     assert discount_factor <= 1
-    episode_return = p0.color == game.winning_player().color
-    return episode_return * discount_factor ** len(game.actions)
+    episode_return = p0.color == game.winning_color()
+    return episode_return * discount_factor ** len(game.state.actions)
 
 
 def get_tournament_return(game, p0, discount_factor):
     """A way to say winning is important, no matter how long it takes, and
     getting close to winning is a secondary metric"""
-    episode_return = p0 == game.winning_player()
+    episode_return = p0.color == game.winning_color()
     episode_return = episode_return * 1000 + min(p0.actual_victory_points, 10)
-    return episode_return * discount_factor ** len(game.actions)
+    return episode_return * discount_factor ** len(game.state.actions)
 
 
 def get_victory_points_return(game, p0):
@@ -132,7 +132,7 @@ def get_victory_points_return(game, p0):
     #   is better, and still a Game with 9vps is less than 10vps,
     #   no matter turns.
     episode_return = min(p0.actual_victory_points, 10)
-    return episode_return * 0.9999 ** len(game.actions)
+    return episode_return * 0.9999 ** len(game.state.actions)
 
 
 def populate_matrices(

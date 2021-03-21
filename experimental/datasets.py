@@ -78,10 +78,10 @@ def preprocess_actions(actions_batch):
     return tf.stack([tensor for _, tensor in actions_batch.items()], axis=1)
 
 
-def preprocess_board_tensors(board_tensors_batch, batch_size):
+def preprocess_board_tensors(board_tensors_batch, batch_size, channels=CHANNELS):
     return tf.reshape(
         tf.stack([v for _, v in board_tensors_batch.items()], axis=1),
-        (batch_size, WIDTH, HEIGHT, CHANNELS, 1),
+        (batch_size, WIDTH, HEIGHT, channels, 1),
     )
 
 

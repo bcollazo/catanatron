@@ -9,22 +9,27 @@ normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization(
     mean=mean, variance=variance
 )
 """
-from experimental.machine_learning.board_tensor_features import NUMERIC_FEATURES
+import sys
 import time
 from pathlib import Path
 
 import tensorflow as tf
 import numpy as np
 
+from experimental.machine_learning.board_tensor_features import (
+    get_numeric_features,
+    get_channels,
+)
 from experimental.datasets import (
     read_dataset,
     preprocess_samples,
     preprocess_board_tensors,
 )
 
-NORMALIZATION_GAMES = 1000
+DATA_DIRECTORY = sys.argv[1]
+NORMALIZATION_GAMES = int(sys.argv[2])
+NUM_PLAYERS = int(sys.argv[3])
 NORMALIZATION_BATCHES = (NORMALIZATION_GAMES * 800) // 32
-DATA_DIRECTORY = "data/random-games"
 SAMPLES_MEAN_PATH = Path(DATA_DIRECTORY, "samples-mean.npy")
 SAMPLES_VARIANCE_PATH = Path(DATA_DIRECTORY, "samples-variance.npy")
 NUMERIC_FEATURES_MEAN_PATH = Path(DATA_DIRECTORY, "numeric-features-mean.npy")
@@ -39,7 +44,7 @@ board_tensors = read_dataset(
 )
 
 # ===== SAMPLES
-print(f"Creating normalization layers with {NORMALIZATION_BATCHES} batches of data...")
+print(f"Using {NORMALIZATION_BATCHES} batches of data in {DATA_DIRECTORY}...")
 t1 = time.time()
 normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization()
 normalizer_layer.adapt(samples.take(NORMALIZATION_BATCHES).map(preprocess_samples))
@@ -50,12 +55,12 @@ np.save(SAMPLES_VARIANCE_PATH, normalizer_layer.variance)
 print(f"Saved to {SAMPLES_MEAN_PATH} and {SAMPLES_VARIANCE_PATH}")
 
 # ====== BOARD TENSORS
-print(f"Creating normalization layers with {NORMALIZATION_BATCHES} batches of data...")
+print(f"Using {NORMALIZATION_BATCHES} batches of data in {DATA_DIRECTORY}")
 t1 = time.time()
 normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization()
 normalizer_layer.adapt(
     board_tensors.take(NORMALIZATION_BATCHES).map(
-        lambda d: preprocess_board_tensors(d, 32)
+        lambda d: preprocess_board_tensors(d, 32, get_channels(NUM_PLAYERS))
     )
 )
 print(normalizer_layer.mean, normalizer_layer.variance)
@@ -66,12 +71,12 @@ print(f"Saved to {BOARD_TENSORS_MEAN_PATH} and {BOARD_TENSORS_VARIANCE_PATH}")
 
 
 # ====== SAMPLES NUMERIC FEATURES
-print(f"Creating normalization layers with {NORMALIZATION_BATCHES} batches of data...")
+print(f"Using {NORMALIZATION_BATCHES} batches of data in {DATA_DIRECTORY}")
 t1 = time.time()
 normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization()
 normalizer_layer.adapt(
     samples.take(NORMALIZATION_BATCHES).map(
-        lambda d: preprocess_samples(d, NUMERIC_FEATURES)
+        lambda d: preprocess_samples(d, get_numeric_features(NUM_PLAYERS))
     )
 )
 print(normalizer_layer.mean, normalizer_layer.variance)

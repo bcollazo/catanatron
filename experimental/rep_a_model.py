@@ -7,24 +7,25 @@ import numpy as np
 import tensorflow as tf
 import kerastuner as kt
 
-from experimental.machine_learning.features import get_feature_ordering
 from experimental.machine_learning.players.reinforcement import FEATURES
 
 # ===== Configuration
 BATCH_SIZE = 32
 EPOCHS = 10
 PREFETCH_BUFFER_SIZE = 10
-LABEL_COLUMN = "0"
-DATA_SIZE = 304833  # use zcat data/mcts-playouts/labels.csv.gzip | wc
-DATA_DIRECTORY = "data/mcts-playouts"
+DATA_SIZE = 800 * 1000  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+DATA_DIRECTORY = "data/random-1v1s"
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
-VALIDATION_DATA_SIZE = 30665
-VALIDATION_DATA_DIRECTORY = "data/mcts-playouts-validation"
+LABEL_FILE = "rewards.csv.gzip"
+LABEL_COLUMN = "VICTORY_POINTS_RETURN"
+VALIDATION_DATA_SIZE = 800 * 1000
+VALIDATION_DATA_DIRECTORY = "data/random-1v1s"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
-NORMALIZATION_DIRECTORY = "data/random-games"
+NORMALIZATION = False
+NORMALIZATION_DIRECTORY = "data/random-1v1s"
 NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "mean.npy")
 NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "variance.npy")
-SHUFFLE = False
+SHUFFLE = True
 SHUFFLE_SEED = random.randint(0, 20000)
 SHUFFLE_BUFFER_SIZE = 1000
 
