@@ -11,7 +11,7 @@ Create a virtualenv with [Pipenv](https://pipenv.pypa.io/en/latest/) (or use the
 
 ```
 pip install pipenv
-pipenv install
+pipenv install --dev
 ```
 
 Run games with the `play.py` script. It provides extra options you can explore with `--help`:
@@ -206,6 +206,10 @@ docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensor
 ```
 python -m cProfile -o profile.pstats experimental/play.py --num=5
 snakeviz profile.pstats
+```
+
+```
+pytest --benchmark-compare=0001 --benchmark-compare-fail=mean:10% --benchmark-columns=min,max,mean,stddev
 ```
 
 ### Head Large Datasets with Pandas
