@@ -204,7 +204,7 @@ docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensor
 ### Testing Performance
 
 ```
-python -m cProfile experimental/play.py --num=5 -o profile.pstats
+python -m cProfile -o profile.pstats experimental/play.py --num=5
 snakeviz profile.pstats
 ```
 
