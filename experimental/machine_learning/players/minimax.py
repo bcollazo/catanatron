@@ -1,3 +1,4 @@
+import random
 import time
 from collections import defaultdict
 from typing import List
@@ -61,6 +62,27 @@ class ValueFunctionPlayer(Player):
                 best_action = action
 
         return best_action
+
+
+class VictoryPointPlayer(Player):
+    def decide(self, game: Game, playable_actions):
+        if len(playable_actions) == 1:
+            return playable_actions[0]
+
+        best_value = float("-inf")
+        best_actions = []
+        for action in playable_actions:
+            game_copy = game.copy()
+            game_copy.execute(action)
+
+            value = game_copy.state.players_by_color[self.color].actual_victory_points
+            if value == best_value:
+                best_actions.append(action)
+            if value > best_value:
+                best_value = value
+                best_actions = [action]
+
+        return random.choice(best_actions)
 
 
 class StateNode:
