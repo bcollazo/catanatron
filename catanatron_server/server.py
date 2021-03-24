@@ -21,6 +21,11 @@ from experimental.machine_learning.players.reinforcement import (
     VRLPlayer,
     get_v_model,
 )
+from experimental.machine_learning.players.minimax import (
+    MiniMaxPlayer,
+    ValueFunctionPlayer,
+    VictoryPointPlayer,
+)
 from experimental.machine_learning.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
@@ -94,9 +99,10 @@ def create_game():
             # VRLPlayer(Color.RED, "FOO", "models/vp-big-256-64"),
             # TensorRLPlayer(Color.BLUE, "BAR", "tensor-model-normalized"),
             # MCTSPlayer(Color.RED, "FOO", 25),
-            RandomPlayer(Color.RED, "FOO"),
-            RandomPlayer(Color.BLUE, "BAR"),
-            RandomPlayer(Color.WHITE, "BAZ"),
+            ValueFunctionPlayer(Color.RED, "FOO"),
+            # RandomPlayer(Color.RED, "FOO"),
+            # RandomPlayer(Color.BLUE, "BAR"),
+            # RandomPlayer(Color.WHITE, "BAZ"),
             RandomPlayer(Color.ORANGE, "QUX"),
         ]
     )

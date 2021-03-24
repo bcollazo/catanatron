@@ -23,6 +23,7 @@ from experimental.machine_learning.players.reinforcement import (
 from experimental.machine_learning.players.minimax import (
     MiniMaxPlayer,
     ValueFunctionPlayer,
+    VictoryPointPlayer,
 )
 from experimental.machine_learning.players.mcts import MCTSPlayer
 from experimental.machine_learning.players.scikit import ScikitPlayer
@@ -89,36 +90,38 @@ def simulate(num, players, outpath, save_in_db, watch):
     colors = [c for c in Color]
     pseudonyms = ["Foo", "Bar", "Baz", "Qux"]
     for i, key in enumerate(player_keys):
-        player_type = key[0]
         param = key[1:]
-        if player_type == "R":
+        if key == "R":
             initialized_players.append(RandomPlayer(colors[i], pseudonyms[i]))
-        elif player_type == "H":
+        elif key == "H":
             initialized_players.append(HumanPlayer(colors[i], pseudonyms[i]))
-        elif player_type == "W":
+        elif key == "W":
             initialized_players.append(WeightedRandomPlayer(colors[i], pseudonyms[i]))
-        elif player_type == "V":
+        elif key == "O":
+            initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
+        elif key == "X":
+            initialized_players.append(MiniMaxPlayer(colors[i], pseudonyms[i]))
+        elif key == "F":
+            initialized_players.append(ValueFunctionPlayer(colors[i], pseudonyms[i]))
+        elif key == "S":
+            initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
+        elif key == "VP":
+            initialized_players.append(VictoryPointPlayer(colors[i], pseudonyms[i]))
+        # Parametrized players
+        elif key[0] == "V":
             initialized_players.append(VRLPlayer(colors[i], pseudonyms[i], param))
-        elif player_type == "Q":
+        elif key[0] == "Q":
             initialized_players.append(QRLPlayer(colors[i], pseudonyms[i], param))
-        elif player_type == "P":
+        elif key[0] == "P":
             initialized_players.append(PRLPlayer(colors[i], pseudonyms[i], param))
-        elif player_type == "T":
+        elif key[0] == "T":
             initialized_players.append(TensorRLPlayer(colors[i], pseudonyms[i], param))
-        elif player_type == "G":
+        elif key[0] == "G":
             initialized_players.append(
                 GreedyPlayoutsPlayer(colors[i], pseudonyms[i], int(param))
             )
-        elif player_type == "M":
+        elif key[0] == "M":
             initialized_players.append(MCTSPlayer(colors[i], pseudonyms[i], int(param)))
-        elif player_type == "O":
-            initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
-        elif player_type == "X":
-            initialized_players.append(MiniMaxPlayer(colors[i], pseudonyms[i]))
-        elif player_type == "F":
-            initialized_players.append(ValueFunctionPlayer(colors[i], pseudonyms[i]))
-        elif player_type == "S":
-            initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
         else:
             raise ValueError("Invalid player key")
 
