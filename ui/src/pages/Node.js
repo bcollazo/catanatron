@@ -4,18 +4,22 @@ import cn from "classnames";
 import { tilePixelVector, getNodeDelta } from "../utils/coordinates";
 
 function Building({ building, color }) {
-  const cssClass = `bg-white bg-${color.toLowerCase()}-700`;
+  const cssClass = `bg-white bg-${color.toLowerCase()}-600`;
   const city = building === "CITY";
   const border = city ? "w-8 h-8 border-2" : "w-6 h-6 border-2";
   return (
     <>
       <div
-        className={cn("node-building absolute border-black", cssClass, border)}
+        className={cn(
+          "rounded-md node-building absolute border-black",
+          cssClass,
+          border
+        )}
       ></div>
       {city && (
         <div
           className={cn(
-            "node-building absolute border-black",
+            "rounded-md node-building absolute border-black",
             cssClass,
             "w-4 h-4 border-2"
           )}

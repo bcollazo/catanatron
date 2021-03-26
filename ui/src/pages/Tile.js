@@ -1,12 +1,12 @@
 import React from "react";
 import cn from "classnames";
 
-import brickTile from "../assets/tiles/tile_brick.png";
-import desertTile from "../assets/tiles/tile_desert.svg";
-import grainTile from "../assets/tiles/tile_grain.svg";
-import lumberTile from "../assets/tiles/tile_lumber.svg";
-import oreTile from "../assets/tiles/tile_ore.svg";
-import woolTile from "../assets/tiles/tile_wool.svg";
+import brickTile from "../assets/tile_brick.png";
+import desertTile from "../assets/tile_desert.png";
+import grainTile from "../assets/tile_grain.png";
+import lumberTile from "../assets/tile_lumber.png";
+import oreTile from "../assets/tile_ore.png";
+import woolTile from "../assets/tile_wool.png";
 import { tilePixelVector } from "../utils/coordinates";
 
 const bgColorResource = (resource) => {
@@ -23,7 +23,7 @@ export function Circle({ className, children, style }) {
   return (
     <div
       className={cn(
-        "rounded-full h-8 w-8 bg-white flex justify-center items-center border-2 border-black",
+        "rounded-md h-8 w-8 bg-white flex justify-center items-center border-2 border-black",
         className
       )}
       style={style}
@@ -58,11 +58,54 @@ export default function Tile({
   } else if (tile.type === "DESERT") {
     resourceTile = desertTile;
   } else if (tile.type === "PORT") {
+    console.log(tile);
+    let x = 0;
+    let y = 0;
+    if (tile.direction.includes("SOUTH")) {
+      y += 50;
+    }
+    if (tile.direction.includes("NORTH")) {
+      y -= 50;
+    }
+    if (tile.direction.includes("WEST")) {
+      x -= 20;
+      if (tile.direction === "WEST") {
+        x = -50;
+      }
+    }
+    if (tile.direction.includes("EAST")) {
+      x += 20;
+      if (tile.direction === "EAST") {
+        x = 50;
+      }
+    }
     if (tile.resource === null) {
-      contents = <Circle>3:1</Circle>;
+      contents = (
+        <Circle
+          className={tile.direction}
+          style={{
+            position: "relative",
+            left: x,
+            top: y,
+          }}
+        >
+          3:1
+        </Circle>
+      );
     } else {
       const bg = bgColorResource(tile.resource);
-      contents = <Circle className={bg}>2:1</Circle>;
+      contents = (
+        <Circle
+          style={{
+            position: "relative",
+            left: x,
+            top: y,
+          }}
+          className={bg}
+        >
+          2:1
+        </Circle>
+      );
     }
   }
 

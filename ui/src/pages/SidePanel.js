@@ -27,7 +27,7 @@ export default function SidePanel({ state }) {
       text = `${action_type}`;
     }
 
-    const colorClass = `text-white text-${color.toLowerCase()}-700`;
+    const colorClass = `text-white text-${color.toLowerCase()}-600`;
     return (
       <div key={index} className={colorClass}>
         {color}: {text}

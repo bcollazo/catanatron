@@ -7,10 +7,13 @@ import {
 } from "../utils/coordinates";
 
 function Road({ color }) {
-  const cssClass = `bg-white bg-${color.toLowerCase()}-700`;
+  const cssClass = `bg-white bg-${color.toLowerCase()}-600`;
   return (
     <div
-      className={cn("road absolute border-2 border-black h-3 w-10", cssClass)}
+      className={cn(
+        "road absolute rounded-sm border-2 border-black h-3 w-10",
+        cssClass
+      )}
     ></div>
   );
 }

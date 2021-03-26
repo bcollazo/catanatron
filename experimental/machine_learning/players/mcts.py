@@ -125,10 +125,11 @@ class MCTSPlayer(Player):
         if len(playable_actions) == 1:
             return playable_actions[0]
 
+        start = time.time()
         root = StateNode(self.color, game.copy(), None, playable_actions)
         for i in range(self.num_simulations):
-            start = time.time()
             root.run_simulation()
-            print("Simulation", i, "took", time.time() - start)
+
+        print(f"MCTS took {time.time() - start} secs to decide {len(playable_actions)}")
 
         return root.choose_best_action()

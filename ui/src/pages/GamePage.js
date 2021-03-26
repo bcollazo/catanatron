@@ -49,7 +49,7 @@ export default function GamePage() {
     <div className="h-full flex">
       <div
         className="w-full h-full flex flex-col"
-        style={{ backgroundColor: "#01c7f4" }}
+        style={{ backgroundColor: "rgb(0 52 64)" }}
       >
         <Board state={state} />
         <ControlPanel

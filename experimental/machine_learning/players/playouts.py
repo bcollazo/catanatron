@@ -10,6 +10,8 @@ DEFAULT_NUM_PLAYOUTS = 25
 USE_MULTIPROCESSING = False
 NUM_WORKERS = multiprocessing.cpu_count()
 
+PLAYOUTS_BUDGET = 100
+
 # Single threaded NUM_PLAYOUTS=25 takes ~185.3893163204193 secs on initial placement
 #   10.498431205749512 secs to do initial road (3 playable actions)
 # Multithreaded, dividing the NUM_PLAYOUTS only (actions serially), takes ~52.22048330307007 secs
@@ -26,19 +28,26 @@ class GreedyPlayoutsPlayer(Player):
         if len(playable_actions) == 1:
             return playable_actions[0]
 
+        start = time.time()
+        num_playouts = PLAYOUTS_BUDGET // len(playable_actions)
+
         best_action = None
         max_wins = None
         for action in playable_actions:
             action_applied_game_copy = game.copy()
             action_applied_game_copy.execute(action)
 
-            counter = run_playouts(action_applied_game_copy, self.num_playouts)
+            counter = run_playouts(action_applied_game_copy, num_playouts)
 
             wins = counter[self.color]
             if max_wins is None or wins > max_wins:
                 best_action = action
                 max_wins = wins
 
+        print(
+            f"Greedy took {time.time() - start} secs to decide "
+            + f"{len(playable_actions)} at {num_playouts} per action"
+        )
         return best_action
 
 
@@ -53,7 +62,7 @@ def run_playouts(action_applied_game_copy, num_playouts):
     else:
         counter = Counter(map(run_playout, params))
     duration = time.time() - start
-    print(f"{num_playouts} playouts took: {duration}. Results: {counter}")
+    # print(f"{num_playouts} playouts took: {duration}. Results: {counter}")
     return counter
 
 
