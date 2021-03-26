@@ -8,6 +8,7 @@ import pandas as pd
 import sklearn
 from sklearn.ensemble import RandomForestRegressor
 
+from experimental.machine_learning.features import get_feature_ordering
 from experimental.datasets import read_dataset, preprocess_samples
 
 # Taken from correlation analysis
@@ -37,10 +38,10 @@ FEATURES = [
     "P0_KNIGHT_PLAYED",
     "P1_KNIGHT_PLAYED",
 ]
+FEATURES = get_feature_ordering(num_players=2)
 
 
-if __name__ == "__main__":
-    print("Training RF")
+def read_data_tf():
     start = time.time()
     data_directory = "data/random1v1s"
     CHUNKS = 100_000
@@ -78,10 +79,24 @@ if __name__ == "__main__":
 
     X = samples_df[FEATURES]
     y = rewards_df["DISCOUNTED_RETURN"]
+    return X, y
+
+
+def read_data_simple():
+    #  zcat data/testing/rewards.csv.gzip | head -n 100000 > rewards.csv
+    samples = pd.read_csv("samples.csv")[FEATURES]
+    rewards = pd.read_csv("rewards.csv")["VICTORY_POINTS_RETURN"]
+    return samples, rewards
+
+
+if __name__ == "__main__":
+    print("Reading RF data")
+    X, y = read_data_simple()
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
-        X, y, test_size=0.20, random_state=42
+        X, y, test_size=0.10, random_state=42
     )
 
+    print("Training RF")
     model = RandomForestRegressor()
     model.fit(X_train, y_train)
 

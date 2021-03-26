@@ -206,6 +206,13 @@ tuner/round |0 |1
 
 - Did a RandomForest, but data seems wrong. Played very poorly.
 
+- Scikit Regression player doesnt win, because just gets a lot of wheat production,
+  builds roads to extend as much as they can (dont hold to build settlements),
+  place robber on themselves, dont trade (same value); no hand-diversity features.
+
+- Greedy (even when budgeted to run same num playouts as MCTS) does better than
+  MCTS.
+
 ## Future Work:
 
 - Should probably try to do NN player with better tuning (more layers, different label).
