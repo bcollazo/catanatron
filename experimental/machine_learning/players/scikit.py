@@ -5,10 +5,15 @@ from catanatron.models.actions import Action
 from catanatron.models.enums import Resource, BuildingType
 
 from experimental.machine_learning.features import create_sample
-from experimental.simple_model import FEATURES
 
 
-with open("experimental/models/simple-scikit.model", "rb") as file:
+# from experimental.simple_model import FEATURES
+# with open("experimental/models/simple-scikit.model", "rb") as file:
+#     clf = pickle.load(file)
+
+from experimental.simple_forest import FEATURES
+
+with open("experimental/models/simple-rf.model", "rb") as file:
     clf = pickle.load(file)
 
 

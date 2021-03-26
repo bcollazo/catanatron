@@ -27,13 +27,13 @@ from experimental.datasets import (
 )
 
 DATA_DIRECTORY = sys.argv[1]
-NORMALIZATION_GAMES = int(sys.argv[2])
+NORMALIZATION_SAMPLES = int(sys.argv[2])
 NUM_PLAYERS = int(sys.argv[3])
 
 SAMPLES = True
 BOARD_TENSORS = False
 
-NORMALIZATION_BATCHES = (NORMALIZATION_GAMES * 800) // 32
+NORMALIZATION_BATCHES = NORMALIZATION_SAMPLES // 32
 SAMPLES_MEAN_PATH = Path(DATA_DIRECTORY, "samples-mean.npy")
 SAMPLES_VARIANCE_PATH = Path(DATA_DIRECTORY, "samples-variance.npy")
 NUMERIC_FEATURES_MEAN_PATH = Path(DATA_DIRECTORY, "numeric-features-mean.npy")

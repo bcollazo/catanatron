@@ -16,6 +16,7 @@ from catanatron.models.enums import Resource
 from experimental.machine_learning.features import (
     create_sample,
     create_sample_vector,
+    get_feature_ordering,
 )
 from experimental.machine_learning.board_tensor_features import (
     NUMERIC_FEATURES,
@@ -51,6 +52,26 @@ FEATURES = [
     "P0_KNIGHT_PLAYED",
     "P1_KNIGHT_PLAYED",
 ]
+
+
+def allow_feature(feature_name):
+    return True
+    return (
+        feature_name[:4] != "TILE"
+        and feature_name[:4] != "PORT"
+        and feature_name[:4] != "NODE"
+        and feature_name[:4] != "EDGE"
+        and feature_name[:4] != "BANK"
+        and feature_name[-6:] != "ROLLED"
+        and (feature_name[-6:] != "PLAYED" or "KNIGHT" in feature_name)
+        and feature_name[-8:] != "PLAYABLE"
+        and "HAND" not in feature_name
+    )
+
+
+ALL_FEATURES = get_feature_ordering(num_players=2)
+FEATURES = list(filter(allow_feature, ALL_FEATURES))
+FEATURE_INDICES = [ALL_FEATURES.index(f) for f in FEATURES]
 
 
 BASE_TOPOLOGY = BaseMap().topology
@@ -274,6 +295,8 @@ class VRLPlayer(Player):
 
         scores = get_v_model(self.model_path).call(tf.convert_to_tensor(samples))
         best_idx = np.argmax(scores)
+        # print(list(zip(playable_actions, scores)))
+        # breakpoint()
         return playable_actions[best_idx]
 
     def __repr__(self):

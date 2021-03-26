@@ -46,6 +46,7 @@ def read_data(
         shuffle=shuffle,
         shuffle_seed=shuffle_seed,
         num_epochs=num_epochs,
+        column_defaults=[tf.float64] * 10,
     )
     return samples, board_tensors, actions, rewards
 
@@ -56,7 +57,9 @@ def read_dataset(
     prefetch_buffer_size=None,
     shuffle=True,
     shuffle_seed=123,
+    shuffle_buffer_size=10000,
     num_epochs=None,
+    column_defaults=None,
 ):
     return tf.data.experimental.make_csv_dataset(
         path,
@@ -65,7 +68,9 @@ def read_dataset(
         compression_type="GZIP",
         shuffle=shuffle,
         shuffle_seed=shuffle_seed,
+        shuffle_buffer_size=shuffle_buffer_size,
         num_epochs=num_epochs,
+        column_defaults=column_defaults,
     )
 
 

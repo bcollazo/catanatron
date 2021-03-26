@@ -196,7 +196,27 @@ tuner/round |0 |1
   tensorforce. TF-Agents seems possible, but pretty raw API right now.
   Hard to use tensorforce because not clear how to specify Rep B mixed model.
 
+- VictoryPoint player is better than Random (much better) and WeightedRandom (not so much).
+
+- Where able to do a somewhat strong NN with clipnorm=1, 2 layers, 32 and 8 neurons
+  batch norm of inputs and batches of 32. 7,000,000 samples divided in 10 epochs.
+  Still this player doesnt beat hand-heuristic. (ValueFunctionPlayer). This used
+  DISCOUNTED_RETURN. MSE as loss and LR=0.0001.
+  `loss: 1.5084e-07 - mae: 2.1945e-04 - val_loss: 4.2677e-05 - val_mae: 5.0571e-04`
+
+- Did a RandomForest, but data seems wrong. Played very poorly.
+
 ## Future Work:
+
+- Should probably try to do NN player with better tuning (more layers, different label).
+
+- Interested in seeing MCTS play in real life. Should compare G10 to MCTS50
+
+- Work on performance.
+
+- Generate data as 1 Big CSV per representation. (samples + labels), (bt + labels)
+
+- Idea: Make test-evaluation framework. Use gaussian optimization to find best weights.
 
 - Attempt DQN Tutorial with TF2.0 Summary Module, to see progress. If works,
   adapt to Catan-DQN Tutorial.
@@ -205,7 +225,7 @@ tuner/round |0 |1
   experiment/play.py, have a Game in the Overview.ipyn and run a catan-dqn.py job faster
   (should only do when can confirm Data and DQN approach improves...).
 
-- Simplify problem. Learn 1v1. Simplify ROBBER_ACTIONS to "Play Knight" to player with most points.
+- Simplify ROBBER_ACTIONS to "Play Knight" to player with most points.
 
 - Learn from offline MCTS data, using Rep B. (Seems slow to generate MCTS labeled data).
 
@@ -214,9 +234,6 @@ tuner/round |0 |1
 
 - Learn an offline DQN (using VPs) with Rep B. That is, use Reward as label (
   so that early moves don't get a 1)
-
-- Separate immutable state from Board (Map?), so that copying is a lot faster, and
-  can cache functions (say node-production) globally (across game copies).
 
 - Consider implementing AlphaBetaPruning to speed up game. Although
   it seems speedup at best might be 1/2 the time, which still doesn't cut it.
@@ -229,7 +246,7 @@ tuner/round |0 |1
     that we have random players fixed does this job for now, since we collect
     samples from their perspective as well).
 
-- Play a game against MCTS player. Play against MCTS with look-ahead.
+- Play a game against Greedy player. Play against Greedy with look-ahead.
 
 - Idea: Sum up "enemy features". Make it look like its 1 enemy.
 
@@ -247,6 +264,11 @@ tuner/round |0 |1
 - Using autokeras with whole 1Gb dataset is better?
 - Does playing against your V1 self, training on that, improve?
 - Try Q-Learning but, iterate on playing, learning, playing, learning... e-greedy.
+
+### Performance Improvements
+
+- Separate immutable state from Board (Map?), so that copying is a lot faster, and
+  can cache functions (say node-production) globally (across game copies).
 
 ### Toy problems
 

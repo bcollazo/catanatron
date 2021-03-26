@@ -7,24 +7,27 @@ import numpy as np
 import tensorflow as tf
 import kerastuner as kt
 
-from experimental.machine_learning.players.reinforcement import FEATURES
+from experimental.machine_learning.players.reinforcement import (
+    FEATURES,
+    FEATURE_INDICES,
+)
 
 # ===== Configuration
-BATCH_SIZE = 2048
-EPOCHS = 1
-PREFETCH_BUFFER_SIZE = 10
-DATA_SIZE = 5969527  # use zcat data/mcts-playouts/labels.csv.gzip | wc
 DATA_DIRECTORY = "data/random1v1s"
-STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
+DATA_SIZE = 7000000  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+EPOCHS = 10
+BATCH_SIZE = 32
+STEPS_PER_EPOCH = DATA_SIZE // EPOCHS // BATCH_SIZE
+PREFETCH_BUFFER_SIZE = 10
 LABEL_FILE = "rewards.csv.gzip"
-LABEL_COLUMN = "VICTORY_POINTS_RETURN"
+LABEL_COLUMN = "DISCOUNTED_RETURN"
 VALIDATION_DATA_SIZE = 10000
 VALIDATION_DATA_DIRECTORY = "data/random1v1s"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
 NORMALIZATION = False
 NORMALIZATION_DIRECTORY = "data/random1v1s"
-NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "mean.npy")
-NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "variance.npy")
+NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "samples-mean.npy")
+NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "samples-variance.npy")
 SHUFFLE = True
 SHUFFLE_SEED = random.randint(0, 20000)
 VALIDATION_SHUFFLE_SEED = random.randint(0, 20000)
@@ -120,14 +123,15 @@ test_dataset = tf.data.Dataset.from_generator(
 inputs = tf.keras.Input(shape=(NUM_FEATURES,))
 outputs = inputs
 
-mean = np.load(NORMALIZATION_MEAN_PATH)
-variance = np.load(NORMALIZATION_VARIANCE_PATH)
-normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization(
-    mean=mean, variance=variance
-)
+if NORMALIZATION:
+    mean = np.load(NORMALIZATION_MEAN_PATH)[FEATURE_INDICES]
+    variance = np.load(NORMALIZATION_VARIANCE_PATH)[FEATURE_INDICES]
+    normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization(
+        mean=mean, variance=variance
+    )
+    outputs = normalizer_layer(outputs)
 
-# outputs = normalizer_layer(outputs)
-# outputs = tf.keras.layers.BatchNormalization()(outputs)
+outputs = tf.keras.layers.BatchNormalization()(outputs)
 # outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(320, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(160, activation=tf.nn.relu)(outputs)
@@ -135,13 +139,13 @@ normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization(
 # outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(64, activation=tf.nn.relu)(outputs)
 
-outputs = tf.keras.layers.Dense(32, activation=tf.nn.relu)(outputs)
-outputs = tf.keras.layers.Dense(8, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(32)(outputs)
+outputs = tf.keras.layers.Dense(8)(outputs)
 outputs = tf.keras.layers.Dense(units=1)(outputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 model.compile(
     metrics=["mae"],
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.000001),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001, clipnorm=1),
     loss="mean_squared_error",
 )
 model.summary()

@@ -343,7 +343,7 @@ def create_sample_vector(game, p0_color, features=None):
 FEATURE_ORDERING = None
 
 
-def get_feature_ordering():
+def get_feature_ordering(num_players=4):
     global FEATURE_ORDERING
     if FEATURE_ORDERING is None:
         players = [
@@ -352,6 +352,7 @@ def get_feature_ordering():
             SimplePlayer(Color.WHITE),
             SimplePlayer(Color.ORANGE),
         ]
+        players = players[:num_players]
         game = Game(players)
         sample = create_sample(game, players[0].color)
         FEATURE_ORDERING = sorted(sample.keys())

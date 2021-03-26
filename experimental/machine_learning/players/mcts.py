@@ -15,6 +15,7 @@ EXP_C = 2 ** 0.5
 
 class StateNode:
     def __init__(self, color, state, parent, playable_actions=None):
+        self.level = 0 if parent is None else parent.level + 1
         self.color = color  # color of player carrying out MCTS
         self.parent = parent
         self.state = state
