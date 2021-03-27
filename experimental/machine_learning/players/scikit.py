@@ -35,5 +35,5 @@ class ScikitPlayer(Player):
         scores = clf.predict(samples)
         best_idx = np.argmax(scores)
         best_action = playable_actions[best_idx]
-        breakpoint()
+        # breakpoint()
         return best_action
