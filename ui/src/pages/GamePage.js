@@ -47,6 +47,17 @@ export default function GamePage() {
   }
   return (
     <div className="h-full flex">
+      <h1
+        style={{
+          position: "absolute",
+          color: "white",
+          margin: "20px",
+          fontSize: "3em",
+          fontFamily: "'Bungee Inline', cursive",
+        }}
+      >
+        Catanatron
+      </h1>
       <div
         className="w-full h-full flex flex-col"
         style={{ backgroundColor: "rgb(0 52 64)" }}
