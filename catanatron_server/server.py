@@ -16,12 +16,14 @@ from experimental.machine_learning.features import (
 )
 
 # from experimental.machine_learning.players.online_mcts_dqn import get_model
+# from experimental.machine_learning.players.scikit import ScikitPlayer
 from experimental.machine_learning.players.reinforcement import (
     TensorRLPlayer,
     VRLPlayer,
     get_v_model,
 )
 from experimental.machine_learning.players.minimax import (
+    AlphaBetaPlayer,
     MiniMaxPlayer,
     ValueFunctionPlayer,
     VictoryPointPlayer,
@@ -96,14 +98,16 @@ def get_game_endpoint(game_id):
 def create_game():
     game = Game(
         players=[
-            VRLPlayer(Color.RED, "FOO", "experimental/models/1v1-rep-a"),
+            # VRLPlayer(Color.RED, "FOO", "experimental/models/1v1-rep-a"),
+            # ScikitPlayer(Color.RED, "FOO"),
             # TensorRLPlayer(Color.BLUE, "BAR", "tensor-model-normalized"),
             # MCTSPlayer(Color.RED, "FOO", 25),
-            # ValueFunctionPlayer(Color.RED, "FOO"),
+            ValueFunctionPlayer(Color.RED, "FOO", "value_fn2"),
+            AlphaBetaPlayer(Color.BLUE, "BAR")
             # RandomPlayer(Color.RED, "FOO"),
             # RandomPlayer(Color.BLUE, "BAR"),
             # RandomPlayer(Color.WHITE, "BAZ"),
-            RandomPlayer(Color.ORANGE, "QUX"),
+            # RandomPlayer(Color.ORANGE, "QUX"),
         ]
     )
     save_game_state(game)
