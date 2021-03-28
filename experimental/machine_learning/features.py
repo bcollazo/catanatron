@@ -1,5 +1,6 @@
 from collections import Counter
 from typing import Generator, Tuple
+import functools
 
 import networkx as nx
 
@@ -281,6 +282,7 @@ def count_production(level_nodes, board_buildable, game, owned_nodes):
     return production
 
 
+@functools.lru_cache(maxsize=200)
 def get_node_counter_production(board, node_id):
     tiles = board.map.adjacent_tiles[node_id]
     return Counter(
