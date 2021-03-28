@@ -1,4 +1,4 @@
-import functools
+from collections import Counter
 from typing import Generator, Tuple
 
 import networkx as nx
@@ -115,16 +115,16 @@ def tile_features(game, p0_color):
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
     # TODO: Cacheable
     def f(game, tile_id, resource):
-        tile = game.state.board.map.get_tile_by_id(tile_id)
+        tile = game.state.board.map.tiles_by_id[tile_id]
         return tile.resource == resource
 
     # TODO: Cacheable
     def g(game, tile_id):
-        tile = game.state.board.map.get_tile_by_id(tile_id)
+        tile = game.state.board.map.tiles_by_id[tile_id]
         return 0 if tile.resource is None else number_probability(tile.number)
 
     def h(game, tile_id):
-        tile = game.state.board.map.get_tile_by_id(tile_id)
+        tile = game.state.board.map.tiles_by_id[tile_id]
         return game.state.board.map.tiles[game.state.board.robber_coordinate] == tile
 
     features = {}
@@ -164,26 +164,39 @@ def graph_features(game, p0_color):
     return features
 
 
-def production_features(game, p0_color):
-    # P0_WHEAT_PRODUCTION, P0_ORE_PRODUCTION, ..., P1_WHEAT_PRODUCTION, ...
-    features = {}
-    for resource in Resource:
-        for i, player in iter_players(game, p0_color):
-            production = 0
-            for node_id in player.buildings[BuildingType.SETTLEMENT]:
-                production += get_node_production(game.state.board, node_id, resource)
-            for node_id in player.buildings[BuildingType.CITY]:
-                production += 2 * get_node_production(
-                    game.state.board, node_id, resource
-                )
-            features[f"P{i}_{resource.value}_PRODUCTION"] = production
+def build_production_features(consider_robber):
+    prefix = "EFFECTIVE_" if consider_robber else "TOTAL_"
 
-    return features
+    def production_features(game, p0_color):
+        # P0_WHEAT_PRODUCTION, P0_ORE_PRODUCTION, ..., P1_WHEAT_PRODUCTION, ...
+        features = {}
+        board = game.state.board
+        robbed_nodes = set(board.map.tiles[board.robber_coordinate].nodes.values())
+        for resource in Resource:
+            for i, player in iter_players(game, p0_color):
+                production = 0
+                for node_id in player.buildings[BuildingType.SETTLEMENT]:
+                    if consider_robber and node_id in robbed_nodes:
+                        continue
+                    production += get_node_production(
+                        game.state.board, node_id, resource
+                    )
+                for node_id in player.buildings[BuildingType.CITY]:
+                    if consider_robber and node_id in robbed_nodes:
+                        continue
+                    production += 2 * get_node_production(
+                        game.state.board, node_id, resource
+                    )
+                features[f"{prefix}P{i}_{resource.value}_PRODUCTION"] = production
+
+        return features
+
+    return production_features
 
 
 # @functools.lru_cache(maxsize=None)
 def get_node_production(board, node_id, resource):
-    tiles = board.map.get_adjacent_tiles(node_id)
+    tiles = board.map.adjacent_tiles[node_id]
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 
@@ -204,9 +217,84 @@ def get_player_expandable_nodes(game, player):
     return expandable_node_ids
 
 
+REACHABLE_FEATURES_MAX = 3  # exclusive
+
+
+def reachability_features(game, p0_color):
+    features = {}
+
+    board_buildable = set(game.state.board.buildable_node_ids(p0_color, True))
+    for i, player in iter_players(game, p0_color):
+        color = player.color
+        owned_nodes = set(
+            player.buildings[BuildingType.SETTLEMENT]
+            + player.buildings[BuildingType.CITY]
+        )
+
+        # Do layer 0
+        zero_nodes = set()
+        for component in game.state.board.connected_components[color]:
+            for node_id in component:
+                zero_nodes.add(node_id)
+
+        production = count_production(zero_nodes, board_buildable, game, owned_nodes)
+        for resource in Resource:
+            features[f"P{i}_0_ROAD_REACHABLE_{resource.value}"] = production[resource]
+
+        # for layers deep:
+        last_layer_nodes = zero_nodes
+        for level in range(1, REACHABLE_FEATURES_MAX):
+            level_nodes = set(last_layer_nodes)
+            for node_id in last_layer_nodes:
+                if game.state.board.is_enemy_node(node_id, color):
+                    continue  # not expandable.
+
+                def can_follow_edge(neighbor_id):
+                    edge = (node_id, neighbor_id)
+                    return not game.state.board.is_enemy_road(edge, color)
+
+                expandable = filter(can_follow_edge, STATIC_GRAPH.neighbors(node_id))
+                level_nodes.update(expandable)
+
+            production = count_production(
+                level_nodes, board_buildable, game, owned_nodes
+            )
+            for resource in Resource:
+                features[f"P{i}_{level}_ROAD_REACHABLE_{resource.value}"] = production[
+                    resource
+                ]
+
+            last_layer_nodes = level_nodes
+
+    return features
+
+
+def count_production(level_nodes, board_buildable, game, owned_nodes):
+    level_buildable_nodes = {
+        node_id
+        for node_id in level_nodes
+        if node_id in board_buildable or node_id in owned_nodes
+    }
+    production = Counter()
+    for node_id in level_buildable_nodes:
+        production += get_node_counter_production(game.state.board, node_id)
+    return production
+
+
+def get_node_counter_production(board, node_id):
+    tiles = board.map.adjacent_tiles[node_id]
+    return Counter(
+        {
+            t.resource: number_probability(t.number)
+            for t in tiles
+            if t.resource is not None
+        }
+    )
+
+
 def expansion_features(game, p0_color):
     global STATIC_GRAPH
-    MAX_EXPANSION_DISTANCE = 4  # exclusive
+    MAX_EXPANSION_DISTANCE = 3  # exclusive
 
     features = {}
 
@@ -316,12 +404,14 @@ feature_extractors = [
     player_features,
     resource_hand_features,
     # TRANSFERABLE BOARD FEATURES =====
-    production_features,
+    build_production_features(True),
+    build_production_features(False),
     # expansion_features,
+    reachability_features,
     # RAW BASE-MAP FEATURES =====
-    tile_features,
-    port_features,
-    graph_features,
+    # tile_features,
+    # port_features,
+    # graph_features,
     # GAME FEATURES =====
     game_features,
 ]

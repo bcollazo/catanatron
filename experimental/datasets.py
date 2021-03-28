@@ -58,6 +58,7 @@ def read_dataset(
     shuffle=True,
     shuffle_seed=123,
     shuffle_buffer_size=10000,
+    select_columns=None,
     num_epochs=None,
     column_defaults=None,
 ):
@@ -69,6 +70,7 @@ def read_dataset(
         shuffle=shuffle,
         shuffle_seed=shuffle_seed,
         shuffle_buffer_size=shuffle_buffer_size,
+        select_columns=select_columns,
         num_epochs=num_epochs,
         column_defaults=column_defaults,
     )

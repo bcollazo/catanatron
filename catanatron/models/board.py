@@ -270,6 +270,10 @@ class Board:
     def is_enemy_node(self, node_id, color):
         node_color = self.get_node_color(node_id)
         return node_color is not None and node_color != color
+    
+    def is_enemy_road(self, edge, color):
+        edge_color = self.get_edge_color(edge)
+        return edge_color is not None and edge_color != color
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):

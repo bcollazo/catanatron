@@ -269,7 +269,7 @@ class Game:
             self.state.board.build_settlement(player.color, node_id, True)
             player.build_settlement(node_id, True)
             # yield resources of second settlement
-            for tile in self.state.board.map.get_adjacent_tiles(node_id):
+            for tile in self.state.board.map.adjacent_tiles[node_id]:
                 if tile.resource != None:
                     self.state.resource_deck.draw(1, tile.resource)
                     player.resource_deck.replenish(1, tile.resource)

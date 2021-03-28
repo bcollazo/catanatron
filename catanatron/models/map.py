@@ -72,6 +72,14 @@ def init_resource_tiles(catan_map):
     return tiles
 
 
+def init_adjacent_tiles(resource_tiles):
+    adjacent_tiles = defaultdict(list)  # node_id => tile[3]
+    for _, tile in resource_tiles:
+        for node_id in tile.nodes.values():
+            adjacent_tiles[node_id].append(tile)
+    return adjacent_tiles
+
+
 class BaseMap:
     """
     Describes a basic 4 player map. Includes the tiles, ports, and numbers used.
@@ -171,27 +179,9 @@ class BaseMap:
         self.port_nodes = init_port_nodes(self)
         self.resource_tiles = init_resource_tiles(self)
 
-    # @functools.lru_cache
-    def get_adjacent_tiles(self, node_id):
-        tiles = []
-        for _, tile in self.resource_tiles:
-            if node_id in tile.nodes.values():
-                tiles.append(tile)
-        return tiles
-
-    # @functools.lru_cache
-    def get_tile_by_id(self, tile_id):
-        filtered = filter(
-            lambda t: isinstance(t, Tile) and t.id == tile_id, self.tiles.values()
-        )
-        return next(filtered, None)
-
-    # @functools.lru_cache
-    def get_port_by_id(self, port_id):
-        filtered = filter(
-            lambda t: isinstance(t, Port) and t.id == port_id, self.tiles.values()
-        )
-        return next(filtered, None)
+        self.adjacent_tiles = init_adjacent_tiles(self.resource_tiles)
+        self.tiles_by_id = {t.id: t for t in self.tiles.values() if isinstance(t, Tile)}
+        self.ports_by_id = {p.id: p for p in self.tiles.values() if isinstance(p, Port)}
 
 
 # Given a tile, the reference to the node.

@@ -3,7 +3,7 @@ import timeit
 setup = """
 from catanatron.game import Game
 from catanatron.models.player import RandomPlayer, Color
-from experimental.machine_learning.features import create_sample_vector
+from experimental.machine_learning.features import create_sample_vector, expansion_features, reachability_features
 
 game = Game(
     [
@@ -22,7 +22,21 @@ result = timeit.timeit(
     setup=setup,
     number=NUMBER,
 )
-print(result / NUMBER, "secs")
+print("create_sample_vector", result / NUMBER, "secs")
+
+result = timeit.timeit(
+    "expansion_features(game, game.state.players[0].color)",
+    setup=setup,
+    number=NUMBER,
+)
+print("expansion_features", result / NUMBER, "secs")
+
+result = timeit.timeit(
+    "reachability_features(game, game.state.players[0].color)",
+    setup=setup,
+    number=NUMBER,
+)
+print("reachability_features", result / NUMBER, "secs")
 
 
 # Results:

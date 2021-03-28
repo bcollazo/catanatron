@@ -1,3 +1,4 @@
+import math
 import random
 import tensorflow as tf
 
@@ -10,6 +11,7 @@ from catanatron.models.player import SimplePlayer, Color
 from experimental.machine_learning.features import (
     create_sample,
     expansion_features,
+    reachability_features,
     iter_players,
     port_distance_features,
     tile_features,
@@ -76,6 +78,65 @@ def test_expansion_features():
     assert features["P0_WHEAT_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource.value}_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource.value}_AT_DISTANCE_1"] > 0
+
+
+def test_reachability_features():
+    """Board in tensor-board-test.png"""
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    # NOTE: tensor-board-test.png is the board that happens after seeding random
+    #   with 123 and running a random.sample() like so:
+    # We do this here to allow Game.__init__ evolve freely.
+    random.seed(123)
+    random.sample(players, len(players))
+    catan_map = BaseMap()
+    game = Game(players, seed=123, map=catan_map)
+
+    game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 5))
+    features = reachability_features(game, Color.RED)
+    assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
+    assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
+    assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(6)
+    assert features["P0_0_ROAD_REACHABLE_WHEAT"] == 0
+    # these are 0 since cant build at distance 1
+    assert features["P0_1_ROAD_REACHABLE_ORE"] == 0
+    assert features["P0_1_ROAD_REACHABLE_WHEAT"] == 0
+    # whats available at distance 0 should also be available at distance 1
+    assert features["P0_1_ROAD_REACHABLE_WOOD"] == number_probability(3)
+    assert features["P0_1_ROAD_REACHABLE_BRICK"] == number_probability(4)
+    assert features["P0_1_ROAD_REACHABLE_SHEEP"] == number_probability(6)
+
+    game.execute(Action(Color.RED, ActionType.BUILD_INITIAL_ROAD, (5, 0)))
+    features = reachability_features(game, Color.RED)
+    assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
+    assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
+    assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(6)
+    assert features["P0_0_ROAD_REACHABLE_WHEAT"] == 0
+    assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(
+        8
+    ) + number_probability(5)
+    assert features["P0_1_ROAD_REACHABLE_WHEAT"] == 2 * number_probability(9)
+
+    # Test distance 2
+    assert math.isclose(
+        features["P0_2_ROAD_REACHABLE_ORE"],
+        2 * number_probability(10)
+        + 3 * number_probability(8)
+        + 3 * number_probability(5),
+    )
+
+    # Test enemy making building removes buildability
+    game.execute(Action(Color.BLUE, ActionType.BUILD_FIRST_SETTLEMENT, 1))
+    features = reachability_features(game, Color.RED)
+    assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(8)
+    assert math.isclose(
+        features["P0_2_ROAD_REACHABLE_ORE"],
+        2 * number_probability(10) + 3 * number_probability(8),
+    )
 
 
 def test_tile_features():
@@ -225,9 +286,9 @@ def test_resource_proba_planes():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    map = BaseMap()
+    catan_map = BaseMap()
+    game = Game(players, seed=123, map=catan_map)
 
-    game = Game(players, seed=123, map=map)
     tensor = create_board_tensor(game, players[0].color)
     assert tensor[0][0][0] == 0
 
