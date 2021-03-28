@@ -5,11 +5,13 @@ from typing import List
 
 import numpy as np
 
+from catanatron.models.enums import DevelopmentCard, Resource
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron.models.actions import Action
 from experimental.machine_learning.features import (
     build_production_features,
+    create_sample,
     iter_players,
 )
 
@@ -60,8 +62,9 @@ def value_fn2(game, p0_color, verbose=False):
     _, p1 = next(iterator)
     p1_color = p1.color
 
+    sample = create_sample(game, p0_color)
+
     proba_point = 2.778 / 100
-    production = effective_production_features(game, p0_color)
     features = [
         "EFFECTIVE_P0_WHEAT_PRODUCTION",
         "EFFECTIVE_P0_ORE_PRODUCTION",
@@ -69,10 +72,9 @@ def value_fn2(game, p0_color, verbose=False):
         "EFFECTIVE_P0_WOOD_PRODUCTION",
         "EFFECTIVE_P0_BRICK_PRODUCTION",
     ]
-    prod_sum = sum([production[f] for f in features])
-    prod_variety = sum([production[f] != 0 for f in features]) * 4 * proba_point
+    prod_sum = sum([sample[f] for f in features])
+    prod_variety = sum([sample[f] != 0 for f in features]) * 4 * proba_point
 
-    enemy_production = effective_production_features(game, p1_color)
     enemy_features = [
         "EFFECTIVE_P1_WHEAT_PRODUCTION",
         "EFFECTIVE_P1_ORE_PRODUCTION",
@@ -80,38 +82,38 @@ def value_fn2(game, p0_color, verbose=False):
         "EFFECTIVE_P1_WOOD_PRODUCTION",
         "EFFECTIVE_P1_BRICK_PRODUCTION",
     ]
-    enemy_prod_sum = sum([enemy_production[f] for f in enemy_features])
-    enemy_prod_variety = (
-        sum([enemy_production[f] != 0 for f in enemy_features]) * 4 * proba_point
-    )
+    enemy_prod_sum = sum([sample[f] for f in enemy_features])
 
-    paths = game.state.board.continuous_roads_by_player(p0_color)
-    path_lengths = map(lambda path: len(path), paths)
-    longest_road_length = 0 if len(paths) == 0 else max(path_lengths)
+    longest_road_length = sample["P0_LONGEST_ROAD_LENGTH"]
+
+    features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
+    production_at_one = sum([sample[f] for f in features])
 
     if verbose:
         print(prod_sum, prod_variety)
 
-    return (
-        p0.actual_victory_points * 1000
-        + p0.cities_available * -100
-        + p0.settlements_available * -10
-        + p0.roads_available * -1
-        + longest_road_length
-        + len(p0.development_deck.to_array())
-        + len(p0.played_development_cards.to_array()) * 0.1
-        + prod_sum
-        + prod_variety
-        - enemy_prod_sum
+    return float(
+        p0.actual_victory_points * 1000000
+        + longest_road_length * 10
+        + len(p0.development_deck.to_array()) * 10
+        + len(p0.played_development_cards.to_array()) * 10.1
+        + p0.played_development_cards.count(DevelopmentCard.KNIGHT) * 10.1
+        + prod_sum * 1000
+        + prod_variety * 1000
+        - enemy_prod_sum * 1000
+        + production_at_one * 10
     )
 
 
 class ValueFunctionPlayer(Player):
     def __init__(self, color, name, function_name="value_fn"):
         super().__init__(color, name=name)
-        self.value_fn = {"value_fn": value_fn, "value_fn2": value_fn2, "": value_fn}[
-            function_name
-        ]
+        self.function_name = function_name
+
+    def value_fn(self, game, color):
+        return {"value_fn": value_fn, "value_fn2": value_fn2, "": value_fn}[
+            self.function_name
+        ](game, color)
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
@@ -123,7 +125,7 @@ class ValueFunctionPlayer(Player):
             game_copy = game.copy()
             game_copy.execute(action)
 
-            value = value_fn(game_copy, self.color)
+            value = self.value_fn(game_copy, self.color)
             if value > best_value:
                 best_value = value
                 best_action = action
@@ -131,7 +133,7 @@ class ValueFunctionPlayer(Player):
         return best_action
 
     def __str__(self) -> str:
-        return super().__str__() + self.value_fn.__name__
+        return super().__str__() + self.function_name
 
 
 class VictoryPointPlayer(Player):
@@ -242,7 +244,7 @@ class MiniMaxPlayer(Player):
         return best_action
 
 
-ALPHABETA_DEPTH = 3
+ALPHABETA_DEPTH = 2
 
 
 class AlphaBetaPlayer(Player):
@@ -257,32 +259,45 @@ class AlphaBetaPlayer(Player):
             float("-inf"),
             float("inf"),
             self.color,
+            maximizingPlayer=True,
             playable_actions=playable_actions,
         )
         print("Decision Results:", len(playable_actions), time.time() - start)
+        # breakpoint()
         return result[0]
 
 
-def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
+def alphabeta(
+    game, depth, alpha, beta, p0_color, maximizingPlayer=None, playable_actions=None
+):
     """AlphaBeta MiniMax Algorithm.
 
     NOTE: Sometimes returns a value, sometimes an (action, value). This is
     because some levels are state=>action, some are action=>state and in
     action=>state would probably need (action, proba, value) as return type.
     """
+    tabs = "\t" * (ALPHABETA_DEPTH - depth)
     if depth == 0 or game.winning_color() is not None:
-        return value_fn(game, p0_color)
+        # print(tabs, "returned heuristic", value_fn2(game, p0_color))
+        return value_fn2(game, p0_color)
 
-    maximizingPlayer = game.current_player().color == p0_color
-    children = expand_spectrum(game, playable_actions=playable_actions)
+    if playable_actions is None:
+        player, action_prompt = game.pop_from_queue()
+        maximizingPlayer = player.color == p0_color
+        actions = game.playable_actions(player, action_prompt)
+    else:
+        actions = playable_actions
+    children = expand_spectrum(game, actions)
+    # print(tabs, "MAXIMIZING =", maximizingPlayer, len(children))
     if maximizingPlayer:
         best_action = None
         best_value = float("-inf")
         for action, outprobas in children.items():
             expected_value = 0
             for (out, proba) in outprobas:
+                # print(tabs, "call maxalphabeta", action, proba, depth - 1, alpha, beta)
                 result = alphabeta(out, depth - 1, alpha, beta, p0_color)
-                value = result if depth == 1 else result[1]
+                value = result if isinstance(result, float) else result[1]
                 expected_value += proba * value
 
             if expected_value > best_value:
@@ -290,8 +305,10 @@ def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
                 best_value = expected_value
             alpha = max(alpha, best_value)
             if alpha >= beta:
-                print("beta cutoff")
+                # print(tabs, "beta cutoff")
                 break  # beta cutoff
+            # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
+
         return best_action, best_value
     else:
         best_action = None
@@ -299,8 +316,9 @@ def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
         for action, outprobas in children.items():
             expected_value = 0
             for (out, proba) in outprobas:
+                # print(tabs, "call minalphabeta", action, proba, depth - 1, alpha, beta)
                 result = alphabeta(out, depth - 1, alpha, beta, p0_color)
-                value = result if depth == 1 else result[1]
+                value = result if isinstance(result, float) else result[1]
                 expected_value += proba * value
 
             if expected_value < best_value:
@@ -308,20 +326,16 @@ def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
                 best_value = expected_value
             beta = min(beta, best_value)
             if beta <= alpha:
-                print("alpha cutoff")
-                break  # beta cutoff
+                # print(tabs, "alpha cutoff")
+                break  # alpha cutoff
+            # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
+
         return best_action, best_value
 
 
-def expand_spectrum(game, playable_actions=None):
+def expand_spectrum(game, actions):
+    """Consumes game if playable_actions not specified"""
     children = defaultdict(list)
-
-    if playable_actions is None:
-        player, action_prompt = game.pop_from_queue()
-        actions = game.playable_actions(player, action_prompt)
-    else:
-        actions = playable_actions
-
     for action in actions:
         outprobas = game.execute_spectrum(action)
         children[action] = outprobas
