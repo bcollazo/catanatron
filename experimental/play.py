@@ -21,6 +21,7 @@ from experimental.machine_learning.players.reinforcement import (
     hot_one_encode_action,
 )
 from experimental.machine_learning.players.minimax import (
+    AlphaBetaPlayer,
     MiniMaxPlayer,
     ValueFunctionPlayer,
     VictoryPointPlayer,
@@ -101,13 +102,17 @@ def simulate(num, players, outpath, save_in_db, watch):
             initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
         elif key == "X":
             initialized_players.append(MiniMaxPlayer(colors[i], pseudonyms[i]))
-        elif key == "F":
-            initialized_players.append(ValueFunctionPlayer(colors[i], pseudonyms[i]))
         elif key == "S":
             initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
         elif key == "VP":
             initialized_players.append(VictoryPointPlayer(colors[i], pseudonyms[i]))
+        elif key == "AB":
+            initialized_players.append(AlphaBetaPlayer(colors[i], pseudonyms[i]))
         # Parametrized players
+        elif key[0] == "F":
+            initialized_players.append(
+                ValueFunctionPlayer(colors[i], pseudonyms[i], param)
+            )
         elif key[0] == "V":
             initialized_players.append(VRLPlayer(colors[i], pseudonyms[i], param))
         elif key[0] == "Q":
