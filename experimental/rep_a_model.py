@@ -13,19 +13,19 @@ from experimental.machine_learning.players.reinforcement import (
 )
 
 # ===== Configuration
-DATA_DIRECTORY = "data/random1v1s"
-DATA_SIZE = 7000000  # use zcat data/mcts-playouts/labels.csv.gzip | wc
-EPOCHS = 10
+DATA_DIRECTORY = "data/reachability"
+DATA_SIZE = 17994609  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+EPOCHS = 1
 BATCH_SIZE = 32
-STEPS_PER_EPOCH = DATA_SIZE // EPOCHS // BATCH_SIZE
+STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
 PREFETCH_BUFFER_SIZE = 10
 LABEL_FILE = "rewards.csv.gzip"
 LABEL_COLUMN = "DISCOUNTED_RETURN"
-VALIDATION_DATA_SIZE = 10000
-VALIDATION_DATA_DIRECTORY = "data/random1v1s"
+VALIDATION_DATA_SIZE = 820507
+VALIDATION_DATA_DIRECTORY = "data/reachability-validation"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
 NORMALIZATION = False
-NORMALIZATION_DIRECTORY = "data/random1v1s"
+NORMALIZATION_DIRECTORY = "data/reachability-validation"
 NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "samples-mean.npy")
 NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "samples-variance.npy")
 SHUFFLE = True
@@ -79,6 +79,7 @@ rewards = tf.data.experimental.make_csv_dataset(
     shuffle_seed=SHUFFLE_SEED,
     shuffle_buffer_size=SHUFFLE_BUFFER_SIZE,
     select_columns=[LABEL_COLUMN],
+    column_defaults=[tf.float64],
 )
 train_dataset = tf.data.Dataset.zip((samples, rewards)).map(preprocess)
 train_dataset = tf.data.Dataset.from_generator(
@@ -109,6 +110,7 @@ rewards = tf.data.experimental.make_csv_dataset(
     shuffle_seed=VALIDATION_SHUFFLE_SEED,
     shuffle_buffer_size=SHUFFLE_BUFFER_SIZE,
     select_columns=[LABEL_COLUMN],
+    column_defaults=[tf.float64],
 )
 test_dataset = tf.data.Dataset.zip((samples, rewards)).map(preprocess)
 test_dataset = tf.data.Dataset.from_generator(
@@ -203,9 +205,11 @@ model.fit(
     steps_per_epoch=STEPS_PER_EPOCH,
     epochs=EPOCHS,
     validation_data=test_dataset,
-    validation_steps=VALIDATION_DATA_SIZE / BATCH_SIZE,
+    validation_steps=VALIDATION_DATA_SIZE // BATCH_SIZE,
     callbacks=[
-        # tf.keras.callbacks.EarlyStopping(monitor="val_mae", patience=3, min_delta=1e-6),
+        tf.keras.callbacks.EarlyStopping(
+            monitor="val_mae", patience=1, min_delta=0.0001
+        ),
         tf.keras.callbacks.TensorBoard(
             log_dir=LOG_DIR, histogram_freq=1, write_graph=True
         ),

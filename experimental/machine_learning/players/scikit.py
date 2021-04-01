@@ -11,7 +11,7 @@ from experimental.machine_learning.features import create_sample, create_sample_
 
 from experimental.simple_model import FEATURES
 
-with open("experimental/models/simple-scikit-expansions.model", "rb") as file:
+with open("experimental/models/simple-scikit-linear.model", "rb") as file:
     clf = pickle.load(file)
 
 # from experimental.simple_forest import FEATURES
@@ -37,6 +37,6 @@ class ScikitPlayer(Player):
         best_idx = np.argmax(scores)
         best_action = playable_actions[best_idx]
 
-        pprint(list(zip(playable_actions, scores)))
-        breakpoint()
+        # pprint(list(zip(playable_actions, scores)))
+        # breakpoint()
         return best_action
