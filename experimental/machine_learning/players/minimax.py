@@ -244,10 +244,14 @@ class MiniMaxPlayer(Player):
         return best_action
 
 
-ALPHABETA_DEPTH = 2
+ALPHABETA_DEFAULT_DEPTH = 2
 
 
 class AlphaBetaPlayer(Player):
+    def __init__(self, color, name, depth=ALPHABETA_DEFAULT_DEPTH):
+        super().__init__(color, name=name)
+        self.depth = depth
+
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
@@ -255,16 +259,21 @@ class AlphaBetaPlayer(Player):
         start = time.time()
         result = alphabeta(
             game.copy(),
-            ALPHABETA_DEPTH,
+            self.depth,
             float("-inf"),
             float("inf"),
             self.color,
             maximizingPlayer=True,
             playable_actions=playable_actions,
         )
-        print("Decision Results:", len(playable_actions), time.time() - start)
+        print(
+            "Decision Results:", self.depth, len(playable_actions), time.time() - start
+        )
         # breakpoint()
         return result[0]
+
+    def __repr__(self) -> str:
+        return super().__repr__() + f"(depth={self.depth})"
 
 
 def alphabeta(
@@ -276,7 +285,7 @@ def alphabeta(
     because some levels are state=>action, some are action=>state and in
     action=>state would probably need (action, proba, value) as return type.
     """
-    tabs = "\t" * (ALPHABETA_DEPTH - depth)
+    tabs = "\t" * (ALPHABETA_DEFAULT_DEPTH - depth)
     if depth == 0 or game.winning_color() is not None:
         # print(tabs, "returned heuristic", value_fn2(game, p0_color))
         return value_fn2(game, p0_color)

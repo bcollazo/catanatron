@@ -106,9 +106,11 @@ def simulate(num, players, outpath, save_in_db, watch):
             initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
         elif key == "VP":
             initialized_players.append(VictoryPointPlayer(colors[i], pseudonyms[i]))
-        elif key == "AB":
-            initialized_players.append(AlphaBetaPlayer(colors[i], pseudonyms[i]))
         # Parametrized players
+        elif key[0:2] == "AB":
+            initialized_players.append(
+                AlphaBetaPlayer(colors[i], pseudonyms[i], int(key[2]))
+            )
         elif key[0] == "F":
             initialized_players.append(
                 ValueFunctionPlayer(colors[i], pseudonyms[i], param)
