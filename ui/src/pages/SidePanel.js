@@ -46,13 +46,13 @@ export default function SidePanel({ state }) {
       has_army,
       has_road,
     }) => {
-      const playerClass = `bg-white bg-${color.toLowerCase()}-700 h-42 overflow-auto`;
+      const playerClass = `bg-white bg-${color.toLowerCase()}-700 h-42 overflow-auto rounded-md p-2 m-1`;
       return (
         <div key={color} className={playerClass}>
           <div>{JSON.stringify(resource_deck, null, 2)}</div>
           <div>{JSON.stringify(development_deck, null, 2)}</div>
-          <div>VPs: {public_victory_points}</div>
-          <div>AVPs: {actual_victory_points}</div>
+          <div>Victory Points: {public_victory_points}</div>
+          {/* <div>AVPs: {actual_victory_points}</div> */}
           <div className={cn({ "font-bold": has_army })}>
             Knights: {played_development_cards["KNIGHT"]}
           </div>
@@ -63,7 +63,7 @@ export default function SidePanel({ state }) {
   );
 
   return (
-    <div className="h-full w-1/2 bg-gray-900 p-4">
+    <div className="h-full w-300 bg-gray-900 p-4">
       <div ref={actionRef} className="h-64 overflow-auto">
         {actions}
       </div>

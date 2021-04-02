@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 
 import useWindowSize from "../utils/useWindowSize";
 import Tile from "./Tile";
@@ -7,41 +7,70 @@ import Edge from "./Edge";
 import Node from "./Node";
 import Robber from "./Robber";
 
-export default function Board({ state }) {
-  const ref = useRef(null);
-  const [boardWidth, setBoardWidth] = useState(0);
-  const [boardHeight, setBoardHeight] = useState(0);
-  const { width, height } = useWindowSize();
+/**
+ * This uses the formulas: W = SQRT3 * size and H = 2 * size.
+ * Math comes from https://www.redblobgames.com/grids/hexagons/.
+ */
+function computeDefaultSize(divWidth, divHeight) {
+  const numLevels = 6; // 3 rings + 1/2 a tile for the outer water ring
+  // divHeight = numLevels * (3h/4) + (h/4), implies:
+  const maxSizeThatRespectsHeight = (4 * divHeight) / (3 * numLevels + 1) / 2; 
+  const correspondingWidth = SQRT3 * maxSizeThatRespectsHeight;
+  let size;
+  if (numLevels * correspondingWidth < divWidth) {
+    // thus complete board would fit if we pick size based on height (height is limiting factor)
+    size = maxSizeThatRespectsHeight;
+  } else {
+    // we'll have to decide size based on width.
+    const maxSizeThatRespectsWidth = divWidth / numLevels / SQRT3;
+    size = maxSizeThatRespectsWidth;
+  }
+  return size;
+}
 
+export default function Board({ state }) {
+  const { width, height } = useWindowSize();
+  const ref = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(null);
+  const [containerHeight, setContainerHeight] = useState(null);
+  const [size, setSize] = useState(null);
+
+  // Set Board Width when we get our computed flex space available.
   useEffect(() => {
     if (ref.current !== null) {
       const style = window.getComputedStyle(ref.current, null);
-      setBoardWidth(parseInt(style.getPropertyValue("width")));
-      setBoardHeight(parseInt(style.getPropertyValue("height")));
+      const divWidth = parseInt(style.getPropertyValue("width"));
+      const divHeight = parseInt(style.getPropertyValue("height"));
+      setContainerWidth(divWidth);
+      setContainerHeight(divHeight);
+      setSize(computeDefaultSize(divWidth, divHeight))
     }
   }, [ref, width, height]);
 
-  // signed integer to create zoom effect. 1 means it should be contained.
-  const boardScalingFactor = 1;
-  const centerX = (boardWidth * boardScalingFactor) / 2;
-  const centerY = (boardHeight * boardScalingFactor) / 2;
+  useEffect(() => {
+    const handleWheel = (event) => {
+      console.log(size, event.deltaY);
+      // TODO: CAP
+      const newSize = size + event.deltaY * -0.1; // deltaY < 0 means bigger
+      setSize(newSize);
+    }
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', handleWheel)
+    }
+  }, [size]);
 
-  const numLevels = 7; // 2 outermost of water, 3 inner layers
-  let w, size, h;
-  // if assuming width, would break height
-  if ((2 * boardWidth) / SQRT3 < boardHeight) {
-    w = boardWidth / numLevels;
-    size = w / SQRT3;
-    h = 2 * size;
-  } else {
-    // boardHeight = numLevels * (3h/4) + (1h/4)
-    // 4*boardHeight = numLevels * 3h + 1h
-    // 4*boardHeight = (3*numLevels + 1)*h, so:
-    h = (4 * boardHeight) / (3 * numLevels + 1);
-    size = h / 2;
-    w = SQRT3 * size;
+  if (containerWidth === null || containerHeight === null) {
+    return <div className="board-container flex-grow flex">
+      <div ref={ref} className="board relative w-full h-full">
+      </div>
+    </div>;
   }
 
+  const centerX = containerWidth / 2;
+  const centerY = containerHeight / 2;
+  const w = SQRT3 * size;
+  const h = 2 * size;
   const tiles = state.tiles.map(({ coordinate, tile }) => (
     <Tile
       key={coordinate}
@@ -54,46 +83,47 @@ export default function Board({ state }) {
       size={size}
     />
   ));
-  const edges = Object.values(
-    state.edges
-  ).map(({ color, direction, tile_coordinate, id }) => (
-    <Edge
-      id={id}
-      key={id}
-      centerX={centerX}
-      centerY={centerY}
-      w={w}
-      h={h}
-      size={size}
-      coordinate={tile_coordinate}
-      direction={direction}
-      color={color}
-    />
-  ));
-  const nodes = Object.values(
-    state.nodes
-  ).map(({ color, building, direction, tile_coordinate, id }) => (
-    <Node
-      id={id}
-      key={id}
-      centerX={centerX}
-      centerY={centerY}
-      w={w}
-      h={h}
-      size={size}
-      coordinate={tile_coordinate}
-      direction={direction}
-      building={building}
-      color={color}
-    />
-  ));
+  // const edges = Object.values(
+  //   state.edges
+  // ).map(({ color, direction, tile_coordinate, id }) => (
+  //   <Edge
+  //     id={id}
+  //     key={id}
+  //     centerX={centerX}
+  //     centerY={centerY}
+  //     w={w}
+  //     h={h}
+  //     scalingFactor={scalingFactor}
+  //     size={size}
+  //     coordinate={tile_coordinate}
+  //     direction={direction}
+  //     color={color}
+  //   />
+  // ));
+  // const nodes = Object.values(
+  //   state.nodes
+  // ).map(({ color, building, direction, tile_coordinate, id }) => (
+  //   <Node
+  //     id={id}
+  //     key={id}
+  //     centerX={centerX}
+  //     centerY={centerY}
+  //     w={w}
+  //     h={h}
+  //     size={size}
+  //     coordinate={tile_coordinate}
+  //     direction={direction}
+  //     building={building}
+  //     color={color}
+  //   />
+  // ));
 
   return (
     <div className="board-container flex-grow flex">
-      <div ref={ref} className="board relative w-full h-full">
+      <div ref={ref} className="board relative w-full h-full" onDrag={onDrag}>
         {tiles}
-        {edges}
-        {nodes}
+        {/* {edges}
+        {nodes} */}
         <Robber
           centerX={centerX}
           centerY={centerY}

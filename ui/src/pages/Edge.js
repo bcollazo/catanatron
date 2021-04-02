@@ -24,13 +24,14 @@ export default function Edge({
   centerY,
   w,
   h,
+  scalingFactor,
   size,
   coordinate,
   direction,
   color,
 }) {
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
-  const [deltaX, deltaY, transform] = getEdgeDeltaAndTransform(direction, w, h);
+  const [deltaX, deltaY, transform] = getEdgeDeltaAndTransform(direction, w, h, scalingFactor);
   const x = tileX + deltaX;
   const y = tileY + deltaY;
 

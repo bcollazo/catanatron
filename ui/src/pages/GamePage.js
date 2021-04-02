@@ -68,7 +68,7 @@ export default function GamePage() {
           onClickAutomation={onClickAutomation}
         />
       </div>
-      <SidePanel state={state} />
+      {/* <SidePanel state={state} /> */}
     </div>
   );
 }
