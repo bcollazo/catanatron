@@ -55,6 +55,20 @@ FEATURES = [
 
 
 def allow_feature(feature_name):
+    return (
+        "2_ROAD" not in feature_name
+        and "HAND" not in feature_name
+        and "BANK" not in feature_name
+        and "P0_ACTUAL_VPS" != feature_name
+        and "PLAYABLE" not in feature_name
+        and "LEFT" not in feature_name
+        and "ROLLED" not in feature_name
+        and "PLAYED" not in feature_name
+        and "PUBLIC_VPS" not in feature_name
+        and not ("TOTAL" in feature_name and "P1" in feature_name)
+        and not ("EFFECTIVE" in feature_name and "P0" in feature_name)
+        and (feature_name[-6:] != "PLAYED" or "KNIGHT" in feature_name)
+    )
     return True
     return (
         feature_name[:4] != "TILE"
@@ -294,8 +308,15 @@ class VRLPlayer(Player):
             samples.append(state)
 
         scores = get_v_model(self.model_path).call(tf.convert_to_tensor(samples))
-        best_idx = np.argmax(scores)
-        # print(list(zip(playable_actions, scores)))
+
+        # We do this instead of np.argmax(scores), because often all have same
+        #   value, at which point we want random instead of first (end turn).
+        best_score = np.max(scores)
+        max_indices = np.where(scores == best_score)
+        best_idx = np.random.choice(max_indices[0])
+
+        # pprint(list(zip(FEATURES, get_v_model(self.model_path).get_weights()[-2])))
+        # pprint(list(zip(playable_actions, scores)))
         # breakpoint()
         return playable_actions[best_idx]
 

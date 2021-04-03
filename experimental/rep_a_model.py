@@ -5,7 +5,8 @@ import random
 
 import numpy as np
 import tensorflow as tf
-import kerastuner as kt
+
+# import kerastuner as kt
 
 from experimental.machine_learning.players.reinforcement import (
     FEATURES,
@@ -13,16 +14,16 @@ from experimental.machine_learning.players.reinforcement import (
 )
 
 # ===== Configuration
-DATA_DIRECTORY = "data/random1v1s"
-DATA_SIZE = 7000000  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+DATA_DIRECTORY = "data/reachability"
+DATA_SIZE = 17994609  # use zcat data/mcts-playouts/labels.csv.gzip | wc
 EPOCHS = 10
-BATCH_SIZE = 32
-STEPS_PER_EPOCH = DATA_SIZE // EPOCHS // BATCH_SIZE
+BATCH_SIZE = 2 ** 5
+STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
 PREFETCH_BUFFER_SIZE = 10
 LABEL_FILE = "rewards.csv.gzip"
-LABEL_COLUMN = "DISCOUNTED_RETURN"
-VALIDATION_DATA_SIZE = 10000
-VALIDATION_DATA_DIRECTORY = "data/random1v1s"
+LABEL_COLUMN = "VICTORY_POINTS_RETURN"
+VALIDATION_DATA_SIZE = 820507
+VALIDATION_DATA_DIRECTORY = "data/reachability-validation"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
 NORMALIZATION = False
 NORMALIZATION_DIRECTORY = "data/random1v1s"
@@ -211,7 +212,6 @@ model.fit(
         ),
     ],
 )
-
 
 model.save(MODEL_PATH)
 print("Saved model at:", MODEL_PATH)

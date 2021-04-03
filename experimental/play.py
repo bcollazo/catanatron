@@ -6,7 +6,6 @@ import click
 import termplotlib as tpl
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 
 from catanatron.models.enums import BuildingType, Resource
 from catanatron_server.database import save_game_state
@@ -48,8 +47,11 @@ from experimental.machine_learning.utils import (
     DISCOUNT_FACTOR,
 )
 
-
+LOG_IN_TF = False
 RUNNING_AVG_LENGTH = 1
+
+if LOG_IN_TF:
+    import tensorflow as tf
 
 
 @click.command()
@@ -141,7 +143,8 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
     durations = []
     games = []
     results_by_player = defaultdict(list)
-    writer = tf.summary.create_file_writer(f"logs/play/{int(time.time())}")
+    if LOG_IN_TF:
+        writer = tf.summary.create_file_writer(f"logs/play/{int(time.time())}")
     for i in range(num_games):
         for player in players:
             player.restart_state()
@@ -183,16 +186,17 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
         games.append(game)
         for player in players:
             results_by_player[player.color].append(player.actual_victory_points)
-        with writer.as_default():
-            for player in players:
-                results = results_by_player[player.color]
-                last_results = results[len(results) - RUNNING_AVG_LENGTH :]
-                if len(last_results) >= RUNNING_AVG_LENGTH:
-                    running_avg = sum(last_results) / len(last_results)
-                    tf.summary.scalar(
-                        f"{player.color}-vp-running-avg", running_avg, step=i
-                    )
-            writer.flush()
+        if LOG_IN_TF:
+            with writer.as_default():
+                for player in players:
+                    results = results_by_player[player.color]
+                    last_results = results[len(results) - RUNNING_AVG_LENGTH :]
+                    if len(last_results) >= RUNNING_AVG_LENGTH:
+                        running_avg = sum(last_results) / len(last_results)
+                        tf.summary.scalar(
+                            f"{player.color}-vp-running-avg", running_avg, step=i
+                        )
+                writer.flush()
 
     print("AVG Ticks:", sum(ticks) / len(ticks))
     print("AVG Turns:", sum(turns) / len(turns))
@@ -207,7 +211,7 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
     fig.barh([wins[str(p)] for p in players], players, force_ascii=False)
     fig.show()
 
-    return games
+    return wins, results_by_player
 
 
 def build_action_callback(games_directory):
@@ -232,38 +236,38 @@ def build_action_callback(games_directory):
         action = game.state.actions[-1]
         player = game.state.players_by_color[action.color]
         data[player.color]["samples"].append(create_sample(game, player.color))
-        data[player.color]["actions"].append(hot_one_encode_action(action))
+        # data[player.color]["actions"].append(hot_one_encode_action(action))
 
-        board_tensor = create_board_tensor(game, player.color)
-        shape = board_tensor.shape
-        flattened_tensor = tf.reshape(
-            board_tensor, (shape[0] * shape[1] * shape[2],)
-        ).numpy()
-        data[player.color]["board_tensors"].append(flattened_tensor)
+        # board_tensor = create_board_tensor(game, player.color)
+        # shape = board_tensor.shape
+        # flattened_tensor = tf.reshape(
+        #     board_tensor, (shape[0] * shape[1] * shape[2],)
+        # ).numpy()
+        # data[player.color]["board_tensors"].append(flattened_tensor)
 
-        player_tiles = set()
-        for node_id in (
-            player.buildings[BuildingType.SETTLEMENT]
-            + player.buildings[BuildingType.CITY]
-        ):
-            for tile in game.state.board.map.get_adjacent_tiles(node_id):
-                player_tiles.add(tile.resource)
-        data[player.color]["OWS_ONLY_LABEL"].append(
-            player_tiles == set([Resource.ORE, Resource.WHEAT, Resource.SHEEP])
-        )
-        data[player.color]["OWS_LABEL"].append(
-            Resource.ORE in player_tiles
-            and Resource.WHEAT in player_tiles
-            and Resource.SHEEP in player_tiles
-        )
-        data[player.color]["settlements"].append(
-            len(player.buildings[BuildingType.SETTLEMENT])
-        )
-        data[player.color]["cities"].append(len(player.buildings[BuildingType.CITY]))
-        data[player.color]["prod_vps"].append(
-            len(player.buildings[BuildingType.SETTLEMENT])
-            + len(player.buildings[BuildingType.CITY])
-        )
+        # player_tiles = set()
+        # for node_id in (
+        #     player.buildings[BuildingType.SETTLEMENT]
+        #     + player.buildings[BuildingType.CITY]
+        # ):
+        #     for tile in game.state.board.map.adjacent_tiles[node_id]:
+        #         player_tiles.add(tile.resource)
+        # data[player.color]["OWS_ONLY_LABEL"].append(
+        #     player_tiles == set([Resource.ORE, Resource.WHEAT, Resource.SHEEP])
+        # )
+        # data[player.color]["OWS_LABEL"].append(
+        #     Resource.ORE in player_tiles
+        #     and Resource.WHEAT in player_tiles
+        #     and Resource.SHEEP in player_tiles
+        # )
+        # data[player.color]["settlements"].append(
+        #     len(player.buildings[BuildingType.SETTLEMENT])
+        # )
+        # data[player.color]["cities"].append(len(player.buildings[BuildingType.CITY]))
+        # data[player.color]["prod_vps"].append(
+        #     len(player.buildings[BuildingType.SETTLEMENT])
+        #     + len(player.buildings[BuildingType.CITY])
+        # )
 
         if game.winning_player() is not None:
             flush_to_matrices(game, data, games_directory)
@@ -282,8 +286,8 @@ def flush_to_matrices(game, data, games_directory):
     for player in game.state.players:
         player_data = data[player.color]
         samples.extend(player_data["samples"])
-        actions.extend(player_data["actions"])
-        board_tensors.extend(player_data["board_tensors"])
+        # actions.extend(player_data["actions"])
+        # board_tensors.extend(player_data["board_tensors"])
 
         # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
         episode_return = get_discounted_return(game, player, 1)
@@ -305,21 +309,21 @@ def flush_to_matrices(game, data, games_directory):
             ],
             (len(player_data["samples"]), 1),
         )
-        return_matrix = np.concatenate(
-            (return_matrix, np.transpose([player_data["OWS_ONLY_LABEL"]])), axis=1
-        )
-        return_matrix = np.concatenate(
-            (return_matrix, np.transpose([player_data["OWS_LABEL"]])), axis=1
-        )
-        return_matrix = np.concatenate(
-            (return_matrix, np.transpose([player_data["settlements"]])), axis=1
-        )
-        return_matrix = np.concatenate(
-            (return_matrix, np.transpose([player_data["cities"]])), axis=1
-        )
-        return_matrix = np.concatenate(
-            (return_matrix, np.transpose([player_data["prod_vps"]])), axis=1
-        )
+        # return_matrix = np.concatenate(
+        #     (return_matrix, np.transpose([player_data["OWS_ONLY_LABEL"]])), axis=1
+        # )
+        # return_matrix = np.concatenate(
+        #     (return_matrix, np.transpose([player_data["OWS_LABEL"]])), axis=1
+        # )
+        # return_matrix = np.concatenate(
+        #     (return_matrix, np.transpose([player_data["settlements"]])), axis=1
+        # )
+        # return_matrix = np.concatenate(
+        #     (return_matrix, np.transpose([player_data["cities"]])), axis=1
+        # )
+        # return_matrix = np.concatenate(
+        #     (return_matrix, np.transpose([player_data["prod_vps"]])), axis=1
+        # )
         labels.extend(return_matrix)
 
     # Build Q-learning Design Matrix
@@ -336,11 +340,11 @@ def flush_to_matrices(game, data, games_directory):
             "TOURNAMENT_RETURN",
             "DISCOUNTED_TOURNAMENT_RETURN",
             "VICTORY_POINTS_RETURN",
-            "OWS_ONLY_LABEL",
-            "OWS_LABEL",
-            "settlements",
-            "cities",
-            "prod_vps",
+            # "OWS_ONLY_LABEL",
+            # "OWS_LABEL",
+            # "settlements",
+            # "cities",
+            # "prod_vps",
         ],
     ).astype("float64")
     print(rewards_df.describe())

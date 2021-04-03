@@ -10,6 +10,7 @@ from catanatron.models.player import Player
 from catanatron.models.actions import Action
 from experimental.machine_learning.features import (
     build_production_features,
+    create_sample,
     iter_players,
 )
 
@@ -42,7 +43,7 @@ def value_fn(game, p0_color, verbose=False):
         print(prod_sum, prod_variety)
 
     return (
-        p0.actual_victory_points * 1000
+        p0.public_victory_points * 1000
         + p0.cities_available * -100
         + p0.settlements_available * -10
         + p0.roads_available * -1
@@ -54,64 +55,66 @@ def value_fn(game, p0_color, verbose=False):
     )
 
 
-def value_fn2(game, p0_color, verbose=False):
-    iterator = iter_players(game, p0_color)
-    _, p0 = next(iterator)
-    _, p1 = next(iterator)
-    p1_color = p1.color
+def build_value_function(params):
+    def fn(game, p0_color, verbose=False):
+        iterator = iter_players(game, p0_color)
+        _, p0 = next(iterator)
 
-    proba_point = 2.778 / 100
-    production = effective_production_features(game, p0_color)
-    features = [
-        "EFFECTIVE_P0_WHEAT_PRODUCTION",
-        "EFFECTIVE_P0_ORE_PRODUCTION",
-        "EFFECTIVE_P0_SHEEP_PRODUCTION",
-        "EFFECTIVE_P0_WOOD_PRODUCTION",
-        "EFFECTIVE_P0_BRICK_PRODUCTION",
-    ]
-    prod_sum = sum([production[f] for f in features])
-    prod_variety = sum([production[f] != 0 for f in features]) * 4 * proba_point
+        sample = create_sample(game, p0_color)
 
-    enemy_production = effective_production_features(game, p1_color)
-    enemy_features = [
-        "EFFECTIVE_P1_WHEAT_PRODUCTION",
-        "EFFECTIVE_P1_ORE_PRODUCTION",
-        "EFFECTIVE_P1_SHEEP_PRODUCTION",
-        "EFFECTIVE_P1_WOOD_PRODUCTION",
-        "EFFECTIVE_P1_BRICK_PRODUCTION",
-    ]
-    enemy_prod_sum = sum([enemy_production[f] for f in enemy_features])
-    enemy_prod_variety = (
-        sum([enemy_production[f] != 0 for f in enemy_features]) * 4 * proba_point
-    )
+        proba_point = 2.778 / 100
+        features = [
+            "EFFECTIVE_P0_WHEAT_PRODUCTION",
+            "EFFECTIVE_P0_ORE_PRODUCTION",
+            "EFFECTIVE_P0_SHEEP_PRODUCTION",
+            "EFFECTIVE_P0_WOOD_PRODUCTION",
+            "EFFECTIVE_P0_BRICK_PRODUCTION",
+        ]
+        prod_sum = sum([sample[f] for f in features])
+        prod_variety = sum([sample[f] != 0 for f in features]) * params[0] * proba_point
 
-    paths = game.state.board.continuous_roads_by_player(p0_color)
-    path_lengths = map(lambda path: len(path), paths)
-    longest_road_length = 0 if len(paths) == 0 else max(path_lengths)
+        enemy_features = [
+            "EFFECTIVE_P1_WHEAT_PRODUCTION",
+            "EFFECTIVE_P1_ORE_PRODUCTION",
+            "EFFECTIVE_P1_SHEEP_PRODUCTION",
+            "EFFECTIVE_P1_WOOD_PRODUCTION",
+            "EFFECTIVE_P1_BRICK_PRODUCTION",
+        ]
+        enemy_prod_sum = sum([sample[f] for f in enemy_features])
 
-    if verbose:
-        print(prod_sum, prod_variety)
+        longest_road_length = sample["P0_LONGEST_ROAD_LENGTH"]
 
-    return (
-        p0.actual_victory_points * 1000
-        + p0.cities_available * -100
-        + p0.settlements_available * -10
-        + p0.roads_available * -1
-        + longest_road_length
-        + len(p0.development_deck.to_array())
-        + len(p0.played_development_cards.to_array()) * 0.1
-        + prod_sum
-        + prod_variety
-        - enemy_prod_sum
-    )
+        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
+        production_at_one = sum([sample[f] for f in features])
+
+        if verbose:
+            print(prod_sum, prod_variety)
+
+        return float(
+            p0.public_victory_points * 1000000
+            + longest_road_length * 10
+            + len(p0.development_deck.to_array()) * 10
+            + len(p0.played_development_cards.to_array()) * 10.1
+            + p0.played_development_cards.count(DevelopmentCard.KNIGHT) * 10.1
+            + prod_sum * 1000
+            + prod_variety * 1000
+            - enemy_prod_sum * 1000
+            + production_at_one * 10
+        )
+
+    return fn
+
+
+value_fn2 = build_value_function([4])
 
 
 class ValueFunctionPlayer(Player):
-    def __init__(self, color, name, function_name="value_fn"):
+    def __init__(self, color, name, fn):
         super().__init__(color, name=name)
-        self.value_fn = {"value_fn": value_fn, "value_fn2": value_fn2, "": value_fn}[
-            function_name
-        ]
+        if isinstance(fn, str):
+            self.value_fn = globals()[fn or "value_fn2"]
+        else:  # assume fn
+            self.value_fn = fn
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:

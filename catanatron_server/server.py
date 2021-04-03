@@ -96,11 +96,13 @@ def get_game_endpoint(game_id):
 def create_game():
     game = Game(
         players=[
-            # VRLPlayer(Color.RED, "FOO", "experimental/models/1v1-rep-a"),
+            VRLPlayer(Color.RED, "FOO", "experimental/models/1v1-rep-a"),
+            # ScikitPlayer(Color.RED, "FOO"),
             # TensorRLPlayer(Color.BLUE, "BAR", "tensor-model-normalized"),
             # MCTSPlayer(Color.RED, "FOO", 25),
-            # ValueFunctionPlayer(Color.RED, "FOO"),
-            RandomPlayer(Color.RED, "FOO"),
+            # ValueFunctionPlayer(Color.RED, "FOO", "value_fn2"),
+            # AlphaBetaPlayer(Color.BLUE, "BAR")
+            # RandomPlayer(Color.RED, "FOO"),
             RandomPlayer(Color.BLUE, "BAR"),
             # RandomPlayer(Color.WHITE, "BAZ"),
             # RandomPlayer(Color.ORANGE, "QUX"),

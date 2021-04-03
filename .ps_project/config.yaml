@@ -7,7 +7,7 @@ workflows:
         command: experiment.run_single_node
         params:
           command: nvidia-smi
-          container: tensorflow/tensorflow:1.13.1-gpu-py3
+          container: tensorflow/tensorflow:1.13.1-gpu-py38
           experimentEnv:
             EPOCHS_EVAL: 5
             EVAL_SECS: 10
