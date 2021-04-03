@@ -1,3 +1,6 @@
 data
 ui
+logs
 experimental/logs
+experimental/models
+.git
