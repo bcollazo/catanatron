@@ -1,12 +1,40 @@
-.example-text {
-  position: relative;
+.MuiToolbar-root {
+  background: #222;
 }
 
-.example-text .block {
-  position: absolute;
-  left: 50px;
-  background-color: orange;
+h6.MuiTypography-h6 {
+  font-family: "Bungee Inline", cursive;
+}
 
-  height: 50px;
-  width: 50px;
+.board-container {
+  height: calc(100% - 64px);
+
+  .react-transform-component {
+    height: 100%;
+
+    .react-transform-element {
+      height: 100%;
+    }
+  }
+
+  .example-text {
+    position: relative;
+
+    height: 100%;
+  }
+
+  .example-text .block {
+    position: absolute;
+    left: 50px;
+    background-color: red;
+
+    height: 50px;
+    width: 50px;
+  }
+}
+
+.tools {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
 }
