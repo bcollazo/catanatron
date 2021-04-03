@@ -1,11 +1,10 @@
 import time
-import os
 from pathlib import Path
 import random
 
 import numpy as np
 import tensorflow as tf
-import kerastuner as kt
+# import kerastuner as kt
 
 from experimental.machine_learning.players.reinforcement import (
     FEATURES,
@@ -15,8 +14,8 @@ from experimental.machine_learning.players.reinforcement import (
 # ===== Configuration
 DATA_DIRECTORY = "data/reachability"
 DATA_SIZE = 17994609  # use zcat data/mcts-playouts/labels.csv.gzip | wc
-EPOCHS = 1
-BATCH_SIZE = 32
+EPOCHS = 2
+BATCH_SIZE = 2**5
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
 PREFETCH_BUFFER_SIZE = 10
 LABEL_FILE = "rewards.csv.gzip"
@@ -24,14 +23,14 @@ LABEL_COLUMN = "DISCOUNTED_RETURN"
 VALIDATION_DATA_SIZE = 820507
 VALIDATION_DATA_DIRECTORY = "data/reachability-validation"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
-NORMALIZATION = False
-NORMALIZATION_DIRECTORY = "data/reachability-validation"
+NORMALIZATION = True
+NORMALIZATION_DIRECTORY = "data/reachability"
 NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "samples-mean.npy")
 NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "samples-variance.npy")
 SHUFFLE = True
 SHUFFLE_SEED = random.randint(0, 20000)
 VALIDATION_SHUFFLE_SEED = random.randint(0, 20000)
-SHUFFLE_BUFFER_SIZE = 1000
+SHUFFLE_BUFFER_SIZE = 100000
 
 NUM_FEATURES = len(FEATURES)
 MODEL_NAME = "1v1-rep-a"
@@ -39,7 +38,15 @@ MODEL_PATH = f"experimental/models/{MODEL_NAME}"
 LOG_DIR = f"logs/rep-a-value-model/{MODEL_NAME}/{int(time.time())}"
 
 
-# ===== Building Dataset Generator
+# ===== Create Dataset Objects
+# === Download Idempotently
+SAMPLES_PATH = Path(DATA_DIRECTORY, "samples.csv.gzip")
+LABELS_PATH = Path(DATA_DIRECTORY, LABEL_FILE)
+VALIDATION_SAMPLES_PATH = Path(VALIDATION_DATA_DIRECTORY, "samples.csv.gzip")
+VALIDATION_LABELS_PATH = Path(VALIDATION_DATA_DIRECTORY, LABEL_FILE)
+
+
+# === Define Generator
 def preprocess(samples_batch, rewards_batch):
     """Input are dictionary of tensors"""
     input1 = preprocess_samples(samples_batch)
@@ -61,7 +68,7 @@ def build_generator(dataset):
 
 print("Reading and building train dataset...")
 samples = tf.data.experimental.make_csv_dataset(
-    os.path.join(DATA_DIRECTORY, "samples.csv.gzip"),
+    str(SAMPLES_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -71,7 +78,7 @@ samples = tf.data.experimental.make_csv_dataset(
     select_columns=FEATURES,
 )
 rewards = tf.data.experimental.make_csv_dataset(
-    os.path.join(DATA_DIRECTORY, LABEL_FILE),
+    str(LABELS_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -92,7 +99,7 @@ train_dataset = tf.data.Dataset.from_generator(
 
 print("Reading and building test dataset...")
 samples = tf.data.experimental.make_csv_dataset(
-    os.path.join(VALIDATION_DATA_DIRECTORY, "samples.csv.gzip"),
+    str(VALIDATION_SAMPLES_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -102,7 +109,7 @@ samples = tf.data.experimental.make_csv_dataset(
     select_columns=FEATURES,
 )
 rewards = tf.data.experimental.make_csv_dataset(
-    os.path.join(VALIDATION_DATA_DIRECTORY, LABEL_FILE),
+    str(VALIDATION_LABELS_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -122,6 +129,7 @@ test_dataset = tf.data.Dataset.from_generator(
 )
 
 # ===== REGULAR MODEL
+init = tf.keras.initializers.HeUniform()
 inputs = tf.keras.Input(shape=(NUM_FEATURES,))
 outputs = inputs
 
@@ -133,7 +141,7 @@ if NORMALIZATION:
     )
     outputs = normalizer_layer(outputs)
 
-outputs = tf.keras.layers.BatchNormalization()(outputs)
+# outputs = tf.keras.layers.BatchNormalization()(outputs)
 # outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(320, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(160, activation=tf.nn.relu)(outputs)
@@ -141,9 +149,9 @@ outputs = tf.keras.layers.BatchNormalization()(outputs)
 # outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(64, activation=tf.nn.relu)(outputs)
 
-outputs = tf.keras.layers.Dense(32)(outputs)
-outputs = tf.keras.layers.Dense(8)(outputs)
-outputs = tf.keras.layers.Dense(units=1)(outputs)
+# outputs = tf.keras.layers.Dense(32, activation=tf.nn.relu)(outputs)
+# outputs = tf.keras.layers.Dense(8, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(units=1, kernel_initializer=init)(outputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 model.compile(
     metrics=["mae"],

@@ -26,11 +26,11 @@ from experimental.datasets import (
     preprocess_board_tensors,
 )
 
+# usage: python experimental/normalizer.py data/reachability 100000 2
 DATA_DIRECTORY = sys.argv[1]
 NORMALIZATION_SAMPLES = int(sys.argv[2])
 NUM_PLAYERS = int(sys.argv[3])
 
-SAMPLES = True
 BOARD_TENSORS = False
 
 NORMALIZATION_BATCHES = NORMALIZATION_SAMPLES // 32
@@ -43,24 +43,23 @@ BOARD_TENSORS_VARIANCE_PATH = Path(DATA_DIRECTORY, "board-tensors-variance.npy")
 
 print("Reading and building train dataset...")
 samples = read_dataset(str(Path(DATA_DIRECTORY, "samples.csv.gzip")), shuffle=False)
-board_tensors = read_dataset(
-    str(Path(DATA_DIRECTORY, "board_tensors.csv.gzip")), shuffle=False
-)
 
 # ===== SAMPLES
-if SAMPLES:
-    print(f"Using {NORMALIZATION_BATCHES} batches of data in {DATA_DIRECTORY}...")
-    t1 = time.time()
-    normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization()
-    normalizer_layer.adapt(samples.take(NORMALIZATION_BATCHES).map(preprocess_samples))
-    print(normalizer_layer.mean, normalizer_layer.variance)
-    print("Took 1", time.time() - t1)
-    np.save(SAMPLES_MEAN_PATH, normalizer_layer.mean)
-    np.save(SAMPLES_VARIANCE_PATH, normalizer_layer.variance)
-    print(f"Saved to {SAMPLES_MEAN_PATH} and {SAMPLES_VARIANCE_PATH}")
+print(f"Using {NORMALIZATION_BATCHES} batches of data in {DATA_DIRECTORY}...")
+t1 = time.time()
+normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization()
+normalizer_layer.adapt(samples.take(NORMALIZATION_BATCHES).map(preprocess_samples))
+print(normalizer_layer.mean, normalizer_layer.variance)
+print("Took 1", time.time() - t1)
+np.save(SAMPLES_MEAN_PATH, normalizer_layer.mean)
+np.save(SAMPLES_VARIANCE_PATH, normalizer_layer.variance)
+print(f"Saved to {SAMPLES_MEAN_PATH} and {SAMPLES_VARIANCE_PATH}")
 
 # ====== BOARD TENSORS
 if BOARD_TENSORS:
+    board_tensors = read_dataset(
+        str(Path(DATA_DIRECTORY, "board_tensors.csv.gzip")), shuffle=False
+    )
     print(f"Using {NORMALIZATION_BATCHES} batches of data in {DATA_DIRECTORY}")
     t1 = time.time()
     normalizer_layer = tf.keras.layers.experimental.preprocessing.Normalization()
