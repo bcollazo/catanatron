@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 import useWindowSize from "../utils/useWindowSize";
 import Tile from "./Tile";
@@ -14,7 +15,7 @@ import Robber from "./Robber";
 function computeDefaultSize(divWidth, divHeight) {
   const numLevels = 6; // 3 rings + 1/2 a tile for the outer water ring
   // divHeight = numLevels * (3h/4) + (h/4), implies:
-  const maxSizeThatRespectsHeight = (4 * divHeight) / (3 * numLevels + 1) / 2; 
+  const maxSizeThatRespectsHeight = (4 * divHeight) / (3 * numLevels + 1) / 2;
   const correspondingWidth = SQRT3 * maxSizeThatRespectsHeight;
   let size;
   if (numLevels * correspondingWidth < divWidth) {
@@ -34,6 +35,12 @@ export default function Board({ state }) {
   const [containerWidth, setContainerWidth] = useState(null);
   const [containerHeight, setContainerHeight] = useState(null);
   const [size, setSize] = useState(null);
+  const [draggingStart, setDraggingStart] = useState(null); // null if not dragging, the start coord else
+  const [center, setCenter] = useState(null);
+
+  const onMouseDown = (event) => {
+    console.log(event);
+  };
 
   // Set Board Width when we get our computed flex space available.
   useEffect(() => {
@@ -43,7 +50,9 @@ export default function Board({ state }) {
       const divHeight = parseInt(style.getPropertyValue("height"));
       setContainerWidth(divWidth);
       setContainerHeight(divHeight);
-      setSize(computeDefaultSize(divWidth, divHeight))
+      setSize(computeDefaultSize(divWidth, divHeight));
+      setCenter([divWidth / 2, divHeight / 2]);
+      console.log(divWidth, divHeight);
     }
   }, [ref, width, height]);
 
@@ -53,29 +62,28 @@ export default function Board({ state }) {
       // TODO: CAP
       const newSize = size + event.deltaY * -0.1; // deltaY < 0 means bigger
       setSize(newSize);
-    }
-    window.addEventListener('wheel', handleWheel, { passive: true })
+    };
+    window.addEventListener("wheel", handleWheel, { passive: true });
     return () => {
-      window.removeEventListener('wheel', handleWheel)
-    }
+      window.removeEventListener("wheel", handleWheel);
+    };
   }, [size]);
 
+  return (
+    <div className="board-container flex-grow flex">
+      <div ref={ref} className="board relative w-full h-full"></div>
+    </div>
+  );
   if (containerWidth === null || containerHeight === null) {
-    return <div className="board-container flex-grow flex">
-      <div ref={ref} className="board relative w-full h-full">
-      </div>
-    </div>;
   }
 
-  const centerX = containerWidth / 2;
-  const centerY = containerHeight / 2;
+  console.log("center", center);
   const w = SQRT3 * size;
   const h = 2 * size;
   const tiles = state.tiles.map(({ coordinate, tile }) => (
     <Tile
       key={coordinate}
-      centerX={centerX}
-      centerY={centerY}
+      center={center}
       w={w}
       h={h}
       coordinate={coordinate}
@@ -119,20 +127,116 @@ export default function Board({ state }) {
   // ));
 
   return (
-    <div className="board-container flex-grow flex">
-      <div ref={ref} className="board relative w-full h-full" onDrag={onDrag}>
-        {tiles}
-        {/* {edges}
-        {nodes} */}
-        <Robber
-          centerX={centerX}
-          centerY={centerY}
-          w={w}
-          h={h}
-          size={size}
-          coordinate={state.robber_coordinate}
-        />
-      </div>
+    <div className="h-full">
+      <TransformWrapper
+        options={{
+          limitToBounds: false,
+        }}
+      >
+        {({
+          zoomIn,
+          zoomOut,
+          resetTransform,
+          positionX,
+          positionY,
+          scale,
+          previousScale,
+        }) => (
+          <React.Fragment>
+            <div className="element">
+              {
+                <TransformComponent>
+                  <div className="example-text">
+                    <h1>Lorem ipsum</h1>
+                    <p>
+                      Lorem ipsum dolor sit amet, consectetur adipiscing elit,
+                      sed do eiusmod tempor incididunt ut labore et dolore magna
+                      aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+                      ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                      Duis aute irure dolor in reprehenderit in voluptate velit
+                      esse cillum dolore eu fugiat nulla pariatur. Excepteur
+                      sint occaecat cupidatat non proident, sunt in culpa qui
+                      officia deserunt mollit anim id est laborum.
+                    </p>
+                    <h1>SVG</h1>
+                    <Robber
+                      center={[positionX + center[0], positionY + center[1]]}
+                      w={w}
+                      h={h}
+                      size={size}
+                      coordinate={state.robber_coordinate}
+                    />
+                  </div>
+                </TransformComponent>
+              }
+            </div>
+            <div className="tools">
+              <div className="info">
+                <h3>State</h3>
+                <h5>
+                  <span className="badge badge-secondary">
+                    Position x : {positionX}px
+                  </span>
+                  <span className="badge badge-secondary">
+                    Position y : {positionY}px
+                  </span>
+                  <span className="badge badge-secondary">Scale : {scale}</span>
+                  <span className="badge badge-secondary">
+                    Previous scale : {previousScale}
+                  </span>
+                </h5>
+              </div>
+              <button
+                className="btn-gradient cyan small"
+                onClick={zoomIn}
+                data-testid="zoom-in-button"
+              >
+                Zoom In
+              </button>
+              <button
+                className="btn-gradient blue small"
+                onClick={zoomOut}
+                data-testid="zoom-out-button"
+              >
+                Zoom Out
+              </button>
+              <button
+                className="btn-gradient purple small"
+                onClick={resetTransform}
+                data-testid="reset-button"
+              >
+                Reset
+              </button>
+            </div>
+          </React.Fragment>
+        )}
+      </TransformWrapper>
     </div>
   );
+  // {
+  //   /* <div className="board-container flex-grow flex">
+  //         <div
+  //           ref={ref}
+  //           className="board relative w-full h-full"
+  //           onMouseDown={onMouseDown}
+  //         > */
+  // }
+  // {
+  //   tiles;
+  // }
+  // {
+  //   /* {edges}
+  //       {nodes} */
+  // }
+  // <Robber
+  //   center={center}
+  //   w={w}
+  //   h={h}
+  //   size={size}
+  //   coordinate={state.robber_coordinate}
+  // />;
+  // {
+  //   /* </div>
+  //       </div> */
+  // }
 }

@@ -3,7 +3,9 @@ import React from "react";
 import { Circle } from "./Tile";
 import { tilePixelVector } from "../utils/coordinates";
 
-export default function Robber({ centerX, centerY, w, size, coordinate }) {
+export default function Robber({ center, w, size, coordinate }) {
+  console.log({ center, w, size, coordinate });
+  const [centerX, centerY] = center;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
   const [deltaX, deltaY] = [-w / 4, 0];
   const x = tileX + deltaX;

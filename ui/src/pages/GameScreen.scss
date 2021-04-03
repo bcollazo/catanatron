@@ -1,0 +1,12 @@
+.example-text {
+  position: relative;
+}
+
+.example-text .block {
+  position: absolute;
+  left: 50px;
+  background-color: orange;
+
+  height: 50px;
+  width: 50px;
+}

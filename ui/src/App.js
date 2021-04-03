@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import "./tailwind.output.css";
 import "./App.scss";
 import GamePage from "./pages/GamePage";
+import GameScreen from "./pages/GameScreen";
 import HomePage from "./pages/HomePage";
 
 function App() {
@@ -11,7 +12,7 @@ function App() {
     <Router>
       <Switch>
         <Route path="/games/:gameId">
-          <GamePage />
+          <GameScreen />
         </Route>
         <Route path="/">
           <HomePage />

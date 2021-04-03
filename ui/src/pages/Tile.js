@@ -34,14 +34,14 @@ export function Circle({ className, children, style }) {
 }
 
 export default function Tile({
-  centerX,
-  centerY,
+  center,
   w,
   h,
   coordinate,
   tile,
   size,
 }) {
+  const [centerX, centerY] = center;
   const [x, y] = tilePixelVector(coordinate, size, centerX, centerY);
 
   let contents;

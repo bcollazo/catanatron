@@ -58,17 +58,17 @@ export default function GamePage() {
       >
         Catanatron
       </h1>
+      {/* <SidePanel state={state} /> */}
       <div
-        className="w-full h-full flex flex-col"
+        className="w-full h-full"
         style={{ backgroundColor: "rgb(0 52 64)" }}
       >
         <Board state={state} />
-        <ControlPanel
+        {/* <ControlPanel
           onClickNext={onClickNext}
           onClickAutomation={onClickAutomation}
-        />
+        /> */}
       </div>
-      {/* <SidePanel state={state} /> */}
     </div>
   );
 }
