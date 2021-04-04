@@ -1,0 +1,29 @@
+.actions-toolbar {
+  position: absolute;
+  right: 0px;
+  left: 0px;
+  bottom: 0px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+
+  button {
+    width: 100px;
+    margin: 6px;
+  }
+
+  .action-popover {
+    z-index: 1;
+  }
+
+  .MuiButton-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    .MuiButton-startIcon {
+      margin: 0;
+    }
+  }
+}
