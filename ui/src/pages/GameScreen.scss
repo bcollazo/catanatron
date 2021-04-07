@@ -7,13 +7,16 @@ h6.MuiTypography-h6 {
 }
 
 .board-container {
-  height: calc(100% - 64px);
+  height: 100%;
+  width: 100%;
 
   .react-transform-component {
     height: 100%;
+    width: 100%;
 
     .react-transform-element {
       height: 100%;
+      width: 100%;
     }
   }
 
@@ -21,20 +24,15 @@ h6.MuiTypography-h6 {
     position: relative;
 
     height: 100%;
+    width: 100%;
   }
 
   .example-text .block {
     position: absolute;
-    left: 50px;
     background-color: red;
 
-    height: 50px;
-    width: 50px;
+    // left: 50px;
+    // height: 50px;
+    // width: 50px;
   }
-}
-
-.open-drawer-btn {
-  position: fixed;
-  bottom: 50px;
-  left: 10px;
 }

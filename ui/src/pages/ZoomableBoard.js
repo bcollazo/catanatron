@@ -1,7 +1,48 @@
-import React from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
-export default function ZoomableBoard() {
+import useWindowSize from "../utils/useWindowSize";
+import { SQRT3 } from "../utils/coordinates";
+import Tile from "./Tile";
+import ActionsToolbar from "./ActionsToolbar";
+
+/**
+ * This uses the formulas: W = SQRT3 * size and H = 2 * size.
+ * Math comes from https://www.redblobgames.com/grids/hexagons/.
+ */
+function computeDefaultSize(divWidth, divHeight) {
+  const numLevels = 6; // 3 rings + 1/2 a tile for the outer water ring
+  // divHeight = numLevels * (3h/4) + (h/4), implies:
+  const maxSizeThatRespectsHeight = (4 * divHeight) / (3 * numLevels + 1) / 2;
+  const correspondingWidth = SQRT3 * maxSizeThatRespectsHeight;
+  let size;
+  if (numLevels * correspondingWidth < divWidth) {
+    // thus complete board would fit if we pick size based on height (height is limiting factor)
+    size = maxSizeThatRespectsHeight;
+  } else {
+    // we'll have to decide size based on width.
+    const maxSizeThatRespectsWidth = divWidth / numLevels / SQRT3;
+    size = maxSizeThatRespectsWidth;
+  }
+  return size;
+}
+
+export default function ZoomableBoard({ state }) {
+  const { width, height } = useWindowSize();
+
+  const center = [width / 2, height / 2];
+  const size = computeDefaultSize(width, height);
+
+  const tiles = state.tiles.map(({ coordinate, tile }) => (
+    <Tile
+      key={coordinate}
+      center={center}
+      coordinate={coordinate}
+      tile={tile}
+      size={size}
+    />
+  ));
+
   return (
     <TransformWrapper
       options={{
@@ -17,34 +58,26 @@ export default function ZoomableBoard() {
         scale,
         previousScale,
       }) => (
-        <div className="board-container">
-          {
-            <TransformComponent>
-              <div className="example-text">
-                <div className="block"></div>
-                <h1>Lorem ipsum</h1>
-                <p>
-                  {positionX} Lorem ipsum dolor sit amet, consectetur adipiscing
-                  elit, sed do eiusmod tempor incididunt ut labore et dolore
-                  magna aliqua. Ut enim ad minim veniam, quis nostrud
-                  exercitation ullamco laboris nisi ut aliquip ex ea commodo
-                  consequat. Duis aute irure dolor in reprehenderit in voluptate
-                  velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
-                  sint occaecat cupidatat non proident, sunt in culpa qui
-                  officia deserunt mollit anim id est laborum.
-                </p>
-                <h1>SVG</h1>
-                {/* <Robber
+        <React.Fragment>
+          <div className="board-container">
+            {
+              <TransformComponent>
+                <div className="example-text">
+                  {/* <h1>Block</h1> */}
+                  {tiles}
+                  {/* <Robber
                         center={[positionX + center[0], positionY + center[1]]}
                         w={w}
                         h={h}
                         size={size}
                         coordinate={state.robber_coordinate}
                       /> */}
-              </div>
-            </TransformComponent>
-          }
-        </div>
+                </div>
+              </TransformComponent>
+            }
+          </div>
+          <ActionsToolbar zoomIn={zoomIn} zoomOut={zoomOut} />
+        </React.Fragment>
       )}
     </TransformWrapper>
   );

@@ -6,10 +6,11 @@
   padding: 10px;
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
 
   button {
-    width: 100px;
-    margin: 6px;
+    width: 60px;
+    margin: 4px;
   }
 
   .action-popover {

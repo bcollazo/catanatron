@@ -7,7 +7,7 @@ import grainTile from "../assets/tile_grain.png";
 import lumberTile from "../assets/tile_lumber.png";
 import oreTile from "../assets/tile_ore.png";
 import woolTile from "../assets/tile_wool.png";
-import { tilePixelVector } from "../utils/coordinates";
+import { SQRT3, tilePixelVector } from "../utils/coordinates";
 
 const bgColorResource = (resource) => {
   return {
@@ -33,14 +33,9 @@ export function Circle({ className, children, style }) {
   );
 }
 
-export default function Tile({
-  center,
-  w,
-  h,
-  coordinate,
-  tile,
-  size,
-}) {
+export default function Tile({ center, coordinate, tile, size }) {
+  const w = SQRT3 * size;
+  const h = 2 * size;
   const [centerX, centerY] = center;
   const [x, y] = tilePixelVector(coordinate, size, centerX, centerY);
 
