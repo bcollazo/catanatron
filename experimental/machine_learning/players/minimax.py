@@ -8,6 +8,7 @@ import numpy as np
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron.models.actions import Action
+from catanatron.models.enums import Resource, DevelopmentCard
 from experimental.machine_learning.features import (
     build_production_features,
     create_sample,
@@ -107,15 +108,16 @@ def build_value_function(params):
 
 value_fn2 = build_value_function([4])
 
+def get_value_fn(name):
+    return globals()[name or "value_fn2"]
+    
+
 
 class ValueFunctionPlayer(Player):
-    def __init__(self, color, name, fn):
+    def __init__(self, color, name, value_fn_name):
         super().__init__(color, name=name)
-        if isinstance(fn, str):
-            self.value_fn = globals()[fn or "value_fn2"]
-        else:  # assume fn
-            self.value_fn = fn
-
+        self.value_fn_name = value_fn_name
+        
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
@@ -126,7 +128,7 @@ class ValueFunctionPlayer(Player):
             game_copy = game.copy()
             game_copy.execute(action)
 
-            value = value_fn(game_copy, self.color)
+            value = get_value_fn(self.value_fn_name)(game_copy, self.color)
             if value > best_value:
                 best_value = value
                 best_action = action
