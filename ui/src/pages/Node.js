@@ -1,7 +1,7 @@
 import React from "react";
 import cn from "classnames";
 
-import { tilePixelVector, getNodeDelta } from "../utils/coordinates";
+import { tilePixelVector, getNodeDelta, SQRT3 } from "../utils/coordinates";
 
 function Building({ building, color }) {
   const cssClass = `bg-white bg-${color.toLowerCase()}-600`;
@@ -32,16 +32,16 @@ function Building({ building, color }) {
 
 export default function Node({
   id,
-  centerX,
-  centerY,
-  w,
-  h,
+  center,
   size,
   coordinate,
   direction,
   building,
   color,
 }) {
+  const [centerX, centerY] = center;
+  const w = SQRT3 * size;
+  const h = 2 * size;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
   const [deltaX, deltaY] = getNodeDelta(direction, w, h);
   const x = tileX + deltaX;
@@ -53,7 +53,7 @@ export default function Node({
       style={{
         left: x,
         top: y,
-        transform: `translateY(-0.75rem) translateX(-0.75rem)`,
+        transform: `translateY(-50%) translateX(-50%)`,
       }}
       onClick={() => console.log("Clicked node", id)}
     >

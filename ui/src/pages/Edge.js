@@ -4,6 +4,7 @@ import cn from "classnames";
 import {
   tilePixelVector,
   getEdgeDeltaAndTransform,
+  SQRT3,
 } from "../utils/coordinates";
 
 function Road({ color }) {
@@ -20,18 +21,17 @@ function Road({ color }) {
 
 export default function Edge({
   id,
-  centerX,
-  centerY,
-  w,
-  h,
-  scalingFactor,
+  center,
   size,
   coordinate,
   direction,
   color,
 }) {
+  const [centerX, centerY] = center;
+  const w = SQRT3 * size;
+  const h = 2 * size;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
-  const [deltaX, deltaY, transform] = getEdgeDeltaAndTransform(direction, w, h, scalingFactor);
+  const [deltaX, deltaY, transform] = getEdgeDeltaAndTransform(direction, w, h);
   const x = tileX + deltaX;
   const y = tileY + deltaY;
 

@@ -5,6 +5,9 @@ import clsx from "clsx";
 import useWindowSize from "../utils/useWindowSize";
 import { SQRT3 } from "../utils/coordinates";
 import Tile from "./Tile";
+import Node from "./Node";
+import Edge from "./Edge";
+import Robber from "./Robber";
 
 /**
  * This uses the formulas: W = SQRT3 * size and H = 2 * size.
@@ -31,7 +34,7 @@ export default function ZoomableBoard({ state }) {
   const { width, height } = useWindowSize();
   const [show, setShow] = useState(false);
 
-  const containerHeight = height - 80;
+  const containerHeight = height - 144;
 
   const center = [width / 2, containerHeight / 2];
   const size = computeDefaultSize(width, containerHeight);
@@ -43,6 +46,33 @@ export default function ZoomableBoard({ state }) {
       coordinate={coordinate}
       tile={tile}
       size={size}
+    />
+  ));
+  const nodes = Object.values(
+    state.nodes
+  ).map(({ color, building, direction, tile_coordinate, id }) => (
+    <Node
+      id={id}
+      key={id}
+      center={center}
+      size={size}
+      coordinate={tile_coordinate}
+      direction={direction}
+      building={building}
+      color={color}
+    />
+  ));
+  const edges = Object.values(
+    state.edges
+  ).map(({ color, direction, tile_coordinate, id }) => (
+    <Edge
+      id={id}
+      key={id}
+      center={center}
+      size={size}
+      coordinate={tile_coordinate}
+      direction={direction}
+      color={color}
     />
   ));
 
@@ -73,15 +103,13 @@ export default function ZoomableBoard({ state }) {
               <TransformComponent>
                 <div className={clsx("board", { show })}>
                   {tiles}
-                  {/* <h1>Block</h1> */}
-                  {/* {tiles} */}
-                  {/* <Robber
-                        center={[positionX + center[0], positionY + center[1]]}
-                        w={w}
-                        h={h}
-                        size={size}
-                        coordinate={state.robber_coordinate}
-                      /> */}
+                  {edges}
+                  {nodes}
+                  <Robber
+                    center={center}
+                    size={size}
+                    coordinate={state.robber_coordinate}
+                  />
                 </div>
               </TransformComponent>
             }

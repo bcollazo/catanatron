@@ -49,6 +49,7 @@ function GameScreen(props) {
 
   return (
     <main>
+      <div className="prompt">Build first settlement</div>
       {!state && (
         <Loader
           className="loader"
@@ -59,7 +60,7 @@ function GameScreen(props) {
         />
       )}
       {state && <ZoomableBoard state={state} />}
-      <ActionsToolbar />
+      <ActionsToolbar onTick={onClickNext} />
     </main>
   );
 }

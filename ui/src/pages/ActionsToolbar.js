@@ -64,7 +64,7 @@ function DrawerContent({ toggleDrawer }) {
   );
 }
 
-export default function ActionsToolbar({ zoomIn, zoomOut }) {
+export default function ActionsToolbar({ zoomIn, zoomOut, onTick }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -107,6 +107,7 @@ export default function ActionsToolbar({ zoomIn, zoomOut }) {
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}
+        onClick={onTick}
       >
         End
       </Button>
