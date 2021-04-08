@@ -1,8 +1,7 @@
 .actions-toolbar {
-  position: absolute;
-  right: 0px;
-  left: 0px;
-  bottom: 0px;
+  max-width: 375px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 10px;
   display: flex;
   justify-content: space-between;

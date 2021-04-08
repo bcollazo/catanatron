@@ -1,10 +1,10 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import clsx from "clsx";
 
 import useWindowSize from "../utils/useWindowSize";
 import { SQRT3 } from "../utils/coordinates";
 import Tile from "./Tile";
-import ActionsToolbar from "./ActionsToolbar";
 
 /**
  * This uses the formulas: W = SQRT3 * size and H = 2 * size.
@@ -29,9 +29,12 @@ function computeDefaultSize(divWidth, divHeight) {
 
 export default function ZoomableBoard({ state }) {
   const { width, height } = useWindowSize();
+  const [show, setShow] = useState(false);
 
-  const center = [width / 2, height / 2];
-  const size = computeDefaultSize(width, height);
+  const containerHeight = height - 80;
+
+  const center = [width / 2, containerHeight / 2];
+  const size = computeDefaultSize(width, containerHeight);
 
   const tiles = state.tiles.map(({ coordinate, tile }) => (
     <Tile
@@ -43,10 +46,16 @@ export default function ZoomableBoard({ state }) {
     />
   ));
 
+  useEffect(() => {
+    setTimeout(() => {
+      setShow(true);
+    }, 300);
+  }, []);
+
   return (
     <TransformWrapper
       options={{
-        limitToBounds: false,
+        limitToBounds: true,
       }}
     >
       {({
@@ -62,9 +71,10 @@ export default function ZoomableBoard({ state }) {
           <div className="board-container">
             {
               <TransformComponent>
-                <div className="example-text">
-                  {/* <h1>Block</h1> */}
+                <div className={clsx("board", { show })}>
                   {tiles}
+                  {/* <h1>Block</h1> */}
+                  {/* {tiles} */}
                   {/* <Robber
                         center={[positionX + center[0], positionY + center[1]]}
                         w={w}
@@ -76,7 +86,6 @@ export default function ZoomableBoard({ state }) {
               </TransformComponent>
             }
           </div>
-          <ActionsToolbar zoomIn={zoomIn} zoomOut={zoomOut} />
         </React.Fragment>
       )}
     </TransformWrapper>

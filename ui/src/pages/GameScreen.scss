@@ -6,8 +6,27 @@ h6.MuiTypography-h6 {
   font-family: "Bungee Inline", cursive;
 }
 
+main {
+  background: #141414;
+
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+
+  .loader {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
 .board-container {
-  height: 100%;
+  height: calc(100% - 80px);
   width: 100%;
 
   .react-transform-component {
@@ -20,14 +39,18 @@ h6.MuiTypography-h6 {
     }
   }
 
-  .example-text {
+  .board {
     position: relative;
+    opacity: 0;
 
     height: 100%;
     width: 100%;
   }
+  .board.show {
+    opacity: 1;
+  }
 
-  .example-text .block {
+  .board .block {
     position: absolute;
     background-color: red;
 
