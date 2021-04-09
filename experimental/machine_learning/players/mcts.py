@@ -19,7 +19,6 @@ class StateNode:
         self.color = color  # color of player carrying out MCTS
         self.parent = parent
         self.state = state
-        self.playable_actions = playable_actions
         self.children = []
 
         self.wins = 0
@@ -55,23 +54,12 @@ class StateNode:
         return self.state.winning_player() is not None
 
     def expand(self):
-        # This method should only be called once per node
-        actions = self.get_playable_actions()
-
         children = defaultdict(list)
-        for action in actions:
+        for action in self.state.playable_actions:
             outcomes = self.state.execute_spectrum(action)
             for (state, proba) in outcomes:
                 children[action].append((StateNode(self.color, state, self), proba))
         self.children = children
-
-    def get_playable_actions(self):
-        if self.playable_actions is None:
-            player, action_prompt = self.state.pop_from_queue()
-            actions = self.state.playable_actions(player, action_prompt)
-            self.current_player = player
-            self.playable_actions = actions
-        return self.playable_actions
 
     def select(self):
         """select a child StateNode"""
@@ -85,12 +73,12 @@ class StateNode:
 
     def choose_best_action(self):
         scores = []
-        for action in self.playable_actions:
+        for action in self.state.playable_actions:
             score = self.action_children_expected_score(action)
             scores.append(score)
 
         idx = max(range(len(scores)), key=lambda i: scores[i])
-        action = self.playable_actions[idx]
+        action = self.state.playable_actions[idx]
         return action
 
     def action_children_expected_score(self, action):

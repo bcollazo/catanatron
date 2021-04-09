@@ -169,9 +169,8 @@ class StateNode:
         self.value = None  # min(children) or max(children)
 
     def expand(self):
-        player, action_prompt = self.state.pop_from_queue()
-        # TODO: Need to avoid knowing player's actions.
-        actions = self.state.playable_actions(player, action_prompt)
+        # TODO: Need to avoid knowing player's actions / hidden cards.
+        actions = self.state.playable_actions
         return list(map(lambda a: ActionNode(self, a), actions))
 
 
@@ -262,13 +261,7 @@ class AlphaBetaPlayer(Player):
 
         start = time.time()
         result = alphabeta(
-            game.copy(),
-            self.depth,
-            float("-inf"),
-            float("inf"),
-            self.color,
-            maximizingPlayer=True,
-            playable_actions=playable_actions,
+            game.copy(), self.depth, float("-inf"), float("inf"), self.color
         )
         print(
             "Decision Results:", self.depth, len(playable_actions), time.time() - start
@@ -280,9 +273,7 @@ class AlphaBetaPlayer(Player):
         return super().__repr__() + f"(depth={self.depth})"
 
 
-def alphabeta(
-    game, depth, alpha, beta, p0_color, maximizingPlayer=None, playable_actions=None
-):
+def alphabeta(game, depth, alpha, beta, p0_color):
     """AlphaBeta MiniMax Algorithm.
 
     NOTE: Sometimes returns a value, sometimes an (action, value). This is
@@ -294,12 +285,8 @@ def alphabeta(
         # print(tabs, "returned heuristic", value_fn2(game, p0_color))
         return value_fn2(game, p0_color)
 
-    if playable_actions is None:
-        player, action_prompt = game.pop_from_queue()
-        maximizingPlayer = player.color == p0_color
-        actions = game.playable_actions(player, action_prompt)
-    else:
-        actions = playable_actions
+    maximizingPlayer = game.state.current_player().color == p0_color
+    actions = game.state.playable_actions
     children = expand_spectrum(game, actions)
     # print(tabs, "MAXIMIZING =", maximizingPlayer, len(children))
     if maximizingPlayer:

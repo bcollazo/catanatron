@@ -4,7 +4,13 @@ from catanatron.algorithms import longest_road, largest_army
 from catanatron.models.actions import Action, ActionType
 from catanatron.models.player import SimplePlayer, Color
 from catanatron.models.decks import ResourceDeck
-from catanatron.models.enums import DevelopmentCard
+from catanatron.models.enums import DevelopmentCard, Resource
+
+
+def roll_maybe_move_robber(game):
+    game.execute(Action(game.state.current_player().color, ActionType.ROLL, None))
+    if game.state.playable_actions[0].action_type == ActionType.MOVE_ROBBER:
+        game.execute(game.state.playable_actions[0])
 
 
 def test_longest_road_simple():
@@ -14,20 +20,31 @@ def test_longest_road_simple():
     blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
-
-    game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (3, 2)))
+    p0_color = game.state.players[0].color
+    p1_color = game.state.players[1].color
+    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
+    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color is None
 
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (2, 1)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (1, 0)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (0, 5)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (5, 4)))
+    game.execute(Action(p1_color, ActionType.BUILD_FIRST_SETTLEMENT, 40))
+    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, (40, 44)))
+    game.execute(Action(p1_color, ActionType.BUILD_SECOND_SETTLEMENT, 43))
+    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, (43, 44)))
+
+    game.execute(Action(p0_color, ActionType.BUILD_SECOND_SETTLEMENT, 1))
+    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (1, 2)))
+
+    roll_maybe_move_robber(game)
+    game.state.players[0].resource_deck.replenish(10, Resource.WOOD)
+    game.state.players[0].resource_deck.replenish(10, Resource.BRICK)
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 1)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 5)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (4, 5)))
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
-    assert color == Color.RED
+    assert color == p0_color
     assert len(path) == 5
 
 

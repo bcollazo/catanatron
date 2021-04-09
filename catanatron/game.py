@@ -122,9 +122,16 @@ class State:
             self.development_deck = DevelopmentDeck.starting_bank()
             self.tick_queue = initialize_tick_queue(self.players)
             self.current_player_index = 0
-            self.num_turns = 0
+            self.num_turns = 0  # num_completed_turns
             self.road_color = None
             self.army_color = None
+
+            # To be set by Game
+            self.current_prompt = None
+            self.playable_actions = None
+
+    def current_player(self):
+        return self.players[self.current_player_index]
 
 
 class Game:
@@ -140,6 +147,7 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.state = State(players, map or BaseMap())
+            self.advance_tick()
 
     def play(self, action_callbacks=[], decide_fn=None):
         """Runs the game until the end"""
@@ -152,31 +160,16 @@ class Game:
                 return player
         return None
 
-    def winning_color(self):
-        player = self.winning_player()
-        return None if player is None else player.color
-
-    def pop_from_queue(self):
-        """Important: dont call this without consuming results. O/W illegal state"""
-        if len(self.state.tick_queue) > 0:
-            (seating, action_prompt) = self.state.tick_queue.pop(0)
-            player = self.state.players[seating]
-        else:
-            player = self.current_player()
-            action_prompt = (
-                ActionPrompt.PLAY_TURN if player.has_rolled else ActionPrompt.ROLL
-            )
-        return player, action_prompt
-
     def play_tick(self, action_callbacks=[], decide_fn=None):
         """
         Consume from queue (player, decision) to support special building phase,
             discarding, and other decisions out-of-turn.
         If nothing there, fall back to (current, playable()) for current-turn.
+        Assumes self.player and self.action_prompt and self.playable_actions are ready.
         """
-        player, action_prompt = self.pop_from_queue()
+        player = self.state.current_player()
+        actions = self.state.playable_actions
 
-        actions = self.playable_actions(player, action_prompt)
         action = (
             decide_fn(player, self, actions)
             if decide_fn is not None
@@ -185,6 +178,7 @@ class Game:
         return self.execute(action, action_callbacks=action_callbacks)
 
     def playable_actions(self, player, action_prompt):
+        print("computing playable", player, action_prompt)
         if action_prompt == ActionPrompt.BUILD_FIRST_SETTLEMENT:
             return initial_settlement_possibilites(player, self.state.board, True)
         elif action_prompt == ActionPrompt.BUILD_SECOND_SETTLEMENT:
@@ -251,7 +245,11 @@ class Game:
             raise RuntimeError("Unknown ActionPrompt")
 
     def execute(self, action, action_callbacks=[]):
-        outcome_proba = None
+        if action not in self.state.playable_actions:
+            raise ValueError(
+                f"{action} not in playable actions: {self.state.playable_actions}"
+            )
+
         if action.action_type == ActionType.END_TURN:
             next_player_index = (self.state.current_player_index + 1) % len(
                 self.state.players
@@ -473,12 +471,27 @@ class Game:
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.state.actions.append(action)
+        print("EXECUTED", action)
         self.count_victory_points()
+        self.advance_tick()
 
         for callback in action_callbacks:
             callback(self)
 
-        return outcome_proba
+    def advance_tick(self):
+        if len(self.state.tick_queue) > 0:
+            (seating, action_prompt) = self.state.tick_queue.pop(0)
+            self.state.current_player_index = seating
+            player = self.state.current_player()
+        else:
+            player = self.state.current_player()
+            action_prompt = (
+                ActionPrompt.PLAY_TURN if player.has_rolled else ActionPrompt.ROLL
+            )
+
+        print("tick", player, action_prompt, self.state.actions)
+        self.state.current_prompt = action_prompt
+        self.state.playable_actions = self.playable_actions(player, action_prompt)
 
     def execute_spectrum(self, action, action_callbacks=[]):
         """Returns [(game_copy, proba), ...] tuples for result of given action.
@@ -559,6 +572,10 @@ class Game:
 
     def current_player(self):
         return self.state.players[self.state.current_player_index]
+
+    def winning_color(self):
+        player = self.winning_player()
+        return None if player is None else player.color
 
     def count_victory_points(self):
         for player in self.state.players:

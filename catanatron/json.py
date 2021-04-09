@@ -48,7 +48,9 @@ class GameEncoder(json.JSONEncoder):
                 "actions": [self.default(a) for a in obj.state.actions],
                 "players": [self.default(p) for p in obj.state.players],
                 "robber_coordinate": obj.state.board.robber_coordinate,
-                "current_color": obj.current_player().color
+                "current_color": obj.state.current_player().color,
+                "current_prompt": obj.state.current_prompt,
+                "current_playable_actions": obj.state.playable_actions,
             }
         if isinstance(obj, Deck):
             return {resource.value: count for resource, count in obj.cards.items()}

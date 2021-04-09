@@ -124,7 +124,9 @@ class CatanEnv:
     def __init__(self):
         self.game = None
         self.p0 = None
-        self.currently_playable = None
+
+    def playable_actions(self):
+        return self.game.state.playable_actions
 
     def reset(self):
         p0 = Player(Color.WHITE)
@@ -145,14 +147,14 @@ class CatanEnv:
         # Take any action in the playable, that matches ACTIONS_ARRAY prototype
         (action_type, value) = ACTIONS_ARRAY[action]
         catan_action = None
-        for a in self.currently_playable:
+        for a in self.playable_actions():
             normalized = normalize_action(a)
             if normalized.action_type == action_type and normalized.value == value:
                 catan_action = a
                 break
         if catan_action is None:
             print("Couldnt find", action, action_type, value, "in:")
-            print(self.currently_playable)
+            print(self.playable_actions())
             breakpoint()
         else:
             self.game.execute(catan_action)
@@ -176,15 +178,15 @@ class CatanEnv:
 
     def _advance_until_p0_decision(self):
         while self.game.winning_player() is None:
-            # This is basically an adapted self.game.play_tick()
-            player, action_prompt = self.game.pop_from_queue()
-            self.currently_playable = self.game.playable_actions(player, action_prompt)
-            if player.color == self.p0.color and len(self.currently_playable) > 1:
+            player = self.game.state.current_player()
+            actions = self.playable_actions()
+
+            if player.color == self.p0.color and len(actions) > 1:
                 break
             else:
                 # Assume enemies play randomly
-                index = random.randrange(0, len(self.currently_playable))
-                random_action = self.currently_playable[index]
+                index = random.randrange(0, len(actions))
+                random_action = actions[index]
                 self.game.execute(random_action)
 
 
@@ -310,7 +312,7 @@ def epsilon_greedy_policy(env, agent, current_state):
     # This part stays mostly the same, the change is to query a model for Q values
     if np.random.random() > epsilon:
         # Create array like [0,0,1,0,0,0,1,...] representing possible actions
-        normalized_playable = [normalize_action(a) for a in env.currently_playable]
+        normalized_playable = [normalize_action(a) for a in env.playable_actions()]
         possibilities = [(a.action_type, a.value) for a in normalized_playable]
         possible_indices = [ACTIONS_ARRAY.index(x) for x in possibilities]
         mask = np.zeros(ACTION_SPACE_SIZE, dtype=np.int)
@@ -322,8 +324,8 @@ def epsilon_greedy_policy(env, agent, current_state):
         action = np.argmax(clipped_probas)
     else:
         # Get random action
-        index = random.randrange(0, len(env.currently_playable))
-        random_action = env.currently_playable[index]
+        index = random.randrange(0, len(env.playable_actions()))
+        random_action = env.playable_actions()[index]
         normalized = normalize_action(random_action)
         action = ACTIONS_ARRAY.index((normalized.action_type, normalized.value))
 
@@ -332,7 +334,7 @@ def epsilon_greedy_policy(env, agent, current_state):
 
 def boltzmann_policy(env, agent, current_state):
     # Create array like [0,0,1,0,0,0,1,...] representing possible actions
-    normalized_playable = [normalize_action(a) for a in env.currently_playable]
+    normalized_playable = [normalize_action(a) for a in env.playable_actions()]
     possibilities = [(a.action_type, a.value) for a in normalized_playable]
     possible_indices = [ACTIONS_ARRAY.index(x) for x in possibilities]
     mask = np.zeros(ACTION_SPACE_SIZE, dtype=np.int)
@@ -345,8 +347,8 @@ def boltzmann_policy(env, agent, current_state):
     translated = clipped_probas + translation
     if translated.sum() == 0:
         # HMM... How many times, does this happen?
-        index = random.randrange(0, len(env.currently_playable))
-        random_action = env.currently_playable[index]
+        index = random.randrange(0, len(env.playable_actions()))
+        random_action = env.playable_actions()[index]
         normalized = normalize_action(random_action)
         action = ACTIONS_ARRAY.index((normalized.action_type, normalized.value))
     else:

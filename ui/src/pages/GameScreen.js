@@ -50,7 +50,7 @@ function GameScreen(props) {
   return (
     <main>
       <div className="prompt">
-        {state && state.current_color + ": Build first settlement"}
+        {state && `${state.current_color}: ${state.current_prompt}`}
       </div>
       {!state && (
         <Loader

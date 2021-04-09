@@ -40,7 +40,6 @@ CORS(app)
 
 @app.route("/games/<string:game_id>/tick", methods=["POST"])
 def tick_game(game_id):
-    """If its bots turn, play_tick completely and report last move, else just pop_from_queue"""
     game = get_last_game_state(game_id)
     if game is None:
         abort(404, description="Resource not found")
