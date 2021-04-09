@@ -53,7 +53,6 @@ export default function Tile({ center, coordinate, tile, size }) {
   } else if (tile.type === "DESERT") {
     resourceTile = desertTile;
   } else if (tile.type === "PORT") {
-    console.log(tile);
     let x = 0;
     let y = 0;
     if (tile.direction.includes("SOUTH")) {

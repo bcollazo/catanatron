@@ -7,7 +7,7 @@ import tensorflow as tf
 from catanatron_server.database import save_game_state, get_last_game_state
 from catanatron.game import Game
 from catanatron.json import GameEncoder
-from catanatron.models.player import RandomPlayer, Color
+from catanatron.models.player import SimplePlayer, RandomPlayer, Color
 from experimental.machine_learning.players.playouts import GreedyPlayoutsPlayer
 from experimental.machine_learning.features import (
     create_sample,
@@ -38,6 +38,7 @@ CORS(app)
 
 @app.route("/games/<string:game_id>/tick", methods=["POST"])
 def tick_game(game_id):
+    """If its bots turn, play_tick completely and report last move, else just pop_from_queue"""
     game = get_last_game_state(game_id)
     if game is None:
         abort(404, description="Resource not found")
@@ -103,7 +104,7 @@ def create_game():
             ValueFunctionPlayer(Color.RED, "FOO", "value_fn2"),
             # AlphaBetaPlayer(Color.BLUE, "BAR")
             # RandomPlayer(Color.RED, "FOO"),
-            RandomPlayer(Color.BLUE, "BAR"),
+            SimplePlayer(Color.BLUE, "BAR"),
             # RandomPlayer(Color.WHITE, "BAZ"),
             # RandomPlayer(Color.ORANGE, "QUX"),
         ]

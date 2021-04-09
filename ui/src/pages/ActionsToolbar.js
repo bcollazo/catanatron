@@ -79,9 +79,8 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick }) {
 
     setIsDrawerOpen(open);
   };
-
-  return (
-    <div className="actions-toolbar">
+  const playButtons = (
+    <>
       <OptionsButton
         menuListId="use-menu-list"
         icon={<SimCardIcon />}
@@ -111,6 +110,19 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick }) {
       >
         End
       </Button>
+    </>
+  );
+
+  const botsTurn = true;
+
+  return (
+    <div className="actions-toolbar">
+      {!botsTurn && playButtons}
+      {botsTurn && (
+        <Button className="confirm-btn" variant="contained" color="primary">
+          Ok
+        </Button>
+      )}
       {/* <Button
         className="open-drawer-btn"
         startIcon={<ChevronLeftIcon />}

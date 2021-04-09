@@ -1,4 +1,5 @@
 .actions-toolbar {
+  width: 100%;
   max-width: 375px;
   margin-left: auto;
   margin-right: auto;
@@ -9,7 +10,12 @@
 
   button {
     width: 60px;
+    height: 60px;
     margin: 4px;
+  }
+
+  .confirm-btn {
+    width: 100%;
   }
 
   .action-popover {
