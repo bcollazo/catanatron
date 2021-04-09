@@ -178,7 +178,6 @@ class Game:
         return self.execute(action, action_callbacks=action_callbacks)
 
     def playable_actions(self, player, action_prompt):
-        print("computing playable", player, action_prompt)
         if action_prompt == ActionPrompt.BUILD_FIRST_SETTLEMENT:
             return initial_settlement_possibilites(player, self.state.board, True)
         elif action_prompt == ActionPrompt.BUILD_SECOND_SETTLEMENT:
@@ -471,7 +470,6 @@ class Game:
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.state.actions.append(action)
-        print("EXECUTED", action)
         self.count_victory_points()
         self.advance_tick()
 
@@ -489,7 +487,6 @@ class Game:
                 ActionPrompt.PLAY_TURN if player.has_rolled else ActionPrompt.ROLL
             )
 
-        print("tick", player, action_prompt, self.state.actions)
         self.state.current_prompt = action_prompt
         self.state.playable_actions = self.playable_actions(player, action_prompt)
 

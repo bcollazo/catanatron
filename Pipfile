@@ -12,14 +12,6 @@ coveralls = "*"
 snakeviz = "*"
 pytest-benchmark = "*"
 ipython = "*"
-
-[packages]
-# Depedencies for Catanatron Server
-flask = "*"
-flask-cors = "*"
-psycopg2-binary = "*"
-setuptools = "*"
-catanatron = {editable = true, path = "."}
 # Dependencies for Catanatron Research (Experimental)
 click = "*"
 termplotlib = "*"
@@ -28,6 +20,14 @@ pandas = "*"
 scikit-learn = "==0.24.0"
 jupyterlab = "*"
 matplotlib = "*"
+
+[packages]
+# Depedencies for Catanatron Server
+flask = "*"
+flask-cors = "*"
+psycopg2-binary = "*"
+setuptools = "*"
+catanatron = {editable = true, path = "."}
 
 [requires]
 python_version = "3.8"

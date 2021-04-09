@@ -7,8 +7,27 @@ from catanatron.models.decks import ResourceDeck
 from catanatron.models.enums import DevelopmentCard, Resource
 
 
-def roll_maybe_move_robber(game):
+def build_initial_placements(game, p0_actions, p1_actions=[24, (24, 25), 26, (25, 26)]):
+    p0_color = game.state.players[0].color
+    p1_color = game.state.players[1].color
+    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, p0_actions[0]))
+    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, p0_actions[1]))
+
+    game.execute(Action(p1_color, ActionType.BUILD_FIRST_SETTLEMENT, p1_actions[0]))
+    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, p1_actions[1]))
+    game.execute(Action(p1_color, ActionType.BUILD_SECOND_SETTLEMENT, p1_actions[2]))
+    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, p1_actions[3]))
+
+    game.execute(Action(p0_color, ActionType.BUILD_SECOND_SETTLEMENT, p0_actions[2]))
+    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, p0_actions[3]))
+
+
+def advance_to_play_turn(game):
+    if game.state.playable_actions[-1].action_type == ActionType.END_TURN:
+        game.execute(game.state.playable_actions[-1])
     game.execute(Action(game.state.current_player().color, ActionType.ROLL, None))
+    if game.state.playable_actions[0].action_type == ActionType.DISCARD:
+        game.execute(game.state.playable_actions[0])
     if game.state.playable_actions[0].action_type == ActionType.MOVE_ROBBER:
         game.execute(game.state.playable_actions[0])
 
@@ -20,23 +39,13 @@ def test_longest_road_simple():
     blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
-    p0_color = game.state.players[0].color
-    p1_color = game.state.players[1].color
-    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
+    build_initial_placements(game, [3, (2, 3), 1, (1, 2)])
+    advance_to_play_turn(game)
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
     assert color is None
 
-    game.execute(Action(p1_color, ActionType.BUILD_FIRST_SETTLEMENT, 40))
-    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, (40, 44)))
-    game.execute(Action(p1_color, ActionType.BUILD_SECOND_SETTLEMENT, 43))
-    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, (43, 44)))
-
-    game.execute(Action(p0_color, ActionType.BUILD_SECOND_SETTLEMENT, 1))
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (1, 2)))
-
-    roll_maybe_move_robber(game)
+    p0_color = game.state.players[0].color
     game.state.players[0].resource_deck.replenish(10, Resource.WOOD)
     game.state.players[0].resource_deck.replenish(10, Resource.BRICK)
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 1)))
@@ -55,29 +64,31 @@ def test_longest_road_tie():
     blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
+    build_initial_placements(game, [0, (0, 1), 2, (1, 2)])
+    advance_to_play_turn(game)
 
-    game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (3, 2)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_FIRST_SETTLEMENT, 21))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (21, 19)))
+    p0_color = game.state.players[0].color
+    game.state.players[0].resource_deck.replenish(10, Resource.WOOD)
+    game.state.players[0].resource_deck.replenish(10, Resource.BRICK)
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (3, 4)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (4, 5)))
+    advance_to_play_turn(game)
 
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (2, 1)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (1, 0)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (0, 5)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (5, 4)))
-
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (19, 46)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (46, 45)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (45, 47)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (47, 43)))
+    p1_color = game.state.players[1].color
+    game.state.players[1].resource_deck.replenish(10, Resource.WOOD)
+    game.state.players[1].resource_deck.replenish(10, Resource.BRICK)
+    game.execute(Action(p1_color, ActionType.BUILD_ROAD, (26, 27)))
+    game.execute(Action(p1_color, ActionType.BUILD_ROAD, (27, 28)))
+    game.execute(Action(p1_color, ActionType.BUILD_ROAD, (28, 29)))
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
-    assert color == Color.RED  # even if blue also has 5-road. red had it first
+    assert color == p0_color  # even if blue also has 5-road. red had it first
     assert len(path) == 5
 
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (43, 21)))
+    game.execute(Action(p1_color, ActionType.BUILD_ROAD, (29, 30)))
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
-    assert color == Color.BLUE
+    assert color == p1_color
     assert len(path) == 6
 
 
@@ -91,7 +102,7 @@ def test_complicated_road():  # classic 8-like roads
     game = Game(players=[red, blue])
 
     game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (3, 2)))
+    game.execute(Action(Color.RED, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (2, 1)))
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (1, 0)))
     game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (0, 5)))
