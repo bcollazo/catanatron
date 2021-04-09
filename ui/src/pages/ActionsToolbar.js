@@ -119,7 +119,12 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick }) {
     <div className="actions-toolbar">
       {!botsTurn && playButtons}
       {botsTurn && (
-        <Button className="confirm-btn" variant="contained" color="primary">
+        <Button
+          className="confirm-btn"
+          variant="contained"
+          color="primary"
+          onClick={onTick}
+        >
           Ok
         </Button>
       )}

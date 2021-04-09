@@ -23,8 +23,6 @@ services:
   react-ui:
     image: bcollazo/catanatron-react-ui:latest
     build: ./ui
-    environment:
-      - REACT_APP_API_URL=http://server:5000
     ports:
       - 3000:3000
     stdin_open: true

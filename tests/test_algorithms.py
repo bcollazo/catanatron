@@ -23,13 +23,16 @@ def build_initial_placements(game, p0_actions, p1_actions=[24, (24, 25), 26, (25
 
 
 def advance_to_play_turn(game):
-    if game.state.playable_actions[-1].action_type == ActionType.END_TURN:
-        game.execute(game.state.playable_actions[-1])
     game.execute(Action(game.state.current_player().color, ActionType.ROLL, None))
-    if game.state.playable_actions[0].action_type == ActionType.DISCARD:
+    while game.state.playable_actions[0].action_type in [
+        ActionType.DISCARD,
+        ActionType.MOVE_ROBBER,
+    ]:
         game.execute(game.state.playable_actions[0])
-    if game.state.playable_actions[0].action_type == ActionType.MOVE_ROBBER:
-        game.execute(game.state.playable_actions[0])
+
+
+def end_turn(game):
+    game.execute(Action(game.state.current_player().color, ActionType.END_TURN, None))
 
 
 def test_longest_road_simple():
@@ -73,6 +76,7 @@ def test_longest_road_tie():
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (3, 4)))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (4, 5)))
+    end_turn(game)
     advance_to_play_turn(game)
 
     p1_color = game.state.players[1].color
@@ -100,29 +104,31 @@ def test_complicated_road():  # classic 8-like roads
     blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
+    build_initial_placements(game, [0, (0, 1), 2, (1, 2)])
+    advance_to_play_turn(game)
 
-    game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(Color.RED, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (2, 1)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (1, 0)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (0, 5)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (5, 4)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (4, 3)))
+    p0_color = game.state.players[0].color
+    game.state.players[0].resource_deck.replenish(20, Resource.WOOD)
+    game.state.players[0].resource_deck.replenish(20, Resource.BRICK)
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (3, 4)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (4, 5)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 5)))
 
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (2, 9)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (9, 8)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (8, 7)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (7, 6)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (6, 1)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (1, 6)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (6, 7)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (7, 8)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (8, 9)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 9)))
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
-    assert color == Color.RED
+    assert color == p0_color
     assert len(path) == 11
 
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (8, 27)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (8, 27)))
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
-    assert color == Color.RED
+    assert color == p0_color
     assert len(path) == 11
 
 

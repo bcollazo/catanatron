@@ -27,7 +27,7 @@ function GameScreen(props) {
 
   const onClickNext = useCallback(async () => {
     setInFlightRequest(true);
-    const response = await axios.post(`${API_URL}/games/${gameId}/tick`);
+    const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
     setInFlightRequest(false);
     setState(response.data);
   }, [gameId]);

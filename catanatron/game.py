@@ -470,6 +470,7 @@ class Game:
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.state.actions.append(action)
+        print("===== EXECUTED", action)
         self.count_victory_points()
         self.advance_tick()
 
@@ -477,6 +478,7 @@ class Game:
             callback(self)
 
     def advance_tick(self):
+        print(self.state.tick_queue)
         if len(self.state.tick_queue) > 0:
             (seating, action_prompt) = self.state.tick_queue.pop(0)
             self.state.current_player_index = seating
@@ -489,6 +491,7 @@ class Game:
 
         self.state.current_prompt = action_prompt
         self.state.playable_actions = self.playable_actions(player, action_prompt)
+        print("Set PLAYABLE ACTIONS", self.state.playable_actions)
 
     def execute_spectrum(self, action, action_callbacks=[]):
         """Returns [(game_copy, proba), ...] tuples for result of given action.

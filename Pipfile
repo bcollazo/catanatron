@@ -3,23 +3,23 @@ name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
-[dev-packages]
-pytest-watch = "*"
-coverage = "*"
-black = "*"
-pytest = "*"
-coveralls = "*"
-snakeviz = "*"
-pytest-benchmark = "*"
-ipython = "*"
-# Dependencies for Catanatron Research (Experimental)
-click = "*"
-termplotlib = "*"
-tensorflow = "*"
-pandas = "*"
-scikit-learn = "==0.24.0"
-jupyterlab = "*"
-matplotlib = "*"
+# [dev-packages]
+# pytest-watch = "*"
+# coverage = "*"
+# black = "*"
+# pytest = "*"
+# coveralls = "*"
+# snakeviz = "*"
+# pytest-benchmark = "*"
+# ipython = "*"
+# # Dependencies for Catanatron Research (Experimental)
+# click = "*"
+# termplotlib = "*"
+# tensorflow = "*"
+# pandas = "*"
+# scikit-learn = "==0.24.0"
+# jupyterlab = "*"
+# matplotlib = "*"
 
 [packages]
 # Depedencies for Catanatron Server
