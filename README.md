@@ -2,6 +2,7 @@
 
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Gradient](https://assets.paperspace.io/img/gradient-badge.svg)](https://console.paperspace.com/github/bcollazo/catanatron/blob/master/experimental/notebooks/Overview.ipynb?clone=true&runtime=bcollazo/paperspace-rl)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/ccd61293-6735-4eb1-a6f0-bce11d6b91fa/deploy-status)](https://app.netlify.com/sites/catanatron/deploys)
 
 Settlers of Catan Python implementation and Machine-Learning player.
 
