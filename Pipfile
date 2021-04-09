@@ -26,8 +26,8 @@ verify_ssl = true
 flask = "*"
 flask-cors = "*"
 psycopg2-binary = "*"
-setuptools = "*"
 catanatron = {editable = true, path = "."}
+gunicorn = "*"
 
 [requires]
 python_version = "3.8"

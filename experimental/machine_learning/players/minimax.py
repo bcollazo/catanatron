@@ -3,8 +3,6 @@ import time
 from collections import defaultdict
 from typing import List
 
-import numpy as np
-
 from catanatron.models.enums import DevelopmentCard, Resource
 from catanatron.game import Game
 from catanatron.models.player import Player
