@@ -14,7 +14,8 @@ import "./GameScreen.scss";
 function GameScreen(props) {
   const { gameId } = useParams();
   const [state, setState] = useState(null);
-  const [automation, setAutomation] = useState(false);
+  const automation = false;
+  // const [automation, setAutomation] = useState(false);
   const [inFlightRequest, setInFlightRequest] = useState(false);
 
   useEffect(() => {
@@ -32,9 +33,9 @@ function GameScreen(props) {
     setState(response.data);
   }, [gameId]);
 
-  const onClickAutomation = () => {
-    setAutomation(!automation);
-  };
+  // const onClickAutomation = () => {
+  //   setAutomation(!automation);
+  // };
 
   useEffect(() => {
     const interval = setInterval(async () => {
