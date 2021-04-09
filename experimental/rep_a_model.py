@@ -14,9 +14,9 @@ from experimental.machine_learning.players.reinforcement import (
 )
 
 # ===== Configuration
-DATA_DIRECTORY = "data/reachability"
-DATA_SIZE = 17994609  # use zcat data/mcts-playouts/labels.csv.gzip | wc
-EPOCHS = 10
+DATA_DIRECTORY = "data/reachability100k"
+DATA_SIZE = 85761634  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+EPOCHS = 1
 BATCH_SIZE = 2 ** 5
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
 PREFETCH_BUFFER_SIZE = 10
@@ -32,7 +32,7 @@ NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "samples-variance.np
 SHUFFLE = True
 SHUFFLE_SEED = random.randint(0, 20000)
 VALIDATION_SHUFFLE_SEED = random.randint(0, 20000)
-SHUFFLE_BUFFER_SIZE = 1000
+SHUFFLE_BUFFER_SIZE = 10000
 
 NUM_FEATURES = len(FEATURES)
 MODEL_NAME = "1v1-rep-a"
@@ -132,7 +132,7 @@ if NORMALIZATION:
     )
     outputs = normalizer_layer(outputs)
 
-outputs = tf.keras.layers.BatchNormalization()(outputs)
+# outputs = tf.keras.layers.BatchNormalization()(outputs)
 # outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(320, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(160, activation=tf.nn.relu)(outputs)
@@ -140,8 +140,8 @@ outputs = tf.keras.layers.BatchNormalization()(outputs)
 # outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(64, activation=tf.nn.relu)(outputs)
 
-outputs = tf.keras.layers.Dense(32)(outputs)
-outputs = tf.keras.layers.Dense(8)(outputs)
+# outputs = tf.keras.layers.Dense(32)(outputs)
+# outputs = tf.keras.layers.Dense(8)(outputs)
 outputs = tf.keras.layers.Dense(units=1)(outputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 model.compile(
@@ -199,6 +199,7 @@ model.summary()
 # model = tuner.hypermodel.build(best_hps)
 
 # ===== Fit Final Model
+start = time.time()
 model.fit(
     train_dataset,
     steps_per_epoch=STEPS_PER_EPOCH,
@@ -212,6 +213,7 @@ model.fit(
         ),
     ],
 )
+print("Training took", time.time() - start)
 
 model.save(MODEL_PATH)
 print("Saved model at:", MODEL_PATH)
