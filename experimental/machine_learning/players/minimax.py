@@ -5,6 +5,7 @@ from typing import List
 
 import numpy as np
 
+from catanatron.models.enums import DevelopmentCard, Resource
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron.models.actions import Action
@@ -108,16 +109,16 @@ def build_value_function(params):
 
 value_fn2 = build_value_function([4])
 
+
 def get_value_fn(name):
     return globals()[name or "value_fn2"]
-    
 
 
 class ValueFunctionPlayer(Player):
     def __init__(self, color, name, value_fn_name):
         super().__init__(color, name=name)
         self.value_fn_name = value_fn_name
-        
+
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
@@ -136,7 +137,7 @@ class ValueFunctionPlayer(Player):
         return best_action
 
     def __str__(self) -> str:
-        return super().__str__() + self.value_fn.__name__
+        return super().__str__() + self.function_name
 
 
 class VictoryPointPlayer(Player):
@@ -247,10 +248,14 @@ class MiniMaxPlayer(Player):
         return best_action
 
 
-ALPHABETA_DEPTH = 3
+ALPHABETA_DEFAULT_DEPTH = 2
 
 
 class AlphaBetaPlayer(Player):
+    def __init__(self, color, name, depth=ALPHABETA_DEFAULT_DEPTH):
+        super().__init__(color, name=name)
+        self.depth = depth
+
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
@@ -258,36 +263,54 @@ class AlphaBetaPlayer(Player):
         start = time.time()
         result = alphabeta(
             game.copy(),
-            ALPHABETA_DEPTH,
+            self.depth,
             float("-inf"),
             float("inf"),
             self.color,
+            maximizingPlayer=True,
             playable_actions=playable_actions,
         )
-        print("Decision Results:", len(playable_actions), time.time() - start)
+        print(
+            "Decision Results:", self.depth, len(playable_actions), time.time() - start
+        )
+        # breakpoint()
         return result[0]
 
+    def __repr__(self) -> str:
+        return super().__repr__() + f"(depth={self.depth})"
 
-def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
+
+def alphabeta(
+    game, depth, alpha, beta, p0_color, maximizingPlayer=None, playable_actions=None
+):
     """AlphaBeta MiniMax Algorithm.
 
     NOTE: Sometimes returns a value, sometimes an (action, value). This is
     because some levels are state=>action, some are action=>state and in
     action=>state would probably need (action, proba, value) as return type.
     """
+    tabs = "\t" * (ALPHABETA_DEFAULT_DEPTH - depth)
     if depth == 0 or game.winning_color() is not None:
-        return value_fn(game, p0_color)
+        # print(tabs, "returned heuristic", value_fn2(game, p0_color))
+        return value_fn2(game, p0_color)
 
-    maximizingPlayer = game.current_player().color == p0_color
-    children = expand_spectrum(game, playable_actions=playable_actions)
+    if playable_actions is None:
+        player, action_prompt = game.pop_from_queue()
+        maximizingPlayer = player.color == p0_color
+        actions = game.playable_actions(player, action_prompt)
+    else:
+        actions = playable_actions
+    children = expand_spectrum(game, actions)
+    # print(tabs, "MAXIMIZING =", maximizingPlayer, len(children))
     if maximizingPlayer:
         best_action = None
         best_value = float("-inf")
         for action, outprobas in children.items():
             expected_value = 0
             for (out, proba) in outprobas:
+                # print(tabs, "call maxalphabeta", action, proba, depth - 1, alpha, beta)
                 result = alphabeta(out, depth - 1, alpha, beta, p0_color)
-                value = result if depth == 1 else result[1]
+                value = result if isinstance(result, float) else result[1]
                 expected_value += proba * value
 
             if expected_value > best_value:
@@ -295,8 +318,10 @@ def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
                 best_value = expected_value
             alpha = max(alpha, best_value)
             if alpha >= beta:
-                print("beta cutoff")
+                # print(tabs, "beta cutoff")
                 break  # beta cutoff
+            # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
+
         return best_action, best_value
     else:
         best_action = None
@@ -304,8 +329,9 @@ def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
         for action, outprobas in children.items():
             expected_value = 0
             for (out, proba) in outprobas:
+                # print(tabs, "call minalphabeta", action, proba, depth - 1, alpha, beta)
                 result = alphabeta(out, depth - 1, alpha, beta, p0_color)
-                value = result if depth == 1 else result[1]
+                value = result if isinstance(result, float) else result[1]
                 expected_value += proba * value
 
             if expected_value < best_value:
@@ -313,20 +339,16 @@ def alphabeta(game, depth, alpha, beta, p0_color, playable_actions=None):
                 best_value = expected_value
             beta = min(beta, best_value)
             if beta <= alpha:
-                print("alpha cutoff")
-                break  # beta cutoff
+                # print(tabs, "alpha cutoff")
+                break  # alpha cutoff
+            # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
+
         return best_action, best_value
 
 
-def expand_spectrum(game, playable_actions=None):
+def expand_spectrum(game, actions):
+    """Consumes game if playable_actions not specified"""
     children = defaultdict(list)
-
-    if playable_actions is None:
-        player, action_prompt = game.pop_from_queue()
-        actions = game.playable_actions(player, action_prompt)
-    else:
-        actions = playable_actions
-
     for action in actions:
         outprobas = game.execute_spectrum(action)
         children[action] = outprobas

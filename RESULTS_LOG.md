@@ -204,7 +204,8 @@ tuner/round |0 |1
   DISCOUNTED_RETURN. MSE as loss and LR=0.0001.
   `loss: 1.5084e-07 - mae: 2.1945e-04 - val_loss: 4.2677e-05 - val_mae: 5.0571e-04`
 
-- Did a RandomForest, but data seems wrong. Played very poorly.
+- Did a RandomForest, but data seems wrong. Played very poorly. Tried again with
+  all Rep 1 features; no dice. Hard to analyze... Probably overfitted. Keeps ending turn.
 
 - Scikit Regression player doesnt win, because just gets a lot of wheat production,
   builds roads to extend as much as they can (dont hold to build settlements),
@@ -212,6 +213,11 @@ tuner/round |0 |1
 
 - Greedy (even when budgeted to run same num playouts as MCTS) does better than
   MCTS.
+
+- ValueFunction 2.0 (using EFFECTIVE_PRODUCTION and REACHABILITY features) plays
+  pretty strongly. Better than Greedy=25 and MCTS=100.
+
+- AlphaBeta(depth=2) plays stronger than ValueFunction 2.0. Using VF2.0 as heuristic.
 
 ## Future Work:
 

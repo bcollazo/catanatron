@@ -12,8 +12,10 @@ COPY requirements.txt /app
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
+# For some reason we can't include the -e . dependency of the 
+#   catanatron package in the requirements.txt. So we install
+#   it separately, here:
 COPY . .
-
 RUN pip install .
 
 EXPOSE 5000

@@ -9,8 +9,10 @@ services:
     ports:
       - 5432:5432
   server:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
     image: catanatron-server:latest
-    build: .
     environment:
       - DATABASE_URL=postgresql://catanatron:victorypoint@db:5432/catanatron_db
     ports:
@@ -19,8 +21,8 @@ services:
     volumes:
       - .:/app
   react-ui:
-    image: catanatron-react-ui:latest
     build: ./ui
+    image: catanatron-react-ui:latest
     ports:
       - "3000:3000"
     stdin_open: true

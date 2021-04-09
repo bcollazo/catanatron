@@ -1,5 +1,4 @@
 import time
-import os
 from pathlib import Path
 import random
 
@@ -25,14 +24,14 @@ LABEL_COLUMN = "VICTORY_POINTS_RETURN"
 VALIDATION_DATA_SIZE = 820507
 VALIDATION_DATA_DIRECTORY = "data/reachability-validation"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
-NORMALIZATION = False
-NORMALIZATION_DIRECTORY = "data/random1v1s"
+NORMALIZATION = True
+NORMALIZATION_DIRECTORY = "data/reachability"
 NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "samples-mean.npy")
 NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "samples-variance.npy")
 SHUFFLE = True
 SHUFFLE_SEED = random.randint(0, 20000)
 VALIDATION_SHUFFLE_SEED = random.randint(0, 20000)
-SHUFFLE_BUFFER_SIZE = 10000
+SHUFFLE_BUFFER_SIZE = 100000
 
 NUM_FEATURES = len(FEATURES)
 MODEL_NAME = "1v1-rep-a"
@@ -40,7 +39,15 @@ MODEL_PATH = f"experimental/models/{MODEL_NAME}"
 LOG_DIR = f"logs/rep-a-value-model/{MODEL_NAME}/{int(time.time())}"
 
 
-# ===== Building Dataset Generator
+# ===== Create Dataset Objects
+# === Download Idempotently
+SAMPLES_PATH = Path(DATA_DIRECTORY, "samples.csv.gzip")
+LABELS_PATH = Path(DATA_DIRECTORY, LABEL_FILE)
+VALIDATION_SAMPLES_PATH = Path(VALIDATION_DATA_DIRECTORY, "samples.csv.gzip")
+VALIDATION_LABELS_PATH = Path(VALIDATION_DATA_DIRECTORY, LABEL_FILE)
+
+
+# === Define Generator
 def preprocess(samples_batch, rewards_batch):
     """Input are dictionary of tensors"""
     input1 = preprocess_samples(samples_batch)
@@ -62,7 +69,7 @@ def build_generator(dataset):
 
 print("Reading and building train dataset...")
 samples = tf.data.experimental.make_csv_dataset(
-    os.path.join(DATA_DIRECTORY, "samples.csv.gzip"),
+    str(SAMPLES_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -72,7 +79,7 @@ samples = tf.data.experimental.make_csv_dataset(
     select_columns=FEATURES,
 )
 rewards = tf.data.experimental.make_csv_dataset(
-    os.path.join(DATA_DIRECTORY, LABEL_FILE),
+    str(LABELS_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -80,6 +87,7 @@ rewards = tf.data.experimental.make_csv_dataset(
     shuffle_seed=SHUFFLE_SEED,
     shuffle_buffer_size=SHUFFLE_BUFFER_SIZE,
     select_columns=[LABEL_COLUMN],
+    column_defaults=[tf.float64],
 )
 train_dataset = tf.data.Dataset.zip((samples, rewards)).map(preprocess)
 train_dataset = tf.data.Dataset.from_generator(
@@ -92,7 +100,7 @@ train_dataset = tf.data.Dataset.from_generator(
 
 print("Reading and building test dataset...")
 samples = tf.data.experimental.make_csv_dataset(
-    os.path.join(VALIDATION_DATA_DIRECTORY, "samples.csv.gzip"),
+    str(VALIDATION_SAMPLES_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -102,7 +110,7 @@ samples = tf.data.experimental.make_csv_dataset(
     select_columns=FEATURES,
 )
 rewards = tf.data.experimental.make_csv_dataset(
-    os.path.join(VALIDATION_DATA_DIRECTORY, LABEL_FILE),
+    str(VALIDATION_LABELS_PATH),
     BATCH_SIZE,
     prefetch_buffer_size=PREFETCH_BUFFER_SIZE,
     compression_type="GZIP",
@@ -110,6 +118,7 @@ rewards = tf.data.experimental.make_csv_dataset(
     shuffle_seed=VALIDATION_SHUFFLE_SEED,
     shuffle_buffer_size=SHUFFLE_BUFFER_SIZE,
     select_columns=[LABEL_COLUMN],
+    column_defaults=[tf.float64],
 )
 test_dataset = tf.data.Dataset.zip((samples, rewards)).map(preprocess)
 test_dataset = tf.data.Dataset.from_generator(
@@ -121,6 +130,7 @@ test_dataset = tf.data.Dataset.from_generator(
 )
 
 # ===== REGULAR MODEL
+init = tf.keras.initializers.HeUniform()
 inputs = tf.keras.Input(shape=(NUM_FEATURES,))
 outputs = inputs
 
@@ -139,10 +149,9 @@ if NORMALIZATION:
 # outputs = tf.keras.layers.Dense(512, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
 # outputs = tf.keras.layers.Dense(64, activation=tf.nn.relu)(outputs)
-
-# outputs = tf.keras.layers.Dense(32)(outputs)
-# outputs = tf.keras.layers.Dense(8)(outputs)
-outputs = tf.keras.layers.Dense(units=1)(outputs)
+# outputs = tf.keras.layers.Dense(32, activation=tf.nn.relu)(outputs)
+# outputs = tf.keras.layers.Dense(8, activation=tf.nn.relu)(outputs)
+outputs = tf.keras.layers.Dense(units=1, kernel_initializer=init)(outputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 model.compile(
     metrics=["mae"],
@@ -205,9 +214,11 @@ model.fit(
     steps_per_epoch=STEPS_PER_EPOCH,
     epochs=EPOCHS,
     validation_data=test_dataset,
-    validation_steps=VALIDATION_DATA_SIZE / BATCH_SIZE,
+    validation_steps=VALIDATION_DATA_SIZE // BATCH_SIZE,
     callbacks=[
-        # tf.keras.callbacks.EarlyStopping(monitor="val_mae", patience=3, min_delta=1e-6),
+        tf.keras.callbacks.EarlyStopping(
+            monitor="val_mae", patience=1, min_delta=0.0001
+        ),
         tf.keras.callbacks.TensorBoard(
             log_dir=LOG_DIR, histogram_freq=1, write_graph=True
         ),

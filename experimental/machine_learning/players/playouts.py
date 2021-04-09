@@ -7,7 +7,7 @@ from catanatron.game import Game
 from catanatron.models.player import Player
 
 DEFAULT_NUM_PLAYOUTS = 25
-USE_MULTIPROCESSING = False
+USE_MULTIPROCESSING = True
 NUM_WORKERS = multiprocessing.cpu_count()
 
 PLAYOUTS_BUDGET = 100
@@ -29,7 +29,8 @@ class GreedyPlayoutsPlayer(Player):
             return playable_actions[0]
 
         start = time.time()
-        num_playouts = PLAYOUTS_BUDGET // len(playable_actions)
+        # num_playouts = PLAYOUTS_BUDGET // len(playable_actions)
+        num_playouts = self.num_playouts
 
         best_action = None
         max_wins = None

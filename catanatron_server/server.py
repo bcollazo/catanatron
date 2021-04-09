@@ -16,12 +16,14 @@ from experimental.machine_learning.features import (
 )
 
 # from experimental.machine_learning.players.online_mcts_dqn import get_model
+# from experimental.machine_learning.players.scikit import ScikitPlayer
 from experimental.machine_learning.players.reinforcement import (
     TensorRLPlayer,
     VRLPlayer,
     get_v_model,
 )
 from experimental.machine_learning.players.minimax import (
+    AlphaBetaPlayer,
     MiniMaxPlayer,
     ValueFunctionPlayer,
     VictoryPointPlayer,

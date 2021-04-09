@@ -1,5 +1,6 @@
 import time
 import random
+from pprint import pprint
 import os
 import copy
 
@@ -69,22 +70,12 @@ def allow_feature(feature_name):
         and not ("EFFECTIVE" in feature_name and "P0" in feature_name)
         and (feature_name[-6:] != "PLAYED" or "KNIGHT" in feature_name)
     )
-    return True
-    return (
-        feature_name[:4] != "TILE"
-        and feature_name[:4] != "PORT"
-        and feature_name[:4] != "NODE"
-        and feature_name[:4] != "EDGE"
-        and feature_name[:4] != "BANK"
-        and feature_name[-6:] != "ROLLED"
-        and (feature_name[-6:] != "PLAYED" or "KNIGHT" in feature_name)
-        and feature_name[-8:] != "PLAYABLE"
-        and "HAND" not in feature_name
-    )
 
 
 ALL_FEATURES = get_feature_ordering(num_players=2)
 FEATURES = list(filter(allow_feature, ALL_FEATURES))
+pprint(FEATURES)
+
 FEATURE_INDICES = [ALL_FEATURES.index(f) for f in FEATURES]
 
 

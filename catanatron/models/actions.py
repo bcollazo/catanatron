@@ -53,8 +53,13 @@ class ActionType(Enum):
     END_TURN = "END_TURN"  # value is None
 
 
+def action_repr(self):
+    return f"Action({self.color.value} {self.action_type.value} {self.value})"
+
+
 # TODO: Distinguish between PossibleAction and FinalizedAction?
 Action = namedtuple("Action", ["color", "action_type", "value"])
+Action.__repr__ = action_repr
 
 TradeOffer = namedtuple(
     "TradeOffer", ["offering", "asking", "tradee"]

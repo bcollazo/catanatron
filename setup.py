@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="catanatron",  # Replace with your own username
+    name="catanatron",
     version="0.0.1",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
@@ -19,4 +19,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8",
+    install_requires=[
+        'networkx',
+    ],
 )

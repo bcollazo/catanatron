@@ -70,17 +70,17 @@ FEATURES = [
     "P1_HAS_ROAD",
     "P0_HAS_ARMY",
     "P1_HAS_ARMY",
-    "TOTAL__P0_ORE_PRODUCTION",
-    "TOTAL__P0_WOOD_PRODUCTION",
-    "TOTAL__P0_WHEAT_PRODUCTION",
-    "TOTAL__P0_SHEEP_PRODUCTION",
-    "TOTAL__P0_BRICK_PRODUCTION",
+    "TOTAL_P0_ORE_PRODUCTION",
+    "TOTAL_P0_WOOD_PRODUCTION",
+    "TOTAL_P0_WHEAT_PRODUCTION",
+    "TOTAL_P0_SHEEP_PRODUCTION",
+    "TOTAL_P0_BRICK_PRODUCTION",
     "P0_LONGEST_ROAD_LENGTH",
-    "EFFECTIVE__P1_ORE_PRODUCTION",
-    "EFFECTIVE__P1_WOOD_PRODUCTION",
-    "EFFECTIVE__P1_WHEAT_PRODUCTION",
-    "EFFECTIVE__P1_SHEEP_PRODUCTION",
-    "EFFECTIVE__P1_BRICK_PRODUCTION",
+    # "EFFECTIVE_P1_ORE_PRODUCTION",
+    # "EFFECTIVE_P1_WOOD_PRODUCTION",
+    # "EFFECTIVE_P1_WHEAT_PRODUCTION",
+    # "EFFECTIVE_P1_SHEEP_PRODUCTION",
+    # "EFFECTIVE_P1_BRICK_PRODUCTION",
     "P1_LONGEST_ROAD_LENGTH",
     "P0_PUBLIC_VPS",
     "P1_PUBLIC_VPS",
@@ -144,32 +144,44 @@ def read_data_tf(samples_iter, rewards_iter, batches=1_000):
     return samples_df, rewards_df
 
 
-def read_data_simple():
+def read_and_train_simple():
     #  zcat data/testing/rewards.csv.gzip | head -n 100000 > rewards.csv
     start = time.time()
-    samples = pd.read_csv("samples.csv")[FEATURES]
-    rewards = pd.read_csv("rewards.csv")["VICTORY_POINTS_RETURN"]
-
+    samples_df = pd.read_csv("samples.csv")
+    rewards_df = pd.read_csv("rewards.csv")
     print("Reading data took:", time.time() - start)
-    return samples, rewards
+
+    X = samples_df[FEATURES]
+    y = rewards_df["VICTORY_POINTS_RETURN"]
+
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+        X, y, test_size=0.10, random_state=42
+    )
+    clf = make_pipeline(StandardScaler(), SGDRegressor())
+
+    clf.fit(X_train, y_train)
+    print(clf.predict(X_test))
+    print(y_test)
+    print(clf.score(X_test, y_test))
+
+    pprint(list(zip(FEATURES, clf.steps[1][1].coef_)))
+
+    return clf
 
 
-if __name__ == "__main__":
-    # 300,000 samples will take about 5Gb of RAM
-    samples = 300_000
-    chunk = 1000
-    scaler = StandardScaler()
+def read_and_train_online():
+    global_scaler = StandardScaler()
     clf = SGDRegressor()
-
-    # Read data
-    samples_iter, rewards_iter = create_datasets_iters("data/random1v1s-expansions")
-    for epochs in range(10):
+    samples_iter, rewards_iter = create_datasets_iters("data/linear-features")
+    for epochs in range(100):
         samples_df, rewards_df = read_data_tf(samples_iter, rewards_iter, 100_000)
 
         X = samples_df[FEATURES]
         y = rewards_df["VICTORY_POINTS_RETURN"]
 
-        scaler.partial_fit(X)
+        scaler = StandardScaler()
+        scaler.fit(X)
+        global_scaler.partial_fit(X)
         X = scaler.transform(X)
 
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
@@ -183,9 +195,16 @@ if __name__ == "__main__":
         print(clf.score(X_test, y_test))
 
     pprint(list(zip(FEATURES, clf.coef_)))
+    clf = make_pipeline(scaler, clf)
+    return clf
+
+
+if __name__ == "__main__":
+    # clf = read_and_train_online()
+    clf = read_and_train_simple()
+
     breakpoint()
 
     # Save model
-    clf = make_pipeline(scaler, clf)
-    with open("experimental/models/simple-scikit-expansions.model", "wb") as file:
+    with open("experimental/models/simple-scikit-linear.model", "wb") as file:
         pickle.dump(clf, file)

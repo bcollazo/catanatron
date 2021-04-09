@@ -26,19 +26,17 @@ action_space = np.array([i for i in range(5000)])
 
 NUMBER = 1000
 result = timeit.timeit("game.copy()", setup=setup, number=NUMBER)
-print(result / NUMBER, "secs")
+print(result / NUMBER, "secs; game.copy()")
 
 result = timeit.timeit(
     """
-# players = pickle.loads(pickle.dumps(game.state.players))
 players = game.state.players.copy()
 
-# board = pickle.loads(pickle.dumps(game.state.board))
 board = dict()
 board['map'] = game.state.board.map  # for caching speedups
 board['buildings'] = game.state.board.buildings.copy()
+board['roads'] = game.state.board.roads.copy()
 board['connected_components'] = game.state.board.connected_components.copy()
-board['color_node_to_subgraphs'] = game.state.board.color_node_to_subgraphs.copy()
 
 state_copy = dict()
 state_copy['players'] = players
@@ -57,12 +55,11 @@ game_copy = Game([], None, None, initialize=False)
 game_copy.seed = game.seed
 game_copy.id = game.id
 game_copy.state = state_copy
-{}
 """,
     setup=setup,
     number=NUMBER,
 )
-print(result / NUMBER, "secs")
+print(result / NUMBER, "secs; hand-hydrated")
 
 # Theoretical Python limit on state.copy(?) (Using numpy arrays)
 result = timeit.timeit(
@@ -73,7 +70,9 @@ players = player_state.copy()
 # Graph is tensor board(?)
 board = {
     'map': game.state.board.map,
-    'buildings': game.state.board.buildings.copy()
+    'buildings': game.state.board.buildings.copy(),
+    'roads': game.state.board.roads.copy(),
+    'connected_components': game.state.board.connected_components.copy(),
 }
 
 state_copy = {
@@ -83,12 +82,11 @@ state_copy = {
 'tick_queue': game.state.tick_queue.copy(),
 'actions': game.state.actions.copy(),
 }
-{}
 """,
     setup=setup,
     number=NUMBER,
 )
-print(result / NUMBER, "secs")
+print(result / NUMBER, "secs; theoretical-limit? (arrays + dicts + map-reuse)")
 
 # Understanding what improvements can we get if we move state to numpy arrays.
 result = timeit.timeit(

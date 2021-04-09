@@ -10,17 +10,22 @@ from experimental.machine_learning.features import create_sample, create_sample_
 
 
 from experimental.simple_model import FEATURES
-
-with open("experimental/models/simple-scikit-expansions.model", "rb") as file:
-    clf = pickle.load(file)
-
 # from experimental.simple_forest import FEATURES
 
-# with open("experimental/models/simple-rf.model", "rb") as file:
-#     clf = pickle.load(file)
+clf = None
+def load_model():
+    global clf
+    with open("experimental/models/simple-scikit-linear.model", "rb") as file:
+        clf = pickle.load(file)
+    # with open("experimental/models/simple-rf.model", "rb") as file:
+    #     clf = pickle.load(file)
 
 
 class ScikitPlayer(Player):
+    def __init__(self, color, name):
+        super().__init__(color, name=name)
+        load_model()
+
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
@@ -37,6 +42,6 @@ class ScikitPlayer(Player):
         best_idx = np.argmax(scores)
         best_action = playable_actions[best_idx]
 
-        pprint(list(zip(playable_actions, scores)))
-        breakpoint()
+        # pprint(list(zip(playable_actions, scores)))
+        # breakpoint()
         return best_action
