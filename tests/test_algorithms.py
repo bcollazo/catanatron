@@ -39,7 +39,7 @@ def test_longest_road_simple():
     blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
-    build_initial_placements(game, [3, (2, 3), 1, (1, 2)])
+    build_initial_placements(game, [0, (0, 1), 2, (1, 2)])
     advance_to_play_turn(game)
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
@@ -48,8 +48,8 @@ def test_longest_road_simple():
     p0_color = game.state.players[0].color
     game.state.players[0].resource_deck.replenish(10, Resource.WOOD)
     game.state.players[0].resource_deck.replenish(10, Resource.BRICK)
-    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 1)))
-    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 5)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (3, 4)))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (4, 5)))
 
     color, path = longest_road(game.state.board, game.state.players, game.state.actions)
