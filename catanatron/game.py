@@ -112,11 +112,11 @@ def initialize_tick_queue(players):
 class State:
     """Small container object to group dynamic variables in state"""
 
-    def __init__(self, players, map, initialize=True):
+    def __init__(self, players, catan_map, initialize=True):
         if initialize:
             self.players = random.sample(players, len(players))
             self.players_by_color = {p.color: p for p in players}
-            self.board = Board(map)
+            self.board = Board(catan_map)
             self.actions = []  # log of all action taken by players
             self.resource_deck = ResourceDeck.starting_bank()
             self.development_deck = DevelopmentDeck.starting_bank()
@@ -140,13 +140,13 @@ class Game:
     core turn-by-turn controlling logic.
     """
 
-    def __init__(self, players: Iterable[Player], seed=None, map=None, initialize=True):
+    def __init__(self, players: Iterable[Player], seed=None, catan_map=None, initialize=True):
         if initialize:
             self.seed = seed or random.randrange(sys.maxsize)
             random.seed(self.seed)
 
             self.id = str(uuid.uuid4())
-            self.state = State(players, map or BaseMap())
+            self.state = State(players, catan_map or BaseMap())
             self.advance_tick()
 
     def play(self, action_callbacks=[], decide_fn=None):
@@ -315,6 +315,7 @@ class Game:
             action = Action(action.color, action.action_type, card)
         elif action.action_type == ActionType.ROLL:
             player = self.state.players_by_color[action.color]
+            player.has_rolled = True
             dices = action.value or roll_dice()
             number = dices[0] + dices[1]
 
@@ -345,7 +346,6 @@ class Game:
             self.state.tick_queue.append(
                 (self.state.current_player_index, ActionPrompt.PLAY_TURN)
             )
-            player.has_rolled = True
         elif action.action_type == ActionType.DISCARD:
             player = self.state.players_by_color[action.color]
             hand = player.resource_deck.to_array()
@@ -478,7 +478,7 @@ class Game:
             callback(self)
 
     def advance_tick(self):
-        print(self.state.tick_queue)
+        print(self.state.tick_queue, self.state.current_player().has_rolled)
         if len(self.state.tick_queue) > 0:
             (seating, action_prompt) = self.state.tick_queue.pop(0)
             self.state.current_player_index = seating

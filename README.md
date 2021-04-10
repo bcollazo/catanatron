@@ -8,11 +8,12 @@ Settlers of Catan Python implementation and Machine-Learning player.
 
 ## Usage
 
-Create a virtualenv with [Pipenv](https://pipenv.pypa.io/en/latest/) (or use the provided `requirements.txt`):
+Create a virtualenv with Python 3.8 and install requirements:
 
 ```
-pip install pipenv
-pipenv install --dev
+python3.8 -m venv catanatron-venv
+source ./catanatron-venv/bin/activate
+pip install -r dev-requirements.txt
 ```
 
 Run games with the `play.py` script. It provides extra options you can explore with `--help`:

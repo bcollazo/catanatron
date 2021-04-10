@@ -1,3 +1,4 @@
+from catanatron.models.map import BaseMap
 from catanatron.models.board import Board
 from catanatron.game import Game
 from catanatron.algorithms import longest_road, largest_army
@@ -140,33 +141,40 @@ def test_triple_longest_road_tie():
     blue.resource_deck += ResourceDeck.starting_bank()
     white.resource_deck += ResourceDeck.starting_bank()
 
-    game = Game(players=[red, blue, white])
+    board = Board(BaseMap())
+    board.build_settlement(Color.RED, 3, True)
+    board.build_road(Color.RED, (3, 2))
+    board.build_road(Color.RED, (2, 1))
+    board.build_road(Color.RED, (1, 0))
+    board.build_road(Color.RED, (0, 5))
+    board.build_road(Color.RED, (5, 4))
+    board.build_road(Color.RED, (3, 4))
 
-    game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (3, 2)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (2, 1)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (1, 0)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (0, 5)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (5, 4)))
-    game.execute(Action(Color.RED, ActionType.BUILD_ROAD, (3, 4)))
+    board.build_settlement(Color.BLUE, 24, True)
+    board.build_road(Color.BLUE, (24, 25))
+    board.build_road(Color.BLUE, (25, 26))
+    board.build_road(Color.BLUE, (26, 27))
+    board.build_road(Color.BLUE, (27, 8))
+    board.build_road(Color.BLUE, (8, 7))
+    board.build_road(Color.BLUE, (7, 24))
 
-    game.execute(Action(Color.BLUE, ActionType.BUILD_FIRST_SETTLEMENT, 24))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (24, 25)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (25, 26)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (26, 27)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (27, 8)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (8, 7)))
-    game.execute(Action(Color.BLUE, ActionType.BUILD_ROAD, (7, 24)))
+    board.build_settlement(Color.WHITE, 17, True)
+    board.build_road(Color.WHITE, (18, 17))
+    board.build_road(Color.WHITE, (17, 39))
+    board.build_road(Color.WHITE, (39, 41))
+    board.build_road(Color.WHITE, (41, 42))
+    board.build_road(Color.WHITE, (42, 40))
+    board.build_road(Color.WHITE, (40, 18))
+    board.update_connected_components()
 
-    game.execute(Action(Color.WHITE, ActionType.BUILD_FIRST_SETTLEMENT, 17))
-    game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (18, 17)))
-    game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (17, 39)))
-    game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (39, 41)))
-    game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (41, 42)))
-    game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (42, 40)))
-    game.execute(Action(Color.WHITE, ActionType.BUILD_ROAD, (40, 18)))
+    # subset... not quite representative, but should be ok.
+    actions = [
+        Action(Color.RED, ActionType.BUILD_ROAD, (3,2)),
+        Action(Color.BLUE, ActionType.BUILD_ROAD, (24,25)),
+        Action(Color.WHITE, ActionType.BUILD_ROAD, (18,17)),
+    ]
 
-    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
+    color, path = longest_road(board, [red, blue, white], actions)
     assert color == Color.RED
     assert len(path) == 6
 
