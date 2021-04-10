@@ -1,4 +1,4 @@
-catanatron @ file:///home/bcollazo/BryanCode/catanatron
+-e ./
 click==7.1.2
 decorator==4.4.2
 Flask==1.1.2
