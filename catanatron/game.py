@@ -167,7 +167,6 @@ class Game:
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.state.actions.append(action)
-        print("===== EXECUTED", action)
         self.count_victory_points()
         self.advance_tick()
 
@@ -175,7 +174,6 @@ class Game:
             callback(self)
 
     def advance_tick(self):
-        print(self.state.tick_queue, self.state.current_player().has_rolled)
         if len(self.state.tick_queue) > 0:
             (seating, action_prompt) = self.state.tick_queue.pop(0)
             self.state.current_player_index = seating
@@ -188,7 +186,6 @@ class Game:
 
         self.state.current_prompt = action_prompt
         self.state.playable_actions = self.playable_actions(player, action_prompt)
-        print("Set PLAYABLE ACTIONS", self.state.playable_actions)
 
     def execute_spectrum(self, action, action_callbacks=[]):
         """Returns [(game_copy, proba), ...] tuples for result of given action.
@@ -318,6 +315,8 @@ class Game:
         state_copy.num_turns = self.state.num_turns
         state_copy.road_color = self.state.road_color
         state_copy.army_color = self.state.army_color
+        state_copy.current_prompt = self.state.current_prompt
+        state_copy.playable_actions = self.state.playable_actions
 
         game_copy = Game([], None, None, initialize=False)
         game_copy.seed = self.seed
@@ -337,6 +336,7 @@ def replay_game(game):
     for player in tmp_game.state.players:
         player.restart_state()
 
+    breakpoint()
     for action in game_copy.state.actions:
         tmp_game.execute(action)
         yield tmp_game, action

@@ -1,5 +1,6 @@
 import math
 import random
+from tests.utils import advance_to_play_turn, build_initial_placements
 import tensorflow as tf
 
 from catanatron.models.enums import Resource
@@ -47,14 +48,15 @@ def test_port_distance_features():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(players[0].color, ActionType.BUILD_INITIAL_ROAD, (3, 2)))
+    color = game.state.players[0].color
+    game.execute(Action(color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
+    game.execute(Action(color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
 
     ports = game.state.board.map.port_nodes
     se_port_resource = next(filter(lambda entry: 29 in entry[1], ports.items()))[0]
     port_name = "3:1" if se_port_resource is None else se_port_resource.value
 
-    features = port_distance_features(game, players[0].color)
+    features = port_distance_features(game, color)
     assert features["P0_HAS_WHEAT_PORT"] == False
     assert features[f"P0_{port_name}_PORT_DISTANCE"] == 3
 
@@ -67,14 +69,15 @@ def test_expansion_features():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(players[0].color, ActionType.BUILD_INITIAL_ROAD, (3, 2)))
+    color = game.state.players[0].color
+    game.execute(Action(color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
+    game.execute(Action(color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
 
     neighbor_tile_resource = game.state.board.map.tiles[(1, -1, 0)].resource
     if neighbor_tile_resource is None:
         neighbor_tile_resource = game.state.board.map.tiles[(0, -1, 1)].resource
 
-    features = expansion_features(game, players[0].color)
+    features = expansion_features(game, color)
     assert features["P0_WHEAT_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource.value}_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource.value}_AT_DISTANCE_1"] > 0
@@ -95,9 +98,10 @@ def test_reachability_features():
     random.sample(players, len(players))
     catan_map = BaseMap()
     game = Game(players, seed=123, catan_map=catan_map)
+    p0_color = game.state.players[0].color
 
-    game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 5))
-    features = reachability_features(game, Color.RED)
+    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 5))
+    features = reachability_features(game, p0_color)
     assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
     assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(6)
@@ -110,8 +114,8 @@ def test_reachability_features():
     assert features["P0_1_ROAD_REACHABLE_BRICK"] == number_probability(4)
     assert features["P0_1_ROAD_REACHABLE_SHEEP"] == number_probability(6)
 
-    game.execute(Action(Color.RED, ActionType.BUILD_INITIAL_ROAD, (5, 0)))
-    features = reachability_features(game, Color.RED)
+    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (0, 5)))
+    features = reachability_features(game, p0_color)
     assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
     assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(6)
@@ -130,8 +134,9 @@ def test_reachability_features():
     )
 
     # Test enemy making building removes buildability
-    game.execute(Action(Color.BLUE, ActionType.BUILD_FIRST_SETTLEMENT, 1))
-    features = reachability_features(game, Color.RED)
+    p1_color = game.state.players[1].color
+    game.execute(Action(p1_color, ActionType.BUILD_FIRST_SETTLEMENT, 1))
+    features = reachability_features(game, p0_color)
     assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(8)
     assert math.isclose(
         features["P0_2_ROAD_REACHABLE_ORE"],
@@ -165,10 +170,11 @@ def test_graph_features():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    game.execute(Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(players[0].color, ActionType.BUILD_INITIAL_ROAD, (3, 2)))
+    p0_color = game.state.players[0].color
+    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
+    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
 
-    features = graph_features(game, players[0].color)
+    features = graph_features(game, p0_color)
     assert features[f"NODE3_P0_SETTLEMENT"]
     assert features[f"EDGE(2, 3)_P0_ROAD"]
     assert not features[f"NODE3_P1_SETTLEMENT"]
@@ -221,36 +227,26 @@ def test_init_tile_map():
 
 
 def test_create_board_tensor():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-        SimplePlayer(Color.WHITE),
-        SimplePlayer(Color.ORANGE),
-    ]
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
     p0 = game.state.players[0]
 
     # assert starts with no settlement/cities
     tensor = create_board_tensor(game, p0.color)
-    assert tensor.shape == (21, 11, 20)
+    assert tensor.shape == (21, 11, 20 - 4)
     assert tensor[0][0][0] == 0
     assert tensor[10][6][0] == 0
     assert tensor[9][6][0] == 0
 
-    # assert settlement marks a 1 in the spot
-    game.execute(Action(p0.color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    tensor = create_board_tensor(game, p0.color)
-    assert tensor.shape == (21, 11, 20)
-    assert tensor[10][6][0] == 1
-    assert tensor[9][6][0] == 0
-
-    game.execute(Action(p0.color, ActionType.BUILD_INITIAL_ROAD, (3, 4)))
+    # assert settlement and road mark 1s correspondingly
+    build_initial_placements(game, p0_actions=[3, (3, 4), 37, (14, 37)])
     tensor = create_board_tensor(game, p0.color)
     assert tensor[10][6][0] == 1
     assert tensor[9][6][1] == 1
 
     p0.resource_deck.replenish(2, Resource.WHEAT)
     p0.resource_deck.replenish(3, Resource.ORE)
+    advance_to_play_turn(game)
     game.execute(Action(p0.color, ActionType.BUILD_CITY, 3))
     tensor = create_board_tensor(game, p0.color)
     assert tensor[10][6][0] == 2

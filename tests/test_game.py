@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch
 
+from tests.utils import advance_to_play_turn, build_initial_placements
 from catanatron.game import Game
 from catanatron.state import yield_resources
 from catanatron.models.board import Board
@@ -45,81 +46,49 @@ def test_can_play_for_a_bit():  # assert no exception thrown
         game.play_tick()
 
 
-@patch("catanatron.game.roll_dice")
+@patch("catanatron.state.roll_dice")
+def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 6)
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        game.play_tick()
+
+    players[1].resource_deck = ResourceDeck()
+    players[1].resource_deck.replenish(7, Resource.WHEAT)
+    game.play_tick()  # should be player 0 rolling.
+
+    assert not any(
+        a.action_type == ActionType.DISCARD for a in game.state.playable_actions
+    )
+
+
+@patch("catanatron.state.roll_dice")
 def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    blue_seating = game.state.players.index(players[1])
-    for _ in range(8):
-        game.play_tick()  # run initial placements
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        game.play_tick()
 
     players[1].resource_deck = ResourceDeck()
     players[1].resource_deck.replenish(9, Resource.WHEAT)
     game.play_tick()  # should be player 0 rolling.
 
-    discarding_ticks = list(
-        filter(
-            lambda a: a[0] == blue_seating and a[1] == ActionPrompt.DISCARD,
-            game.state.tick_queue,
-        )
-    )
-    assert len(discarding_ticks) == 1
+    assert len(game.state.playable_actions) == 1
+    assert game.state.playable_actions == [
+        Action(players[1].color, ActionType.DISCARD, None)
+    ]
 
     game.play_tick()
     assert players[1].resource_deck.num_cards() == 5
 
 
 # ===== Development Cards
-def test_cant_buy_more_than_max_card():
-    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
-
-    with pytest.raises(ValueError):  # not enough money
-        game.execute(Action(players[0].color, ActionType.BUY_DEVELOPMENT_CARD, None))
-
-    players[0].resource_deck.replenish(26, Resource.SHEEP)
-    players[0].resource_deck.replenish(26, Resource.WHEAT)
-    players[0].resource_deck.replenish(26, Resource.ORE)
-
-    for i in range(25):
-        game.execute(Action(players[0].color, ActionType.BUY_DEVELOPMENT_CARD, None))
-
-    # assert must have all victory points
-    game.count_victory_points()
-    assert players[0].development_deck.num_cards() == 25
-    assert players[0].public_victory_points == 0
-    assert players[0].actual_victory_points == 5
-
-    with pytest.raises(ValueError):  # not enough cards in bank
-        game.execute(Action(players[0].color, ActionType.BUY_DEVELOPMENT_CARD, None))
-
-    assert players[0].resource_deck.num_cards() == 3
-
-
-def test_play_year_of_plenty_gives_player_resources():
-    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
-    player_to_act = players[0]
-    player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
-
-    player_to_act.clean_turn_state()
-    action_to_execute = Action(
-        player_to_act.color,
-        ActionType.PLAY_YEAR_OF_PLENTY,
-        [Resource.ORE, Resource.WHEAT],
-    )
-
-    game.execute(action_to_execute)
-
-    for card_type in Resource:
-        if card_type == Resource.ORE or card_type == Resource.WHEAT:
-            assert player_to_act.resource_deck.count(card_type) == 1
-            assert game.state.resource_deck.count(card_type) == 18
-        else:
-            assert player_to_act.resource_deck.count(card_type) == 0
-            assert game.state.resource_deck.count(card_type) == 19
-    assert player_to_act.development_deck.count(DevelopmentCard.YEAR_OF_PLENTY) == 0
 
 
 def test_play_year_of_plenty_not_enough_resources():
@@ -162,35 +131,6 @@ def test_play_monopoly_no_monopoly_card():
 
     with pytest.raises(ValueError):  # no monopoly
         game.execute(action_to_execute)
-
-
-def test_play_monopoly_player_steals_cards():
-    player_to_act = SimplePlayer(Color.RED)
-    player_to_steal_from_1 = SimplePlayer(Color.BLUE)
-    player_to_steal_from_2 = SimplePlayer(Color.ORANGE)
-
-    player_to_act.development_deck.replenish(1, DevelopmentCard.MONOPOLY)
-
-    player_to_steal_from_1.resource_deck.replenish(3, Resource.ORE)
-    player_to_steal_from_1.resource_deck.replenish(1, Resource.WHEAT)
-    player_to_steal_from_2.resource_deck.replenish(2, Resource.ORE)
-    player_to_steal_from_2.resource_deck.replenish(1, Resource.WHEAT)
-
-    players = [player_to_act, player_to_steal_from_1, player_to_steal_from_2]
-    game = Game(players)
-
-    player_to_act.clean_turn_state()
-    action_to_execute = Action(
-        player_to_act.color, ActionType.PLAY_MONOPOLY, Resource.ORE
-    )
-
-    game.execute(action_to_execute)
-
-    assert player_to_act.resource_deck.count(Resource.ORE) == 5
-    assert player_to_steal_from_1.resource_deck.count(Resource.ORE) == 0
-    assert player_to_steal_from_1.resource_deck.count(Resource.WHEAT) == 1
-    assert player_to_steal_from_2.resource_deck.count(Resource.ORE) == 0
-    assert player_to_steal_from_2.resource_deck.count(Resource.WHEAT) == 1
 
 
 # ===== Yield Resources
@@ -284,66 +224,20 @@ def test_empty_payout_if_not_enough_resources():
     assert Color.RED not in payout or payout[Color.RED].count(tile.resource) == 0
 
 
-def test_can_only_play_one_dev_card_per_turn():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-        SimplePlayer(Color.WHITE),
-        SimplePlayer(Color.ORANGE),
-    ]
-    game = Game(players)
-
-    players[0].development_deck.replenish(2, DevelopmentCard.YEAR_OF_PLENTY)
-
-    players[0].clean_turn_state()
-    action = Action(
-        players[0].color, ActionType.PLAY_YEAR_OF_PLENTY, 2 * [Resource.BRICK]
-    )
-    game.execute(action)
-    with pytest.raises(ValueError):  # shouldnt be able to play two dev cards
-        game.execute(action)
-
-
-def test_trade_execution():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-        SimplePlayer(Color.WHITE),
-        SimplePlayer(Color.ORANGE),
-    ]
-    game = Game(players)
-
-    players[0].resource_deck.replenish(4, Resource.BRICK)
-    trade_offer = tuple([Resource.BRICK] * 4 + [Resource.ORE])
-    action = Action(players[0].color, ActionType.MARITIME_TRADE, trade_offer)
-    game.execute(action)
-
-    assert players[0].resource_deck.num_cards() == 1
-    assert game.state.resource_deck.num_cards() == 19 * 5 + 4 - 1
-
-
 def test_can_trade_with_port():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-        SimplePlayer(Color.WHITE),
-        SimplePlayer(Color.ORANGE),
-    ]
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
+    port_tile = game.state.board.map.tiles[(3, -3, 0)]  # port with node_id=25
+    build_initial_placements(game)  # p1 builds at 26, so has (3,-3,0) port
+    advance_to_play_turn(game)
 
-    # Find port at (3, -3, 0), West.
-    port_node_id = 25
-    port = game.state.board.map.tiles[(3, -3, 0)]
-    action = Action(players[0].color, ActionType.BUILD_FIRST_SETTLEMENT, port_node_id)
-    game.execute(action)
-
-    resource_out = port.resource or Resource.WHEAT
-    num_out = 3 if port.resource is None else 2
-    players[0].resource_deck.replenish(num_out, resource_out)
-
-    actions = game.playable_actions(players[0], ActionPrompt.PLAY_TURN)
-    assert len(actions) == 5
-    # assert Action(players[0].color, ActionType.MARITIME_TRADE, trade_offer) in actions?
+    resource_out = port_tile.resource or Resource.WHEAT
+    num_out = 3 if port_tile.resource is None else 2
+    game.state.players[1].resource_deck.replenish(num_out, resource_out)
+    actions = game.playable_actions(game.state.players[1], ActionPrompt.PLAY_TURN)
+    assert len(actions) >= 5
+    assert any(a.action_type == ActionType.MARITIME_TRADE for a in actions)
+    # assert Action(game.state.players[1].color, ActionType.MARITIME_TRADE, value)
 
 
 def test_second_placement_takes_cards_from_bank():
@@ -356,7 +250,9 @@ def test_second_placement_takes_cards_from_bank():
     game = Game(players)
     assert len(game.state.resource_deck.to_array()) == 19 * 5
 
-    action = Action(Color.RED, ActionType.BUILD_SECOND_SETTLEMENT, 0)
-    game.execute(action)
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        game.play_tick()
 
     assert len(game.state.resource_deck.to_array()) < 19 * 5
