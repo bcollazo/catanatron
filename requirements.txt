@@ -1,4 +1,4 @@
--e git+git@github.com:bcollazo/catanatron.git@0123447c2ba879966d2828513c47b14705eff9a0#egg=catanatron
+catanatron @ file:///home/bcollazo/BryanCode/catanatron
 click==7.1.2
 decorator==4.4.2
 Flask==1.1.2
