@@ -11,8 +11,8 @@ Settlers of Catan Python implementation and Machine-Learning player.
 Create a virtualenv with Python 3.8 and install requirements:
 
 ```
-python3.8 -m venv catanatron-venv
-source ./catanatron-venv/bin/activate
+python3.8 -m venv venv
+source ./venv/bin/activate
 pip install -r dev-requirements.txt
 ```
 
