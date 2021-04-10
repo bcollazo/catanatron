@@ -1,10 +1,11 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from catanatron.game import Game, yield_resources
+from catanatron.game import Game
+from catanatron.state import yield_resources
 from catanatron.models.board import Board
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
-from catanatron.models.actions import ActionType, Action, ActionPrompt, TradeOffer
+from catanatron.models.actions import ActionType, Action, ActionPrompt
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.decks import ResourceDeck
 
@@ -12,12 +13,14 @@ from catanatron.models.decks import ResourceDeck
 def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    for i in range(len(game.state.tick_queue) - 1):
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
         game.play_tick()
 
     # assert there are 4 houses and 4 roads
     settlements = [
-        i
+        building
         for building in game.state.board.buildings.values()
         if building[1] == BuildingType.SETTLEMENT
     ]
@@ -40,66 +43,6 @@ def test_can_play_for_a_bit():  # assert no exception thrown
     game = Game(players)
     for _ in range(10):
         game.play_tick()
-
-
-def test_buying_road_is_payed_for():
-    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
-
-    game.state.board.build_road = MagicMock()
-    action = Action(players[0].color, ActionType.BUILD_ROAD, (3, 4))
-    with pytest.raises(ValueError):  # not enough money
-        game.execute(action)
-
-    players[0].resource_deck.replenish(1, Resource.WOOD)
-    players[0].resource_deck.replenish(1, Resource.BRICK)
-    game.execute(action)
-
-    assert players[0].resource_deck.count(Resource.WOOD) == 0
-    assert players[0].resource_deck.count(Resource.BRICK) == 0
-    assert game.state.resource_deck.count(Resource.WOOD) == 20  # since we didnt yield
-
-
-def test_moving_robber_steals_correctly():
-    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
-
-    players[1].resource_deck.replenish(1, Resource.WHEAT)
-    game.state.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
-
-    action = Action(players[0].color, ActionType.MOVE_ROBBER, ((2, 0, -2), None, None))
-    game.execute(action)
-    assert players[0].resource_deck.num_cards() == 0
-    assert players[1].resource_deck.num_cards() == 1
-
-    action = Action(
-        players[0].color,
-        ActionType.MOVE_ROBBER,
-        ((0, 0, 0), players[1].color, Resource.WHEAT),
-    )
-    game.execute(action)
-    assert players[0].resource_deck.num_cards() == 1
-    assert players[1].resource_deck.num_cards() == 0
-
-
-@patch("catanatron.game.roll_dice")
-def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
-    fake_roll_dice.return_value = (1, 6)
-    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
-    blue_seating = game.state.players.index(players[1])
-
-    players[1].resource_deck = ResourceDeck()
-    players[1].resource_deck.replenish(7, Resource.WHEAT)
-    game.execute(Action(players[0].color, ActionType.ROLL, None))  # roll
-
-    discarding_ticks = list(
-        filter(
-            lambda a: a[0] == blue_seating and a[1] == ActionPrompt.DISCARD,
-            game.state.tick_queue,
-        )
-    )
-    assert len(discarding_ticks) == 0
 
 
 @patch("catanatron.game.roll_dice")
@@ -371,7 +314,7 @@ def test_trade_execution():
     game = Game(players)
 
     players[0].resource_deck.replenish(4, Resource.BRICK)
-    trade_offer = TradeOffer([Resource.BRICK] * 4, [Resource.ORE], None)
+    trade_offer = tuple([Resource.BRICK] * 4 + [Resource.ORE])
     action = Action(players[0].color, ActionType.MARITIME_TRADE, trade_offer)
     game.execute(action)
 
@@ -397,10 +340,8 @@ def test_can_trade_with_port():
     resource_out = port.resource or Resource.WHEAT
     num_out = 3 if port.resource is None else 2
     players[0].resource_deck.replenish(num_out, resource_out)
-    resource_in = Resource.WHEAT if resource_out != Resource.WHEAT else Resource.WOOD
 
     actions = game.playable_actions(players[0], ActionPrompt.PLAY_TURN)
-    trade_offer = TradeOffer([resource_out] * num_out, resource_in, None)
     assert len(actions) == 5
     # assert Action(players[0].color, ActionType.MARITIME_TRADE, trade_offer) in actions?
 

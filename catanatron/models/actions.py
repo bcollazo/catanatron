@@ -47,7 +47,10 @@ class ActionType(Enum):
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
 
     # Trade
-    MARITIME_TRADE = "MARITIME_TRADE"  # value is TradeOffer(offering=Resource[], asking=Resource, tradee=None)
+    # MARITIME_TRADE value is 5-resouce tuple, where last resource is resource asked.
+    #   resources in index 2 and 3 might be None, denoting a port-trade.
+    MARITIME_TRADE = "MARITIME_TRADE"
+
     # TODO: Domestic trade. Im thinking should contain SUGGEST_TRADE, ACCEPT_TRADE actions...
 
     END_TURN = "END_TURN"  # value is None
@@ -60,10 +63,6 @@ def action_repr(self):
 # TODO: Distinguish between PossibleAction and FinalizedAction?
 Action = namedtuple("Action", ["color", "action_type", "value"])
 Action.__repr__ = action_repr
-
-TradeOffer = namedtuple(
-    "TradeOffer", ["offering", "asking", "tradee"]
-)  # offering and asking are Resource lists. tradee is a Player; None if bank
 
 
 def monopoly_possible_actions(player):
@@ -246,7 +245,7 @@ def maritime_trade_possibilities(player, bank, board):
             for j_resource in Resource:
                 # cant trade for same resource, and bank must have enough
                 if resource != j_resource and bank.count(j_resource) > 0:
-                    trade_offer = TradeOffer(tuple([resource] * 4), (j_resource,), None)
+                    trade_offer = tuple([resource] * 4 + [j_resource])
                     possibilities.append(
                         Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
                     )
@@ -259,9 +258,7 @@ def maritime_trade_possibilities(player, bank, board):
                     for j_resource in Resource:
                         # cant trade for same resource, and bank must have enough
                         if resource != j_resource and bank.count(j_resource) > 0:
-                            trade_offer = TradeOffer(
-                                tuple([resource] * 3), (j_resource,), None
-                            )
+                            trade_offer = tuple([resource] * 3 + [None, j_resource])
                             possibilities.append(
                                 Action(
                                     player.color, ActionType.MARITIME_TRADE, trade_offer
@@ -272,8 +269,8 @@ def maritime_trade_possibilities(player, bank, board):
                 for j_resource in Resource:
                     # cant trade for same resource, and bank must have enough
                     if port_resource != j_resource and bank.count(j_resource) > 0:
-                        trade_offer = TradeOffer(
-                            tuple([port_resource] * 2), (j_resource,), None
+                        trade_offer = tuple(
+                            [port_resource] * 2 + [None, None, j_resource]
                         )
                         possibilities.append(
                             Action(player.color, ActionType.MARITIME_TRADE, trade_offer)

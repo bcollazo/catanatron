@@ -3,11 +3,9 @@ import pickle
 import random
 import sys
 from typing import Iterable
-from collections import defaultdict
 
-from catanatron.algorithms import longest_road, largest_army
+from catanatron.state import State, apply_action
 from catanatron.models.map import BaseMap
-from catanatron.models.board import Board
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
 from catanatron.models.actions import (
     ActionPrompt,
@@ -48,99 +46,15 @@ def number_probability(number):
     }[number] / 100
 
 
-def roll_dice():
-    return (random.randint(1, 6), random.randint(1, 6))
-
-
-def yield_resources(board, resource_deck, number):
-    """
-    Returns:
-        (payouts, depleted): tuple where:
-        payouts: dictionary of "resource_deck" keyed by player
-                e.g. {Color.RED: ResourceDeck({Resource.WEAT: 3})}
-            depleted: list of resources that couldn't yield
-    """
-    intented_payout = defaultdict(lambda: defaultdict(int))
-    resource_totals = defaultdict(int)
-    for coordinate, tile in board.map.resource_tiles:
-        if tile.number != number or board.robber_coordinate == coordinate:
-            continue  # doesn't yield
-
-        for _, node_id in tile.nodes.items():
-            building = board.buildings.get(node_id, None)
-            if building is None:
-                continue
-            elif building[1] == BuildingType.SETTLEMENT:
-                intented_payout[building[0]][tile.resource] += 1
-                resource_totals[tile.resource] += 1
-            elif building[1] == BuildingType.CITY:
-                intented_payout[building[0]][tile.resource] += 2
-                resource_totals[tile.resource] += 2
-
-    # for each resource, check enough in deck to yield.
-    depleted = []
-    for resource in Resource:
-        total = resource_totals[resource]
-        if not resource_deck.can_draw(total, resource):
-            depleted.append(resource)
-
-    # build final data ResourceDeck structure
-    payout = {}
-    for player, player_payout in intented_payout.items():
-        payout[player] = ResourceDeck()
-
-        for resource, count in player_payout.items():
-            if resource not in depleted:
-                payout[player].replenish(count, resource)
-
-    return payout, depleted
-
-
-def initialize_tick_queue(players):
-    """First player goes, settlement and road, ..."""
-    tick_queue = []
-    for seating in range(len(players)):
-        tick_queue.append((seating, ActionPrompt.BUILD_FIRST_SETTLEMENT))
-        tick_queue.append((seating, ActionPrompt.BUILD_INITIAL_ROAD))
-    for seating in range(len(players) - 1, -1, -1):
-        tick_queue.append((seating, ActionPrompt.BUILD_SECOND_SETTLEMENT))
-        tick_queue.append((seating, ActionPrompt.BUILD_INITIAL_ROAD))
-    tick_queue.append((0, ActionPrompt.ROLL))
-    return tick_queue
-
-
-class State:
-    """Small container object to group dynamic variables in state"""
-
-    def __init__(self, players, catan_map, initialize=True):
-        if initialize:
-            self.players = random.sample(players, len(players))
-            self.players_by_color = {p.color: p for p in players}
-            self.board = Board(catan_map)
-            self.actions = []  # log of all action taken by players
-            self.resource_deck = ResourceDeck.starting_bank()
-            self.development_deck = DevelopmentDeck.starting_bank()
-            self.tick_queue = initialize_tick_queue(self.players)
-            self.current_player_index = 0
-            self.num_turns = 0  # num_completed_turns
-            self.road_color = None
-            self.army_color = None
-
-            # To be set by Game
-            self.current_prompt = None
-            self.playable_actions = None
-
-    def current_player(self):
-        return self.players[self.current_player_index]
-
-
 class Game:
     """
     This contains the complete state of the game (board + players) and the
     core turn-by-turn controlling logic.
     """
 
-    def __init__(self, players: Iterable[Player], seed=None, catan_map=None, initialize=True):
+    def __init__(
+        self, players: Iterable[Player], seed=None, catan_map=None, initialize=True
+    ):
         if initialize:
             self.seed = seed or random.randrange(sys.maxsize)
             random.seed(self.seed)
@@ -249,224 +163,7 @@ class Game:
                 f"{action} not in playable actions: {self.state.playable_actions}"
             )
 
-        if action.action_type == ActionType.END_TURN:
-            next_player_index = (self.state.current_player_index + 1) % len(
-                self.state.players
-            )
-            self.state.current_player_index = next_player_index
-            self.state.players[next_player_index].clean_turn_state()
-            self.state.tick_queue.append((next_player_index, ActionPrompt.ROLL))
-            self.state.num_turns += 1
-        elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
-            player, node_id = self.state.players_by_color[action.color], action.value
-            self.state.board.build_settlement(player.color, node_id, True)
-            player.build_settlement(node_id, True)
-        elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
-            player, node_id = self.state.players_by_color[action.color], action.value
-            self.state.board.build_settlement(player.color, node_id, True)
-            player.build_settlement(node_id, True)
-            # yield resources of second settlement
-            for tile in self.state.board.map.adjacent_tiles[node_id]:
-                if tile.resource != None:
-                    self.state.resource_deck.draw(1, tile.resource)
-                    player.resource_deck.replenish(1, tile.resource)
-        elif action.action_type == ActionType.BUILD_SETTLEMENT:
-            player, node_id = self.state.players_by_color[action.color], action.value
-            self.state.board.build_settlement(player.color, node_id, False)
-            player.build_settlement(node_id, False)
-            self.state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
-            self.state.road_color = longest_road(
-                self.state.board, self.state.players, self.state.actions
-            )[0]
-        elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
-            player, edge = self.state.players_by_color[action.color], action.value
-            self.state.board.build_road(player.color, edge)
-            player.build_road(edge, True)
-        elif action.action_type == ActionType.BUILD_ROAD:
-            player, edge = self.state.players_by_color[action.color], action.value
-            self.state.board.build_road(player.color, edge)
-            player.build_road(edge, False)
-            self.state.resource_deck += ResourceDeck.road_cost()  # replenish bank
-            self.state.road_color = longest_road(
-                self.state.board, self.state.players, self.state.actions
-            )[0]
-        elif action.action_type == ActionType.BUILD_CITY:
-            player, node_id = self.state.players_by_color[action.color], action.value
-            self.state.board.build_city(player.color, node_id)
-            player.build_city(node_id)
-            self.state.resource_deck += ResourceDeck.city_cost()  # replenish bank
-        elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-            player = self.state.players_by_color[action.color]
-            if self.state.development_deck.num_cards() == 0:
-                raise ValueError("No more development cards")
-            if not player.resource_deck.includes(ResourceDeck.development_card_cost()):
-                raise ValueError("No money to buy development card")
-
-            if action.value is None:
-                card = self.state.development_deck.random_draw()
-            else:
-                card = action.value
-                self.state.development_deck.draw(1, card)
-
-            player.development_deck.replenish(1, card)
-            player.resource_deck -= ResourceDeck.development_card_cost()
-            self.state.resource_deck += ResourceDeck.development_card_cost()
-
-            action = Action(action.color, action.action_type, card)
-        elif action.action_type == ActionType.ROLL:
-            player = self.state.players_by_color[action.color]
-            player.has_rolled = True
-            dices = action.value or roll_dice()
-            number = dices[0] + dices[1]
-
-            if number == 7:
-                seatings_to_discard = [
-                    seating
-                    for seating, player in enumerate(self.state.players)
-                    if player.resource_deck.num_cards() > 7
-                ]
-                self.state.tick_queue.extend(
-                    [(seating, ActionPrompt.DISCARD) for seating in seatings_to_discard]
-                )
-                self.state.tick_queue.append(
-                    (self.state.current_player_index, ActionPrompt.MOVE_ROBBER)
-                )
-            else:
-                payout, _ = yield_resources(
-                    self.state.board, self.state.resource_deck, number
-                )
-                for color, resource_deck in payout.items():
-                    player = self.state.players_by_color[color]
-
-                    # Atomically add to player's hand and remove from bank
-                    player.resource_deck += resource_deck
-                    self.state.resource_deck -= resource_deck
-
-            action = Action(action.color, action.action_type, dices)
-            self.state.tick_queue.append(
-                (self.state.current_player_index, ActionPrompt.PLAY_TURN)
-            )
-        elif action.action_type == ActionType.DISCARD:
-            player = self.state.players_by_color[action.color]
-            hand = player.resource_deck.to_array()
-            num_to_discard = len(hand) // 2
-            if action.value is None:
-                # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
-                discarded = random.sample(hand, k=num_to_discard)
-            else:
-                discarded = action.value  # for replay functionality
-            to_discard = ResourceDeck.from_array(discarded)
-
-            player.resource_deck -= to_discard
-            self.state.resource_deck += to_discard
-            action = Action(action.color, action.action_type, discarded)
-        elif action.action_type == ActionType.MOVE_ROBBER:
-            player = self.state.players_by_color[action.color]
-            (coordinate, robbed_color, robbed_resource) = action.value
-            self.state.board.robber_coordinate = coordinate
-            if robbed_color is not None:
-                player_to_steal_from = self.state.players_by_color[robbed_color]
-                enemy_cards = player_to_steal_from.resource_deck.num_cards()
-                if robbed_resource is None:
-                    resource = player_to_steal_from.resource_deck.random_draw()
-                    action = Action(
-                        action.color,
-                        action.action_type,
-                        (coordinate, robbed_color, resource),
-                    )
-                else:  # for replay functionality
-                    resource = robbed_resource
-                    player_to_steal_from.resource_deck.draw(1, resource)
-                player.resource_deck.replenish(1, resource)
-        elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
-            player = self.state.players_by_color[action.color]
-            if not player.can_play_knight():
-                raise ValueError("Player cant play knight card now")
-            (coordinate, robbed_color, robbed_resource) = action.value
-            self.state.board.robber_coordinate = coordinate
-            if robbed_color is not None:
-                player_to_steal_from = self.state.players_by_color[robbed_color]
-                enemy_cards = player_to_steal_from.resource_deck.num_cards()
-                if robbed_resource is None:
-                    resource = player_to_steal_from.resource_deck.random_draw()
-                    action = Action(
-                        action.color,
-                        action.action_type,
-                        (coordinate, robbed_color, resource),
-                    )
-                else:  # for replay functionality
-                    resource = robbed_resource
-                    player_to_steal_from.resource_deck.draw(1, resource)
-                player.resource_deck.replenish(1, resource)
-            player.mark_played_dev_card(DevelopmentCard.KNIGHT)
-            self.state.army_color = largest_army(
-                self.state.players, self.state.actions
-            )[0]
-        elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
-            player = self.state.players_by_color[action.color]
-            cards_selected = ResourceDeck.from_array(action.value)
-            if not player.can_play_year_of_plenty():
-                raise ValueError("Player cant play year of plenty now")
-            if not self.state.resource_deck.includes(cards_selected):
-                raise ValueError(
-                    "Not enough resources of this type (these types?) in bank"
-                )
-            player.resource_deck += cards_selected
-            self.state.resource_deck -= cards_selected
-            player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
-        elif action.action_type == ActionType.PLAY_MONOPOLY:
-            player, mono_resource = (
-                self.state.players_by_color[action.color],
-                action.value,
-            )
-            cards_stolen = ResourceDeck()
-            if not player.can_play_monopoly():
-                raise ValueError("Player cant play monopoly now")
-            total_enemy_cards = 0
-            for p in self.state.players:
-                if not p.color == action.color:
-                    number_of_cards_to_steal = p.resource_deck.count(mono_resource)
-                    cards_stolen.replenish(number_of_cards_to_steal, mono_resource)
-                    p.resource_deck.draw(number_of_cards_to_steal, mono_resource)
-                    total_enemy_cards += p.resource_deck.num_cards()
-            player.resource_deck += cards_stolen
-            player.mark_played_dev_card(DevelopmentCard.MONOPOLY)
-        elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
-            player, (first_edge, second_edge) = (
-                self.state.players_by_color[action.color],
-                action.value,
-            )
-            if not player.can_play_road_building():
-                raise ValueError("Player cant play road building now")
-
-            self.state.board.build_road(player.color, first_edge)
-            self.state.board.build_road(player.color, second_edge)
-            player.build_road(first_edge, True)
-            player.build_road(second_edge, True)
-            player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
-            self.state.road_color = longest_road(
-                self.state.board, self.state.players, self.state.actions
-            )[0]
-        elif action.action_type == ActionType.MARITIME_TRADE:
-            player, trade_offer = (
-                self.state.players_by_color[action.color],
-                action.value,
-            )
-            offering = ResourceDeck.from_array(trade_offer.offering)
-            asking = ResourceDeck.from_array(trade_offer.asking)
-            tradee = trade_offer.tradee or self  # self means bank
-            if not player.resource_deck.includes(offering):
-                raise ValueError("Trying to trade without money")
-            if not isinstance(tradee, Game):
-                raise ValueError("Non-bank tradee not supported")
-            if not tradee.state.resource_deck.includes(asking):
-                raise ValueError("Tradee doenst have those cards")
-            player.resource_deck -= offering
-            tradee.state.resource_deck += offering
-            player.resource_deck += asking
-            tradee.state.resource_deck -= asking
-        else:
-            raise RuntimeError("Unknown ActionType " + str(action.action_type))
+        apply_action(self.state, action)
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.state.actions.append(action)
@@ -634,7 +331,7 @@ def replay_game(game):
 
     # reset game state re-using the board (map really)
     tmp_game = Game(
-        game_copy.state.players, seed=game.seed, map=game_copy.state.board.map
+        game_copy.state.players, seed=game.seed, catan_map=game_copy.state.board.map
     )
     tmp_game.id = game_copy.id  # TODO: needed?
     for player in tmp_game.state.players:

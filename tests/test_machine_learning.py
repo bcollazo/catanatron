@@ -94,7 +94,7 @@ def test_reachability_features():
     random.seed(123)
     random.sample(players, len(players))
     catan_map = BaseMap()
-    game = Game(players, seed=123, map=catan_map)
+    game = Game(players, seed=123, catan_map=catan_map)
 
     game.execute(Action(Color.RED, ActionType.BUILD_FIRST_SETTLEMENT, 5))
     features = reachability_features(game, Color.RED)
@@ -287,7 +287,7 @@ def test_resource_proba_planes():
     random.seed(123)
     random.sample(players, len(players))
     catan_map = BaseMap()
-    game = Game(players, seed=123, map=catan_map)
+    game = Game(players, seed=123, catan_map=catan_map)
 
     tensor = create_board_tensor(game, players[0].color)
     assert tensor[0][0][0] == 0

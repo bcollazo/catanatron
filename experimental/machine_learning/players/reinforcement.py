@@ -10,7 +10,7 @@ from tensorflow import keras
 
 from catanatron.game import Game
 from catanatron.models.player import Player
-from catanatron.models.actions import Action, ActionType, TradeOffer
+from catanatron.models.actions import Action, ActionType
 from catanatron.models.map import BaseMap, NUM_NODES, Tile
 from catanatron.models.board import get_edges
 from catanatron.models.enums import Resource
@@ -111,21 +111,21 @@ ACTIONS_ARRAY = [
     *[(ActionType.PLAY_MONOPOLY, r) for r in Resource],
     # 4:1 with bank
     *[
-        (ActionType.MARITIME_TRADE, TradeOffer(tuple(4 * [i]), tuple([j]), None))
+        (ActionType.MARITIME_TRADE, tuple(4 * [i] + [j]))
         for i in Resource
         for j in Resource
         if i != j
     ],
     # 3:1 with port
     *[
-        (ActionType.MARITIME_TRADE, TradeOffer(tuple(3 * [i]), tuple([j]), None))
+        (ActionType.MARITIME_TRADE, tuple(3 * [i] + [None, j]))
         for i in Resource
         for j in Resource
         if i != j
     ],
     # 2:1 with port
     *[
-        (ActionType.MARITIME_TRADE, TradeOffer(tuple(2 * [i]), tuple([j]), None))
+        (ActionType.MARITIME_TRADE, tuple(2 * [i] + [None, None, j]))
         for i in Resource
         for j in Resource
         if i != j
