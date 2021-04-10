@@ -336,7 +336,6 @@ def replay_game(game):
     for player in tmp_game.state.players:
         player.restart_state()
 
-    breakpoint()
     for action in game_copy.state.actions:
         tmp_game.execute(action)
         yield tmp_game, action
