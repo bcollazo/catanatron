@@ -323,19 +323,3 @@ class Game:
         game_copy.id = self.id
         game_copy.state = state_copy
         return game_copy
-
-
-def replay_game(game):
-    game_copy = game.copy()
-
-    # reset game state re-using the board (map really)
-    tmp_game = Game(
-        game_copy.state.players, seed=game.seed, catan_map=game_copy.state.board.map
-    )
-    tmp_game.id = game_copy.id  # TODO: needed?
-    for player in tmp_game.state.players:
-        player.restart_state()
-
-    for action in game_copy.state.actions:
-        tmp_game.execute(action)
-        yield tmp_game, action
