@@ -1,12 +1,12 @@
 import React from "react";
 import cn from "classnames";
 
-import brickTile from "../assets/tile_brick.png";
-import desertTile from "../assets/tile_desert.png";
-import grainTile from "../assets/tile_grain.png";
-import lumberTile from "../assets/tile_lumber.png";
-import oreTile from "../assets/tile_ore.png";
-import woolTile from "../assets/tile_wool.png";
+import brickTile from "../assets/tile_brick.svg";
+import desertTile from "../assets/tile_desert.svg";
+import grainTile from "../assets/tile_wheat.svg";
+import lumberTile from "../assets/tile_wood.svg";
+import oreTile from "../assets/tile_ore.svg";
+import woolTile from "../assets/tile_sheep.svg";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
 
 const bgColorResource = (resource) => {
