@@ -31,24 +31,23 @@ export function getNodeDelta(direction, w, h) {
   }
 }
 
-const SMALL_BREAKPOINT = 576;
-
-export function getEdgeTransform(direction, size, viewportWidth) {
-  const stroke = viewportWidth < SMALL_BREAKPOINT ? 8 : 12;
-  const traslate = `translate(-${(size * 0.8) / 2}px, -${size - stroke / 4}px)`;
+export function getEdgeTransform(direction, size) {
+  const distanceToEdge = size * 0.87;
+  const translate = (deg) =>
+    `translateX(-50%) translateY(-50%) rotate(${deg}deg) translateY(${-distanceToEdge}px)`;
   switch (direction) {
-    case "EAST":
-      return `rotate(90deg) ${traslate}`;
     case "NORTHEAST":
-      return `rotate(30deg) ${traslate}`;
+      return `${translate(30)}`;
+    case "EAST":
+      return `${translate(90)}`;
     case "SOUTHEAST":
-      return `rotate(150deg) ${traslate}`;
-    case "WEST":
-      return `rotate(-90deg) ${traslate}`;
+      return `${translate(150)}`;
     case "SOUTHWEST":
-      return `rotate(210deg) ${traslate}`;
+      return `${translate(210)}`;
+    case "WEST":
+      return `${translate(270)}`;
     case "NORTHWEST":
-      return `rotate(-30deg) ${traslate}`;
+      return `${translate(330)}`;
     default:
       throw Error("Unkown direction " + direction);
   }

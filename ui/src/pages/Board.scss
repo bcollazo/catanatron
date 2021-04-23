@@ -34,11 +34,16 @@
 }
 
 // ===== Edges
+.edge {
+  display: flex;
+  justify-content: center;
+}
 .road {
   position: absolute;
   border: 2px solid $dark-gray;
 
   height: 8px; // stroke
+  width: 80%;
 }
 @media screen and (min-width: $sm-breakpoint) {
   .road {
