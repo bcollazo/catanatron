@@ -64,7 +64,7 @@ function DrawerContent({ toggleDrawer }) {
   );
 }
 
-export default function ActionsToolbar({ zoomIn, zoomOut, onTick }) {
+export default function ActionsToolbar({ zoomIn, zoomOut, onTick, disabled }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -120,6 +120,7 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick }) {
       {!botsTurn && playButtons}
       {botsTurn && (
         <Button
+          disabled={disabled}
           className="confirm-btn"
           variant="contained"
           color="primary"

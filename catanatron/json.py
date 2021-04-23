@@ -65,6 +65,7 @@ class GameEncoder(json.JSONEncoder):
                 "current_playable_actions": obj.state.playable_actions,
                 # TODO: Use cached value when we cache it.
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
+                "winning_color": obj.winning_color(),
             }
         if isinstance(obj, Deck):
             return {resource.value: count for resource, count in obj.cards.items()}
