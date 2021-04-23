@@ -91,7 +91,7 @@ export default function ActionsToolbar({
   const playButtons = (
     <>
       <OptionsButton
-        disabled={isRoll}
+        disabled={false}
         menuListId="use-menu-list"
         icon={<SimCardIcon />}
         items={["Monopoly", "Year of Plenty", "Road Building", "Knight"]}

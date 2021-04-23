@@ -17,11 +17,8 @@ CORS(app)
 
 
 def advance_until_color(game, color, callbacks):
-    while (
-        game.winning_player() is not None and game.state.current_player().color != color
-    ):
+    while game.winning_player() is None and game.state.current_player().color != color:
         game.play_tick(callbacks)
-        print(game.winning_player(), game.state.current_player().color, color)
 
 
 @app.route("/games/<string:game_id>/actions", methods=["POST"])
@@ -30,8 +27,11 @@ def tick_game(game_id):
     if game is None:
         abort(404, description="Resource not found")
 
+    # TODO: Apply human play
     if game.winning_player() is None:
         game.play_tick([lambda g: save_game_state(g)])
+
+    advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
     return json.dumps(game, cls=GameEncoder)
 
 

@@ -14,14 +14,72 @@ import "./GameScreen.scss";
 
 const HUMAN_COLOR = "BLUE";
 
+function humanizeAction(action) {
+  switch (action[1]) {
+    case "ROLL":
+      return `${action[0]}: ROLLED ${action[2]}`;
+    case "DISCARD":
+      return `${action[0]}: DISCARDED ${action[2]}`;
+    case "BUY_DEVELOPMENT_CARD":
+      return `${action[0]}: BOUGHT DEVELOPMENT CARD`;
+    case "BUILD_FIRST_SETTLEMENT":
+    case "BUILD_SECOND_SETTLEMENT":
+    case "BUILD_SETTLEMENT":
+    case "BUILD_CITY": {
+      const parts = action[1].split("_");
+      const building = parts[parts.length - 1];
+      const tile = action[2];
+      return `${action[0]}: BUILT ${building} ON ${tile}`;
+    }
+    case "BUILD_INITIAL_ROAD": {
+      const edge = action[2];
+      return `${action[0]}: BUILT INITIAL ROAD ON ${edge}`;
+    }
+    case "BUILD_ROAD": {
+      const edge = action[2];
+      return `${action[0]}: BUILT ROAD ON ${edge}`;
+    }
+    case "PLAY_KNIGHT_CARD": {
+      const tile = action[2];
+      return `${action[0]}: PLAYED KNIGHT CARD TO ${tile}`;
+    }
+    case "MOVE_ROBBER": {
+      const tile = action[2];
+      return `${action[0]}: MOVED ROBBER TO ${tile}`;
+    }
+
+    case "END_TURN":
+      return `${action[0]}: ENDED TURN`;
+    default:
+      return `${action[0]}: ${action.slice(1)}`;
+  }
+}
+
+function humanizePrompt(state) {
+  switch (state.current_prompt) {
+    case "ROLL":
+      return `${state.current_color}: ROLL OR PLAY DEVELOPMENT CARD`;
+    case "PLAY_TURN":
+      return `${state.current_color}: PLAY TURN`;
+    case "BUILD_FIRST_SETTLEMENT":
+    case "BUILD_SECOND_SETTLEMENT":
+    case "BUILD_INITIAL_ROAD": {
+      const prompt = state.current_prompt.replaceAll("_", " ");
+      return `${state.current_color}: ${prompt}`;
+    }
+    default:
+      return `${state.current_color}: ${state.current_prompt}`;
+  }
+}
+
 function Prompt({ actionQueue, state }) {
   let prompt = "";
   if (state.winning_color) {
     prompt = `Game Over. Congrats, ${state.winning_color}!`;
   } else if (actionQueue.length === 0) {
-    prompt = `${state.current_color}: ${state.current_prompt}`;
+    prompt = humanizePrompt(state);
   } else {
-    prompt = `${actionQueue[0][0]}: ${actionQueue[0].slice(1)}`;
+    prompt = humanizeAction(actionQueue[0]);
   }
   return <div className="prompt">{state && prompt}</div>;
 }
@@ -106,6 +164,10 @@ function GameScreen() {
   const [inFlightRequest, setInFlightRequest] = useState(false);
 
   useEffect(() => {
+    if (!gameId) {
+      return;
+    }
+
     (async () => {
       const response = await axios.get(API_URL + "/games/" + gameId);
       const queue = getQueue(response.data.actions);
@@ -146,7 +208,6 @@ function GameScreen() {
     );
   }
 
-  console.log(state);
   const gameOver = state && state.winning_color;
   const bot = state && state.players.find((x) => x.color !== HUMAN_COLOR);
   const human = state && state.players.find((x) => x.color === HUMAN_COLOR);
