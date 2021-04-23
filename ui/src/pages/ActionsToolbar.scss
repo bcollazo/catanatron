@@ -1,6 +1,8 @@
+@import "../variables.scss";
+
 .actions-toolbar {
   width: 100%;
-  max-width: 375px;
+  max-width: $sm-breakpoint;
   margin-left: auto;
   margin-right: auto;
   padding: 10px;
@@ -11,7 +13,6 @@
   button {
     width: 60px;
     height: 60px;
-    margin: 4px;
   }
 
   .confirm-btn {
