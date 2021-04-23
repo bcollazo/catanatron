@@ -40,6 +40,14 @@
   transform: translateY(-0.75rem) translateX(-0.75rem);
 }
 
+// ===== Tiles
+.tile {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 // ===== Edges
 .edge {
   position: absolute;

@@ -109,7 +109,6 @@ function GameScreen() {
   useEffect(() => {
     (async () => {
       const response = await axios.get(API_URL + "/games/" + gameId);
-
       const queue = getQueue(response.data.actions);
       setActionQueue(queue);
       setState(response.data);
@@ -117,7 +116,7 @@ function GameScreen() {
   }, [gameId]);
 
   const onClickNext = useCallback(async () => {
-    if (state.winning_color) {
+    if (state && state.winning_color) {
       return; // do nothing.
     }
 
@@ -136,35 +135,34 @@ function GameScreen() {
     }
   }, [gameId, inFlightRequest, setInFlightRequest, actionQueue]);
 
+  if (!state) {
+    return (
+      <Loader
+        className="loader"
+        type="Grid"
+        color="#000000"
+        height={100}
+        width={100}
+      />
+    );
+  }
+
   console.log(state);
   const gameOver = state && state.winning_color;
   const bot = state && state.players.find((x) => x.color !== HUMAN_COLOR);
   const human = state && state.players.find((x) => x.color === HUMAN_COLOR);
   return (
     <main>
-      {state && <Prompt actionQueue={actionQueue} state={state} />}
-      {state && (
-        <PlayerStateBox
-          playerState={bot}
-          longestRoad={state.longest_roads_by_player[bot.color]}
-        />
-      )}
-      {!state && (
-        <Loader
-          className="loader"
-          type="Grid"
-          color="#FFFFFF"
-          height={100}
-          width={100}
-        />
-      )}
-      {state && <ZoomableBoard state={state} />}
-      {state && (
-        <PlayerStateBox
-          playerState={human}
-          longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
-        />
-      )}
+      <Prompt actionQueue={actionQueue} state={state} />
+      <PlayerStateBox
+        playerState={bot}
+        longestRoad={state.longest_roads_by_player[bot.color]}
+      />
+      <ZoomableBoard state={state} />
+      <PlayerStateBox
+        playerState={human}
+        longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
+      />
       <ActionsToolbar onTick={onClickNext} disabled={gameOver} />
     </main>
   );

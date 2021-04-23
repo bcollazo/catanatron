@@ -92,7 +92,7 @@ export default function Tile({ center, coordinate, tile, size }) {
   return (
     <div
       key={coordinate}
-      className={cn("tile absolute flex justify-center items-center")}
+      className="tile"
       style={{
         left: x - w / 2,
         top: y - h / 2,
