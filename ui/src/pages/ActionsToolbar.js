@@ -64,7 +64,14 @@ function DrawerContent({ toggleDrawer }) {
   );
 }
 
-export default function ActionsToolbar({ zoomIn, zoomOut, onTick, disabled }) {
+export default function ActionsToolbar({
+  zoomIn,
+  zoomOut,
+  onTick,
+  disabled,
+  botsTurn,
+  prompt,
+}) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -79,9 +86,12 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick, disabled }) {
 
     setIsDrawerOpen(open);
   };
+
+  const isRoll = prompt === "ROLL";
   const playButtons = (
     <>
       <OptionsButton
+        disabled={false}
         menuListId="use-menu-list"
         icon={<SimCardIcon />}
         items={["Monopoly", "Year of Plenty", "Road Building", "Knight"]}
@@ -89,6 +99,7 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick, disabled }) {
         Use
       </OptionsButton>
       <OptionsButton
+        disabled={isRoll}
         menuListId="build-menu-list"
         icon={<BuildIcon />}
         items={["Development Card", "City", "Settlement", "Road"]}
@@ -96,6 +107,7 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick, disabled }) {
         Buy
       </OptionsButton>
       <Button
+        disabled={isRoll}
         variant="contained"
         color="secondary"
         startIcon={<AccountBalanceIcon />}
@@ -108,12 +120,10 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick, disabled }) {
         startIcon={<NavigateNextIcon />}
         onClick={onTick}
       >
-        End
+        {isRoll ? "ROLL" : "END"}
       </Button>
     </>
   );
-
-  const botsTurn = true;
 
   return (
     <div className="actions-toolbar">
@@ -152,7 +162,7 @@ export default function ActionsToolbar({ zoomIn, zoomOut, onTick, disabled }) {
   );
 }
 
-function OptionsButton({ menuListId, icon, children, items }) {
+function OptionsButton({ menuListId, icon, children, items, disabled }) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef(null);
 
@@ -185,6 +195,7 @@ function OptionsButton({ menuListId, icon, children, items }) {
   return (
     <React.Fragment>
       <Button
+        disabled={disabled}
         ref={anchorRef}
         aria-controls={open ? menuListId : undefined}
         aria-haspopup="true"

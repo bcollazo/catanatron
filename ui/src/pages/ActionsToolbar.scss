@@ -5,13 +5,14 @@
   max-width: $sm-breakpoint;
   margin-left: auto;
   margin-right: auto;
-  padding: 10px;
+  padding: $sm-gutter;
   display: flex;
   justify-content: space-between;
-  flex-wrap: wrap;
+  gap: $sm-gutter;
 
   button {
-    width: 60px;
+    min-width: 60px;
+    width: 100px;
     height: 60px;
   }
 

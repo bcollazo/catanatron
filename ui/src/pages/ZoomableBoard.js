@@ -42,42 +42,57 @@ export default function ZoomableBoard({ state }) {
   const center = [width / 2, containerHeight / 2];
   const size = computeDefaultSize(width, containerHeight);
 
-  const tiles = state.tiles.map(({ coordinate, tile }) => (
-    <Tile
-      key={coordinate}
-      center={center}
-      coordinate={coordinate}
-      tile={tile}
-      size={size}
-    />
-  ));
-  const nodes = Object.values(
-    state.nodes
-  ).map(({ color, building, direction, tile_coordinate, id }) => (
-    <Node
-      id={id}
-      key={id}
-      center={center}
-      size={size}
-      coordinate={tile_coordinate}
-      direction={direction}
-      building={building}
-      color={color}
-    />
-  ));
-  const edges = Object.values(
-    state.edges
-  ).map(({ color, direction, tile_coordinate, id }) => (
-    <Edge
-      id={id}
-      key={id}
-      center={center}
-      size={size}
-      coordinate={tile_coordinate}
-      direction={direction}
-      color={color}
-    />
-  ));
+  let board;
+  if (size) {
+    const tiles = state.tiles.map(({ coordinate, tile }) => (
+      <Tile
+        key={coordinate}
+        center={center}
+        coordinate={coordinate}
+        tile={tile}
+        size={size}
+      />
+    ));
+    const nodes = Object.values(
+      state.nodes
+    ).map(({ color, building, direction, tile_coordinate, id }) => (
+      <Node
+        id={id}
+        key={id}
+        center={center}
+        size={size}
+        coordinate={tile_coordinate}
+        direction={direction}
+        building={building}
+        color={color}
+      />
+    ));
+    const edges = Object.values(
+      state.edges
+    ).map(({ color, direction, tile_coordinate, id }) => (
+      <Edge
+        id={id}
+        key={id}
+        center={center}
+        size={size}
+        coordinate={tile_coordinate}
+        direction={direction}
+        color={color}
+      />
+    ));
+    board = (
+      <div className={clsx("board", { show })}>
+        {tiles}
+        {edges}
+        {nodes}
+        <Robber
+          center={center}
+          size={size}
+          coordinate={state.robber_coordinate}
+        />
+      </div>
+    );
+  }
 
   useEffect(() => {
     setTimeout(() => {
@@ -102,20 +117,7 @@ export default function ZoomableBoard({ state }) {
       }) => (
         <React.Fragment>
           <div className="board-container">
-            {
-              <TransformComponent>
-                <div className={clsx("board", { show })}>
-                  {tiles}
-                  {edges}
-                  {nodes}
-                  <Robber
-                    center={center}
-                    size={size}
-                    coordinate={state.robber_coordinate}
-                  />
-                </div>
-              </TransformComponent>
-            }
+            <TransformComponent>{board}</TransformComponent>
           </div>
         </React.Fragment>
       )}
