@@ -1,5 +1,6 @@
 @import "../variables.scss";
 
+// ===== Number Tokens
 .number-token,
 .port {
   background: white;
@@ -30,4 +31,17 @@
 
   position: absolute;
   transform: translateY(-0.75rem) translateX(-0.75rem);
+}
+
+// ===== Edges
+.road {
+  position: absolute;
+  border: 2px solid $dark-gray;
+
+  height: 8px; // stroke
+}
+@media screen and (min-width: $sm-breakpoint) {
+  .road {
+    height: 12px; // stroke
+  }
 }

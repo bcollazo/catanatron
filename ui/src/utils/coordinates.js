@@ -31,44 +31,24 @@ export function getNodeDelta(direction, w, h) {
   }
 }
 
-export function getEdgeDeltaAndTransform(direction, w, h, scale=1) {
+const SMALL_BREAKPOINT = 576;
+
+export function getEdgeTransform(direction, size, viewportWidth) {
+  const stroke = viewportWidth < SMALL_BREAKPOINT ? 8 : 12;
+  const traslate = `translate(-${(size * 0.8) / 2}px, -${size - stroke / 4}px)`;
   switch (direction) {
     case "EAST":
-      return [
-        w / 2,
-        -h / 4,
-        `rotate(90deg) translateX(1.5rem) translateY(1.25rem) scale(${scale})`,
-      ];
+      return `rotate(90deg) ${traslate}`;
     case "NORTHEAST":
-      return [
-        w / 2,
-        -h / 4,
-        `rotate(-150deg) translateX(3rem) translateY(-0.25rem) scale(${scale})`,
-      ];
+      return `rotate(30deg) ${traslate}`;
     case "SOUTHEAST":
-      return [
-        w / 2,
-        h / 4,
-        `rotate(150deg) translateX(2.50rem) translateY(0.75rem) scale(${scale})`,
-      ];
+      return `rotate(150deg) ${traslate}`;
     case "WEST":
-      return [
-        -w / 2,
-        h / 4,
-        `rotate(-90deg) translateX(2rem) translateY(-1.25rem) scale(${scale})`,
-      ];
+      return `rotate(-90deg) ${traslate}`;
     case "SOUTHWEST":
-      return [
-        -w / 2,
-        h / 4,
-        `rotate(30deg) translateX(0.50rem) translateY(0.50rem) scale(${scale})`,
-      ];
+      return `rotate(210deg) ${traslate}`;
     case "NORTHWEST":
-      return [
-        -w / 2,
-        -h / 4,
-        `rotate(-30deg) translateX(1rem) translateY(-1rem) scale(${scale})`,
-      ];
+      return `rotate(-30deg) ${traslate}`;
     default:
       throw Error("Unkown direction " + direction);
   }
