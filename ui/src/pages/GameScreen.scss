@@ -1,7 +1,7 @@
 @import "../variables.scss";
 
 .MuiToolbar-root {
-  background: #030000;
+  background: $black;
 }
 
 h6.MuiTypography-h6 {
@@ -9,7 +9,8 @@ h6.MuiTypography-h6 {
 }
 
 main {
-  background: #ffffff;
+  background: $black;
+  color: white;
 
   position: fixed;
   left: 0;
@@ -37,7 +38,6 @@ main {
 
   text-align: left;
   display: flex;
-  justify-content: center;
   align-items: center;
 
   overflow-x: auto;
@@ -63,22 +63,22 @@ main {
   }
 
   .wood-cards {
-    background: greenyellow;
+    background: $wood;
   }
   .brick-cards {
-    background: lightcoral;
+    background: $brick;
   }
   .wheat-cards {
-    background: yellow;
+    background: $wheat;
   }
   .sheep-cards {
-    background: lightgreen;
+    background: $darker-sheep;
   }
   .ore-cards {
-    background: lightsteelblue;
+    background: $ore;
   }
   .dev-cards {
-    background: #aeaeae;
+    background: purple;
   }
 
   .center-text {
