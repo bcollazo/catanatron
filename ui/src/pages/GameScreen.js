@@ -133,7 +133,7 @@ function GameScreen() {
       setActionQueue(queue);
       setState(response.data);
     }
-  }, [gameId, inFlightRequest, setInFlightRequest, actionQueue]);
+  }, [gameId, inFlightRequest, setInFlightRequest, actionQueue, state]);
 
   if (!state) {
     return (
@@ -163,7 +163,10 @@ function GameScreen() {
         playerState={human}
         longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
       />
-      <ActionsToolbar onTick={onClickNext} disabled={gameOver} />
+      <ActionsToolbar
+        onTick={onClickNext}
+        disabled={gameOver || inFlightRequest}
+      />
     </main>
   );
 }
