@@ -11,48 +11,67 @@ import ActionsToolbar from "./ActionsToolbar";
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import "./GameScreen.scss";
 
-function GameScreen(props) {
+const HUMAN_COLOR = "BLUE";
+
+function Prompt({ actionQueue, state }) {
+  let prompt = "";
+  if (actionQueue.length === 0) {
+    prompt = `${state.current_color}: ${state.current_prompt}`;
+  } else {
+    prompt = `${actionQueue[0][0]}: ${actionQueue[0].slice(1)}`;
+  }
+  return <div className="prompt">{state && prompt}</div>;
+}
+
+function getQueue(actions) {
+  const numActions = actions.length;
+  let i;
+  for (i = numActions - 1; i >= 0; i--) {
+    if (actions[i][0] === HUMAN_COLOR) {
+      break;
+    }
+  }
+  i++;
+  console.log(i, actions.slice(i, numActions));
+  return actions.slice(i, numActions);
+}
+
+function GameScreen() {
   const { gameId } = useParams();
+  const [actionQueue, setActionQueue] = useState([]);
   const [state, setState] = useState(null);
-  const automation = false;
-  // const [automation, setAutomation] = useState(false);
   const [inFlightRequest, setInFlightRequest] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const response = await fetch(API_URL + "/games/" + gameId);
-      const data = await response.json();
-      setState(data);
+      const response = await axios.get(API_URL + "/games/" + gameId);
+
+      const queue = getQueue(response.data.actions);
+      setActionQueue(queue);
+      setState(response.data);
     })();
   }, [gameId]);
 
   const onClickNext = useCallback(async () => {
-    setInFlightRequest(true);
-    const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
-    setInFlightRequest(false);
-    setState(response.data);
-  }, [gameId]);
+    // If you queue, consume from queue, else populate
+    if (actionQueue.length > 0) {
+      setActionQueue(actionQueue.slice(1));
+    } else {
+      if (inFlightRequest) return; // this makes it idempotent
+      setInFlightRequest(true);
+      const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
+      setInFlightRequest(false);
 
-  // const onClickAutomation = () => {
-  //   setAutomation(!automation);
-  // };
-
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (automation && !inFlightRequest) {
-        await onClickNext();
-      }
-    }, 50);
-    return () => clearInterval(interval);
-  }, [automation, inFlightRequest, onClickNext]);
+      const queue = getQueue(response.data.actions);
+      setActionQueue(queue);
+      setState(response.data);
+    }
+  }, [gameId, inFlightRequest, setInFlightRequest, actionQueue]);
 
   console.log(state);
-
   return (
     <main>
-      <div className="prompt">
-        {state && `${state.current_color}: ${state.current_prompt}`}
-      </div>
+      {state && <Prompt actionQueue={actionQueue} state={state} />}
       {!state && (
         <Loader
           className="loader"
