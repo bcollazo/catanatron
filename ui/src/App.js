@@ -27,7 +27,7 @@ function App() {
           <Route path="/games/:gameId">
             <GameScreen />
           </Route>
-          <Route path="/">
+          <Route path="/" exact={true}>
             <HomePage />
           </Route>
         </Switch>
