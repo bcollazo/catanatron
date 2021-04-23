@@ -165,6 +165,8 @@ function GameScreen() {
       <ActionsToolbar
         onTick={onClickNext}
         disabled={gameOver || inFlightRequest}
+        botsTurn={actionQueue.length !== 0 && actionQueue[0] !== HUMAN_COLOR}
+        prompt={state.current_prompt}
       />
     </main>
   );
