@@ -17,11 +17,11 @@ const HUMAN_COLOR = "BLUE";
 function humanizeAction(action) {
   switch (action[1]) {
     case "ROLL":
-      return `${action[0]}: ROLLED ${action[2]}`;
+      return `CATANATRON ROLLED ${action[2]}`;
     case "DISCARD":
-      return `${action[0]}: DISCARDED ${action[2]}`;
+      return `CATANATRON DISCARDED ${action[2]}`;
     case "BUY_DEVELOPMENT_CARD":
-      return `${action[0]}: BOUGHT DEVELOPMENT CARD`;
+      return `CATANATRON BOUGHT DEVELOPMENT CARD`;
     case "BUILD_FIRST_SETTLEMENT":
     case "BUILD_SECOND_SETTLEMENT":
     case "BUILD_SETTLEMENT":
@@ -29,38 +29,38 @@ function humanizeAction(action) {
       const parts = action[1].split("_");
       const building = parts[parts.length - 1];
       const tile = action[2];
-      return `${action[0]}: BUILT ${building} ON ${tile}`;
+      return `CATANATRON BUILT ${building} ON ${tile}`;
     }
     case "BUILD_INITIAL_ROAD": {
       const edge = action[2];
-      return `${action[0]}: BUILT INITIAL ROAD ON ${edge}`;
+      return `CATANATRON BUILT INITIAL ROAD ON ${edge}`;
     }
     case "BUILD_ROAD": {
       const edge = action[2];
-      return `${action[0]}: BUILT ROAD ON ${edge}`;
+      return `CATANATRON BUILT ROAD ON ${edge}`;
     }
     case "PLAY_KNIGHT_CARD": {
       const tile = action[2];
-      return `${action[0]}: PLAYED KNIGHT CARD TO ${tile}`;
+      return `CATANATRON PLAYED KNIGHT CARD TO ${tile}`;
     }
     case "MOVE_ROBBER": {
       const tile = action[2];
-      return `${action[0]}: MOVED ROBBER TO ${tile}`;
+      return `CATANATRON MOVED ROBBER TO ${tile}`;
     }
 
     case "END_TURN":
-      return `${action[0]}: ENDED TURN`;
+      return `CATANATRON ENDED TURN`;
     default:
-      return `${action[0]}: ${action.slice(1)}`;
+      return `CATANATRON ${action.slice(1)}`;
   }
 }
 
 function humanizePrompt(state) {
   switch (state.current_prompt) {
     case "ROLL":
-      return `${state.current_color}: ROLL OR PLAY DEVELOPMENT CARD`;
+      return `YOUR TURN`;
     case "PLAY_TURN":
-      return `${state.current_color}: PLAY TURN`;
+      return `YOUR TURN`;
     case "BUILD_FIRST_SETTLEMENT":
     case "BUILD_SECOND_SETTLEMENT":
     case "BUILD_INITIAL_ROAD": {
@@ -213,7 +213,6 @@ function GameScreen() {
   const human = state && state.players.find((x) => x.color === HUMAN_COLOR);
   return (
     <main>
-      <Prompt actionQueue={actionQueue} state={state} />
       <PlayerStateBox
         playerState={bot}
         longestRoad={state.longest_roads_by_player[bot.color]}
@@ -223,6 +222,7 @@ function GameScreen() {
         playerState={human}
         longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
       />
+      <Prompt actionQueue={actionQueue} state={state} />
       <ActionsToolbar
         onTick={onClickNext}
         disabled={gameOver || inFlightRequest}
