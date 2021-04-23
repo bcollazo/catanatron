@@ -15,6 +15,14 @@ app = Flask(__name__)
 CORS(app)
 
 
+def advance_until_color(game, color, callbacks):
+    while (
+        game.winning_player() is not None and game.state.current_player().color != color
+    ):
+        game.play_tick(callbacks)
+        print(game.winning_player(), game.state.current_player().color, color)
+
+
 @app.route("/games/<string:game_id>/actions", methods=["POST"])
 def tick_game(game_id):
     game = get_last_game_state(game_id)
@@ -44,6 +52,7 @@ def create_game():
         ]
     )
     save_game_state(game)
+    advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
     return jsonify({"game_id": game.id})
 
 

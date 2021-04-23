@@ -7,6 +7,18 @@ from catanatron.models.player import Player
 from catanatron.models.decks import Deck
 
 
+def longest_roads_by_player(state):
+    roads = {
+        player.color.value: state.board.continuous_roads_by_player(player.color)
+        for player in state.players
+    }
+
+    return {
+        key: 0 if len(value) == 0 else max(map(len, value))
+        for key, value in roads.items()
+    }
+
+
 class GameEncoder(json.JSONEncoder):
     def default(self, obj):
         if obj is None:
@@ -51,6 +63,8 @@ class GameEncoder(json.JSONEncoder):
                 "current_color": obj.state.current_player().color,
                 "current_prompt": obj.state.current_prompt,
                 "current_playable_actions": obj.state.playable_actions,
+                # TODO: Use cached value when we cache it.
+                "longest_roads_by_player": longest_roads_by_player(obj.state),
             }
         if isinstance(obj, Deck):
             return {resource.value: count for resource, count in obj.cards.items()}
