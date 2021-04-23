@@ -1,23 +1,14 @@
 import React from "react";
 import cn from "classnames";
 
-import {
-  tilePixelVector,
-  getEdgeDeltaAndTransform,
-  SQRT3,
-} from "../utils/coordinates";
+import { tilePixelVector, getEdgeTransform } from "../utils/coordinates";
+import useWindowSize from "../utils/useWindowSize";
 
 function Road({ color }) {
-  const cssClass = `bg-white bg-${color.toLowerCase()}-600`;
-  return (
-    <div
-      className={cn(
-        "road absolute rounded-sm border-2 border-black h-3 w-10",
-        cssClass
-      )}
-    ></div>
-  );
+  return <div className={cn("road", color)}></div>;
 }
+
+const SMALL_BREAKPOINT = 576;
 
 export default function Edge({
   id,
@@ -27,20 +18,20 @@ export default function Edge({
   direction,
   color,
 }) {
+  const { width } = useWindowSize();
+  const stroke = width < SMALL_BREAKPOINT ? 8 : 12;
   const [centerX, centerY] = center;
-  const w = SQRT3 * size;
-  const h = 2 * size;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
-  const [deltaX, deltaY, transform] = getEdgeDeltaAndTransform(direction, w, h);
-  const x = tileX + deltaX;
-  const y = tileY + deltaY;
+  const transform = getEdgeTransform(direction, size, width);
 
   return (
     <div
-      className="edge absolute h-3 w-10"
+      className={"edge " + direction}
       style={{
-        left: x,
-        top: y,
+        left: tileX,
+        top: tileY,
+        width: size,
+        height: stroke,
         transform: transform,
       }}
       onClick={() => console.log("Clicked edge", id)}

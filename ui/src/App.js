@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 
-import "./tailwind.output.css";
 import "./App.scss";
 import GameScreen from "./pages/GameScreen";
 import HomePage from "./pages/HomePage";

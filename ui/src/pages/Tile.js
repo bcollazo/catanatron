@@ -1,5 +1,6 @@
 import React from "react";
 import cn from "classnames";
+import Paper from "@material-ui/core/Paper";
 
 import brickTile from "../assets/tile_brick.svg";
 import desertTile from "../assets/tile_desert.svg";
@@ -9,27 +10,15 @@ import oreTile from "../assets/tile_ore.svg";
 import woolTile from "../assets/tile_sheep.svg";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
 
-const bgColorResource = (resource) => {
-  return {
-    SHEEP: "bg-green-200",
-    WOOD: "bg-green-800",
-    BRICK: "bg-red-400",
-    ORE: "bg-gray-600",
-    WHEAT: "bg-yellow-500",
-  }[resource];
-};
-
-export function Circle({ className, children, style }) {
+export function NumberToken({ className, children, style, size }) {
   return (
-    <div
-      className={cn(
-        "rounded-md h-8 w-8 bg-white flex justify-center items-center border-2 border-black",
-        className
-      )}
-      style={style}
+    <Paper
+      elevation={3}
+      className={cn("number-token", className)}
+      style={{ ...style, width: size * 0.5, height: size * 0.5 }}
     >
       {children}
-    </div>
+    </Paper>
   );
 }
 
@@ -42,7 +31,7 @@ export default function Tile({ center, coordinate, tile, size }) {
   let contents;
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
-    contents = <Circle>{tile.number}</Circle>;
+    contents = <NumberToken size={size}>{tile.number}</NumberToken>;
     resourceTile = {
       BRICK: brickTile,
       SHEEP: woolTile,
@@ -56,49 +45,46 @@ export default function Tile({ center, coordinate, tile, size }) {
     let x = 0;
     let y = 0;
     if (tile.direction.includes("SOUTH")) {
-      y += 50;
+      y += size / 3;
     }
     if (tile.direction.includes("NORTH")) {
-      y -= 50;
+      y -= size / 3;
     }
     if (tile.direction.includes("WEST")) {
-      x -= 20;
+      x -= size / 4;
       if (tile.direction === "WEST") {
-        x = -50;
+        x = -size / 3;
       }
     }
     if (tile.direction.includes("EAST")) {
-      x += 20;
+      x += size / 4;
       if (tile.direction === "EAST") {
-        x = 50;
+        x = size / 3;
       }
     }
     if (tile.resource === null) {
       contents = (
-        <Circle
-          className={tile.direction}
+        <div
+          className="port"
           style={{
-            position: "relative",
             left: x,
             top: y,
           }}
         >
           3:1
-        </Circle>
+        </div>
       );
     } else {
-      const bg = bgColorResource(tile.resource);
       contents = (
-        <Circle
+        <div
+          className="port"
           style={{
-            position: "relative",
             left: x,
             top: y,
           }}
-          className={bg}
         >
           2:1
-        </Circle>
+        </div>
       );
     }
   }
@@ -106,7 +92,7 @@ export default function Tile({ center, coordinate, tile, size }) {
   return (
     <div
       key={coordinate}
-      className={cn("tile absolute flex justify-center items-center")}
+      className="tile"
       style={{
         left: x - w / 2,
         top: y - h / 2,

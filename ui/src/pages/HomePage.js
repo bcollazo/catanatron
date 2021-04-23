@@ -4,6 +4,9 @@ import { useHistory } from "react-router-dom";
 
 import { API_URL } from "../configuration";
 
+import "./HomePage.scss";
+import { Button } from "@material-ui/core";
+
 export default function HomePage() {
   const [disabled, setDisabled] = useState(false);
   const history = useHistory();
@@ -17,15 +20,16 @@ export default function HomePage() {
   }, [history]);
 
   return (
-    <div className="flex flex-col items-center pt-32">
-      <h1 className="font-bold text-5xl mb-2">Welcome</h1>
-      <button
+    <div className="home-page">
+      <h1>Catanatron</h1>
+      <Button
         disabled={disabled}
-        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        variant="contained"
+        color="primary"
         onClick={onClick}
       >
         Start Game
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Circle } from "./Tile";
+import { NumberToken } from "./Tile";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
 
 export default function Robber({ center, size, coordinate }) {
@@ -12,15 +12,15 @@ export default function Robber({ center, size, coordinate }) {
   const y = tileY + deltaY;
 
   return (
-    <Circle
-      className="bg-gray-900 text-white absolute"
+    <NumberToken
+      className="robber"
+      size={size}
       style={{
         left: x,
         top: y,
-        transform: `translateY(-0.75rem) translateX(-0.75rem)`,
       }}
     >
       R
-    </Circle>
+    </NumberToken>
   );
 }
