@@ -55,21 +55,21 @@ export default function Tile({ center, coordinate, tile, size }) {
     let x = 0;
     let y = 0;
     if (tile.direction.includes("SOUTH")) {
-      y += 50;
+      y += size / 3;
     }
     if (tile.direction.includes("NORTH")) {
-      y -= 50;
+      y -= size / 2;
     }
     if (tile.direction.includes("WEST")) {
-      x -= 20;
+      x -= size / 4;
       if (tile.direction === "WEST") {
-        x = -50;
+        x = -size / 3;
       }
     }
     if (tile.direction.includes("EAST")) {
-      x += 20;
+      x += size / 4;
       if (tile.direction === "EAST") {
-        x = 50;
+        x = size / 3;
       }
     }
     if (tile.resource === null) {
@@ -78,7 +78,6 @@ export default function Tile({ center, coordinate, tile, size }) {
           size={size}
           className={tile.direction}
           style={{
-            position: "relative",
             left: x,
             top: y,
           }}
@@ -92,7 +91,6 @@ export default function Tile({ center, coordinate, tile, size }) {
         <NumberToken
           size={size}
           style={{
-            position: "relative",
             left: x,
             top: y,
           }}
