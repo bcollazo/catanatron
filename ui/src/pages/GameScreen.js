@@ -96,7 +96,6 @@ function getQueue(actions) {
     }
   }
   i++;
-  console.log(i, actions.slice(i, numActions));
   return actions.slice(i, numActions);
 }
 

@@ -16,14 +16,9 @@
     "react-loader-spinner": "^4.0.0",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^3.4.3",
-    "react-zoom-pan-pinch": "^1.6.1",
-    "styled-components": "^5.1.1",
-    "tailwindcss": "^1.8.4"
+    "react-zoom-pan-pinch": "^1.6.1"
   },
   "scripts": {
-    "build:tailwind": "tailwindcss build src/tailwind.css -o src/tailwind.output.css",
-    "prestart": "npm run build:tailwind",
-    "prebuild": "npm run build:tailwind",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
