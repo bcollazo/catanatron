@@ -10,16 +10,6 @@ import oreTile from "../assets/tile_ore.svg";
 import woolTile from "../assets/tile_sheep.svg";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
 
-const bgColorResource = (resource) => {
-  return {
-    SHEEP: "bg-green-200",
-    WOOD: "bg-green-800",
-    BRICK: "bg-red-400",
-    ORE: "bg-gray-600",
-    WHEAT: "bg-yellow-500",
-  }[resource];
-};
-
 export function NumberToken({ className, children, style, size }) {
   return (
     <Paper
@@ -58,7 +48,7 @@ export default function Tile({ center, coordinate, tile, size }) {
       y += size / 3;
     }
     if (tile.direction.includes("NORTH")) {
-      y -= size / 2;
+      y -= size / 3;
     }
     if (tile.direction.includes("WEST")) {
       x -= size / 4;
@@ -74,30 +64,27 @@ export default function Tile({ center, coordinate, tile, size }) {
     }
     if (tile.resource === null) {
       contents = (
-        <NumberToken
-          size={size}
-          className={tile.direction}
+        <div
+          className="port"
           style={{
             left: x,
             top: y,
           }}
         >
           3:1
-        </NumberToken>
+        </div>
       );
     } else {
-      const bg = bgColorResource(tile.resource);
       contents = (
-        <NumberToken
-          size={size}
+        <div
+          className="port"
           style={{
             left: x,
             top: y,
           }}
-          className={bg}
         >
           2:1
-        </NumberToken>
+        </div>
       );
     }
   }

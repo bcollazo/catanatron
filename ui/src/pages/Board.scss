@@ -1,6 +1,7 @@
 @import "../variables.scss";
 
-.number-token {
+.number-token,
+.port {
   background: white;
   width: 20px;
   display: flex;
@@ -13,7 +14,8 @@
 }
 
 @media screen and (min-width: $sm-breakpoint) {
-  .number-token {
+  .number-token,
+  .port {
     font-size: 1.3rem;
   }
 }
