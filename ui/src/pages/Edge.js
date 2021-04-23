@@ -4,9 +4,8 @@ import cn from "classnames";
 import { tilePixelVector, getEdgeTransform } from "../utils/coordinates";
 import useWindowSize from "../utils/useWindowSize";
 
-function Road({ color, size }) {
-  const cssClass = `bg-white bg-${color.toLowerCase()}-600`;
-  return <div className={cn("road", cssClass)}></div>;
+function Road({ color }) {
+  return <div className={cn("road", color)}></div>;
 }
 
 const SMALL_BREAKPOINT = 576;
@@ -27,7 +26,7 @@ export default function Edge({
 
   return (
     <div
-      className={"edge absolute " + direction}
+      className={"edge " + direction}
       style={{
         left: tileX,
         top: tileY,
@@ -37,7 +36,7 @@ export default function Edge({
       }}
       onClick={() => console.log("Clicked edge", id)}
     >
-      {color && <Road color={color} size={size} />}
+      {color && <Road color={color} />}
     </div>
   );
 }
