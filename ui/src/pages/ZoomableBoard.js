@@ -9,6 +9,8 @@ import Node from "./Node";
 import Edge from "./Edge";
 import Robber from "./Robber";
 
+import "./Board.scss";
+
 /**
  * This uses the formulas: W = SQRT3 * size and H = 2 * size.
  * Math comes from https://www.redblobgames.com/grids/hexagons/.

@@ -1,0 +1,17 @@
+.number-token {
+  background: white;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.MuiPaper-elevation3.robber {
+  background: black;
+  color: white;
+
+  position: absolute;
+  transform: translateY(-0.75rem) translateX(-0.75rem);
+}

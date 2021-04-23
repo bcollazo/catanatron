@@ -1,5 +1,6 @@
 import React from "react";
 import cn from "classnames";
+import Paper from "@material-ui/core/Paper";
 
 import brickTile from "../assets/tile_brick.svg";
 import desertTile from "../assets/tile_desert.svg";
@@ -19,17 +20,15 @@ const bgColorResource = (resource) => {
   }[resource];
 };
 
-export function Circle({ className, children, style }) {
+export function NumberToken({ className, children, style, size }) {
   return (
-    <div
-      className={cn(
-        "rounded-md h-8 w-8 bg-white flex justify-center items-center border-2 border-black",
-        className
-      )}
-      style={style}
+    <Paper
+      elevation={3}
+      className={cn("number-token", className)}
+      style={{ ...style, width: size * 0.6, height: size * 0.6 }}
     >
       {children}
-    </div>
+    </Paper>
   );
 }
 
@@ -42,7 +41,7 @@ export default function Tile({ center, coordinate, tile, size }) {
   let contents;
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
-    contents = <Circle>{tile.number}</Circle>;
+    contents = <NumberToken size={size}>{tile.number}</NumberToken>;
     resourceTile = {
       BRICK: brickTile,
       SHEEP: woolTile,
@@ -75,7 +74,8 @@ export default function Tile({ center, coordinate, tile, size }) {
     }
     if (tile.resource === null) {
       contents = (
-        <Circle
+        <NumberToken
+          size={size}
           className={tile.direction}
           style={{
             position: "relative",
@@ -84,12 +84,13 @@ export default function Tile({ center, coordinate, tile, size }) {
           }}
         >
           3:1
-        </Circle>
+        </NumberToken>
       );
     } else {
       const bg = bgColorResource(tile.resource);
       contents = (
-        <Circle
+        <NumberToken
+          size={size}
           style={{
             position: "relative",
             left: x,
@@ -98,7 +99,7 @@ export default function Tile({ center, coordinate, tile, size }) {
           className={bg}
         >
           2:1
-        </Circle>
+        </NumberToken>
       );
     }
   }
