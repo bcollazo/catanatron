@@ -2,6 +2,7 @@ import json
 
 from flask import Flask, jsonify, abort
 from flask_cors import CORS
+from dotenv import load_dotenv
 
 from catanatron_server.database import save_game_state, get_last_game_state
 from catanatron.game import Game
@@ -10,7 +11,7 @@ from catanatron.models.player import RandomPlayer, Color
 
 from experimental.machine_learning.players.minimax import ValueFunctionPlayer
 
-
+load_dotenv()  # useful if running server outside docker
 app = Flask(__name__)
 CORS(app)
 
