@@ -25,7 +25,7 @@ export function NumberToken({ className, children, style, size }) {
     <Paper
       elevation={3}
       className={cn("number-token", className)}
-      style={{ ...style, width: size * 0.6, height: size * 0.6 }}
+      style={{ ...style, width: size * 0.5, height: size * 0.5 }}
     >
       {children}
     </Paper>

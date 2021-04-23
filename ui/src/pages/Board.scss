@@ -1,3 +1,5 @@
+@import "../variables.scss";
+
 .number-token {
   background: white;
   width: 20px;
@@ -7,12 +9,22 @@
   font-size: 0.8rem;
   font-weight: bold;
 
-  position: "relative";
+  position: relative;
+}
+
+@media screen and (min-width: $sm-breakpoint) {
+  .number-token {
+    font-size: 1.3rem;
+  }
+}
+
+.MuiPaper-elevation3.number-token {
+  background: $dark-gray;
+  color: white;
 }
 
 .MuiPaper-elevation3.robber {
-  background: black;
-  color: white;
+  background: #6b6b6b;
 
   position: absolute;
   transform: translateY(-0.75rem) translateX(-0.75rem);

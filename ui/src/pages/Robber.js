@@ -14,6 +14,7 @@ export default function Robber({ center, size, coordinate }) {
   return (
     <NumberToken
       className="robber"
+      size={size}
       style={{
         left: x,
         top: y,
