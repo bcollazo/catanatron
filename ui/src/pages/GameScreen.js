@@ -3,7 +3,10 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import PropTypes from "prop-types";
 import Loader from "react-loader-spinner";
-import cn from "classnames";
+import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
+
+import Divider from "@material-ui/core/Divider";
+import { makeStyles } from "@material-ui/core/styles";
 
 import { API_URL } from "../configuration";
 import ZoomableBoard from "./ZoomableBoard";
@@ -11,136 +14,37 @@ import ActionsToolbar from "./ActionsToolbar";
 
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import "./GameScreen.scss";
+import PlayerStateBox, { ResourceCards } from "../components/PlayerStateBox";
+import Prompt from "../components/Prompt";
 
 const HUMAN_COLOR = "BLUE";
 
-function humanizeAction(action) {
-  switch (action[1]) {
-    case "ROLL":
-      return `CATANATRON ROLLED ${action[2]}`;
-    case "DISCARD":
-      return `CATANATRON DISCARDED ${action[2]}`;
-    case "BUY_DEVELOPMENT_CARD":
-      return `CATANATRON BOUGHT DEVELOPMENT CARD`;
-    case "BUILD_FIRST_SETTLEMENT":
-    case "BUILD_SECOND_SETTLEMENT":
-    case "BUILD_SETTLEMENT":
-    case "BUILD_CITY": {
-      const parts = action[1].split("_");
-      const building = parts[parts.length - 1];
-      const tile = action[2];
-      return `CATANATRON BUILT ${building} ON ${tile}`;
-    }
-    case "BUILD_INITIAL_ROAD": {
-      const edge = action[2];
-      return `CATANATRON BUILT INITIAL ROAD ON ${edge}`;
-    }
-    case "BUILD_ROAD": {
-      const edge = action[2];
-      return `CATANATRON BUILT ROAD ON ${edge}`;
-    }
-    case "PLAY_KNIGHT_CARD": {
-      const tile = action[2];
-      return `CATANATRON PLAYED KNIGHT CARD TO ${tile}`;
-    }
-    case "MOVE_ROBBER": {
-      const tile = action[2];
-      return `CATANATRON MOVED ROBBER TO ${tile}`;
-    }
+const useStyles = makeStyles({
+  list: {
+    width: 250,
+  },
+});
 
-    case "END_TURN":
-      return `CATANATRON ENDED TURN`;
-    default:
-      return `CATANATRON ${action.slice(1)}`;
-  }
-}
+function DrawerContent({ toggleDrawer, state, bot, human }) {
+  const classes = useStyles();
 
-function humanizePrompt(state) {
-  switch (state.current_prompt) {
-    case "ROLL":
-      return `YOUR TURN`;
-    case "PLAY_TURN":
-      return `YOUR TURN`;
-    case "BUILD_FIRST_SETTLEMENT":
-    case "BUILD_SECOND_SETTLEMENT":
-    case "BUILD_INITIAL_ROAD": {
-      const prompt = state.current_prompt.replaceAll("_", " ");
-      return `${state.current_color}: ${prompt}`;
-    }
-    default:
-      return `${state.current_color}: ${state.current_prompt}`;
-  }
-}
-
-function Prompt({ actionQueue, state }) {
-  let prompt = "";
-  if (state.winning_color) {
-    prompt = `Game Over. Congrats, ${state.winning_color}!`;
-  } else if (actionQueue.length === 0) {
-    prompt = humanizePrompt(state);
-  } else {
-    prompt = humanizeAction(actionQueue[0]);
-  }
-  return <div className="prompt">{state && prompt}</div>;
-}
-
-function PlayerStateBox({ playerState, longestRoad }) {
-  const numDevCards = Object.values(playerState.development_deck).reduce(
-    (a, b) => a + b,
-    0
-  );
-  const resdeck = playerState.resource_deck;
   return (
-    <div className="player-state-box">
-      <div className="resource-cards" title="Resource Cards">
-        {resdeck.WOOD !== 0 && (
-          <div className="wood-cards center-text">{resdeck.WOOD}</div>
-        )}
-        {resdeck.BRICK !== 0 && (
-          <div className="brick-cards center-text">{resdeck.BRICK}</div>
-        )}
-        {resdeck.SHEEP !== 0 && (
-          <div className="sheep-cards center-text">{resdeck.SHEEP}</div>
-        )}
-        {resdeck.WHEAT !== 0 && (
-          <div className="wheat-cards center-text">{resdeck.WHEAT}</div>
-        )}
-        {resdeck.ORE !== 0 && (
-          <div className="ore-cards center-text">{resdeck.ORE}</div>
-        )}
-        {numDevCards !== 0 && (
-          <div className="dev-cards center-text" title="Development Cards">
-            {numDevCards}
-          </div>
-        )}
-      </div>
-      <div
-        className={cn("num-knights center-text", {
-          has_army: playerState.has_army,
-        })}
-        title="Knights Played"
-      >
-        <span>{playerState.played_development_cards.KNIGHT}</span>
-        <small>knights</small>
-      </div>
-      <div
-        className={cn("num-roads center-text", {
-          has_road: playerState.has_road,
-        })}
-        title="Longest Road"
-      >
-        {longestRoad}
-        <small>roads</small>
-      </div>
-      <div
-        className={cn("victory-points center-text", {
-          has_road: playerState.actual_victory_points >= 10,
-        })}
-        title="Victory Points"
-      >
-        {playerState.actual_victory_points}
-        <small>VPs</small>
-      </div>
+    <div
+      className={classes.list}
+      role="presentation"
+      onClick={toggleDrawer(false)}
+      onKeyDown={toggleDrawer(false)}
+    >
+      <PlayerStateBox
+        playerState={bot}
+        longestRoad={state.longest_roads_by_player[bot.color]}
+      />
+      <Divider />
+      <PlayerStateBox
+        playerState={human}
+        longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
+      />
+      <Divider />
     </div>
   );
 }
@@ -162,6 +66,20 @@ function GameScreen() {
   const [actionQueue, setActionQueue] = useState([]);
   const [state, setState] = useState(null);
   const [inFlightRequest, setInFlightRequest] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  const toggleDrawer = (open) => (event) => {
+    if (
+      event &&
+      event.type === "keydown" &&
+      (event.key === "Tab" || event.key === "Shift")
+    ) {
+      return;
+    }
+
+    setIsDrawerOpen(open);
+  };
 
   useEffect(() => {
     if (!gameId) {
@@ -213,15 +131,9 @@ function GameScreen() {
   const human = state && state.players.find((x) => x.color === HUMAN_COLOR);
   return (
     <main>
-      <PlayerStateBox
-        playerState={bot}
-        longestRoad={state.longest_roads_by_player[bot.color]}
-      />
+      <h1 className="logo">Catanatron</h1>
       <ZoomableBoard state={state} />
-      <PlayerStateBox
-        playerState={human}
-        longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
-      />
+      <ResourceCards playerState={human} />
       <Prompt actionQueue={actionQueue} state={state} />
       <ActionsToolbar
         onTick={onClickNext}
@@ -229,6 +141,21 @@ function GameScreen() {
         botsTurn={actionQueue.length !== 0 && actionQueue[0] !== HUMAN_COLOR}
         prompt={state.current_prompt}
       />
+      <SwipeableDrawer
+        anchor={"left"}
+        open={isDrawerOpen}
+        onClose={toggleDrawer(false)}
+        onOpen={toggleDrawer(true)}
+        disableBackdropTransition={!iOS}
+        disableDiscovery={iOS}
+      >
+        <DrawerContent
+          toggleDrawer={toggleDrawer}
+          state={state}
+          human={human}
+          bot={bot}
+        />
+      </SwipeableDrawer>
     </main>
   );
 }

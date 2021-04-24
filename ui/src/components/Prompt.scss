@@ -1,0 +1,16 @@
+@import "../variables.scss";
+
+.prompt {
+  background: $dark-gray;
+  padding: $sm-gutter;
+
+  height: 60px;
+  font-size: 1rem;
+
+  text-align: left;
+  display: flex;
+  align-items: center;
+
+  overflow-x: auto;
+  white-space: nowrap;
+}

@@ -1,0 +1,62 @@
+@import "../variables.scss";
+
+.resource-cards {
+  height: 40px;
+  display: flex;
+  gap: 6px;
+
+  margin-bottom: $sm-gutter;
+  .wood-cards {
+    background: $wood;
+  }
+  .brick-cards {
+    background: $brick;
+  }
+  .wheat-cards {
+    background: $wheat;
+  }
+  .sheep-cards {
+    background: $darker-sheep;
+  }
+  .ore-cards {
+    background: $ore;
+  }
+  .dev-cards {
+    background: purple;
+  }
+}
+
+.center-text {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 25px;
+  height: 40px;
+}
+
+.player-state-box {
+  padding: $sm-gutter;
+
+  max-width: $sm-breakpoint;
+  margin: 0 auto;
+  width: 100%;
+
+  .scores {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .num-knights,
+  .num-roads,
+  .victory-points {
+    flex-direction: column;
+    width: 50px;
+    height: 40px;
+  }
+
+  .has_army,
+  .has_road {
+    font-weight: bold;
+  }
+}
