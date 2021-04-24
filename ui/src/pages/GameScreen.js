@@ -97,13 +97,15 @@ function GameScreen() {
 
   if (!state) {
     return (
-      <Loader
-        className="loader"
-        type="Grid"
-        color="#000000"
-        height={100}
-        width={100}
-      />
+      <main>
+        <Loader
+          className="loader"
+          type="Grid"
+          color="#000000"
+          height={100}
+          width={100}
+        />
+      </main>
     );
   }
 

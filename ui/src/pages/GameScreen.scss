@@ -30,6 +30,15 @@ main {
     justify-content: center;
     align-items: center;
   }
+
+  .board-container,
+  .loader {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 }
 
 .left-drawer {
@@ -43,15 +52,6 @@ main {
       padding: $sm-gutter;
     }
   }
-}
-
-.board-container,
-.loader {
-  height: 100%;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .board-container {
