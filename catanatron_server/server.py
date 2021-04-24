@@ -27,11 +27,17 @@ def tick_game(game_id):
     if game is None:
         abort(404, description="Resource not found")
 
-    # TODO: Apply human play
-    if game.winning_player() is None:
+    if game.winning_player() is not None:
+        return json.dumps(game, cls=GameEncoder)
+
+    bots_turn = True
+    if bots_turn:
+        game.play_tick([lambda g: save_game_state(g)])
+    else:
+        # TODO: Apply human play. Assert not 400 Bad Request.
         game.play_tick([lambda g: save_game_state(g)])
 
-    advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
+    # advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
     return json.dumps(game, cls=GameEncoder)
 
 
@@ -53,7 +59,7 @@ def create_game():
         ]
     )
     save_game_state(game)
-    advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
+    # advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
     return jsonify({"game_id": game.id})
 
 

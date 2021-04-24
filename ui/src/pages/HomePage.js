@@ -6,30 +6,37 @@ import { API_URL } from "../configuration";
 
 import "./HomePage.scss";
 import { Button } from "@material-ui/core";
+import Loader from "react-loader-spinner";
 
 export default function HomePage() {
-  const [disabled, setDisabled] = useState(false);
+  const [loading, setLoading] = useState(false);
   const history = useHistory();
 
   const onClick = useCallback(async () => {
-    setDisabled(true);
+    setLoading(true);
     const response = await axios.post(API_URL + "/games");
     const { game_id: gameId } = response.data;
-    setDisabled(false);
+    setLoading(false);
     history.push("/games/" + gameId);
   }, [history]);
 
   return (
     <div className="home-page">
-      <h1>Catanatron</h1>
-      <Button
-        disabled={disabled}
-        variant="contained"
-        color="primary"
-        onClick={onClick}
-      >
-        Start Game
-      </Button>
+      <h1 className="logo">Catanatron</h1>
+      {!loading && (
+        <Button variant="contained" color="primary" onClick={onClick}>
+          Start Game
+        </Button>
+      )}
+      {loading && (
+        <Loader
+          className="loader"
+          type="Grid"
+          color="#ffffff"
+          height={60}
+          width={60}
+        />
+      )}
     </div>
   );
 }

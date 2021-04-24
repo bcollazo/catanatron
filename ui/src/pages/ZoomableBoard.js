@@ -37,7 +37,7 @@ export default function ZoomableBoard({ state }) {
   const [show, setShow] = useState(false);
 
   // TODO: Keep in sync with CSS
-  const containerHeight = height - 144 - 120;
+  const containerHeight = height - 144 - 38 - 40;
 
   const center = [width / 2, containerHeight / 2];
   const size = computeDefaultSize(width, containerHeight);

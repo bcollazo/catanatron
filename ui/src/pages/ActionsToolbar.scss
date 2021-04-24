@@ -1,5 +1,18 @@
 @import "../variables.scss";
 
+.state-summary {
+  height: 60px;
+  width: 100%;
+  max-width: $sm-breakpoint;
+  margin: 0 auto;
+  display: flex;
+  padding: $sm-gutter;
+  .open-drawer-btn {
+    color: white;
+    margin-right: $sm-gutter;
+  }
+}
+
 .actions-toolbar {
   width: 100%;
   max-width: $sm-breakpoint;

@@ -9,6 +9,11 @@ h6.MuiTypography-h6 {
 }
 
 main {
+  .logo {
+    margin: 20px 20px 0 20px;
+    text-align: center;
+  }
+
   background: $black;
   color: white;
 
@@ -25,92 +30,28 @@ main {
     justify-content: center;
     align-items: center;
   }
-}
 
-.prompt {
-  background: $dark-gray;
-  color: #66bf4c;
-  font-family: monospace;
-  padding: $sm-gutter;
-
-  height: 60px;
-  font-size: 1.2rem;
-
-  text-align: left;
-  display: flex;
-  align-items: center;
-
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.player-state-box {
-  height: 60px;
-  padding: $sm-gutter;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  max-width: $sm-breakpoint;
-  margin: 0 auto;
-  width: 100%;
-
-  .resource-cards {
-    flex-grow: 1;
-    display: flex;
-    gap: 6px;
-  }
-
-  .wood-cards {
-    background: $wood;
-  }
-  .brick-cards {
-    background: $brick;
-  }
-  .wheat-cards {
-    background: $wheat;
-  }
-  .sheep-cards {
-    background: $darker-sheep;
-  }
-  .ore-cards {
-    background: $ore;
-  }
-  .dev-cards {
-    background: purple;
-  }
-
-  .center-text {
+  .board-container,
+  .loader {
+    height: 100%;
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-
-    width: 25px;
-    height: 40px;
-  }
-
-  .num-knights,
-  .num-roads,
-  .victory-points {
-    flex-direction: column;
-    width: 50px;
-    height: 40px;
-  }
-
-  .has_army,
-  .has_road {
-    font-weight: bold;
   }
 }
 
-.board-container,
-.loader {
-  height: 100%;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.left-drawer {
+  .MuiDrawer-paper {
+    width: 250px;
+  }
+
+  .log {
+    overflow-y: auto;
+    .action {
+      padding: $sm-gutter;
+    }
+  }
 }
 
 .board-container {
