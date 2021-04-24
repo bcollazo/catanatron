@@ -4,37 +4,21 @@ import axios from "axios";
 import PropTypes from "prop-types";
 import Loader from "react-loader-spinner";
 import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
-
 import Divider from "@material-ui/core/Divider";
-import { makeStyles } from "@material-ui/core/styles";
 
 import { API_URL } from "../configuration";
 import ZoomableBoard from "./ZoomableBoard";
 import ActionsToolbar from "./ActionsToolbar";
+import PlayerStateBox from "../components/PlayerStateBox";
+import { humanizeAction } from "../components/Prompt";
 
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import "./GameScreen.scss";
-import PlayerStateBox, { ResourceCards } from "../components/PlayerStateBox";
-import Prompt from "../components/Prompt";
+import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 
-const HUMAN_COLOR = "BLUE";
-
-const useStyles = makeStyles({
-  list: {
-    width: 250,
-  },
-});
-
-function DrawerContent({ toggleDrawer, state, bot, human }) {
-  const classes = useStyles();
-
+function DrawerContent({ state, bot, human }) {
   return (
-    <div
-      className={classes.list}
-      role="presentation"
-      onClick={toggleDrawer(false)}
-      onKeyDown={toggleDrawer(false)}
-    >
+    <>
       <PlayerStateBox
         playerState={bot}
         longestRoad={state.longest_roads_by_player[bot.color]}
@@ -45,41 +29,27 @@ function DrawerContent({ toggleDrawer, state, bot, human }) {
         longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
       />
       <Divider />
-    </div>
+      <div className="log">
+        {state.actions.map((a) => (
+          <div className="action">{humanizeAction(a)}</div>
+        ))}
+      </div>
+    </>
+    // <div
+    //   className={classes.list}
+    //   role="presentation"
+
+    // >
+
+    // </div>
   );
 }
-
-function getQueue(actions) {
-  const numActions = actions.length;
-  let i;
-  for (i = numActions - 1; i >= 0; i--) {
-    if (actions[i][0] === HUMAN_COLOR) {
-      break;
-    }
-  }
-  i++;
-  return actions.slice(i, numActions);
-}
-
 function GameScreen() {
   const { gameId } = useParams();
-  const [actionQueue, setActionQueue] = useState([]);
   const [state, setState] = useState(null);
   const [inFlightRequest, setInFlightRequest] = useState(false);
+  const [isBotThinking, setIsBotThinking] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-  const toggleDrawer = (open) => (event) => {
-    if (
-      event &&
-      event.type === "keydown" &&
-      (event.key === "Tab" || event.key === "Shift")
-    ) {
-      return;
-    }
-
-    setIsDrawerOpen(open);
-  };
 
   useEffect(() => {
     if (!gameId) {
@@ -88,31 +58,42 @@ function GameScreen() {
 
     (async () => {
       const response = await axios.get(API_URL + "/games/" + gameId);
-      const queue = getQueue(response.data.actions);
-      setActionQueue(queue);
       setState(response.data);
     })();
   }, [gameId]);
+
+  useEffect(() => {
+    if (!state) {
+      return;
+    }
+
+    // Kick off next query?
+    if (state.current_color === BOT_COLOR) {
+      (async () => {
+        console.log("kicking off, thinking-play cycle");
+        setIsBotThinking(true);
+        const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
+        setTimeout(() => {
+          // simulate thinking
+          setIsBotThinking(false);
+          setState(response.data);
+        }, 2000);
+      })();
+    }
+  }, [gameId, state]);
 
   const onClickNext = useCallback(async () => {
     if (state && state.winning_color) {
       return; // do nothing.
     }
 
-    // If you queue, consume from queue, else populate
-    if (actionQueue.length > 0) {
-      setActionQueue(actionQueue.slice(1));
-    } else {
-      if (inFlightRequest) return; // this makes it idempotent
-      setInFlightRequest(true);
-      const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
-      setInFlightRequest(false);
+    if (inFlightRequest) return; // this makes it idempotent
+    setInFlightRequest(true);
+    const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
+    setInFlightRequest(false);
 
-      const queue = getQueue(response.data.actions);
-      setActionQueue(queue);
-      setState(response.data);
-    }
-  }, [gameId, inFlightRequest, setInFlightRequest, actionQueue, state]);
+    setState(response.data);
+  }, [gameId, inFlightRequest, setInFlightRequest, state]);
 
   if (!state) {
     return (
@@ -126,6 +107,27 @@ function GameScreen() {
     );
   }
 
+  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  const toggleLeftDrawer = (open) => (event) => {
+    if (
+      event &&
+      event.type === "keydown" &&
+      (event.key === "Tab" || event.key === "Shift")
+    ) {
+      return;
+    }
+
+    setIsDrawerOpen(open);
+  };
+
+  console.log(state);
+  console.log(
+    state.actions.length,
+    state.actions.slice(state.actions.length - 1),
+    state.current_color,
+    state.current_prompt
+  );
   const gameOver = state && state.winning_color;
   const bot = state && state.players.find((x) => x.color !== HUMAN_COLOR);
   const human = state && state.players.find((x) => x.color === HUMAN_COLOR);
@@ -133,24 +135,25 @@ function GameScreen() {
     <main>
       <h1 className="logo">Catanatron</h1>
       <ZoomableBoard state={state} />
-      <ResourceCards playerState={human} />
-      <Prompt actionQueue={actionQueue} state={state} />
       <ActionsToolbar
         onTick={onClickNext}
         disabled={gameOver || inFlightRequest}
-        botsTurn={actionQueue.length !== 0 && actionQueue[0] !== HUMAN_COLOR}
-        prompt={state.current_prompt}
+        toggleLeftDrawer={toggleLeftDrawer}
+        state={state}
+        isBotThinking={isBotThinking}
       />
       <SwipeableDrawer
+        className="left-drawer"
         anchor={"left"}
         open={isDrawerOpen}
-        onClose={toggleDrawer(false)}
-        onOpen={toggleDrawer(true)}
+        onClose={toggleLeftDrawer(false)}
+        onOpen={toggleLeftDrawer(true)}
         disableBackdropTransition={!iOS}
         disableDiscovery={iOS}
+        onKeyDown={toggleLeftDrawer(false)}
       >
         <DrawerContent
-          toggleDrawer={toggleDrawer}
+          toggleDrawer={toggleLeftDrawer}
           state={state}
           human={human}
           bot={bot}

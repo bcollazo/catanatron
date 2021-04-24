@@ -1,8 +1,10 @@
 import React from "react";
+import Loader from "react-loader-spinner";
+import { HUMAN_COLOR } from "../constants";
 
 import "./Prompt.scss";
 
-function humanizeAction(action) {
+export function humanizeAction(action) {
   switch (action[1]) {
     case "ROLL":
       return `CATANATRON ROLLED ${action[2]}`;
@@ -43,8 +45,8 @@ function humanizeAction(action) {
   }
 }
 
-function humanizePrompt(state) {
-  switch (state.current_prompt) {
+function humanizePrompt(current_prompt) {
+  switch (current_prompt) {
     case "ROLL":
       return `YOUR TURN`;
     case "PLAY_TURN":
@@ -53,20 +55,34 @@ function humanizePrompt(state) {
     case "BUILD_SECOND_SETTLEMENT":
     case "BUILD_INITIAL_ROAD":
     default: {
-      const prompt = state.current_prompt.replaceAll("_", " ");
+      const prompt = current_prompt.replaceAll("_", " ");
       return `PLEASE ${prompt}`;
     }
   }
 }
 
-export default function Prompt({ actionQueue, state }) {
+export default function Prompt({ state, isBotThinking }) {
   let prompt = "";
-  if (state.winning_color) {
+  if (isBotThinking) {
+    prompt = (
+      <>
+        <Loader
+          className="loader"
+          type="Grid"
+          color="#ffffff"
+          height={10}
+          width={10}
+        />
+        <small>Computing</small>
+      </>
+    );
+  } else if (state.winning_color) {
     prompt = `Game Over. Congrats, ${state.winning_color}!`;
-  } else if (actionQueue.length === 0) {
-    prompt = humanizePrompt(state);
+  } else if (state.current_color === HUMAN_COLOR) {
+    prompt = humanizePrompt(state.current_prompt);
   } else {
-    prompt = humanizeAction(actionQueue[0]);
+    // prompt = humanizeAction(state.actions[state.actions.length - 1]);
   }
-  return <div className="prompt">{state && prompt}</div>;
+  console.log(prompt);
+  return <div className="prompt">{prompt}</div>;
 }

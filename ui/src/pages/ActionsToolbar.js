@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@material-ui/core";
-
-// import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountBalanceIcon from "@material-ui/icons/AccountBalance";
 import BuildIcon from "@material-ui/icons/Build";
 import NavigateNextIcon from "@material-ui/icons/NavigateNext";
@@ -12,18 +11,16 @@ import Paper from "@material-ui/core/Paper";
 import Popper from "@material-ui/core/Popper";
 import MenuList from "@material-ui/core/MenuList";
 import SimCardIcon from "@material-ui/icons/SimCard";
-import "./ActionsToolbar.scss";
 
-export default function ActionsToolbar({
-  zoomIn,
-  zoomOut,
-  onTick,
-  disabled,
-  botsTurn,
-  prompt,
-}) {
+import { ResourceCards } from "../components/PlayerStateBox";
+import Prompt from "../components/Prompt";
+
+import "./ActionsToolbar.scss";
+import { BOT_COLOR, HUMAN_COLOR } from "../constants";
+
+function PlayButtons({ prompt, onTick }) {
   const isRoll = prompt === "ROLL";
-  const playButtons = (
+  return (
     <>
       <OptionsButton
         disabled={false}
@@ -59,32 +56,48 @@ export default function ActionsToolbar({
       </Button>
     </>
   );
+}
 
+export default function ActionsToolbar({
+  zoomIn,
+  zoomOut,
+  onTick,
+  disabled,
+  toggleLeftDrawer,
+  state,
+  isBotThinking,
+}) {
+  // const botsTurn = actionQueue.length !== 0 && actionQueue[0] !== HUMAN_COLOR;
+  const botsTurn = state.current_color === BOT_COLOR;
+  const prompt = state.current_prompt;
+  const human = state && state.players.find((x) => x.color === HUMAN_COLOR);
   return (
-    <div className="actions-toolbar">
-      {!botsTurn && playButtons}
-      {botsTurn && (
-        <Button
-          disabled={disabled}
-          className="confirm-btn"
-          variant="contained"
-          color="primary"
-          onClick={onTick}
-        >
-          Ok
+    <>
+      <div className="state-summary">
+        <Button className="open-drawer-btn" onClick={toggleLeftDrawer(true)}>
+          <ChevronLeftIcon />
         </Button>
-      )}
-      {/* <Button
-        className="open-drawer-btn"
-        startIcon={<ChevronLeftIcon />}
-        onClick={toggleDrawer(true)}
-      >
-        Open Info
-      </Button> */}
+        <ResourceCards playerState={human} />
+      </div>
+      <div className="actions-toolbar">
+        {!botsTurn && <PlayButtons prompt={prompt} onTick={onTick} />}
+        {botsTurn && (
+          <Prompt state={state} isBotThinking={isBotThinking} />
+          // <Button
+          //   disabled={disabled}
+          //   className="confirm-btn"
+          //   variant="contained"
+          //   color="primary"
+          //   onClick={onTick}
+          // >
+          //   Ok
+          // </Button>
+        )}
 
-      {/* <Button onClick={zoomIn}>Zoom In</Button>
+        {/* <Button onClick={zoomIn}>Zoom In</Button>
       <Button onClick={zoomOut}>Zoom Out</Button> */}
-    </div>
+      </div>
+    </>
   );
 }
 

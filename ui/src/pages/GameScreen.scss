@@ -25,14 +25,23 @@ main {
   display: flex;
   flex-direction: column;
 
-  .resource-cards {
-    margin: $sm-gutter;
-  }
-
   .loader {
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+}
+
+.left-drawer {
+  .MuiDrawer-paper {
+    width: 250px;
+  }
+
+  .log {
+    overflow-y: auto;
+    .action {
+      padding: $sm-gutter;
+    }
   }
 }
 
