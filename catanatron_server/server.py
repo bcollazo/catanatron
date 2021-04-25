@@ -55,7 +55,7 @@ def create_game():
     game = Game(
         players=[
             ValueFunctionPlayer(Color.RED, "FOO", "value_fn2"),
-            RandomPlayer(Color.BLUE, "BAR"),
+            ValueFunctionPlayer(Color.BLUE, "BAR", "value_fn2"),
         ]
     )
     save_game_state(game)
