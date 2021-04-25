@@ -16,6 +16,7 @@ export default function Node({
   direction,
   building,
   color,
+  flashing,
 }) {
   const [centerX, centerY] = center;
   const w = SQRT3 * size;
@@ -38,6 +39,7 @@ export default function Node({
       onClick={() => console.log("Clicked node", id)}
     >
       {color && <Building building={building} color={color} />}
+      {flashing && <div className="pulsating-circle"></div>}
     </div>
   );
 }

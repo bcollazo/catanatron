@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import clsx from "clsx";
 
@@ -10,6 +10,8 @@ import Edge from "./Edge";
 import Robber from "./Robber";
 
 import "./Board.scss";
+import { store } from "../store";
+import { isPlayersTurn } from "../utils/stateUtils";
 
 /**
  * This uses the formulas: W = SQRT3 * size and H = 2 * size.
@@ -32,19 +34,51 @@ function computeDefaultSize(divWidth, divHeight) {
   return size;
 }
 
-export default function ZoomableBoard({ state }) {
+/** pulsating if its human in initial buildings or if in "building" state. */
+function buildPulsatingNodeIds(state) {
+  if (!isPlayersTurn(state.gameState)) {
+    return new Set([]);
+  }
+
+  const buildInitialSettlementActions = state.gameState.current_playable_actions.filter(
+    (action) =>
+      action[1] === "BUILD_FIRST_SETTLEMENT" ||
+      action[1] === "BUILD_SECOND_SETTLEMENT"
+  );
+  const inInitialBuildPhase = buildInitialSettlementActions.length > 0;
+
+  if (inInitialBuildPhase) {
+    return new Set(buildInitialSettlementActions.map((action) => action[2]));
+  } else if (state.isBuildingSettlement) {
+    const buildSettlementActions = state.gameState.current_playable_actions.filter(
+      (action) => action[1] === "BUILD_SETTLEMENT"
+    );
+    return new Set(buildSettlementActions.map((action) => action[2]));
+  } else if (state.isBuildingCity) {
+    const buildCityActions = state.gameState.current_playable_actions.filter(
+      (action) => action[1] === "BUILD_CITY"
+    );
+    return new Set(buildCityActions.map((action) => action[2]));
+  } else {
+    return new Set([]);
+  }
+}
+
+export default function ZoomableBoard() {
+  const { state, dispatch } = useContext(store);
   const { width, height } = useWindowSize();
   const [show, setShow] = useState(false);
 
   // TODO: Keep in sync with CSS
   const containerHeight = height - 144 - 38 - 40;
-
   const center = [width / 2, containerHeight / 2];
   const size = computeDefaultSize(width, containerHeight);
 
+  const pulsatingNodeIds = buildPulsatingNodeIds(state);
+
   let board;
   if (size) {
-    const tiles = state.tiles.map(({ coordinate, tile }) => (
+    const tiles = state.gameState.tiles.map(({ coordinate, tile }) => (
       <Tile
         key={coordinate}
         center={center}
@@ -54,7 +88,7 @@ export default function ZoomableBoard({ state }) {
       />
     ));
     const nodes = Object.values(
-      state.nodes
+      state.gameState.nodes
     ).map(({ color, building, direction, tile_coordinate, id }) => (
       <Node
         id={id}
@@ -65,10 +99,11 @@ export default function ZoomableBoard({ state }) {
         direction={direction}
         building={building}
         color={color}
+        flashing={pulsatingNodeIds.has(id)}
       />
     ));
     const edges = Object.values(
-      state.edges
+      state.gameState.edges
     ).map(({ color, direction, tile_coordinate, id }) => (
       <Edge
         id={id}
@@ -88,7 +123,7 @@ export default function ZoomableBoard({ state }) {
         <Robber
           center={center}
           size={size}
-          coordinate={state.robber_coordinate}
+          coordinate={state.gameState.robber_coordinate}
         />
       </div>
     );

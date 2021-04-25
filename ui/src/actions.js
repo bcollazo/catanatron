@@ -1,0 +1,6 @@
+const ACTIONS = Object.freeze({
+  SET_LEFT_DRAWER_OPENED: "SET_LEFT_DRAWER_OPENED",
+  SET_GAME_STATE: "SET_GAME_STATE",
+});
+
+export default ACTIONS;
