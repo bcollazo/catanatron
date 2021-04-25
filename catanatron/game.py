@@ -157,8 +157,8 @@ class Game:
         else:
             raise RuntimeError("Unknown ActionPrompt")
 
-    def execute(self, action, action_callbacks=[]):
-        if action not in self.state.playable_actions:
+    def execute(self, action, action_callbacks=[], validate_action=True):
+        if validate_action and action not in self.state.playable_actions:
             raise ValueError(
                 f"{action} not in playable actions: {self.state.playable_actions}"
             )
@@ -208,7 +208,7 @@ class Game:
         )
         if action.action_type in deterministic_actions:
             copy = self.copy()
-            copy.execute(action)
+            copy.execute(action, validate_action=False)
             return [(copy, 1)]
         elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
             results = []
@@ -216,7 +216,7 @@ class Game:
                 option_action = Action(action.color, action.action_type, card)
                 option_game = self.copy()
                 try:
-                    option_game.execute(option_action)
+                    option_game.execute(option_action, validate_action=False)
                 except Exception:
                     # ignore exceptions, since player might imagine impossible outcomes.
                     # ignoring means the value function of this node will be flattened,
@@ -231,7 +231,7 @@ class Game:
                     outcome = (outcome_a, outcome_b)
                     option_action = Action(action.color, action.action_type, outcome)
                     option_game = self.copy()
-                    option_game.execute(option_action)
+                    option_game.execute(option_action, validate_action=False)
                     results.append((option_game, 1 / 36.0))
             return results
         elif action.action_type in [
@@ -241,7 +241,7 @@ class Game:
             (coordinate, robbed_color, _) = action.value
             if robbed_color is None:  # no one to steal, then deterministic
                 copy = self.copy()
-                copy.execute(action)
+                copy.execute(action, validate_action=False)
                 return [(copy, 1)]
             else:
                 results = []
@@ -253,7 +253,7 @@ class Game:
                     )
                     option_game = self.copy()
                     try:
-                        option_game.execute(option_action)
+                        option_game.execute(option_action, validate_action=False)
                     except Exception:
                         # ignore exceptions, since player might imagine impossible outcomes.
                         # ignoring means the value function of this node will be flattened,

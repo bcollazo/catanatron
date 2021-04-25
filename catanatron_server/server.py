@@ -9,7 +9,10 @@ from catanatron.game import Game
 from catanatron.json import GameEncoder, action_from_json
 from catanatron.models.player import RandomPlayer, Color
 
-from experimental.machine_learning.players.minimax import ValueFunctionPlayer
+from experimental.machine_learning.players.minimax import (
+    AlphaBetaPlayer,
+    ValueFunctionPlayer,
+)
 
 load_dotenv()  # useful if running server outside docker
 app = Flask(__name__)
@@ -57,7 +60,7 @@ def get_game_endpoint(game_id):
 def create_game():
     game = Game(
         players=[
-            ValueFunctionPlayer(BOT_COLOR, "FOO", "value_fn2"),
+            AlphaBetaPlayer(BOT_COLOR, "FOO"),
             ValueFunctionPlayer(Color.BLUE, "BAR", "value_fn2"),
         ]
     )
