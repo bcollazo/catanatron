@@ -23,7 +23,6 @@ export default function Edge({
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
   const transform = getEdgeTransform(direction, size, width);
 
-  console.log(size);
   return (
     <div
       id={id}
@@ -31,7 +30,7 @@ export default function Edge({
       style={{
         left: tileX,
         top: tileY,
-        width: size,
+        width: size * 0.9,
         transform: transform,
       }}
       onClick={onClick}

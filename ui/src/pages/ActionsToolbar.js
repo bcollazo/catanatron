@@ -17,21 +17,25 @@ import Paper from "@material-ui/core/Paper";
 import Popper from "@material-ui/core/Popper";
 import MenuList from "@material-ui/core/MenuList";
 import SimCardIcon from "@material-ui/icons/SimCard";
+import { useParams } from "react-router";
 
 import { ResourceCards } from "../components/PlayerStateBox";
 import Prompt from "../components/Prompt";
-
-import "./ActionsToolbar.scss";
 import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { isInitialPhase } from "../utils/stateUtils";
+import { postAction } from "../utils/apiClient";
 
-function PlayButtons({ gameState, onTick }) {
-  const isRoll = gameState.current_prompt === "ROLL";
+import "./ActionsToolbar.scss";
 
+function PlayButtons({ onTick }) {
+  const { gameId } = useParams();
+  const { state, dispatch } = useContext(store);
+
+  const isRoll = state.gameState.current_prompt === "ROLL";
   const playableDevCardTypes = new Set(
-    gameState.current_playable_actions
+    state.gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
       .map((action) => action[1])
   );
@@ -55,7 +59,7 @@ function PlayButtons({ gameState, onTick }) {
   ];
 
   const buildActionTypes = new Set(
-    gameState.current_playable_actions
+    state.gameState.current_playable_actions
       .filter(
         (action) =>
           (action[1].startsWith("BUY") || action[1].startsWith("BUILD")) &&
@@ -65,20 +69,46 @@ function PlayButtons({ gameState, onTick }) {
       )
       .map((a) => a[1])
   );
+  const buyDevCard = useCallback(async () => {
+    const buyDevCardAction = state.gameState.current_playable_actions.find(
+      (action) => action[1] === "BUY_DEVELOPMENT_CARD"
+    );
+    const gameState = await postAction(gameId, buyDevCardAction);
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+  }, []);
+  const setIsBuildingSettlement = useCallback(() => {
+    dispatch({ type: ACTIONS.SET_IS_BUILDING_SETTLEMENT });
+  }, []);
+  const setIsBuildingCity = useCallback(() => {
+    dispatch({ type: ACTIONS.SET_IS_BUILDING_CITY });
+  }, []);
+  const setIsBuildingRoad = useCallback(() => {
+    dispatch({ type: ACTIONS.SET_IS_BUILDING_ROAD });
+  }, []);
   const buildItems = [
     {
       label: "Development Card",
       disabled: !buildActionTypes.has("BUY_DEVELOPMENT_CARD"),
+      onClick: buyDevCard,
     },
-    { label: "City", disabled: !buildActionTypes.has("BUILD_CITY") },
+    {
+      label: "City",
+      disabled: !buildActionTypes.has("BUILD_CITY"),
+      onClick: setIsBuildingCity,
+    },
     {
       label: "Settlement",
       disabled: !buildActionTypes.has("BUILD_SETTLEMENT"),
+      onClick: setIsBuildingSettlement,
     },
-    { label: "Road", disabled: !buildActionTypes.has("BUILD_ROAD") },
+    {
+      label: "Road",
+      disabled: !buildActionTypes.has("BUILD_ROAD"),
+      onClick: setIsBuildingRoad,
+    },
   ];
 
-  const tradeActions = gameState.current_playable_actions.filter(
+  const tradeActions = state.gameState.current_playable_actions.filter(
     (action) => action[1] === "MARITIME_TRADE"
   );
   const tradeItems = tradeActions.map((action) => {
@@ -88,6 +118,17 @@ function PlayButtons({ gameState, onTick }) {
       disabled: false,
     };
   });
+
+  const rollAction = useCallback(async () => {
+    const action = [HUMAN_COLOR, "ROLL", null];
+    const gameState = await postAction(gameId, action);
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+  }, []);
+  const endTurnAction = useCallback(async () => {
+    // const action = [HUMAN_COLOR, "END_TURN", null];
+    const gameState = await postAction(gameId);
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+  }, []);
 
   return (
     <>
@@ -116,11 +157,11 @@ function PlayButtons({ gameState, onTick }) {
         Trade
       </OptionsButton>
       <Button
-        disabled={isInitialPhase(gameState)}
+        disabled={isInitialPhase(state.gameState)}
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}
-        onClick={onTick}
+        onClick={isRoll ? rollAction : endTurnAction}
       >
         {isRoll ? "ROLL" : "END"}
       </Button>
@@ -186,11 +227,12 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
   };
-  const handleClose = (event) => {
+  const handleClose = (onClick) => (event) => {
     if (anchorRef.current && anchorRef.current.contains(event.target)) {
       return;
     }
 
+    onClick && onClick();
     setOpen(false);
   };
   function handleListKeyDown(event) {
@@ -249,7 +291,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
                   {items.map((item) => (
                     <MenuItem
                       key={item.label}
-                      onClick={handleClose}
+                      onClick={handleClose(item.onClick)}
                       disabled={item.disabled}
                     >
                       {item.label}
