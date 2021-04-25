@@ -26,11 +26,14 @@ function DrawerContent({ gameState }) {
       />
       <Divider />
       <div className="log">
-        {gameState.actions.map((action, i) => (
-          <div key={i} className="action">
-            {humanizeAction(action)}
-          </div>
-        ))}
+        {gameState.actions
+          .slice()
+          .reverse()
+          .map((action, i) => (
+            <div key={i} className="action">
+              {humanizeAction(action)}
+            </div>
+          ))}
       </div>
     </>
   );
