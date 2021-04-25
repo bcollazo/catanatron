@@ -56,7 +56,7 @@ function GameScreen() {
         }, ROBOT_THINKING_TIME - requestTime);
       })();
     }
-  }, [gameId, state.gameState, dispatch]);
+  }, [gameId, state.gameState, dispatch, enqueueSnackbar]);
 
   const onClickNext = useCallback(async () => {
     if (state.gameState && state.gameState.winning_color) {
