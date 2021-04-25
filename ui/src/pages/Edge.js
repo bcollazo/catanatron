@@ -8,8 +8,6 @@ function Road({ color }) {
   return <div className={cn("road", color)}></div>;
 }
 
-const SMALL_BREAKPOINT = 576;
-
 export default function Edge({
   id,
   center,
@@ -21,11 +19,11 @@ export default function Edge({
   onClick,
 }) {
   const { width } = useWindowSize();
-  const stroke = width < SMALL_BREAKPOINT ? 8 : 12;
   const [centerX, centerY] = center;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
   const transform = getEdgeTransform(direction, size, width);
 
+  console.log(size);
   return (
     <div
       id={id}
@@ -34,7 +32,6 @@ export default function Edge({
         left: tileX,
         top: tileY,
         width: size,
-        height: stroke,
         transform: transform,
       }}
       onClick={onClick}

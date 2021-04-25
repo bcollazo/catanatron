@@ -51,16 +51,18 @@
   position: absolute;
   display: flex;
   justify-content: center;
+
+  height: 5px; // stroke
 }
 .road {
   position: absolute;
-  border: 2px solid $dark-gray;
-
-  height: 8px; // stroke
-  width: 95%;
+  border: 1px solid $dark-gray;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
 }
 @media screen and (min-width: $sm-breakpoint) {
-  .road {
+  .edge {
     height: 12px; // stroke
   }
 }
@@ -123,13 +125,13 @@
 
 @keyframes pulse-dot {
   0% {
-    transform: scale(0.9);
+    transform: scale(0.8);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1);
   }
   100% {
-    transform: scale(0.9);
+    transform: scale(0.8);
   }
 }
 
@@ -146,8 +148,8 @@
 // }
 
 .node .pulse {
-  width: 100%;
-  height: 100%;
+  width: 75%;
+  height: 75%;
 }
 
 // @media screen and (min-width: $sm-breakpoint) {
