@@ -20,6 +20,15 @@ export default function HomePage() {
   return (
     <div className="home-page">
       <h1 className="logo">Catanatron</h1>
+      <ul>
+        <li>1v1 against a bot</li>
+        <li>
+          open hand <small>(but the bot doesnt use this)</small>
+        </li>
+        <li>
+          no choice during discard <small>(neither does the bot)</small>
+        </li>
+      </ul>
       {!loading && (
         <Button variant="contained" color="primary" onClick={onClick}>
           Start Game
