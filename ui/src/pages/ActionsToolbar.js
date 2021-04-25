@@ -5,6 +5,7 @@ import React, {
   useContext,
   useCallback,
 } from "react";
+import memoize from "fast-memoize";
 import { Button } from "@material-ui/core";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountBalanceIcon from "@material-ui/icons/AccountBalance";
@@ -32,6 +33,14 @@ import "./ActionsToolbar.scss";
 function PlayButtons({ onTick }) {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
+
+  const carryOutAction = useCallback(
+    memoize((action) => async () => {
+      const gameState = await postAction(gameId, action);
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+    }),
+    []
+  );
 
   const isRoll = state.gameState.current_prompt === "ROLL";
   const playableDevCardTypes = new Set(
@@ -114,19 +123,12 @@ function PlayButtons({ onTick }) {
     return {
       label: `${out.length} ${out[0]} => ${action[2][4]}`,
       disabled: false,
+      onClick: carryOutAction(action),
     };
   });
 
-  const rollAction = useCallback(async () => {
-    const action = [HUMAN_COLOR, "ROLL", null];
-    const gameState = await postAction(gameId, action);
-    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-  }, [gameId, dispatch]);
-  const endTurnAction = useCallback(async () => {
-    // const action = [HUMAN_COLOR, "END_TURN", null];
-    const gameState = await postAction(gameId);
-    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-  }, [gameId, dispatch]);
+  const rollAction = carryOutAction([HUMAN_COLOR, "ROLL", null]);
+  const endTurnAction = carryOutAction(); // const action = [HUMAN_COLOR, "END_TURN", null];
 
   return (
     <>
