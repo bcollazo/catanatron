@@ -34,33 +34,6 @@ function PlayButtons({ gameState, onTick }) {
       .filter((action) => action[1].startsWith("PLAY"))
       .map((action) => action[1])
   );
-  const buildActionTypes = new Set(
-    gameState.current_playable_actions
-      .filter(
-        (action) =>
-          (action[1].startsWith("BUY") || action[1].startsWith("BUILD")) &&
-          !action[1].includes("FIRST") &&
-          !action[1].includes("SECOND") &&
-          !action[1].includes("INITIAL")
-      )
-      .map((a) => a[1])
-  );
-  const tradeActions = gameState.current_playable_actions.filter(
-    (action) => action[1] === "MARITIME_TRADE"
-  );
-
-  const buildItems = [
-    {
-      label: "Development Card",
-      disabled: !buildActionTypes.has("BUY_DEVELOPMENT_CARD"),
-    },
-    { label: "City", disabled: !buildActionTypes.has("BUILD_CITY") },
-    {
-      label: "Settlement",
-      disabled: !buildActionTypes.has("BUILD_SETTLEMENT"),
-    },
-    { label: "Road", disabled: !buildActionTypes.has("BUILD_ROAD") },
-  ];
   const useItems = [
     {
       label: "Monopoly",
@@ -80,6 +53,41 @@ function PlayButtons({ gameState, onTick }) {
     },
   ];
 
+  const buildActionTypes = new Set(
+    gameState.current_playable_actions
+      .filter(
+        (action) =>
+          (action[1].startsWith("BUY") || action[1].startsWith("BUILD")) &&
+          !action[1].includes("FIRST") &&
+          !action[1].includes("SECOND") &&
+          !action[1].includes("INITIAL")
+      )
+      .map((a) => a[1])
+  );
+  const buildItems = [
+    {
+      label: "Development Card",
+      disabled: !buildActionTypes.has("BUY_DEVELOPMENT_CARD"),
+    },
+    { label: "City", disabled: !buildActionTypes.has("BUILD_CITY") },
+    {
+      label: "Settlement",
+      disabled: !buildActionTypes.has("BUILD_SETTLEMENT"),
+    },
+    { label: "Road", disabled: !buildActionTypes.has("BUILD_ROAD") },
+  ];
+
+  const tradeActions = gameState.current_playable_actions.filter(
+    (action) => action[1] === "MARITIME_TRADE"
+  );
+  const tradeItems = tradeActions.map((action) => {
+    const out = action[2].slice(0, 4).filter((resource) => resource !== null);
+    return {
+      label: `${out.length} ${out[0]} => ${action[2][4]}`,
+      disabled: false,
+    };
+  });
+
   return (
     <>
       <OptionsButton
@@ -98,14 +106,14 @@ function PlayButtons({ gameState, onTick }) {
       >
         Buy
       </OptionsButton>
-      <Button
-        disabled={tradeActions.length === 0}
-        variant="contained"
-        color="secondary"
-        startIcon={<AccountBalanceIcon />}
+      <OptionsButton
+        disabled={tradeItems.length === 0}
+        menuListId="trade-menu-list"
+        icon={<AccountBalanceIcon />}
+        items={tradeItems}
       >
         Trade
-      </Button>
+      </OptionsButton>
       <Button
         variant="contained"
         color="primary"

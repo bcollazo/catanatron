@@ -13,6 +13,7 @@
   }
 }
 
+$btn-height: 60px;
 .actions-toolbar {
   width: 100%;
   max-width: $sm-breakpoint;
@@ -26,7 +27,7 @@
   button {
     min-width: 60px;
     width: 100px;
-    height: 60px;
+    height: $btn-height;
   }
 
   .confirm-btn {
@@ -35,6 +36,10 @@
 
   .action-popover {
     z-index: 1;
+
+    overflow: auto;
+    max-height: calc(100% - #{$btn-height}); // - action-toolbar-height
+    margin-bottom: 10px;
   }
 
   .MuiButton-label {
