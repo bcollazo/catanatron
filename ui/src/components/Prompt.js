@@ -8,7 +8,7 @@ export function humanizeAction(action) {
   const player = action[0] === HUMAN_COLOR ? "YOU" : "CATANATRON";
   switch (action[1]) {
     case "ROLL":
-      return `${player} ROLLED ${action[2]}`;
+      return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
     case "DISCARD":
       return `${player} DISCARDED ${action[2]}`;
     case "BUY_DEVELOPMENT_CARD":
