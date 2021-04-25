@@ -70,7 +70,7 @@ export default function Prompt({ gameState, isBotThinking }) {
           height={10}
           width={10}
         />
-        <small>Computing</small>
+        <small>Bots Turn</small>
       </>
     );
   } else if (gameState.winning_color) {
@@ -80,6 +80,5 @@ export default function Prompt({ gameState, isBotThinking }) {
   } else {
     // prompt = humanizeAction(gameState.actions[gameState.actions.length - 1]);
   }
-  console.log(prompt);
   return <div className="prompt">{prompt}</div>;
 }

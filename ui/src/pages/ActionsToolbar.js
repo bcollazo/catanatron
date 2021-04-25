@@ -21,7 +21,7 @@ import SimCardIcon from "@material-ui/icons/SimCard";
 import { useParams } from "react-router";
 
 import { ResourceCards } from "../components/PlayerStateBox";
-import Prompt from "../components/Prompt";
+import Prompt, { humanizeAction } from "../components/Prompt";
 import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 import { store } from "../store";
 import ACTIONS from "../actions";
@@ -29,20 +29,27 @@ import { isInitialPhase } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 
 import "./ActionsToolbar.scss";
+import { useSnackbar } from "notistack";
+import { snackbarActions } from "../components/Snackbar";
 
-function PlayButtons({ onTick }) {
+function PlayButtons() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
   const carryOutAction = useCallback(
     memoize((action) => async () => {
       const gameState = await postAction(gameId, action);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+      enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]), {
+        action: snackbarActions(closeSnackbar),
+      });
     }),
-    []
+    [enqueueSnackbar, closeSnackbar]
   );
 
   const isRoll = state.gameState.current_prompt === "ROLL";
+  const isDiscard = state.gameState.current_prompt === "DISCARD";
   const playableDevCardTypes = new Set(
     state.gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
@@ -82,7 +89,10 @@ function PlayButtons({ onTick }) {
     const action = [HUMAN_COLOR, "BUY_DEVELOPMENT_CARD", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-  }, [gameId, dispatch]);
+    enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]), {
+      action: snackbarActions(closeSnackbar),
+    });
+  }, [gameId, dispatch, enqueueSnackbar, closeSnackbar]);
   const setIsBuildingSettlement = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_BUILDING_SETTLEMENT });
   }, [dispatch]);
@@ -129,7 +139,6 @@ function PlayButtons({ onTick }) {
 
   const rollAction = carryOutAction([HUMAN_COLOR, "ROLL", null]);
   const endTurnAction = carryOutAction(); // const action = [HUMAN_COLOR, "END_TURN", null];
-
   return (
     <>
       <OptionsButton
@@ -163,18 +172,13 @@ function PlayButtons({ onTick }) {
         startIcon={<NavigateNextIcon />}
         onClick={isRoll ? rollAction : endTurnAction}
       >
-        {isRoll ? "ROLL" : "END"}
+        {isRoll ? "ROLL" : isDiscard ? "DISCARD" : "END"}
       </Button>
     </>
   );
 }
 
-export default function ActionsToolbar({
-  zoomIn,
-  zoomOut,
-  onTick,
-  isBotThinking,
-}) {
+export default function ActionsToolbar({ zoomIn, zoomOut, isBotThinking }) {
   const { state, dispatch } = useContext(store);
 
   const openLeftDrawer = useCallback(() => {
@@ -197,9 +201,7 @@ export default function ActionsToolbar({
         <ResourceCards playerState={human} />
       </div>
       <div className="actions-toolbar">
-        {!botsTurn && (
-          <PlayButtons gameState={state.gameState} onTick={onTick} />
-        )}
+        {!botsTurn && <PlayButtons gameState={state.gameState} />}
         {botsTurn && (
           <Prompt gameState={state.gameState} isBotThinking={isBotThinking} />
           // <Button

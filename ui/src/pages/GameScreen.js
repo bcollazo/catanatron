@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import PropTypes from "prop-types";
 import Loader from "react-loader-spinner";
@@ -15,14 +15,14 @@ import { store } from "../store";
 import ACTIONS from "../actions";
 import { getState, postAction } from "../utils/apiClient";
 import { humanizeAction } from "../components/Prompt";
+import { snackbarActions } from "../components/Snackbar";
 
 const ROBOT_THINKING_TIME = 2000;
 
 function GameScreen() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
-  const { enqueueSnackbar } = useSnackbar();
-  const [inFlightRequest, setInFlightRequest] = useState(false);
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [isBotThinking, setIsBotThinking] = useState(false);
 
   useEffect(() => {
@@ -52,24 +52,13 @@ function GameScreen() {
           // simulate thinking
           setIsBotThinking(false);
           dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-          enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]));
+          enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]), {
+            action: snackbarActions(closeSnackbar),
+          });
         }, ROBOT_THINKING_TIME - requestTime);
       })();
     }
-  }, [gameId, state.gameState, dispatch, enqueueSnackbar]);
-
-  const onClickNext = useCallback(async () => {
-    if (state.gameState && state.gameState.winning_color) {
-      return; // do nothing.
-    }
-
-    if (inFlightRequest) return; // this makes it idempotent
-    setInFlightRequest(true);
-    const gameState = await postAction(gameId);
-    setInFlightRequest(false);
-
-    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-  }, [gameId, inFlightRequest, setInFlightRequest, state.gameState, dispatch]);
+  }, [gameId, state.gameState, dispatch, enqueueSnackbar, closeSnackbar]);
 
   if (!state.gameState) {
     return (
@@ -85,19 +74,11 @@ function GameScreen() {
     );
   }
 
-  console.log(state.gameState);
-  console.log(
-    state.gameState.actions.length,
-    state.gameState.actions.slice(state.gameState.actions.length - 1),
-    state.gameState.current_color,
-    state.gameState.current_prompt,
-    state.gameState.current_playable_actions
-  );
   return (
     <main>
       <h1 className="logo">Catanatron</h1>
       <ZoomableBoard state={state.gameState} />
-      <ActionsToolbar onTick={onClickNext} isBotThinking={isBotThinking} />
+      <ActionsToolbar isBotThinking={isBotThinking} />
       <LeftDrawer />
     </main>
   );
