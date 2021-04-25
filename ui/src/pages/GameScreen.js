@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useCallback, useContext } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 import PropTypes from "prop-types";
 import Loader from "react-loader-spinner";
 
-import { API_URL } from "../configuration";
 import ZoomableBoard from "./ZoomableBoard";
 import ActionsToolbar from "./ActionsToolbar";
 
@@ -14,6 +12,7 @@ import { BOT_COLOR } from "../constants";
 import LeftDrawer from "../components/LeftDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
+import { getState, postAction } from "../utils/apiClient";
 
 function GameScreen() {
   const { gameId } = useParams();
@@ -27,8 +26,8 @@ function GameScreen() {
     }
 
     (async () => {
-      const response = await axios.get(API_URL + "/games/" + gameId);
-      dispatch({ type: ACTIONS.SET_GAME_STATE, data: response.data });
+      const gameState = await getState(gameId);
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
   }, [gameId, dispatch]);
 
@@ -40,13 +39,12 @@ function GameScreen() {
     // Kick off next query?
     if (state.gameState.current_color === BOT_COLOR) {
       (async () => {
-        console.log("kicking off, thinking-play cycle");
         setIsBotThinking(true);
-        const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
+        const gameState = await postAction(gameId);
         setTimeout(() => {
           // simulate thinking
           setIsBotThinking(false);
-          dispatch({ type: ACTIONS.SET_GAME_STATE, data: response.data });
+          dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
         }, 2000);
       })();
     }
@@ -59,10 +57,10 @@ function GameScreen() {
 
     if (inFlightRequest) return; // this makes it idempotent
     setInFlightRequest(true);
-    const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
+    const gameState = await postAction(gameId);
     setInFlightRequest(false);
 
-    dispatch({ type: ACTIONS.SET_GAME_STATE, data: response.data });
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
   }, [gameId, inFlightRequest, setInFlightRequest, state.gameState, dispatch]);
 
   if (!state.gameState) {

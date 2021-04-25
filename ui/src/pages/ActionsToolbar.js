@@ -25,6 +25,7 @@ import "./ActionsToolbar.scss";
 import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 import { store } from "../store";
 import ACTIONS from "../actions";
+import { isInitialPhase } from "../utils/stateUtils";
 
 function PlayButtons({ gameState, onTick }) {
   const isRoll = gameState.current_prompt === "ROLL";
@@ -115,6 +116,7 @@ function PlayButtons({ gameState, onTick }) {
         Trade
       </OptionsButton>
       <Button
+        disabled={isInitialPhase(gameState)}
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}

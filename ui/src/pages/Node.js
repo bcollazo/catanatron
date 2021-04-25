@@ -9,7 +9,6 @@ function Building({ building, color }) {
 }
 
 export default function Node({
-  id,
   center,
   size,
   coordinate,
@@ -17,6 +16,7 @@ export default function Node({
   building,
   color,
   flashing,
+  onClick,
 }) {
   const [centerX, centerY] = center;
   const w = SQRT3 * size;
@@ -36,7 +36,7 @@ export default function Node({
         top: y,
         transform: `translateY(-50%) translateX(-50%)`,
       }}
-      onClick={() => console.log("Clicked node", id)}
+      onClick={onClick}
     >
       {color && <Building building={building} color={color} />}
       {flashing && <div className="pulsating-circle"></div>}
