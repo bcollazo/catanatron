@@ -70,21 +70,19 @@ function PlayButtons({ onTick }) {
       .map((a) => a[1])
   );
   const buyDevCard = useCallback(async () => {
-    const buyDevCardAction = state.gameState.current_playable_actions.find(
-      (action) => action[1] === "BUY_DEVELOPMENT_CARD"
-    );
-    const gameState = await postAction(gameId, buyDevCardAction);
+    const action = [HUMAN_COLOR, "BUY_DEVELOPMENT_CARD", null];
+    const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-  }, []);
+  }, [gameId, dispatch]);
   const setIsBuildingSettlement = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_BUILDING_SETTLEMENT });
-  }, []);
+  }, [dispatch]);
   const setIsBuildingCity = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_BUILDING_CITY });
-  }, []);
+  }, [dispatch]);
   const setIsBuildingRoad = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_BUILDING_ROAD });
-  }, []);
+  }, [dispatch]);
   const buildItems = [
     {
       label: "Development Card",
@@ -123,12 +121,12 @@ function PlayButtons({ onTick }) {
     const action = [HUMAN_COLOR, "ROLL", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-  }, []);
+  }, [gameId, dispatch]);
   const endTurnAction = useCallback(async () => {
     // const action = [HUMAN_COLOR, "END_TURN", null];
     const gameState = await postAction(gameId);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-  }, []);
+  }, [gameId, dispatch]);
 
   return (
     <>
