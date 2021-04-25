@@ -16,12 +16,12 @@ app = Flask(__name__)
 CORS(app)
 
 
+BOT_COLOR = Color.RED
+
+
 def advance_until_color(game, color, callbacks):
     while game.winning_player() is None and game.state.current_player().color != color:
         game.play_tick(callbacks)
-
-
-BOT_COLOR = Color.RED
 
 
 @app.route("/games/<string:game_id>/actions", methods=["POST"])
@@ -34,14 +34,10 @@ def tick_game(game_id):
         return json.dumps(game, cls=GameEncoder)
 
     bots_turn = game.state.current_player().color == BOT_COLOR
-    if bots_turn or request.json is None:
-        print("BOTS turn")
+    if bots_turn or request.json is None:  # TODO: Remove this or
         game.play_tick([lambda g: save_game_state(g)])
     else:
-        # TODO: Apply human play. Assert not 400 Bad Request.
-        print(request.json)
         action = action_from_json(request.json)
-        print(action)
         game.execute(action, action_callbacks=[lambda g: save_game_state(g)])
 
     # advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
