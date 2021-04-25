@@ -12,6 +12,7 @@
     "classnames": "^2.2.6",
     "fast-memoize": "^2.5.2",
     "node-sass": "^4.14.1",
+    "notistack": "^1.0.6",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-loader-spinner": "^4.0.0",

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useContext } from "react";
 import { useParams } from "react-router-dom";
 import PropTypes from "prop-types";
 import Loader from "react-loader-spinner";
+import { useSnackbar } from "notistack";
 
 import ZoomableBoard from "./ZoomableBoard";
 import ActionsToolbar from "./ActionsToolbar";
@@ -13,10 +14,14 @@ import LeftDrawer from "../components/LeftDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { getState, postAction } from "../utils/apiClient";
+import { humanizeAction } from "../components/Prompt";
+
+const ROBOT_THINKING_TIME = 2000;
 
 function GameScreen() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
+  const { enqueueSnackbar } = useSnackbar();
   const [inFlightRequest, setInFlightRequest] = useState(false);
   const [isBotThinking, setIsBotThinking] = useState(false);
 
@@ -40,12 +45,15 @@ function GameScreen() {
     if (state.gameState.current_color === BOT_COLOR) {
       (async () => {
         setIsBotThinking(true);
+        const start = new Date();
         const gameState = await postAction(gameId);
+        const requestTime = new Date() - start;
         setTimeout(() => {
           // simulate thinking
           setIsBotThinking(false);
           dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-        }, 2000);
+          enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]));
+        }, ROBOT_THINKING_TIME - requestTime);
       })();
     }
   }, [gameId, state.gameState, dispatch]);

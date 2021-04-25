@@ -38,7 +38,6 @@ export function humanizeAction(action) {
       const tile = action[2];
       return `${player} MOVED ROBBER TO ${tile}`;
     }
-
     case "END_TURN":
       return `${player} ENDED TURN`;
     default:
