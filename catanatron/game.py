@@ -163,7 +163,7 @@ class Game:
                 f"{action} not in playable actions: {self.state.playable_actions}"
             )
 
-        apply_action(self.state, action)
+        action = apply_action(self.state, action)
 
         # TODO: Think about possible-action/idea vs finalized-action design
         self.state.actions.append(action)

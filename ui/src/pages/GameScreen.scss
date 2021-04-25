@@ -48,6 +48,10 @@ main {
 
   .log {
     overflow-y: auto;
+
+    // To ensure always clipped towards bottom
+    display: flex;
+    flex-direction: column-reverse;
     .action {
       padding: $sm-gutter;
     }
