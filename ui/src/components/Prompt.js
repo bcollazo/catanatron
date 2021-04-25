@@ -5,7 +5,7 @@ import { HUMAN_COLOR } from "../constants";
 import "./Prompt.scss";
 
 export function humanizeAction(action) {
-  const player = action[0] === HUMAN_COLOR ? "YOU" : "CATANATRON";
+  const player = action[0] === HUMAN_COLOR ? "YOU" : "BOT";
   switch (action[1]) {
     case "ROLL":
       return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
@@ -22,10 +22,7 @@ export function humanizeAction(action) {
       const tile = action[2];
       return `${player} BUILT ${building} ON ${tile}`;
     }
-    case "BUILD_INITIAL_ROAD": {
-      const edge = action[2];
-      return `${player} BUILT INITIAL ROAD ON ${edge}`;
-    }
+    case "BUILD_INITIAL_ROAD":
     case "BUILD_ROAD": {
       const edge = action[2];
       return `${player} BUILT ROAD ON ${edge}`;
@@ -36,7 +33,7 @@ export function humanizeAction(action) {
     }
     case "MOVE_ROBBER": {
       const tile = action[2];
-      return `${player} MOVED ROBBER TO ${tile}`;
+      return `${player} ROBBED ${tile}`;
     }
     case "END_TURN":
       return `${player} ENDED TURN`;
