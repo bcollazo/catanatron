@@ -4,6 +4,7 @@ import ACTIONS from "./actions";
 const initialState = {
   gameState: null,
   // UI
+  isBuildingRoad: false,
   isBuildingSettlement: false,
   isBuildingCity: false,
   isLeftDrawerOpen: false,

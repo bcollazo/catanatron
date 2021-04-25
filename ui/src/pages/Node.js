@@ -39,7 +39,7 @@ export default function Node({
       onClick={onClick}
     >
       {color && <Building building={building} color={color} />}
-      {flashing && <div className="pulsating-circle"></div>}
+      {flashing && <div className="pulse"></div>}
     </div>
   );
 }

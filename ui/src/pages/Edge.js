@@ -17,6 +17,8 @@ export default function Edge({
   coordinate,
   direction,
   color,
+  flashing,
+  onClick,
 }) {
   const { width } = useWindowSize();
   const stroke = width < SMALL_BREAKPOINT ? 8 : 12;
@@ -26,6 +28,7 @@ export default function Edge({
 
   return (
     <div
+      id={id}
       className={"edge " + direction}
       style={{
         left: tileX,
@@ -34,9 +37,10 @@ export default function Edge({
         height: stroke,
         transform: transform,
       }}
-      onClick={() => console.log("Clicked edge", id)}
+      onClick={onClick}
     >
       {color && <Road color={color} />}
+      {flashing && <div className="pulse"></div>}
     </div>
   );
 }

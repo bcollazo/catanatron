@@ -1,12 +1,12 @@
 import json
 
-from flask import Flask, jsonify, abort
+from flask import Flask, jsonify, abort, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 
 from catanatron_server.database import save_game_state, get_last_game_state
 from catanatron.game import Game
-from catanatron.json import GameEncoder
+from catanatron.json import GameEncoder, action_from_json
 from catanatron.models.player import RandomPlayer, Color
 
 from experimental.machine_learning.players.minimax import ValueFunctionPlayer
@@ -21,6 +21,9 @@ def advance_until_color(game, color, callbacks):
         game.play_tick(callbacks)
 
 
+BOT_COLOR = Color.RED
+
+
 @app.route("/games/<string:game_id>/actions", methods=["POST"])
 def tick_game(game_id):
     game = get_last_game_state(game_id)
@@ -30,12 +33,16 @@ def tick_game(game_id):
     if game.winning_player() is not None:
         return json.dumps(game, cls=GameEncoder)
 
-    bots_turn = True
-    if bots_turn:
+    bots_turn = game.state.current_player().color == BOT_COLOR
+    if bots_turn or request.json is None:
+        print("BOTS turn")
         game.play_tick([lambda g: save_game_state(g)])
     else:
         # TODO: Apply human play. Assert not 400 Bad Request.
-        game.play_tick([lambda g: save_game_state(g)])
+        print(request.json)
+        action = action_from_json(request.json)
+        print(action)
+        game.execute(action, action_callbacks=[lambda g: save_game_state(g)])
 
     # advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
     return json.dumps(game, cls=GameEncoder)
@@ -54,7 +61,7 @@ def get_game_endpoint(game_id):
 def create_game():
     game = Game(
         players=[
-            ValueFunctionPlayer(Color.RED, "FOO", "value_fn2"),
+            ValueFunctionPlayer(BOT_COLOR, "FOO", "value_fn2"),
             ValueFunctionPlayer(Color.BLUE, "BAR", "value_fn2"),
         ]
     )

@@ -48,7 +48,6 @@ function buildNodeActions(state) {
   }
 
   const nodeActions = {};
-
   const buildInitialSettlementActions = state.gameState.current_playable_actions.filter(
     (action) =>
       action[1] === "BUILD_FIRST_SETTLEMENT" ||
@@ -75,17 +74,51 @@ function buildNodeActions(state) {
   return nodeActions;
 }
 
+function buildEdgeActions(state) {
+  if (!isPlayersTurn(state.gameState)) {
+    return {};
+  }
+
+  const edgeActions = {};
+  const buildInitialRoadActions = state.gameState.current_playable_actions.filter(
+    (action) => action[1] === "BUILD_INITIAL_ROAD"
+  );
+  const inInitialBuildPhase = buildInitialRoadActions.length > 0;
+  if (inInitialBuildPhase) {
+    buildInitialRoadActions.forEach((action) => {
+      edgeActions[action[2]] = action;
+    });
+  } else if (state.isBuildingRoad) {
+    state.gameState.current_playable_actions
+      .filter((action) => action[1] === "BUILD_ROAD")
+      .forEach((action) => {
+        edgeActions[action[2]] = action;
+      });
+  }
+  return edgeActions;
+}
+
 export default function ZoomableBoard() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
   const { width, height } = useWindowSize();
   const [show, setShow] = useState(false);
 
+  // https://stackoverflow.com/questions/61255053/react-usecallback-with-parameter
   const buildOnNodeClick = useCallback(
     memoize((id, action) => async () => {
-      console.log("Clicked Node ", id);
+      console.log("Clicked Node ", id, action);
       if (action) {
-        console.log("Firing", action);
+        const gameState = await postAction(gameId, action);
+        dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+      }
+    }),
+    []
+  );
+  const buildOnEdgeClick = useCallback(
+    memoize((id, action) => async () => {
+      console.log("Clicked Edge ", id, action);
+      if (action) {
         const gameState = await postAction(gameId, action);
         dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
       }
@@ -99,6 +132,7 @@ export default function ZoomableBoard() {
   const size = computeDefaultSize(width, containerHeight);
 
   const nodeActions = buildNodeActions(state);
+  const edgeActions = buildEdgeActions(state);
 
   let board;
   if (size) {
@@ -137,6 +171,8 @@ export default function ZoomableBoard() {
         coordinate={tile_coordinate}
         direction={direction}
         color={color}
+        flashing={id in edgeActions}
+        onClick={buildOnEdgeClick(id, edgeActions[id])}
       />
     ));
     board = (
