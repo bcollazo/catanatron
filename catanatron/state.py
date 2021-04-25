@@ -293,3 +293,4 @@ def apply_action(state, action):
         state.resource_deck -= asking
     else:
         raise RuntimeError("Unknown ActionType " + str(action.action_type))
+    return action
