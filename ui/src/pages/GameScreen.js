@@ -1,55 +1,24 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 import PropTypes from "prop-types";
 import Loader from "react-loader-spinner";
-import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
-import Divider from "@material-ui/core/Divider";
 
-import { API_URL } from "../configuration";
 import ZoomableBoard from "./ZoomableBoard";
 import ActionsToolbar from "./ActionsToolbar";
-import PlayerStateBox from "../components/PlayerStateBox";
-import { humanizeAction } from "../components/Prompt";
 
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import "./GameScreen.scss";
-import { BOT_COLOR, HUMAN_COLOR } from "../constants";
+import { BOT_COLOR } from "../constants";
+import LeftDrawer from "../components/LeftDrawer";
+import { store } from "../store";
+import ACTIONS from "../actions";
+import { getState, postAction } from "../utils/apiClient";
 
-function DrawerContent({ state, bot, human }) {
-  return (
-    <>
-      <PlayerStateBox
-        playerState={bot}
-        longestRoad={state.longest_roads_by_player[bot.color]}
-      />
-      <Divider />
-      <PlayerStateBox
-        playerState={human}
-        longestRoad={state.longest_roads_by_player[HUMAN_COLOR]}
-      />
-      <Divider />
-      <div className="log">
-        {state.actions.map((a) => (
-          <div className="action">{humanizeAction(a)}</div>
-        ))}
-      </div>
-    </>
-    // <div
-    //   className={classes.list}
-    //   role="presentation"
-
-    // >
-
-    // </div>
-  );
-}
 function GameScreen() {
   const { gameId } = useParams();
-  const [state, setState] = useState(null);
+  const { state, dispatch } = useContext(store);
   const [inFlightRequest, setInFlightRequest] = useState(false);
   const [isBotThinking, setIsBotThinking] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!gameId) {
@@ -57,45 +26,44 @@ function GameScreen() {
     }
 
     (async () => {
-      const response = await axios.get(API_URL + "/games/" + gameId);
-      setState(response.data);
+      const gameState = await getState(gameId);
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
-  }, [gameId]);
+  }, [gameId, dispatch]);
 
   useEffect(() => {
-    if (!state) {
+    if (!state.gameState) {
       return;
     }
 
     // Kick off next query?
-    if (state.current_color === BOT_COLOR) {
+    if (state.gameState.current_color === BOT_COLOR) {
       (async () => {
-        console.log("kicking off, thinking-play cycle");
         setIsBotThinking(true);
-        const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
+        const gameState = await postAction(gameId);
         setTimeout(() => {
           // simulate thinking
           setIsBotThinking(false);
-          setState(response.data);
+          dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
         }, 2000);
       })();
     }
-  }, [gameId, state]);
+  }, [gameId, state.gameState, dispatch]);
 
   const onClickNext = useCallback(async () => {
-    if (state && state.winning_color) {
+    if (state.gameState && state.gameState.winning_color) {
       return; // do nothing.
     }
 
     if (inFlightRequest) return; // this makes it idempotent
     setInFlightRequest(true);
-    const response = await axios.post(`${API_URL}/games/${gameId}/actions`);
+    const gameState = await postAction(gameId);
     setInFlightRequest(false);
 
-    setState(response.data);
-  }, [gameId, inFlightRequest, setInFlightRequest, state]);
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+  }, [gameId, inFlightRequest, setInFlightRequest, state.gameState, dispatch]);
 
-  if (!state) {
+  if (!state.gameState) {
     return (
       <main>
         <Loader
@@ -109,58 +77,20 @@ function GameScreen() {
     );
   }
 
-  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-  const toggleLeftDrawer = (open) => (event) => {
-    if (
-      event &&
-      event.type === "keydown" &&
-      (event.key === "Tab" || event.key === "Shift")
-    ) {
-      return;
-    }
-
-    setIsDrawerOpen(open);
-  };
-
-  console.log(state);
+  console.log(state.gameState);
   console.log(
-    state.actions.length,
-    state.actions.slice(state.actions.length - 1),
-    state.current_color,
-    state.current_prompt
+    state.gameState.actions.length,
+    state.gameState.actions.slice(state.gameState.actions.length - 1),
+    state.gameState.current_color,
+    state.gameState.current_prompt,
+    state.gameState.current_playable_actions
   );
-  const gameOver = state && state.winning_color;
-  const bot = state && state.players.find((x) => x.color !== HUMAN_COLOR);
-  const human = state && state.players.find((x) => x.color === HUMAN_COLOR);
   return (
     <main>
       <h1 className="logo">Catanatron</h1>
-      <ZoomableBoard state={state} />
-      <ActionsToolbar
-        onTick={onClickNext}
-        disabled={gameOver || inFlightRequest}
-        toggleLeftDrawer={toggleLeftDrawer}
-        state={state}
-        isBotThinking={isBotThinking}
-      />
-      <SwipeableDrawer
-        className="left-drawer"
-        anchor={"left"}
-        open={isDrawerOpen}
-        onClose={toggleLeftDrawer(false)}
-        onOpen={toggleLeftDrawer(true)}
-        disableBackdropTransition={!iOS}
-        disableDiscovery={iOS}
-        onKeyDown={toggleLeftDrawer(false)}
-      >
-        <DrawerContent
-          toggleDrawer={toggleLeftDrawer}
-          state={state}
-          human={human}
-          bot={bot}
-        />
-      </SwipeableDrawer>
+      <ZoomableBoard state={state.gameState} />
+      <ActionsToolbar onTick={onClickNext} isBotThinking={isBotThinking} />
+      <LeftDrawer />
     </main>
   );
 }

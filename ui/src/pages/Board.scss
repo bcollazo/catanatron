@@ -51,16 +51,18 @@
   position: absolute;
   display: flex;
   justify-content: center;
+
+  height: 5px; // stroke
 }
 .road {
   position: absolute;
-  border: 2px solid $dark-gray;
-
-  height: 8px; // stroke
-  width: 95%;
+  border: 1px solid $dark-gray;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
 }
 @media screen and (min-width: $sm-breakpoint) {
-  .road {
+  .edge {
     height: 12px; // stroke
   }
 }
@@ -70,6 +72,10 @@
   position: absolute;
   height: 10px;
   width: 10px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 .settlement {
   width: 80%;
@@ -92,4 +98,49 @@
 .RED.city {
   border: 4px solid $red;
   background: $dark-gray;
+}
+
+// Taken from https://codepen.io/peeke/pen/BjxXZa.
+.pulse {
+  cursor: pointer;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+
+  &:after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    animation: pulse-dot 1.25s cubic-bezier(0.455, 0.03, 0.515, 0.955) -0.4s infinite;
+  }
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0.8);
+  }
+}
+
+.edge .pulse {
+  width: 90%;
+  height: 90%;
+}
+
+.node .pulse {
+  width: 75%;
+  height: 75%;
 }

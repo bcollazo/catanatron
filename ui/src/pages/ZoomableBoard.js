@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import clsx from "clsx";
+import memoize from "fast-memoize";
 
 import useWindowSize from "../utils/useWindowSize";
 import { SQRT3 } from "../utils/coordinates";
@@ -10,6 +11,11 @@ import Edge from "./Edge";
 import Robber from "./Robber";
 
 import "./Board.scss";
+import { store } from "../store";
+import { isPlayersTurn } from "../utils/stateUtils";
+import { postAction } from "../utils/apiClient";
+import { useParams } from "react-router";
+import ACTIONS from "../actions";
 
 /**
  * This uses the formulas: W = SQRT3 * size and H = 2 * size.
@@ -32,19 +38,105 @@ function computeDefaultSize(divWidth, divHeight) {
   return size;
 }
 
-export default function ZoomableBoard({ state }) {
+/**
+ * Returns object representing actions to be taken if click on node.
+ * @returns {3 => ["BLUE", "BUILD_CITY", 3], ...}
+ */
+function buildNodeActions(state) {
+  if (!isPlayersTurn(state.gameState)) {
+    return {};
+  }
+
+  const nodeActions = {};
+  const buildInitialSettlementActions = state.gameState.current_playable_actions.filter(
+    (action) =>
+      action[1] === "BUILD_FIRST_SETTLEMENT" ||
+      action[1] === "BUILD_SECOND_SETTLEMENT"
+  );
+  const inInitialBuildPhase = buildInitialSettlementActions.length > 0;
+  if (inInitialBuildPhase) {
+    buildInitialSettlementActions.forEach((action) => {
+      nodeActions[action[2]] = action;
+    });
+  } else if (state.isBuildingSettlement) {
+    state.gameState.current_playable_actions
+      .filter((action) => action[1] === "BUILD_SETTLEMENT")
+      .forEach((action) => {
+        nodeActions[action[2]] = action;
+      });
+  } else if (state.isBuildingCity) {
+    state.gameState.current_playable_actions
+      .filter((action) => action[1] === "BUILD_CITY")
+      .forEach((action) => {
+        nodeActions[action[2]] = action;
+      });
+  }
+  return nodeActions;
+}
+
+function buildEdgeActions(state) {
+  if (!isPlayersTurn(state.gameState)) {
+    return {};
+  }
+
+  const edgeActions = {};
+  const buildInitialRoadActions = state.gameState.current_playable_actions.filter(
+    (action) => action[1] === "BUILD_INITIAL_ROAD"
+  );
+  const inInitialBuildPhase = buildInitialRoadActions.length > 0;
+  if (inInitialBuildPhase) {
+    buildInitialRoadActions.forEach((action) => {
+      edgeActions[action[2]] = action;
+    });
+  } else if (state.isBuildingRoad) {
+    state.gameState.current_playable_actions
+      .filter((action) => action[1] === "BUILD_ROAD")
+      .forEach((action) => {
+        edgeActions[action[2]] = action;
+      });
+  }
+  return edgeActions;
+}
+
+export default function ZoomableBoard() {
+  const { gameId } = useParams();
+  const { state, dispatch } = useContext(store);
   const { width, height } = useWindowSize();
   const [show, setShow] = useState(false);
 
+  // https://stackoverflow.com/questions/61255053/react-usecallback-with-parameter
+  const buildOnNodeClick = useCallback(
+    memoize((id, action) => async () => {
+      console.log("Clicked Node ", id, action);
+      if (action) {
+        const gameState = await postAction(gameId, action);
+        dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+      }
+    }),
+    []
+  );
+  const buildOnEdgeClick = useCallback(
+    memoize((id, action) => async () => {
+      console.log("Clicked Edge ", id, action);
+      if (action) {
+        const gameState = await postAction(gameId, action);
+        dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+      }
+    }),
+    []
+  );
+
   // TODO: Keep in sync with CSS
   const containerHeight = height - 144 - 38 - 40;
-
   const center = [width / 2, containerHeight / 2];
   const size = computeDefaultSize(width, containerHeight);
 
+  const nodeActions = buildNodeActions(state);
+  const edgeActions = buildEdgeActions(state);
+
   let board;
   if (size) {
-    const tiles = state.tiles.map(({ coordinate, tile }) => (
+    const tiles = state.gameState.tiles.map(({ coordinate, tile }) => (
       <Tile
         key={coordinate}
         center={center}
@@ -54,10 +146,9 @@ export default function ZoomableBoard({ state }) {
       />
     ));
     const nodes = Object.values(
-      state.nodes
+      state.gameState.nodes
     ).map(({ color, building, direction, tile_coordinate, id }) => (
       <Node
-        id={id}
         key={id}
         center={center}
         size={size}
@@ -65,10 +156,12 @@ export default function ZoomableBoard({ state }) {
         direction={direction}
         building={building}
         color={color}
+        flashing={id in nodeActions}
+        onClick={buildOnNodeClick(id, nodeActions[id])}
       />
     ));
     const edges = Object.values(
-      state.edges
+      state.gameState.edges
     ).map(({ color, direction, tile_coordinate, id }) => (
       <Edge
         id={id}
@@ -78,6 +171,8 @@ export default function ZoomableBoard({ state }) {
         coordinate={tile_coordinate}
         direction={direction}
         color={color}
+        flashing={id in edgeActions}
+        onClick={buildOnEdgeClick(id, edgeActions[id])}
       />
     ));
     board = (
@@ -88,7 +183,7 @@ export default function ZoomableBoard({ state }) {
         <Robber
           center={center}
           size={size}
-          coordinate={state.robber_coordinate}
+          coordinate={state.gameState.robber_coordinate}
         />
       </div>
     );

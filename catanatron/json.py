@@ -3,8 +3,9 @@ from enum import Enum
 
 from catanatron.game import Game
 from catanatron.models.map import Water, Port, Tile
-from catanatron.models.player import Player
+from catanatron.models.player import Color, Player
 from catanatron.models.decks import Deck
+from catanatron.models.actions import Action, ActionType
 
 
 def longest_roads_by_player(state):
@@ -17,6 +18,19 @@ def longest_roads_by_player(state):
         key: 0 if len(value) == 0 else max(map(len, value))
         for key, value in roads.items()
     }
+
+
+def action_from_json(data):
+    color = Color[data[0]]
+    action_type = ActionType[data[1]]
+    if (
+        action_type == ActionType.BUILD_INITIAL_ROAD
+        or action_type == ActionType.BUILD_ROAD
+    ):
+        action = Action(color, action_type, tuple(data[2]))
+    else:
+        action = Action(color, action_type, data[2])
+    return action
 
 
 class GameEncoder(json.JSONEncoder):
@@ -44,8 +58,9 @@ class GameEncoder(json.JSONEncoder):
                     }
                 for direction, edge in tile.edges.items():
                     color = obj.state.board.roads.get(edge, None)
-                    edges[edge] = {
-                        "id": edge,
+                    edge_id = tuple(sorted(edge))
+                    edges[edge_id] = {
+                        "id": edge_id,
                         "tile_coordinate": coordinate,
                         "direction": self.default(direction),
                         "color": self.default(color),

@@ -32,7 +32,7 @@ export function getNodeDelta(direction, w, h) {
 }
 
 export function getEdgeTransform(direction, size) {
-  const distanceToEdge = size * 0.87;
+  const distanceToEdge = size * 0.865;
   const translate = (deg) =>
     `translateX(-50%) translateY(-50%) rotate(${deg}deg) translateY(${-distanceToEdge}px)`;
   switch (direction) {

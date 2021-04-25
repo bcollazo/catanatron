@@ -5,13 +5,14 @@ import { HUMAN_COLOR } from "../constants";
 import "./Prompt.scss";
 
 export function humanizeAction(action) {
+  const player = action[0] === HUMAN_COLOR ? "YOU" : "CATANATRON";
   switch (action[1]) {
     case "ROLL":
-      return `CATANATRON ROLLED ${action[2]}`;
+      return `${player} ROLLED ${action[2]}`;
     case "DISCARD":
-      return `CATANATRON DISCARDED ${action[2]}`;
+      return `${player} DISCARDED ${action[2]}`;
     case "BUY_DEVELOPMENT_CARD":
-      return `CATANATRON BOUGHT DEVELOPMENT CARD`;
+      return `${player} BOUGHT DEVELOPMENT CARD`;
     case "BUILD_FIRST_SETTLEMENT":
     case "BUILD_SECOND_SETTLEMENT":
     case "BUILD_SETTLEMENT":
@@ -19,29 +20,29 @@ export function humanizeAction(action) {
       const parts = action[1].split("_");
       const building = parts[parts.length - 1];
       const tile = action[2];
-      return `CATANATRON BUILT ${building} ON ${tile}`;
+      return `${player} BUILT ${building} ON ${tile}`;
     }
     case "BUILD_INITIAL_ROAD": {
       const edge = action[2];
-      return `CATANATRON BUILT INITIAL ROAD ON ${edge}`;
+      return `${player} BUILT INITIAL ROAD ON ${edge}`;
     }
     case "BUILD_ROAD": {
       const edge = action[2];
-      return `CATANATRON BUILT ROAD ON ${edge}`;
+      return `${player} BUILT ROAD ON ${edge}`;
     }
     case "PLAY_KNIGHT_CARD": {
       const tile = action[2];
-      return `CATANATRON PLAYED KNIGHT CARD TO ${tile}`;
+      return `${player} PLAYED KNIGHT CARD TO ${tile}`;
     }
     case "MOVE_ROBBER": {
       const tile = action[2];
-      return `CATANATRON MOVED ROBBER TO ${tile}`;
+      return `${player} MOVED ROBBER TO ${tile}`;
     }
 
     case "END_TURN":
-      return `CATANATRON ENDED TURN`;
+      return `${player} ENDED TURN`;
     default:
-      return `CATANATRON ${action.slice(1)}`;
+      return `${player} ${action.slice(1)}`;
   }
 }
 
@@ -61,7 +62,7 @@ function humanizePrompt(current_prompt) {
   }
 }
 
-export default function Prompt({ state, isBotThinking }) {
+export default function Prompt({ gameState, isBotThinking }) {
   let prompt = "";
   if (isBotThinking) {
     prompt = (
@@ -76,12 +77,12 @@ export default function Prompt({ state, isBotThinking }) {
         <small>Computing</small>
       </>
     );
-  } else if (state.winning_color) {
-    prompt = `Game Over. Congrats, ${state.winning_color}!`;
-  } else if (state.current_color === HUMAN_COLOR) {
-    prompt = humanizePrompt(state.current_prompt);
+  } else if (gameState.winning_color) {
+    prompt = `Game Over. Congrats, ${gameState.winning_color}!`;
+  } else if (gameState.current_color === HUMAN_COLOR) {
+    prompt = humanizePrompt(gameState.current_prompt);
   } else {
-    // prompt = humanizeAction(state.actions[state.actions.length - 1]);
+    // prompt = humanizeAction(gameState.actions[gameState.actions.length - 1]);
   }
   console.log(prompt);
   return <div className="prompt">{prompt}</div>;
