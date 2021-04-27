@@ -153,27 +153,27 @@ yarn start
 This can also be run via Docker independetly like (after building):
 
 ```
-docker build -t catanatron-react-ui:latest ui/
-docker run -it -p 3000:3000 catanatron-react-ui
+docker build -t bcollazo/catanatron-react-ui:latest ui/
+docker run -it -p 3000:3000 bcollazo/catanatron-react-ui
 ```
 
 ### Flask Web Server
 
-Make sure you have `pipenv` installed (https://pipenv-fork.readthedocs.io/en/latest/install.html#installing-pipenv).
+Ensure you are inside a virtual environment with all dependencies installed and
+use `flask run`.
 
 ```
-pipenv install
-pipenv shell
-export FLASK_ENV=development
-export FLASK_APP=server.py
+python3.8 -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
 flask run
 ```
 
 This can also be run via Docker independetly like (after building):
 
 ```
-docker build -t catanatron-server:latest .
-docker run -it -p 5000:5000 catanatron-server
+docker build -t bcollazo/catanatron-server:latest .
+docker run -it -p 5000:5000 bcollazo/catanatron-server
 ```
 
 ### PostgreSQL Database
