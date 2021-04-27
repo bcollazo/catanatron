@@ -9,8 +9,27 @@ h6.MuiTypography-h6 {
 }
 
 // For Snackbar
-#root .MuiCollapse-container {
-  margin-bottom: 65px;
+#root .makeStyles-root-1 {
+  z-index: 1200;
+  .MuiCollapse-container {
+    padding: 0 10px;
+    .MuiCollapse-wrapper {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      height: 60px;
+
+      > div > div {
+        height: 100%;
+
+        > div {
+          height: 100%;
+        }
+      }
+    }
+  }
+}
+#root .makeStyles-bottom-5 {
+  bottom: 0px;
 }
 
 main {

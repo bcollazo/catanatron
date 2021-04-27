@@ -1,5 +1,4 @@
 import React from "react";
-import Loader from "react-loader-spinner";
 import { HUMAN_COLOR } from "../constants";
 
 import "./Prompt.scss";
@@ -61,18 +60,7 @@ function humanizePrompt(current_prompt) {
 export default function Prompt({ gameState, isBotThinking }) {
   let prompt = "";
   if (isBotThinking) {
-    prompt = (
-      <>
-        <Loader
-          className="loader"
-          type="Grid"
-          color="#ffffff"
-          height={10}
-          width={10}
-        />
-        <small>Bots Turn</small>
-      </>
-    );
+    // Do nothing, but still render.
   } else if (gameState.winning_color) {
     prompt = `Game Over. Congrats, ${gameState.winning_color}!`;
   } else if (gameState.current_color === HUMAN_COLOR) {
