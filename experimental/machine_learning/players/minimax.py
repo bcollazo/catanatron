@@ -108,14 +108,17 @@ def build_value_function(params):
 value_fn2 = build_value_function([4])
 
 
-def get_value_fn(name):
-    return globals()[name or "value_fn2"]
+def get_value_fn_builder(name):
+    return globals()[name]
 
 
 class ValueFunctionPlayer(Player):
-    def __init__(self, color, name, value_fn_name):
+    def __init__(
+        self, color, name, value_fn_builder_name="build_value_function", params=[4]
+    ):
         super().__init__(color, name=name)
-        self.value_fn_name = value_fn_name
+        self.value_fn_builder_name = value_fn_builder_name
+        self.params = params
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
@@ -127,7 +130,8 @@ class ValueFunctionPlayer(Player):
             game_copy = game.copy()
             game_copy.execute(action)
 
-            value = get_value_fn(self.value_fn_name)(game_copy, self.color)
+            value_fn = get_value_fn_builder(self.value_fn_builder_name)(self.params)
+            value = value_fn(game_copy, self.color)
             if value > best_value:
                 best_value = value
                 best_action = action
@@ -135,7 +139,7 @@ class ValueFunctionPlayer(Player):
         return best_action
 
     def __str__(self) -> str:
-        return super().__str__() + self.function_name
+        return super().__str__() + self.value_fn_builder_name + str(self.params)
 
 
 class VictoryPointPlayer(Player):
@@ -246,20 +250,38 @@ class MiniMaxPlayer(Player):
 
 
 ALPHABETA_DEFAULT_DEPTH = 2
+MAX_SEARCH_TIME_SECS = 20
 
 
 class AlphaBetaPlayer(Player):
-    def __init__(self, color, name, depth=ALPHABETA_DEFAULT_DEPTH):
+    def __init__(
+        self,
+        color,
+        name,
+        depth=ALPHABETA_DEFAULT_DEPTH,
+        value_fn_builder_name="build_value_function",
+        params=[4],
+    ):
         super().__init__(color, name=name)
         self.depth = depth
+        self.value_fn_builder_name = value_fn_builder_name
+        self.params = params
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
 
+        value_fn = get_value_fn_builder(self.value_fn_builder_name)(self.params)
         start = time.time()
+        deadline = start + MAX_SEARCH_TIME_SECS
         result = alphabeta(
-            game.copy(), self.depth, float("-inf"), float("inf"), self.color
+            game.copy(),
+            self.depth,
+            float("-inf"),
+            float("inf"),
+            self.color,
+            deadline,
+            value_fn,
         )
         print(
             "Decision Results:", self.depth, len(playable_actions), time.time() - start
@@ -271,17 +293,17 @@ class AlphaBetaPlayer(Player):
         return super().__repr__() + f"(depth={self.depth})"
 
 
-def alphabeta(game, depth, alpha, beta, p0_color):
+def alphabeta(game, depth, alpha, beta, p0_color, deadline, value_fn):
     """AlphaBeta MiniMax Algorithm.
 
     NOTE: Sometimes returns a value, sometimes an (action, value). This is
     because some levels are state=>action, some are action=>state and in
     action=>state would probably need (action, proba, value) as return type.
     """
-    tabs = "\t" * (ALPHABETA_DEFAULT_DEPTH - depth)
-    if depth == 0 or game.winning_color() is not None:
+    # tabs = "\t" * (ALPHABETA_DEFAULT_DEPTH - depth)
+    if depth == 0 or game.winning_color() is not None or time.time() >= deadline:
         # print(tabs, "returned heuristic", value_fn2(game, p0_color))
-        return value_fn2(game, p0_color)
+        return value_fn(game, p0_color)
 
     maximizingPlayer = game.state.current_player().color == p0_color
     actions = game.state.playable_actions
@@ -294,7 +316,9 @@ def alphabeta(game, depth, alpha, beta, p0_color):
             expected_value = 0
             for (out, proba) in outprobas:
                 # print(tabs, "call maxalphabeta", action, proba, depth - 1, alpha, beta)
-                result = alphabeta(out, depth - 1, alpha, beta, p0_color)
+                result = alphabeta(
+                    out, depth - 1, alpha, beta, p0_color, deadline, value_fn
+                )
                 value = result if isinstance(result, float) else result[1]
                 expected_value += proba * value
 
@@ -315,7 +339,9 @@ def alphabeta(game, depth, alpha, beta, p0_color):
             expected_value = 0
             for (out, proba) in outprobas:
                 # print(tabs, "call minalphabeta", action, proba, depth - 1, alpha, beta)
-                result = alphabeta(out, depth - 1, alpha, beta, p0_color)
+                result = alphabeta(
+                    out, depth - 1, alpha, beta, p0_color, deadline, value_fn
+                )
                 value = result if isinstance(result, float) else result[1]
                 expected_value += proba * value
 

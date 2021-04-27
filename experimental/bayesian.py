@@ -1,6 +1,6 @@
 from experimental.machine_learning.players.minimax import (
+    AlphaBetaPlayer,
     ValueFunctionPlayer,
-    build_value_function,
 )
 from catanatron.models.player import Color, RandomPlayer
 from experimental.play import play_batch
@@ -15,12 +15,15 @@ def black_box_function(x):
     which generates its output values, as unknown.
     """
     # Needs to use the above params as weights for a players
-    fn = build_value_function([x])
     players = [
-        ValueFunctionPlayer(Color.RED, "Foo", "value_fn2"),
-        ValueFunctionPlayer(Color.BLUE, "Bar", fn),
+        ValueFunctionPlayer(Color.RED, "Foo", "build_value_function", [4]),
+        ValueFunctionPlayer(Color.BLUE, "Bar", "build_value_function", [x]),
     ]
-    wins, results_by_player = play_batch(10, players, None, False, False)
+    # players = [
+    #     AlphaBetaPlayer(Color.RED, "Foo", "build_value_function", [4]),
+    #     AlphaBetaPlayer(Color.BLUE, "Bar", "build_value_function", [x]),
+    # ]
+    wins, results_by_player = play_batch(100, players, None, False, False)
     vps = results_by_player[players[1].color]
     avg_vps = sum(vps) / len(vps)
     return 100 * wins[str(players[1])] + avg_vps

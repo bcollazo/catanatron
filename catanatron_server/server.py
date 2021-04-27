@@ -61,7 +61,7 @@ def create_game():
     game = Game(
         players=[
             AlphaBetaPlayer(BOT_COLOR, "FOO"),
-            ValueFunctionPlayer(Color.BLUE, "BAR", "value_fn2"),
+            ValueFunctionPlayer(Color.BLUE, "BAR"),
         ]
     )
     save_game_state(game)
