@@ -50,6 +50,7 @@ function PlayButtons() {
 
   const isRoll = state.gameState.current_prompt === "ROLL";
   const isDiscard = state.gameState.current_prompt === "DISCARD";
+  const isMove = state.gameState.current_prompt === "MOVE_ROBBER";
   const playableDevCardTypes = new Set(
     state.gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
@@ -138,7 +139,8 @@ function PlayButtons() {
   });
 
   const rollAction = carryOutAction([HUMAN_COLOR, "ROLL", null]);
-  const endTurnAction = carryOutAction(); // const action = [HUMAN_COLOR, "END_TURN", null];
+  const proceedAction = carryOutAction();
+  const endTurnAction = carryOutAction([HUMAN_COLOR, "END_TURN", null]);
   return (
     <>
       <OptionsButton
@@ -170,9 +172,15 @@ function PlayButtons() {
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}
-        onClick={isRoll ? rollAction : endTurnAction}
+        onClick={
+          isRoll
+            ? rollAction
+            : isDiscard || isMove
+            ? proceedAction
+            : endTurnAction
+        }
       >
-        {isRoll ? "ROLL" : isDiscard ? "DISCARD" : "END"}
+        {isRoll ? "ROLL" : isDiscard ? "DISCARD" : isMove ? "ROB" : "END"}
       </Button>
     </>
   );
@@ -204,16 +212,16 @@ export default function ActionsToolbar({ zoomIn, zoomOut, isBotThinking }) {
         {!botsTurn && <PlayButtons gameState={state.gameState} />}
         {botsTurn && (
           <Prompt gameState={state.gameState} isBotThinking={isBotThinking} />
-          // <Button
-          //   disabled={disabled}
-          //   className="confirm-btn"
-          //   variant="contained"
-          //   color="primary"
-          //   onClick={onTick}
-          // >
-          //   Ok
-          // </Button>
         )}
+        {/* <Button
+          disabled={disabled}
+          className="confirm-btn"
+          variant="contained"
+          color="primary"
+          onClick={onTick}
+        >
+          Ok
+        </Button> */}
 
         {/* <Button onClick={zoomIn}>Zoom In</Button>
       <Button onClick={zoomOut}>Zoom Out</Button> */}
