@@ -221,3 +221,13 @@ In [1]: import pandas as pd
 In [2]: x = pd.read_csv("data/mcts-playouts-labeling-2/labels.csv.gzip", compression="gzip", iterator=True)
 In [3]: x.get_chunk(10)
 ```
+
+### Publishing to PyPi
+
+```
+pip install twine
+python setup.py sdist bdist_wheel
+twine check dist/*
+twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+twine upload dist/*
+```
