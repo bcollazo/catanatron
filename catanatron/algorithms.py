@@ -2,8 +2,8 @@ from collections import defaultdict
 from typing import Iterable, Set
 
 from catanatron.models.actions import ActionType, Action
-from catanatron.models.board import Board, STATIC_GRAPH
-from catanatron.models.player import Color, Player
+from catanatron.models.board import Board
+from catanatron.models.player import Player
 from catanatron.models.enums import DevelopmentCard
 
 
