@@ -7,6 +7,7 @@ import numpy as np
 from catanatron.game import Game
 from catanatron.models.player import Player
 from experimental.machine_learning.players.playouts import run_playout
+from experimental.machine_learning.players.tree_search_utils import execute_spectrum
 
 SIMULATIONS = 10
 epsilon = 1e-8
@@ -56,7 +57,7 @@ class StateNode:
     def expand(self):
         children = defaultdict(list)
         for action in self.state.playable_actions:
-            outcomes = self.state.execute_spectrum(action)
+            outcomes = execute_spectrum(self.state, action)
             for (state, proba) in outcomes:
                 children[action].append((StateNode(self.color, state, self), proba))
         self.children = children

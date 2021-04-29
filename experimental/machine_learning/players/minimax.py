@@ -13,6 +13,10 @@ from experimental.machine_learning.features import (
     create_sample,
     iter_players,
 )
+from experimental.machine_learning.players.tree_search_utils import (
+    execute_spectrum,
+    expand_spectrum,
+)
 
 
 effective_production_features = build_production_features(True)
@@ -56,7 +60,7 @@ def value_fn(game, p0_color, verbose=False):
 
 
 def build_value_function(params):
-    def fn(game, p0_color, verbose=False):
+    def fn(game, p0_color):
         iterator = iter_players(game, p0_color)
         _, p0 = next(iterator)
 
@@ -71,7 +75,7 @@ def build_value_function(params):
             "EFFECTIVE_P0_BRICK_PRODUCTION",
         ]
         prod_sum = sum([sample[f] for f in features])
-        prod_variety = sum([sample[f] != 0 for f in features]) * params[0] * proba_point
+        prod_variety = sum([sample[f] != 0 for f in features]) * 4 * proba_point
 
         enemy_features = [
             "EFFECTIVE_P1_WHEAT_PRODUCTION",
@@ -87,12 +91,9 @@ def build_value_function(params):
         features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
         production_at_one = sum([sample[f] for f in features])
 
-        if verbose:
-            print(prod_sum, prod_variety)
-
         return float(
             p0.public_victory_points * 1000000
-            + longest_road_length * 10
+            + longest_road_length * params[0]
             + len(p0.development_deck.to_array()) * 10
             + len(p0.played_development_cards.to_array()) * 10.1
             + p0.played_development_cards.count(DevelopmentCard.KNIGHT) * 10.1
@@ -103,9 +104,6 @@ def build_value_function(params):
         )
 
     return fn
-
-
-value_fn2 = build_value_function([4])
 
 
 def get_value_fn_builder(name):
@@ -187,7 +185,7 @@ class ActionNode:
 
     def expand(self):
         # [(game_copy, proba)]
-        results = self.parent.state.execute_spectrum(self.action)
+        results = execute_spectrum(self.parent.state, self.action)
         return list(map(lambda x: (StateNode(self, x[0], None), x[1]), results))
 
 
@@ -302,7 +300,7 @@ def alphabeta(game, depth, alpha, beta, p0_color, deadline, value_fn):
     """
     # tabs = "\t" * (ALPHABETA_DEFAULT_DEPTH - depth)
     if depth == 0 or game.winning_color() is not None or time.time() >= deadline:
-        # print(tabs, "returned heuristic", value_fn2(game, p0_color))
+        # print(tabs, "returned heuristic", value_fn(game, p0_color))
         return value_fn(game, p0_color)
 
     maximizingPlayer = game.state.current_player().color == p0_color
@@ -355,12 +353,3 @@ def alphabeta(game, depth, alpha, beta, p0_color, deadline, value_fn):
             # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
 
         return best_action, best_value
-
-
-def expand_spectrum(game, actions):
-    """Consumes game if playable_actions not specified"""
-    children = defaultdict(list)
-    for action in actions:
-        outprobas = game.execute_spectrum(action)
-        children[action] = outprobas
-    return children  # action => (game, proba)[]
