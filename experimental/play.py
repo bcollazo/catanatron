@@ -21,7 +21,6 @@ from experimental.machine_learning.players.reinforcement import (
 )
 from experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
-    MiniMaxPlayer,
     ValueFunctionPlayer,
     VictoryPointPlayer,
 )
@@ -102,8 +101,6 @@ def simulate(num, players, outpath, save_in_db, watch):
             initialized_players.append(WeightedRandomPlayer(colors[i], pseudonyms[i]))
         elif key == "O":
             initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
-        elif key == "X":
-            initialized_players.append(MiniMaxPlayer(colors[i], pseudonyms[i]))
         elif key == "S":
             initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
         elif key == "VP":
