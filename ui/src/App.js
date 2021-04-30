@@ -26,7 +26,11 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <StateProvider>
-        <SnackbarProvider maxSnack={1} TransitionComponent={Fade}>
+        <SnackbarProvider
+          classes={{ containerRoot: ["snackbar-container"] }}
+          maxSnack={1}
+          TransitionComponent={Fade}
+        >
           <Router>
             <Switch>
               <Route path="/games/:gameId">

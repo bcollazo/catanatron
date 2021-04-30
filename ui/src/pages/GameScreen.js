@@ -14,8 +14,7 @@ import LeftDrawer from "../components/LeftDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { getState, postAction } from "../utils/apiClient";
-import { humanizeAction } from "../components/Prompt";
-import { snackbarActions } from "../components/Snackbar";
+import { dispatchSnackbar } from "../components/Snackbar";
 
 const ROBOT_THINKING_TIME = 2000;
 
@@ -52,9 +51,7 @@ function GameScreen() {
           // simulate thinking
           setIsBotThinking(false);
           dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-          enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]), {
-            action: snackbarActions(closeSnackbar),
-          });
+          dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
         }, ROBOT_THINKING_TIME - requestTime);
       })();
     }

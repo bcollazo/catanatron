@@ -21,7 +21,7 @@ import SimCardIcon from "@material-ui/icons/SimCard";
 import { useParams } from "react-router";
 
 import { ResourceCards } from "../components/PlayerStateBox";
-import Prompt, { humanizeAction } from "../components/Prompt";
+import Prompt from "../components/Prompt";
 import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 import { store } from "../store";
 import ACTIONS from "../actions";
@@ -30,7 +30,7 @@ import { postAction } from "../utils/apiClient";
 
 import "./ActionsToolbar.scss";
 import { useSnackbar } from "notistack";
-import { snackbarActions } from "../components/Snackbar";
+import { dispatchSnackbar } from "../components/Snackbar";
 
 function PlayButtons() {
   const { gameId } = useParams();
@@ -41,9 +41,7 @@ function PlayButtons() {
     memoize((action) => async () => {
       const gameState = await postAction(gameId, action);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-      enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]), {
-        action: snackbarActions(closeSnackbar),
-      });
+      dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
     }),
     [enqueueSnackbar, closeSnackbar]
   );
@@ -90,9 +88,7 @@ function PlayButtons() {
     const action = [HUMAN_COLOR, "BUY_DEVELOPMENT_CARD", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-    enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]), {
-      action: snackbarActions(closeSnackbar),
-    });
+    dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
   }, [gameId, dispatch, enqueueSnackbar, closeSnackbar]);
   const setIsBuildingSettlement = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_BUILDING_SETTLEMENT });

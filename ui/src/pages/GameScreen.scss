@@ -9,8 +9,11 @@ h6.MuiTypography-h6 {
 }
 
 // For Snackbar
-#root .makeStyles-root-1 {
+#root .snackbar-container {
   z-index: 1200;
+  left: 50% !important;
+  bottom: 0px;
+  transform: translateX(-50%);
   .MuiCollapse-container {
     padding: 0 10px;
     .MuiCollapse-wrapper {
@@ -27,9 +30,6 @@ h6.MuiTypography-h6 {
       }
     }
   }
-}
-#root .makeStyles-bottom-5 {
-  bottom: 0px;
 }
 
 main {
