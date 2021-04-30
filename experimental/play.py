@@ -111,7 +111,11 @@ def simulate(num, players, outpath, save_in_db, watch):
                 AlphaBetaPlayer(colors[i], pseudonyms[i], int(key[2]))
             )
         elif key[0] == "F":
-            initialized_players.append(ValueFunctionPlayer(colors[i], pseudonyms[i]))
+            initialized_players.append(
+                ValueFunctionPlayer(
+                    colors[i], pseudonyms[i], "build_value_function", [float(key[1:])]
+                )
+            )
         elif key[0] == "V":
             initialized_players.append(VRLPlayer(colors[i], pseudonyms[i], param))
         elif key[0] == "Q":
