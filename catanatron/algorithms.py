@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Iterable, Set
+from typing import Iterable
 
 from catanatron.models.actions import ActionType, Action
 from catanatron.models.board import Board
@@ -15,12 +15,16 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
     Returns (color, path) tuple where
         color -- color of player whose longest path belongs.
         longest -- list of edges (all from a single color)
+        max_lengths_by_color -- Color => int dict of lengths
     """
     max_count = 0
     max_paths_by_player = dict()
+    max_lengths_by_color = defaultdict(int)
     for player in players:
+        lengths = []
         for path in board.continuous_roads_by_player(player.color):
             count = len(path)
+            lengths.append(count)
             if count < 5:
                 continue
             if count > max_count:
@@ -29,23 +33,30 @@ def longest_road(board: Board, players: Iterable[Player], actions: Iterable[Acti
                 max_paths_by_player[player.color] = path
             elif count == max_count:
                 max_paths_by_player[player.color] = path
+        max_lengths_by_color[player.color] = 0 if len(lengths) == 0 else max(lengths)
 
-    if len(max_paths_by_player) == 0:
-        return (None, None)
-
-    # find first player that got to that point
-    road_building_actions_by_candidates = list(
-        filter(
-            lambda a: a.action_type == ActionType.BUILD_ROAD
-            and a.color in max_paths_by_player.keys(),
-            actions,
-        )
+    max_length = max(max_lengths_by_color.values())
+    road_candidate_entries = filter(
+        lambda entry: entry[1] >= 5 and entry[1] == max_length,
+        max_lengths_by_color.items(),
     )
-    while len(max_paths_by_player) > 1:
-        action = road_building_actions_by_candidates.pop()
-        if action.color in max_paths_by_player:
-            del max_paths_by_player[action.color]
-    return max_paths_by_player.popitem()
+    road_candidates = dict(road_candidate_entries)
+    if len(road_candidates) == 0:
+        return (None, None, max_lengths_by_color)
+
+    # There might be several tied at max_length. Take the first one that got there.
+    for action in reversed(actions):
+        if len(road_candidates) == 1:
+            color, length = road_candidates.popitem()
+            return (color, length, max_lengths_by_color)
+
+        if action.action_type != ActionType.BUILD_ROAD:
+            continue
+
+        if action.color in road_candidates:
+            del road_candidates[action.color]
+
+    return (None, None, max_lengths_by_color)
 
 
 def largest_army(players: Iterable[Player], actions: Iterable[Action]):

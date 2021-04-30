@@ -39,6 +39,7 @@ class Player:
         self.playable_development_cards = self.development_deck.to_array()
 
         self.buildings = defaultdict(list)  # dict of BuildingType => (node_id|edge)[]
+        self.longest_road_length = 0  # to be set externally.
 
     def build_settlement(self, node_id, is_free):
         self.buildings[BuildingType.SETTLEMENT].append(node_id)

@@ -63,12 +63,7 @@ def player_features(game, p0_color):
         features[f"P{i}_SETTLEMENTS_LEFT"] = player.settlements_available
         features[f"P{i}_CITIES_LEFT"] = player.cities_available
         features[f"P{i}_HAS_ROLLED"] = player.has_rolled
-
-        paths = game.state.board.continuous_roads_by_player(player.color)
-        path_lengths = map(lambda path: len(path), paths)
-        features[f"P{i}_LONGEST_ROAD_LENGTH"] = (
-            0 if len(paths) == 0 else max(path_lengths)
-        )
+        features[f"P{i}_LONGEST_ROAD_LENGTH"] = player.longest_road_length
 
     return features
 

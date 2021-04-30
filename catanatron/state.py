@@ -119,7 +119,10 @@ def apply_action(state, action):
         state.board.build_settlement(player.color, node_id, False)
         player.build_settlement(node_id, False)
         state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
-        state.road_color = longest_road(state.board, state.players, state.actions)[0]
+        result = longest_road(state.board, state.players, state.actions)
+        state.road_color = result[0]
+        for color, length in result[2].items():
+            state.players_by_color[color].longest_road_length = length
     elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
         player, edge = state.players_by_color[action.color], action.value
         state.board.build_road(player.color, edge)
@@ -129,7 +132,10 @@ def apply_action(state, action):
         state.board.build_road(player.color, edge)
         player.build_road(edge, False)
         state.resource_deck += ResourceDeck.road_cost()  # replenish bank
-        state.road_color = longest_road(state.board, state.players, state.actions)[0]
+        result = longest_road(state.board, state.players, state.actions)
+        state.road_color = result[0]
+        for color, length in result[2].items():
+            state.players_by_color[color].longest_road_length = length
     elif action.action_type == ActionType.BUILD_CITY:
         player, node_id = state.players_by_color[action.color], action.value
         state.board.build_city(player.color, node_id)
@@ -276,7 +282,10 @@ def apply_action(state, action):
         player.build_road(first_edge, True)
         player.build_road(second_edge, True)
         player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
-        state.road_color = longest_road(state.board, state.players, state.actions)[0]
+        result = longest_road(state.board, state.players, state.actions)
+        state.road_color = result[0]
+        for color, length in result[2].items():
+            state.players_by_color[color].longest_road_length = length
     elif action.action_type == ActionType.MARITIME_TRADE:
         player, trade_offer = (state.players_by_color[action.color], action.value)
         offering = ResourceDeck.from_array(

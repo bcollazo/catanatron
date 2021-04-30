@@ -16,22 +16,29 @@ def test_longest_road_simple():
     blue.resource_deck += ResourceDeck.starting_bank()
 
     game = Game(players=[red, blue])
+    p0_color = game.state.players[0].color
+    p1_color = game.state.players[1].color
     build_initial_placements(game, [0, (0, 1), 2, (1, 2)])
     advance_to_play_turn(game)
 
-    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
+    color, length, max_by_color = longest_road(
+        game.state.board, game.state.players, game.state.actions
+    )
     assert color is None
+    assert max_by_color == {p0_color: 2, p1_color: 2}
 
-    p0_color = game.state.players[0].color
     game.state.players[0].resource_deck.replenish(10, Resource.WOOD)
     game.state.players[0].resource_deck.replenish(10, Resource.BRICK)
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (3, 4)))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (4, 5)))
 
-    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
+    color, length, max_by_color = longest_road(
+        game.state.board, game.state.players, game.state.actions
+    )
     assert color == p0_color
-    assert len(path) == 5
+    assert length == 5
+    assert max_by_color == {p0_color: 5, p1_color: 2}
 
 
 def test_longest_road_tie():
@@ -60,14 +67,20 @@ def test_longest_road_tie():
     game.execute(Action(p1_color, ActionType.BUILD_ROAD, (27, 28)))
     game.execute(Action(p1_color, ActionType.BUILD_ROAD, (28, 29)))
 
-    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
+    color, length, max_by_color = longest_road(
+        game.state.board, game.state.players, game.state.actions
+    )
     assert color == p0_color  # even if blue also has 5-road. red had it first
-    assert len(path) == 5
+    assert length == 5
+    assert max_by_color == {p0_color: 5, p1_color: 5}
 
     game.execute(Action(p1_color, ActionType.BUILD_ROAD, (29, 30)))
-    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
+    color, length, max_by_color = longest_road(
+        game.state.board, game.state.players, game.state.actions
+    )
     assert color == p1_color
-    assert len(path) == 6
+    assert length == 6
+    assert max_by_color == {p0_color: 5, p1_color: 6}
 
 
 # test: complicated circle around
@@ -95,15 +108,19 @@ def test_complicated_road():  # classic 8-like roads
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (8, 9)))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 9)))
 
-    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
+    color, length, max_by_color = longest_road(
+        game.state.board, game.state.players, game.state.actions
+    )
     assert color == p0_color
-    assert len(path) == 11
+    assert length == 11
 
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (8, 27)))
 
-    color, path = longest_road(game.state.board, game.state.players, game.state.actions)
+    color, length, max_by_color = longest_road(
+        game.state.board, game.state.players, game.state.actions
+    )
     assert color == p0_color
-    assert len(path) == 11
+    assert length == 11
 
 
 def test_triple_longest_road_tie():
@@ -142,14 +159,14 @@ def test_triple_longest_road_tie():
 
     # subset... not quite representative, but should be ok.
     actions = [
-        Action(Color.RED, ActionType.BUILD_ROAD, (3,2)),
-        Action(Color.BLUE, ActionType.BUILD_ROAD, (24,25)),
-        Action(Color.WHITE, ActionType.BUILD_ROAD, (18,17)),
+        Action(Color.RED, ActionType.BUILD_ROAD, (3, 2)),
+        Action(Color.BLUE, ActionType.BUILD_ROAD, (24, 25)),
+        Action(Color.WHITE, ActionType.BUILD_ROAD, (18, 17)),
     ]
 
-    color, path = longest_road(board, [red, blue, white], actions)
+    color, length, max_by_color = longest_road(board, [red, blue, white], actions)
     assert color == Color.RED
-    assert len(path) == 6
+    assert length == 6
 
 
 def test_largest_army_calculation_when_no_one_has_three():

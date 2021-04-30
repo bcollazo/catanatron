@@ -10,15 +10,7 @@ from catanatron.models.enums import Resource
 
 
 def longest_roads_by_player(state):
-    roads = {
-        player.color.value: state.board.continuous_roads_by_player(player.color)
-        for player in state.players
-    }
-
-    return {
-        key: 0 if len(value) == 0 else max(map(len, value))
-        for key, value in roads.items()
-    }
+    return {player.color.value: player.longest_road_length for player in state.players}
 
 
 def action_from_json(data):
@@ -85,7 +77,6 @@ class GameEncoder(json.JSONEncoder):
                 "current_color": obj.state.current_player().color,
                 "current_prompt": obj.state.current_prompt,
                 "current_playable_actions": obj.state.playable_actions,
-                # TODO: Use cached value when we cache it.
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
                 "winning_color": obj.winning_color(),
             }
