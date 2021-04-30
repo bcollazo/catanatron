@@ -219,6 +219,9 @@ tuner/round |0 |1
 
 - AlphaBeta(depth=2) plays stronger than ValueFunction 2.0. Using VF2.0 as heuristic.
 
+- Tried Bayesian Optimization to search better weights for hand-crafted heuristic,
+  but seems too slow and inefective.
+
 ## Future Work:
 
 - Should probably try to do NN player with better tuning (more layers, different label).
