@@ -1,4 +1,3 @@
-import functools
 import random
 from enum import Enum
 from collections import defaultdict

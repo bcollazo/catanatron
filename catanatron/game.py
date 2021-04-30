@@ -6,7 +6,7 @@ from typing import Iterable
 
 from catanatron.state import State, apply_action
 from catanatron.models.map import BaseMap
-from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
+from catanatron.models.enums import DevelopmentCard, BuildingType
 from catanatron.models.actions import (
     ActionPrompt,
     Action,
@@ -24,7 +24,8 @@ from catanatron.models.actions import (
     road_building_possibilities,
 )
 from catanatron.models.player import Player
-from catanatron.models.decks import ResourceDeck, DevelopmentDeck
+from catanatron.models.decks import ResourceDeck
+from catanatron.models.board import Board
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
@@ -222,17 +223,27 @@ class Game:
 
     def copy(self) -> "Game":
         players = pickle.loads(pickle.dumps(self.state.players))
-        board = pickle.loads(pickle.dumps(self.state.board))
+
+        board = Board(self.state.board.map, initialize=False)
+        board.map = self.state.board.map  # reuse since its immutable
+        board.buildings = self.state.board.buildings.copy()
+        board.roads = self.state.board.roads.copy()
+        board.connected_components = pickle.loads(
+            pickle.dumps(self.state.board.connected_components)
+        )
+        board.robber_coordinate = self.state.board.robber_coordinate
 
         state_copy = State(None, None, initialize=False)
         state_copy.players = players
         state_copy.players_by_color = {p.color: p for p in players}
         state_copy.board = board
         state_copy.actions = self.state.actions.copy()
+        # TODO: Move Deck to functional code, so as to quick-copy arrays.
         state_copy.resource_deck = pickle.loads(pickle.dumps(self.state.resource_deck))
         state_copy.development_deck = pickle.loads(
             pickle.dumps(self.state.development_deck)
         )
+
         state_copy.tick_queue = self.state.tick_queue.copy()
         state_copy.current_player_index = self.state.current_player_index
         state_copy.num_turns = self.state.num_turns
