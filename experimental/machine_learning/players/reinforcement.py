@@ -74,8 +74,6 @@ def allow_feature(feature_name):
 
 ALL_FEATURES = get_feature_ordering(num_players=2)
 FEATURES = list(filter(allow_feature, ALL_FEATURES))
-pprint(FEATURES)
-
 FEATURE_INDICES = [ALL_FEATURES.index(f) for f in FEATURES]
 
 
