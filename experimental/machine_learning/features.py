@@ -219,10 +219,10 @@ REACHABLE_FEATURES_MAX = 3  # exclusive
 def reachability_features(game, p0_color):
     features = {}
 
-    board_buildable = set(game.state.board.buildable_node_ids(p0_color, True))
+    board_buildable = frozenset(game.state.board.buildable_node_ids(p0_color, True))
     for i, player in iter_players(game, p0_color):
         color = player.color
-        owned_nodes = set(
+        owned_nodes = frozenset(
             player.buildings[BuildingType.SETTLEMENT]
             + player.buildings[BuildingType.CITY]
         )
@@ -233,7 +233,9 @@ def reachability_features(game, p0_color):
             for node_id in component:
                 zero_nodes.add(node_id)
 
-        production = count_production(zero_nodes, board_buildable, game, owned_nodes)
+        production = count_production(
+            frozenset(zero_nodes), board_buildable, game.state.board, owned_nodes
+        )
         for resource in Resource:
             features[f"P{i}_0_ROAD_REACHABLE_{resource.value}"] = production[resource]
 
@@ -253,7 +255,10 @@ def reachability_features(game, p0_color):
                 level_nodes.update(expandable)
 
             production = count_production(
-                level_nodes, board_buildable, game, owned_nodes
+                frozenset(level_nodes),
+                board_buildable,
+                game.state.board,
+                owned_nodes,
             )
             for resource in Resource:
                 features[f"P{i}_{level}_ROAD_REACHABLE_{resource.value}"] = production[
@@ -265,15 +270,16 @@ def reachability_features(game, p0_color):
     return features
 
 
-def count_production(level_nodes, board_buildable, game, owned_nodes):
+@functools.lru_cache(maxsize=1000)
+def count_production(nodes, board_buildable, board, owned_nodes):
     level_buildable_nodes = {
         node_id
-        for node_id in level_nodes
+        for node_id in nodes
         if node_id in board_buildable or node_id in owned_nodes
     }
     production = Counter()
     for node_id in level_buildable_nodes:
-        production += get_node_counter_production(game.state.board, node_id)
+        production += get_node_counter_production(board, node_id)
     return production
 
 

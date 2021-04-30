@@ -38,8 +38,12 @@ result = timeit.timeit(
 )
 print("reachability_features", result / NUMBER, "secs")
 
-
-# Results:
+# Notes:
 # road seems to add 0.0025 secs
 # production_features don't seem to add much.
 # expansion_features seem to add 0.009
+
+# Results:
+# create_sample_vector 0.0014413009049603716 secs
+# expansion_features 0.0018780140690505505 secs
+# reachability_features 0.0006870161320548505 secs
