@@ -1,1 +1,1 @@
-web: gunicorn catanatron_server.server:app
+web: gunicorn catanatron_server:create_app()

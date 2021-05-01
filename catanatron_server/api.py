@@ -1,72 +1,71 @@
 import json
 
-from flask import Flask, jsonify, abort, request
-from flask_cors import CORS
-from dotenv import load_dotenv
+from flask import Response, Blueprint, jsonify, abort, request
 
-from catanatron_server.database import save_game_state, get_last_game_state
-from catanatron.game import Game
+from catanatron_server.models import create_game_state, get_game_state
 from catanatron.json import GameEncoder, action_from_json
-from catanatron.models.player import RandomPlayer, Color
-
+from catanatron.models.player import Color
+from catanatron.game import Game
 from experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
     ValueFunctionPlayer,
 )
 
-load_dotenv()  # useful if running server outside docker
-app = Flask(__name__)
-CORS(app)
-
-
 BOT_COLOR = Color.RED
 
-
-def advance_until_color(game, color, callbacks):
-    while game.winning_player() is None and game.state.current_player().color != color:
-        game.play_tick(callbacks)
+bp = Blueprint("api", __name__, url_prefix="/api")
 
 
-@app.route("/games/<string:game_id>/actions", methods=["POST"])
-def tick_game(game_id):
-    game = get_last_game_state(game_id)
-    if game is None:
-        abort(404, description="Resource not found")
-
-    if game.winning_player() is not None:
-        return json.dumps(game, cls=GameEncoder)
-
-    bots_turn = game.state.current_player().color == BOT_COLOR
-    if bots_turn or request.json is None:  # TODO: Remove this or
-        game.play_tick([lambda g: save_game_state(g)])
-    else:
-        action = action_from_json(request.json)
-        game.execute(action, action_callbacks=[lambda g: save_game_state(g)])
-
-    # advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
-    return json.dumps(game, cls=GameEncoder)
-
-
-@app.route("/games/<string:game_id>", methods=["GET"])
-def get_game_endpoint(game_id):
-    game = get_last_game_state(game_id)
-    if game is None:
-        abort(404, description="Resource not found")
-
-    return json.dumps(game, cls=GameEncoder)
-
-
-@app.route("/games", methods=["POST"])
-def create_game():
+@bp.route("/games", methods=("POST",))
+def post_game():
     game = Game(
         players=[
             AlphaBetaPlayer(BOT_COLOR, "FOO", 2, True),
             ValueFunctionPlayer(Color.BLUE, "BAR"),
         ]
     )
-    save_game_state(game)
-    # advance_until_color(game, Color.BLUE, [lambda g: save_game_state(g)])
+    create_game_state(game)
     return jsonify({"game_id": game.id})
+
+
+@bp.route("/games/<string:game_id>", methods=("GET",))
+def get_game_endpoint(game_id):
+    game = get_game_state(game_id)
+    if game is None:
+        abort(404, description="Resource not found")
+
+    return Response(
+        response=json.dumps(game, cls=GameEncoder),
+        status=200,
+        mimetype="application/json",
+    )
+
+
+@bp.route("/games/<string:game_id>/actions", methods=["POST"])
+def tick_game(game_id):
+    game = get_game_state(game_id)
+    if game is None:
+        abort(404, description="Resource not found")
+
+    if game.winning_player() is not None:
+        return Response(
+            response=json.dumps(game, cls=GameEncoder),
+            status=200,
+            mimetype="application/json",
+        )
+
+    bots_turn = game.state.current_player().color == BOT_COLOR
+    if bots_turn or request.json is None:  # TODO: Remove this or
+        game.play_tick([lambda g: create_game_state(g)])
+    else:
+        action = action_from_json(request.json)
+        game.execute(action, action_callbacks=[lambda g: create_game_state(g)])
+
+    return Response(
+        response=json.dumps(game, cls=GameEncoder),
+        status=200,
+        mimetype="application/json",
+    )
 
 
 # ===== Debugging Routes
