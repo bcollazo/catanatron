@@ -179,11 +179,13 @@ class AlphaBetaPlayer(Player):
         color,
         name,
         depth=ALPHABETA_DEFAULT_DEPTH,
+        prunning=False,
         value_fn_builder_name=None,
         params=DEFAULT_WEIGHTS,
     ):
         super().__init__(color, name=name)
         self.depth = int(depth)
+        self.prunning = str(prunning).lower() != "false"
         self.value_fn_builder_name = (
             "contender_value_function"
             if value_fn_builder_name == "C"
@@ -191,22 +193,24 @@ class AlphaBetaPlayer(Player):
         )
         self.params = params
 
+    def get_actions(self, game):
+        if self.prunning:
+            return list_prunned_actions(game)
+        return game.state.playable_actions
+
     def decide(self, game: Game, playable_actions):
-        actions = simple_prunning(game, playable_actions)
+        actions = self.get_actions(game)
         if len(actions) == 1:
             return actions[0]
 
-        value_fn = get_value_fn(self.value_fn_builder_name, self.params)
         start = time.time()
         deadline = start + MAX_SEARCH_TIME_SECS
-        result = alphabeta(
+        result = self.alphabeta(
             game.copy(),
             self.depth,
             float("-inf"),
             float("inf"),
-            self.color,
             deadline,
-            value_fn,
         )
         # print("Decision Results:", self.depth, len(actions), time.time() - start)
         # breakpoint()
@@ -215,76 +219,64 @@ class AlphaBetaPlayer(Player):
     def __repr__(self) -> str:
         return (
             super().__repr__()
-            + f"(depth={self.depth},value_fn={self.value_fn_builder_name})"
+            + f"(depth={self.depth},value_fn={self.value_fn_builder_name},prunning={self.prunning})"
         )
 
+    def alphabeta(self, game, depth, alpha, beta, deadline):
+        """AlphaBeta MiniMax Algorithm.
 
-def alphabeta(game, depth, alpha, beta, p0_color, deadline, value_fn):
-    """AlphaBeta MiniMax Algorithm.
+        NOTE: Sometimes returns a value, sometimes an (action, value). This is
+        because some levels are state=>action, some are action=>state and in
+        action=>state would probably need (action, proba, value) as return type.
+        """
+        if depth == 0 or game.winning_color() is not None or time.time() >= deadline:
+            value_fn = get_value_fn(self.value_fn_builder_name, self.params)
+            return value_fn(game, self.color)
 
-    NOTE: Sometimes returns a value, sometimes an (action, value). This is
-    because some levels are state=>action, some are action=>state and in
-    action=>state would probably need (action, proba, value) as return type.
-    """
-    # tabs = "\t" * (ALPHABETA_DEFAULT_DEPTH - depth)
-    if depth == 0 or game.winning_color() is not None or time.time() >= deadline:
-        # print(tabs, "returned heuristic", value_fn(game, p0_color))
-        return value_fn(game, p0_color)
+        maximizingPlayer = game.state.current_player().color == self.color
+        actions = self.get_actions(game)
+        children = expand_spectrum(game, actions)
+        if maximizingPlayer:
+            best_action = None
+            best_value = float("-inf")
+            for action, outprobas in children.items():
+                expected_value = 0
+                for (out, proba) in outprobas:
+                    result = self.alphabeta(out, depth - 1, alpha, beta, deadline)
+                    value = result if isinstance(result, float) else result[1]
+                    expected_value += proba * value
 
-    maximizingPlayer = game.state.current_player().color == p0_color
-    actions = simple_prunning(game, game.state.playable_actions)
-    children = expand_spectrum(game, actions)
-    # print(tabs, "MAXIMIZING =", maximizingPlayer, len(children))
-    if maximizingPlayer:
-        best_action = None
-        best_value = float("-inf")
-        for action, outprobas in children.items():
-            expected_value = 0
-            for (out, proba) in outprobas:
-                # print(tabs, "call maxalphabeta", action, proba, depth - 1, alpha, beta)
-                result = alphabeta(
-                    out, depth - 1, alpha, beta, p0_color, deadline, value_fn
-                )
-                value = result if isinstance(result, float) else result[1]
-                expected_value += proba * value
+                if expected_value > best_value:
+                    best_action = action
+                    best_value = expected_value
+                alpha = max(alpha, best_value)
+                if alpha >= beta:
+                    break  # beta cutoff
 
-            if expected_value > best_value:
-                best_action = action
-                best_value = expected_value
-            alpha = max(alpha, best_value)
-            if alpha >= beta:
-                # print(tabs, "beta cutoff")
-                break  # beta cutoff
-            # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
+            return best_action, best_value
+        else:
+            best_action = None
+            best_value = float("inf")
+            for action, outprobas in children.items():
+                expected_value = 0
+                for (out, proba) in outprobas:
+                    result = self.alphabeta(out, depth - 1, alpha, beta, deadline)
+                    value = result if isinstance(result, float) else result[1]
+                    expected_value += proba * value
 
-        return best_action, best_value
-    else:
-        best_action = None
-        best_value = float("inf")
-        for action, outprobas in children.items():
-            expected_value = 0
-            for (out, proba) in outprobas:
-                # print(tabs, "call minalphabeta", action, proba, depth - 1, alpha, beta)
-                result = alphabeta(
-                    out, depth - 1, alpha, beta, p0_color, deadline, value_fn
-                )
-                value = result if isinstance(result, float) else result[1]
-                expected_value += proba * value
+                if expected_value < best_value:
+                    best_action = action
+                    best_value = expected_value
+                beta = min(beta, best_value)
+                if beta <= alpha:
+                    break  # alpha cutoff
 
-            if expected_value < best_value:
-                best_action = action
-                best_value = expected_value
-            beta = min(beta, best_value)
-            if beta <= alpha:
-                # print(tabs, "alpha cutoff")
-                break  # alpha cutoff
-            # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
-
-        return best_action, best_value
+            return best_action, best_value
 
 
-def simple_prunning(game, playable_actions):
+def list_prunned_actions(game):
     current_color = game.state.current_player().color
+    playable_actions = game.state.playable_actions
     actions = playable_actions.copy()
     types = set(map(lambda a: a.action_type, playable_actions))
 

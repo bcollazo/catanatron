@@ -60,7 +60,7 @@ def get_game_endpoint(game_id):
 def create_game():
     game = Game(
         players=[
-            AlphaBetaPlayer(BOT_COLOR, "FOO"),
+            AlphaBetaPlayer(BOT_COLOR, "FOO", 2, True),
             ValueFunctionPlayer(Color.BLUE, "BAR"),
         ]
     )

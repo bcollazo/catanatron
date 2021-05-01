@@ -8,7 +8,7 @@ from catanatron.game import Game
 from catanatron.models.player import Player
 from experimental.machine_learning.players.playouts import run_playout
 from experimental.machine_learning.players.tree_search_utils import execute_spectrum
-from experimental.machine_learning.players.minimax import simple_prunning
+from experimental.machine_learning.players.minimax import list_prunned_actions
 
 SIMULATIONS = 10
 epsilon = 1e-8
@@ -59,11 +59,7 @@ class StateNode:
     def expand(self):
         children = defaultdict(list)
         playable_actions = self.game.state.playable_actions
-        actions = (
-            simple_prunning(self.game, playable_actions)
-            if self.prunning
-            else playable_actions
-        )
+        actions = list_prunned_actions(self.game) if self.prunning else playable_actions
         for action in actions:
             outcomes = execute_spectrum(self.game, action)
             for (state, proba) in outcomes:
@@ -122,11 +118,7 @@ class MCTSPlayer(Player):
         self.prunning = bool(prunning)
 
     def decide(self, game: Game, playable_actions):
-        actions = (
-            simple_prunning(game, playable_actions)
-            if self.prunning
-            else playable_actions
-        )
+        actions = list_prunned_actions(game) if self.prunning else playable_actions
         if len(actions) == 1:
             return actions[0]
 
