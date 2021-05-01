@@ -54,6 +54,7 @@ class Board:
             # color => int{}[] (list of node_id sets) one per component
             #   nodes in sets are incidental (might not be owned by player)
             self.connected_components = defaultdict(list)
+            self.board_buildable_ids = set(range(NUM_NODES))
 
             # assumes there is at least one desert:
             self.robber_coordinate = filter(
@@ -89,6 +90,10 @@ class Board:
         else:
             # TODO: Maybe cut connected components
             self.update_connected_components()
+
+        self.board_buildable_ids.discard(node_id)
+        for n in STATIC_GRAPH.neighbors(node_id):
+            self.board_buildable_ids.discard(n)
 
     def build_road(self, color, edge):
         buildable = self.buildable_edges(color)
@@ -140,35 +145,12 @@ class Board:
         self.buildings[node_id] = (color, BuildingType.CITY)
 
     def buildable_node_ids(self, color: Color, initial_build_phase=False):
-        buildable = set()
-
-        def is_buildable(node_id):
-            """true if this and neighboring nodes are empty"""
-            under_consideration = [node_id] + list(STATIC_GRAPH.neighbors(node_id))
-            are_empty = map(
-                lambda node_id: node_id not in self.buildings,
-                under_consideration,
-            )
-            return all(are_empty)
-
-        # if initial-placement, iterate over non-water/port tiles, for each
-        # of these nodes check if its a buildable node.
         if initial_build_phase:
-            for (_, tile) in self.map.resource_tiles:
-                for (_, node_id) in tile.nodes.items():
-                    if is_buildable(node_id):
-                        buildable.add(node_id)
+            return sorted(list(self.board_buildable_ids))
 
-        # if not initial-placement, find all connected components. For each
-        #   node in this connected subgraph, iterate checking buildability
         subgraphs = self.find_connected_components(color)
-        for subgraph in subgraphs:
-            for node_id in subgraph:
-                # by definition node is "connected", so only need to check buildable
-                if is_buildable(node_id):
-                    buildable.add(node_id)
-
-        return sorted(list(buildable))
+        nodes = set().union(*subgraphs)
+        return sorted(list(nodes.intersection(self.board_buildable_ids)))
 
     def buildable_edges(self, color: Color):
         """List of (n1,n2) tuples. Edges are in n1 < n2 order. Result is also ordered."""
