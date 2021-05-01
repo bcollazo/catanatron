@@ -7,7 +7,8 @@ from catanatron.models.enums import Resource
 from catanatron.models.board import Board, get_edges
 from catanatron.models.map import BaseMap, NUM_NODES, NodeRef
 from catanatron.models.actions import Action, ActionType
-from catanatron.game import Game, number_probability
+from catanatron.game import Game
+from catanatron.models.map import number_probability
 from catanatron.models.player import SimplePlayer, Color
 from experimental.machine_learning.features import (
     create_sample,

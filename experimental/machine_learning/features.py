@@ -1,6 +1,6 @@
-from collections import Counter
 from typing import Generator, Tuple
 import functools
+from collections import Counter
 
 import networkx as nx
 
@@ -8,7 +8,8 @@ from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.map import NUM_NODES, NUM_TILES
 from catanatron.models.player import Color, Player, SimplePlayer
 from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
-from catanatron.game import Game, number_probability
+from catanatron.game import Game
+from catanatron.models.map import number_probability
 
 
 # ===== Helpers
@@ -216,15 +217,16 @@ def get_player_expandable_nodes(game, player):
 REACHABLE_FEATURES_MAX = 3  # exclusive
 
 
-def reachability_features(game, p0_color):
+def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
     features = {}
 
-    board_buildable = frozenset(game.state.board.buildable_node_ids(p0_color, True))
+    board_buildable = game.state.board.buildable_node_ids(p0_color, True)
     for i, player in iter_players(game, p0_color):
         color = player.color
-        owned_nodes = frozenset(
+        owned_or_buildable = frozenset(
             player.buildings[BuildingType.SETTLEMENT]
             + player.buildings[BuildingType.CITY]
+            + board_buildable
         )
 
         # Do layer 0
@@ -234,14 +236,14 @@ def reachability_features(game, p0_color):
                 zero_nodes.add(node_id)
 
         production = count_production(
-            frozenset(zero_nodes), board_buildable, game.state.board, owned_nodes
+            frozenset(owned_or_buildable.intersection(zero_nodes)), game.state.board
         )
         for resource in Resource:
             features[f"P{i}_0_ROAD_REACHABLE_{resource.value}"] = production[resource]
 
         # for layers deep:
         last_layer_nodes = zero_nodes
-        for level in range(1, REACHABLE_FEATURES_MAX):
+        for level in range(1, levels):
             level_nodes = set(last_layer_nodes)
             for node_id in last_layer_nodes:
                 if game.state.board.is_enemy_node(node_id, color):
@@ -255,10 +257,8 @@ def reachability_features(game, p0_color):
                 level_nodes.update(expandable)
 
             production = count_production(
-                frozenset(level_nodes),
-                board_buildable,
+                frozenset(owned_or_buildable.intersection(level_nodes)),
                 game.state.board,
-                owned_nodes,
             )
             for resource in Resource:
                 features[f"P{i}_{level}_ROAD_REACHABLE_{resource.value}"] = production[
@@ -271,28 +271,11 @@ def reachability_features(game, p0_color):
 
 
 @functools.lru_cache(maxsize=1000)
-def count_production(nodes, board_buildable, board, owned_nodes):
-    level_buildable_nodes = {
-        node_id
-        for node_id in nodes
-        if node_id in board_buildable or node_id in owned_nodes
-    }
+def count_production(nodes, board):
     production = Counter()
-    for node_id in level_buildable_nodes:
-        production += get_node_counter_production(board, node_id)
+    for node_id in nodes:
+        production += board.map.node_production[node_id]
     return production
-
-
-@functools.lru_cache(maxsize=200)
-def get_node_counter_production(board, node_id):
-    tiles = board.map.adjacent_tiles[node_id]
-    return Counter(
-        {
-            t.resource: number_probability(t.number)
-            for t in tiles
-            if t.resource is not None
-        }
-    )
 
 
 def expansion_features(game, p0_color):

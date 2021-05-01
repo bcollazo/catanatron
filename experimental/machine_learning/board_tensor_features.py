@@ -2,10 +2,11 @@ import networkx as nx
 import tensorflow as tf
 
 from catanatron.models.player import Color
-from catanatron.game import Game, number_probability
+from catanatron.game import Game
 from catanatron.models.enums import BuildingType, Resource
 from catanatron.models.coordinate_system import offset_to_cube
 from catanatron.models.board import STATIC_GRAPH
+from catanatron.models.map import number_probability
 from catanatron.models.enums import DevelopmentCard, Resource
 from experimental.machine_learning.features import iter_players
 

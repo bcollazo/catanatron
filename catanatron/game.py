@@ -31,22 +31,6 @@ from catanatron.models.board import Board
 TURNS_LIMIT = 1000
 
 
-def number_probability(number):
-    return {
-        2: 2.778,
-        3: 5.556,
-        4: 8.333,
-        5: 11.111,
-        6: 13.889,
-        7: 16.667,
-        8: 13.889,
-        9: 11.111,
-        10: 8.333,
-        11: 5.556,
-        12: 2.778,
-    }[number] / 100
-
-
 class Game:
     """
     This contains the complete state of the game (board + players) and the
@@ -231,6 +215,7 @@ class Game:
         board.connected_components = pickle.loads(
             pickle.dumps(self.state.board.connected_components)
         )
+        board.board_buildable_ids = self.state.board.board_buildable_ids.copy()
         board.robber_coordinate = self.state.board.robber_coordinate
 
         state_copy = State(None, None, initialize=False)
