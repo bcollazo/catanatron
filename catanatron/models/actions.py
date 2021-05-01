@@ -238,7 +238,7 @@ def ncr(n, r):
 
 
 def maritime_trade_possibilities(player, bank, board):
-    possibilities = []
+    trade_offers = set()
     # 4:1 trade
     for resource in Resource:
         if player.resource_deck.count(resource) >= 4:
@@ -246,9 +246,7 @@ def maritime_trade_possibilities(player, bank, board):
                 # cant trade for same resource, and bank must have enough
                 if resource != j_resource and bank.count(j_resource) > 0:
                     trade_offer = tuple([resource] * 4 + [j_resource])
-                    possibilities.append(
-                        Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
-                    )
+                    trade_offers.add(trade_offer)
 
     port_resources = board.get_player_port_resources(player.color)
     for port_resource in port_resources:
@@ -259,11 +257,7 @@ def maritime_trade_possibilities(player, bank, board):
                         # cant trade for same resource, and bank must have enough
                         if resource != j_resource and bank.count(j_resource) > 0:
                             trade_offer = tuple([resource] * 3 + [None, j_resource])
-                            possibilities.append(
-                                Action(
-                                    player.color, ActionType.MARITIME_TRADE, trade_offer
-                                )
-                            )
+                            trade_offers.add(trade_offer)
         else:  # has 2:1
             if player.resource_deck.count(port_resource) >= 2:
                 for j_resource in Resource:
@@ -272,11 +266,11 @@ def maritime_trade_possibilities(player, bank, board):
                         trade_offer = tuple(
                             [port_resource] * 2 + [None, None, j_resource]
                         )
-                        possibilities.append(
-                            Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
-                        )
+                        trade_offers.add(trade_offer)
 
-    return possibilities
+    return list(
+        map(lambda t: Action(player.color, ActionType.MARITIME_TRADE, t), trade_offers)
+    )
 
 
 def road_building_possibilities(player, board):
