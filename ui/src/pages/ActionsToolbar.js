@@ -182,7 +182,12 @@ function PlayButtons() {
   );
 }
 
-export default function ActionsToolbar({ zoomIn, zoomOut, isBotThinking }) {
+export default function ActionsToolbar({
+  zoomIn,
+  zoomOut,
+  isBotThinking,
+  replayMode,
+}) {
   const { state, dispatch } = useContext(store);
 
   const openLeftDrawer = useCallback(() => {
@@ -205,7 +210,9 @@ export default function ActionsToolbar({ zoomIn, zoomOut, isBotThinking }) {
         <ResourceCards playerState={human} />
       </div>
       <div className="actions-toolbar">
-        {!botsTurn && <PlayButtons gameState={state.gameState} />}
+        {!botsTurn && !replayMode && (
+          <PlayButtons gameState={state.gameState} />
+        )}
         {botsTurn && (
           <Prompt gameState={state.gameState} isBotThinking={isBotThinking} />
         )}

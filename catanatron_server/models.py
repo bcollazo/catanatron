@@ -63,12 +63,19 @@ def create_game_state(game):
     return game_state
 
 
-def get_game_state(game_id):
-    result = (
-        db.session.query(GameState)
-        .filter_by(uuid=game_id)
-        .order_by(GameState.state_index.desc())
-        .first_or_404()
-    )
+def get_game_state(game_id, state_index=None):
+    if state_index is None:
+        result = (
+            db.session.query(GameState)
+            .filter_by(uuid=game_id)
+            .order_by(GameState.state_index.desc())
+            .first_or_404()
+        )
+    else:
+        result = (
+            db.session.query(GameState)
+            .filter_by(uuid=game_id, state_index=state_index)
+            .first_or_404()
+        )
     game = pickle.loads(result.pickle_data)
     return game

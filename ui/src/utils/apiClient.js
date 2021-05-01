@@ -7,8 +7,10 @@ export async function createGame() {
   return response.data.game_id;
 }
 
-export async function getState(gameId) {
-  const response = await axios.get(API_URL + "/api/games/" + gameId);
+export async function getState(gameId, stateIndex = "latest") {
+  const response = await axios.get(
+    `${API_URL}/api/games/${gameId}/states/${stateIndex}`
+  );
   return response.data;
 }
 

@@ -17,7 +17,7 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 
 
 @bp.route("/games", methods=("POST",))
-def post_game():
+def post_game_endpoint():
     game = Game(
         players=[
             AlphaBetaPlayer(BOT_COLOR, "FOO", 2, True),
@@ -28,9 +28,10 @@ def post_game():
     return jsonify({"game_id": game.id})
 
 
-@bp.route("/games/<string:game_id>", methods=("GET",))
-def get_game_endpoint(game_id):
-    game = get_game_state(game_id)
+@bp.route("/games/<string:game_id>/states/<string:state_index>", methods=("GET",))
+def get_game_endpoint(game_id, state_index):
+    state_index = None if state_index == "latest" else int(state_index)
+    game = get_game_state(game_id, state_index)
     if game is None:
         abort(404, description="Resource not found")
 
@@ -42,7 +43,7 @@ def get_game_endpoint(game_id):
 
 
 @bp.route("/games/<string:game_id>/actions", methods=["POST"])
-def tick_game(game_id):
+def post_action_endpoint(game_id):
     game = get_game_state(game_id)
     if game is None:
         abort(404, description="Resource not found")

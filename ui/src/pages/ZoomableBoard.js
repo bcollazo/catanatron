@@ -98,12 +98,13 @@ function buildEdgeActions(state) {
   return edgeActions;
 }
 
-export default function ZoomableBoard() {
+export default function ZoomableBoard({ replayMode }) {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
   const { width, height } = useWindowSize();
   const [show, setShow] = useState(false);
 
+  // TODO: Move these up to GameScreen and let Zoomable be presentational component
   // https://stackoverflow.com/questions/61255053/react-usecallback-with-parameter
   const buildOnNodeClick = useCallback(
     memoize((id, action) => async () => {
@@ -131,8 +132,8 @@ export default function ZoomableBoard() {
   const center = [width / 2, containerHeight / 2];
   const size = computeDefaultSize(width, containerHeight);
 
-  const nodeActions = buildNodeActions(state);
-  const edgeActions = buildEdgeActions(state);
+  const nodeActions = replayMode ? {} : buildNodeActions(state);
+  const edgeActions = replayMode ? {} : buildEdgeActions(state);
 
   let board;
   if (size) {
@@ -156,7 +157,7 @@ export default function ZoomableBoard() {
         direction={direction}
         building={building}
         color={color}
-        flashing={id in nodeActions}
+        flashing={!replayMode && id in nodeActions}
         onClick={buildOnNodeClick(id, nodeActions[id])}
       />
     ));

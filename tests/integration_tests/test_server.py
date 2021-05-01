@@ -32,17 +32,30 @@ def test_create_game_get_game_and_run_action(client):
     assert "game_id" in response_json
     game_id = response_json["game_id"]
 
-    response = client.get(f"/api/games/{game_id}")
+    response = client.get(f"/api/games/{game_id}/states/latest")
     response_json = response.get_json()
     assert response.status_code == 200
     assert response.is_json
     assert "tiles" in response_json
+
+    response = client.get(f"/api/games/{game_id}/states/0")
+    state_zero = response.get_json()
+    assert response.status_code == 200
+    assert response.is_json
+    assert "tiles" in state_zero
+    assert response_json == state_zero
 
     response = client.post(f"/api/games/{game_id}/actions")
     response_json = response.get_json()
     assert response.status_code == 200
     assert response.is_json
     assert "tiles" in response_json
+
+    response = client.get(f"/api/games/{game_id}/states/latest")
+    response_json = response.get_json()
+    response = client.get(f"/api/games/{game_id}/states/0")
+    state_zero = response.get_json()
+    assert response_json != state_zero
 
 
 def test_game_not_exists(client):

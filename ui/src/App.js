@@ -33,8 +33,11 @@ function App() {
         >
           <Router>
             <Switch>
+              <Route path="/games/:gameId/states/:stateIndex">
+                <GameScreen replayMode={true} />
+              </Route>
               <Route path="/games/:gameId">
-                <GameScreen />
+                <GameScreen replayMode={false} />
               </Route>
               <Route path="/" exact={true}>
                 <HomePage />
