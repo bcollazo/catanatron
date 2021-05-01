@@ -33,7 +33,7 @@ function GameScreen({ replayMode }) {
       const gameState = await getState(gameId, stateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
-  }, [gameId, dispatch]);
+  }, [gameId, stateIndex, dispatch]);
 
   useEffect(() => {
     if (!state.gameState || replayMode) {
@@ -55,7 +55,14 @@ function GameScreen({ replayMode }) {
         }, ROBOT_THINKING_TIME - requestTime);
       })();
     }
-  }, [gameId, state.gameState, dispatch, enqueueSnackbar, closeSnackbar]);
+  }, [
+    gameId,
+    replayMode,
+    state.gameState,
+    dispatch,
+    enqueueSnackbar,
+    closeSnackbar,
+  ]);
 
   if (!state.gameState) {
     return (
