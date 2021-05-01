@@ -1,85 +1,129 @@
 import random
 import time
-from collections import defaultdict
-from typing import List
 
-from catanatron.models.enums import DevelopmentCard, Resource
+from catanatron.models.enums import BuildingType, DevelopmentCard, Resource
 from catanatron.game import Game
 from catanatron.models.player import Player
-from catanatron.models.actions import Action
+from catanatron.models.actions import ActionType
 from catanatron.models.enums import Resource, DevelopmentCard
 from experimental.machine_learning.features import (
     build_production_features,
-    create_sample,
     iter_players,
+    reachability_features,
 )
-from experimental.machine_learning.players.tree_search_utils import (
-    execute_spectrum,
-    expand_spectrum,
-)
+from experimental.machine_learning.players.tree_search_utils import expand_spectrum
 
 
-effective_production_features = build_production_features(True)
-total_production_features = build_production_features(False)
+TRANSLATE_VARIETY = 4  # i.e. each new resource is like 4 production points
+production_features = build_production_features(True)
 
 
-def build_value_function(params):
+def value_production(sample, player_name="P0", include_variety=True):
+    proba_point = 2.778 / 100
+    features = [
+        f"EFFECTIVE_{player_name}_WHEAT_PRODUCTION",
+        f"EFFECTIVE_{player_name}_ORE_PRODUCTION",
+        f"EFFECTIVE_{player_name}_SHEEP_PRODUCTION",
+        f"EFFECTIVE_{player_name}_WOOD_PRODUCTION",
+        f"EFFECTIVE_{player_name}_BRICK_PRODUCTION",
+    ]
+    prod_sum = sum([sample[f] for f in features])
+    prod_variety = (
+        sum([sample[f] != 0 for f in features]) * TRANSLATE_VARIETY * proba_point
+    )
+    return prod_sum + (0 if not include_variety else prod_variety)
+
+
+def base_value_function(params):
     def fn(game, p0_color):
         iterator = iter_players(game, p0_color)
         _, p0 = next(iterator)
 
-        sample = create_sample(game, p0_color)
+        our_production_sample = production_features(game, p0_color)
+        enemy_production_sample = production_features(game, p0_color)
+        production = value_production(our_production_sample, "P0")
+        enemy_production = value_production(enemy_production_sample, "P1", False)
 
-        proba_point = 2.778 / 100
-        features = [
-            "EFFECTIVE_P0_WHEAT_PRODUCTION",
-            "EFFECTIVE_P0_ORE_PRODUCTION",
-            "EFFECTIVE_P0_SHEEP_PRODUCTION",
-            "EFFECTIVE_P0_WOOD_PRODUCTION",
-            "EFFECTIVE_P0_BRICK_PRODUCTION",
-        ]
-        prod_sum = sum([sample[f] for f in features])
-        prod_variety = sum([sample[f] != 0 for f in features]) * 4 * proba_point
-
-        enemy_features = [
-            "EFFECTIVE_P1_WHEAT_PRODUCTION",
-            "EFFECTIVE_P1_ORE_PRODUCTION",
-            "EFFECTIVE_P1_SHEEP_PRODUCTION",
-            "EFFECTIVE_P1_WOOD_PRODUCTION",
-            "EFFECTIVE_P1_BRICK_PRODUCTION",
-        ]
-        enemy_prod_sum = sum([sample[f] for f in enemy_features])
-
-        longest_road_length = sample["P0_LONGEST_ROAD_LENGTH"]
+        longest_road_length = game.state.players_by_color[p0_color].longest_road_length
 
         features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
-        production_at_one = sum([sample[f] for f in features])
+        reachability_sample = reachability_features(game, p0_color, 2)
+        reachable_production_at_one = sum([reachability_sample[f] for f in features])
 
         return float(
             p0.public_victory_points * 1000000
-            + longest_road_length * params[0]
+            + longest_road_length * 10
             + len(p0.development_deck.to_array()) * 10
             + len(p0.played_development_cards.to_array()) * 10.1
             + p0.played_development_cards.count(DevelopmentCard.KNIGHT) * 10.1
-            + prod_sum * 1000
-            + prod_variety * 1000
-            - enemy_prod_sum * 1000
-            + production_at_one * 10
+            + production * 1000
+            - enemy_production * 1000
+            + reachable_production_at_one * 10
         )
 
     return fn
 
 
-def get_value_fn_builder(name):
-    return globals()[name]
+DEFAULT_WEIGHTS = [1e10, 1e8, 1e8, 1e4, 1e3, 10]
+
+
+def contender_value_function(params):
+    def fn(game, p0_color):
+        iterator = iter_players(game, p0_color)
+        _, p0 = next(iterator)
+
+        production_features = build_production_features(True)
+        our_production_sample = production_features(game, p0_color)
+        enemy_production_sample = production_features(game, p0_color)
+        production = value_production(our_production_sample, "P0")
+        enemy_production = value_production(enemy_production_sample, "P1", False)
+
+        longest_road_length = game.state.players_by_color[p0_color].longest_road_length
+
+        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
+        reachability_sample = reachability_features(game, p0_color, 2)
+        reachable_production_at_one = sum([reachability_sample[f] for f in features])
+
+        # hand_sample = resource_hand_features(game, p0_color)
+        # features = [f"P0_{resource.value}_IN_HAND" for resource in Resource]
+        num_in_hand = p0.resource_deck.num_cards()
+        if num_in_hand > 7:
+            hand_contribution = num_in_hand * -params[4]
+        else:
+            hand_contribution = num_in_hand * params[4]
+
+        num_buildable_nodes = len(game.state.board.buildable_node_ids(p0_color))
+        longest_road_factor = params[5] if num_buildable_nodes == 0 else 0.1
+        return float(
+            p0.public_victory_points * params[0]
+            + production * params[1]
+            - enemy_production * params[2]
+            + reachable_production_at_one * params[3]
+            # TODO: buildable nodes. or closeness to city or settlement.
+            + hand_contribution
+            + longest_road_length * longest_road_factor
+            + len(p0.development_deck.to_array()) * 10
+            + len(p0.played_development_cards.to_array()) * 10.1
+            + p0.played_development_cards.count(DevelopmentCard.KNIGHT) * 10.1
+        )
+
+    return fn
+
+
+def get_value_fn(name, params):
+    if name is None or params is None:
+        return base_value_function(DEFAULT_WEIGHTS)
+    return globals()[name](params)
 
 
 class ValueFunctionPlayer(Player):
-    def __init__(
-        self, color, name, value_fn_builder_name="build_value_function", params=[4]
-    ):
+    def __init__(self, color, name, value_fn_builder_name=None, params=DEFAULT_WEIGHTS):
         super().__init__(color, name=name)
-        self.value_fn_builder_name = value_fn_builder_name
+        self.value_fn_builder_name = (
+            "contender_value_function"
+            if value_fn_builder_name == "C"
+            else "base_value_function"
+        )
         self.params = params
 
     def decide(self, game: Game, playable_actions):
@@ -92,7 +136,7 @@ class ValueFunctionPlayer(Player):
             game_copy = game.copy()
             game_copy.execute(action)
 
-            value_fn = get_value_fn_builder(self.value_fn_builder_name)(self.params)
+            value_fn = get_value_fn(self.value_fn_builder_name, self.params)
             value = value_fn(game_copy, self.color)
             if value > best_value:
                 best_value = value
@@ -135,19 +179,24 @@ class AlphaBetaPlayer(Player):
         color,
         name,
         depth=ALPHABETA_DEFAULT_DEPTH,
-        value_fn_builder_name="build_value_function",
-        params=[4],
+        value_fn_builder_name=None,
+        params=DEFAULT_WEIGHTS,
     ):
         super().__init__(color, name=name)
-        self.depth = depth
-        self.value_fn_builder_name = value_fn_builder_name
+        self.depth = int(depth)
+        self.value_fn_builder_name = (
+            "contender_value_function"
+            if value_fn_builder_name == "C"
+            else "base_value_function"
+        )
         self.params = params
 
     def decide(self, game: Game, playable_actions):
-        if len(playable_actions) == 1:
-            return playable_actions[0]
+        actions = simple_prunning(game, playable_actions)
+        if len(actions) == 1:
+            return actions[0]
 
-        value_fn = get_value_fn_builder(self.value_fn_builder_name)(self.params)
+        value_fn = get_value_fn(self.value_fn_builder_name, self.params)
         start = time.time()
         deadline = start + MAX_SEARCH_TIME_SECS
         result = alphabeta(
@@ -159,14 +208,15 @@ class AlphaBetaPlayer(Player):
             deadline,
             value_fn,
         )
-        print(
-            "Decision Results:", self.depth, len(playable_actions), time.time() - start
-        )
+        # print("Decision Results:", self.depth, len(actions), time.time() - start)
         # breakpoint()
         return result[0]
 
     def __repr__(self) -> str:
-        return super().__repr__() + f"(depth={self.depth})"
+        return (
+            super().__repr__()
+            + f"(depth={self.depth},value_fn={self.value_fn_builder_name})"
+        )
 
 
 def alphabeta(game, depth, alpha, beta, p0_color, deadline, value_fn):
@@ -182,7 +232,7 @@ def alphabeta(game, depth, alpha, beta, p0_color, deadline, value_fn):
         return value_fn(game, p0_color)
 
     maximizingPlayer = game.state.current_player().color == p0_color
-    actions = game.state.playable_actions
+    actions = simple_prunning(game, game.state.playable_actions)
     children = expand_spectrum(game, actions)
     # print(tabs, "MAXIMIZING =", maximizingPlayer, len(children))
     if maximizingPlayer:
@@ -231,3 +281,83 @@ def alphabeta(game, depth, alpha, beta, p0_color, deadline, value_fn):
             # print(tabs, "Expected Value:", action, expected_value, alpha, beta)
 
         return best_action, best_value
+
+
+def simple_prunning(game, playable_actions):
+    current_color = game.state.current_player().color
+    actions = playable_actions.copy()
+    types = set(map(lambda a: a.action_type, playable_actions))
+
+    # Prune Initial Settlements at 1-tile places
+    if (
+        ActionType.BUILD_FIRST_SETTLEMENT in types
+        or ActionType.BUILD_SECOND_SETTLEMENT in types
+    ):
+        actions = filter(
+            lambda a: len(game.state.board.map.adjacent_tiles[a.value]) != 1, actions
+        )
+
+    # Prune Trading if can hold for resources. Only for rare resources.
+    if ActionType.MARITIME_TRADE in types:
+        port_resources = game.state.board.get_player_port_resources(current_color)
+        has_three_to_one = None in port_resources
+        # TODO: for 2:1 ports, skip any 3:1 or 4:1 trades
+        # TODO: if can_safely_hold, prune all
+        tmp_actions = []
+        for action in actions:
+            if action.action_type != ActionType.MARITIME_TRADE:
+                tmp_actions.append(action)
+                continue
+            # has 3:1, skip any 4:1 trades
+            if has_three_to_one and action.value[3] is not None:
+                continue
+            tmp_actions.append(action)
+        actions = tmp_actions
+
+    if ActionType.MOVE_ROBBER in types:
+        actions = prune_robber_actions(
+            current_color, game, actions, ActionType.MOVE_ROBBER
+        )
+    if ActionType.PLAY_KNIGHT_CARD in types:
+        actions = prune_robber_actions(
+            current_color, game, actions, ActionType.PLAY_KNIGHT_CARD
+        )
+
+    return list(actions)
+
+
+def prune_robber_actions(current_color, game, actions, action_type):
+    """Eliminate all but the most impactful tile"""
+    enemy = next(filter(lambda p: p.color != current_color, game.state.players))
+    enemy_owned_tiles = set()
+    for node_id in enemy.buildings[BuildingType.SETTLEMENT]:
+        enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
+    for node_id in enemy.buildings[BuildingType.CITY]:
+        enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
+
+    robber_moves = filter(
+        lambda a: a.action_type == action_type
+        and game.state.board.map.tiles[a.value[0]] in enemy_owned_tiles,
+        actions,
+    )
+    production_features = build_production_features(True)
+
+    def impact(action):
+        game_copy = game.copy()
+        game_copy.execute(action)
+
+        our_production_sample = production_features(game_copy, current_color)
+        enemy_production_sample = production_features(game_copy, current_color)
+        production = value_production(our_production_sample, "P0")
+        enemy_production = value_production(enemy_production_sample, "P1")
+
+        return enemy_production - production
+
+    most_impactful_robber_action = max(
+        robber_moves, key=impact
+    )  # most production and variety producing
+    actions = filter(
+        lambda a: a.action_type != action_type or a == most_impactful_robber_action,
+        actions,
+    )
+    return actions

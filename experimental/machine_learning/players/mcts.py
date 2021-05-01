@@ -8,6 +8,7 @@ from catanatron.game import Game
 from catanatron.models.player import Player
 from experimental.machine_learning.players.playouts import run_playout
 from experimental.machine_learning.players.tree_search_utils import execute_spectrum
+from experimental.machine_learning.players.minimax import simple_prunning
 
 SIMULATIONS = 10
 epsilon = 1e-8
@@ -15,12 +16,13 @@ EXP_C = 2 ** 0.5
 
 
 class StateNode:
-    def __init__(self, color, state, parent, playable_actions=None):
+    def __init__(self, color, game, parent, prunning=False):
         self.level = 0 if parent is None else parent.level + 1
         self.color = color  # color of player carrying out MCTS
         self.parent = parent
-        self.state = state
+        self.game = game  # state
         self.children = []
+        self.prunning = prunning
 
         self.wins = 0
         self.visits = 0
@@ -43,7 +45,7 @@ class StateNode:
             # playout
             result = tmp.playout()
         else:
-            result = self.state.winning_player()
+            result = self.game.winning_player()
 
         # backpropagate
         tmp.backpropagate(result == self.color)
@@ -52,14 +54,22 @@ class StateNode:
         return len(self.children) == 0
 
     def is_terminal(self):
-        return self.state.winning_player() is not None
+        return self.game.winning_player() is not None
 
     def expand(self):
         children = defaultdict(list)
-        for action in self.state.playable_actions:
-            outcomes = execute_spectrum(self.state, action)
+        playable_actions = self.game.state.playable_actions
+        actions = (
+            simple_prunning(self.game, playable_actions)
+            if self.prunning
+            else playable_actions
+        )
+        for action in actions:
+            outcomes = execute_spectrum(self.game, action)
             for (state, proba) in outcomes:
-                children[action].append((StateNode(self.color, state, self), proba))
+                children[action].append(
+                    (StateNode(self.color, state, self, self.prunning), proba)
+                )
         self.children = children
 
     def select(self):
@@ -74,12 +84,12 @@ class StateNode:
 
     def choose_best_action(self):
         scores = []
-        for action in self.state.playable_actions:
+        for action in self.game.state.playable_actions:
             score = self.action_children_expected_score(action)
             scores.append(score)
 
         idx = max(range(len(scores)), key=lambda i: scores[i])
-        action = self.state.playable_actions[idx]
+        action = self.game.state.playable_actions[idx]
         return action
 
     def action_children_expected_score(self, action):
@@ -93,7 +103,7 @@ class StateNode:
         return score
 
     def playout(self):
-        return run_playout(self.state)
+        return run_playout(self.game)
 
     def backpropagate(self, value):
         self.wins += value
@@ -106,19 +116,30 @@ class StateNode:
 
 
 class MCTSPlayer(Player):
-    def __init__(self, color, name, num_simulations=SIMULATIONS):
+    def __init__(self, color, name, num_simulations=SIMULATIONS, prunning=False):
         super().__init__(color, name=name)
-        self.num_simulations = num_simulations
+        self.num_simulations = int(num_simulations)
+        self.prunning = bool(prunning)
 
     def decide(self, game: Game, playable_actions):
-        if len(playable_actions) == 1:
-            return playable_actions[0]
+        actions = (
+            simple_prunning(game, playable_actions)
+            if self.prunning
+            else playable_actions
+        )
+        if len(actions) == 1:
+            return actions[0]
 
         start = time.time()
-        root = StateNode(self.color, game.copy(), None, playable_actions)
-        for i in range(self.num_simulations):
+        root = StateNode(self.color, game.copy(), None, self.prunning)
+        for _ in range(self.num_simulations):
             root.run_simulation()
 
-        print(f"MCTS took {time.time() - start} secs to decide {len(playable_actions)}")
+        print(
+            f"{str(self)} took {time.time() - start} secs to decide {len(playable_actions)}"
+        )
 
         return root.choose_best_action()
+
+    def __repr__(self):
+        return super().__repr__() + f"({self.num_simulations}:{self.prunning})"

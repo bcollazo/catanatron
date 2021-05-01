@@ -53,15 +53,36 @@ if LOG_IN_TF:
     import tensorflow as tf
 
 
+PLAYER_CLASSES = {
+    "R": RandomPlayer,
+    "H": HumanPlayer,
+    "W": WeightedRandomPlayer,
+    "O": OnlineMCTSDQNPlayer,
+    "S": ScikitPlayer,
+    "VP": VictoryPointPlayer,
+    "F": ValueFunctionPlayer,
+    # Tree Search Players
+    "G": GreedyPlayoutsPlayer,
+    "M": MCTSPlayer,
+    "AB": AlphaBetaPlayer,
+    # Used like: --players=V:path/to/model.model,T:path/to.model
+    "V": VRLPlayer,
+    "Q": QRLPlayer,
+    "P": PRLPlayer,
+    "T": TensorRLPlayer,
+}
+
+
 @click.command()
 @click.option("-n", "--num", default=5, help="Number of games to play.")
 @click.option(
     "--players",
     default="R,R,R,R",
-    help="""
-        Comma-separated 4 players to use. R=Random, W=WeightedRandom, VX=VRLPlayer(Version X),
-            PX=PRLPlayer(Version X), QX=QRLPlayer(Version X). X >= 1.
-    """,
+    help=f"""
+        Comma-separated players to use. Use : to specify additional params.\n
+        (e.g. --players=R,G:25,AB:2:C,W).\n
+        {", ".join(map(lambda e: f"{e[0]}={e[1].__name__}", PLAYER_CLASSES.items()))}
+        """,
 )
 @click.option(
     "-o",
@@ -92,46 +113,10 @@ def simulate(num, players, outpath, save_in_db, watch):
     colors = [c for c in Color]
     pseudonyms = ["Foo", "Bar", "Baz", "Qux"]
     for i, key in enumerate(player_keys):
-        param = key[1:]
-        if key == "R":
-            initialized_players.append(RandomPlayer(colors[i], pseudonyms[i]))
-        elif key == "H":
-            initialized_players.append(HumanPlayer(colors[i], pseudonyms[i]))
-        elif key == "W":
-            initialized_players.append(WeightedRandomPlayer(colors[i], pseudonyms[i]))
-        elif key == "O":
-            initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
-        elif key == "S":
-            initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
-        elif key == "VP":
-            initialized_players.append(VictoryPointPlayer(colors[i], pseudonyms[i]))
-        # Parametrized players
-        elif key[0:2] == "AB":
-            initialized_players.append(
-                AlphaBetaPlayer(colors[i], pseudonyms[i], int(key[2]))
-            )
-        elif key[0] == "F":
-            initialized_players.append(
-                ValueFunctionPlayer(
-                    colors[i], pseudonyms[i], "build_value_function", [float(key[1:])]
-                )
-            )
-        elif key[0] == "V":
-            initialized_players.append(VRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "Q":
-            initialized_players.append(QRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "P":
-            initialized_players.append(PRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "T":
-            initialized_players.append(TensorRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "G":
-            initialized_players.append(
-                GreedyPlayoutsPlayer(colors[i], pseudonyms[i], int(param))
-            )
-        elif key[0] == "M":
-            initialized_players.append(MCTSPlayer(colors[i], pseudonyms[i], int(param)))
-        else:
-            raise ValueError("Invalid player key")
+        for player_key, player_class in PLAYER_CLASSES.items():
+            if key.startswith(player_key):
+                params = [colors[i], pseudonyms[i]] + key.split(":")[1:]
+                initialized_players.append(player_class(*params))
 
     play_batch(num, initialized_players, outpath, save_in_db, watch)
 
