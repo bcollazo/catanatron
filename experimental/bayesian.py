@@ -20,8 +20,8 @@ def black_box_function(x):
     weights = DEFAULT_WEIGHTS
     weights[0] = x
     players = [
-        AlphaBetaPlayer(Color.RED, "Foo", 2),
-        AlphaBetaPlayer(Color.BLUE, "Bar", 2, "C", weights),
+        AlphaBetaPlayer(Color.RED, "Foo", 2, True),
+        AlphaBetaPlayer(Color.BLUE, "Bar", 2, True, "C", weights),
     ]
     wins, results_by_player = play_batch(
         100, players, None, False, False, verbose=False
