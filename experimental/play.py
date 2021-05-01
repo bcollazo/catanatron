@@ -121,8 +121,9 @@ def simulate(num, players, outpath, save_in_db, watch):
     play_batch(num, initialized_players, outpath, save_in_db, watch)
 
 
-def play_batch(num_games, players, games_directory, save_in_db, watch):
+def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=True):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
+    verboseprint = print if verbose else lambda *a, **k: None
     wins = defaultdict(int)
     turns = []
     ticks = []
@@ -136,7 +137,9 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
             player.restart_state()
         game = Game(players)
 
-        print(f"Playing game {i + 1} / {num_games}. Seating:", game.state.players)
+        verboseprint(
+            f"Playing game {i + 1} / {num_games}. Seating:", game.state.players
+        )
         action_callbacks = []
         if games_directory:
             action_callbacks.append(build_action_callback(games_directory))
@@ -148,7 +151,9 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
                 time.sleep(0.25)
 
             action_callbacks.append(callback)
-            print("Watch game by refreshing http://localhost:3000/games/" + game.id)
+            verboseprint(
+                "Watch game by refreshing http://localhost:3000/games/" + game.id
+            )
 
         start = time.time()
         try:
@@ -157,12 +162,14 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
             traceback.print_exc()
         finally:
             duration = time.time() - start
-        print("Took", duration, "seconds")
-        print({str(p): p.actual_victory_points for p in players})
+        verboseprint("Took", duration, "seconds")
+        verboseprint({str(p): p.actual_victory_points for p in players})
         if save_in_db and not watch:
             save_game_state(game)
-            print("Saved in db. See result at http://localhost:3000/games/" + game.id)
-        print("")
+            verboseprint(
+                "Saved in db. See result at http://localhost:3000/games/" + game.id
+            )
+        verboseprint("")
 
         winner = game.winning_player()
         wins[str(winner)] += 1
@@ -184,18 +191,19 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
                         )
                 writer.flush()
 
-    print("AVG Ticks:", sum(ticks) / len(ticks))
-    print("AVG Turns:", sum(turns) / len(turns))
-    print("AVG Duration:", sum(durations) / len(durations))
+    verboseprint("AVG Ticks:", sum(ticks) / len(ticks))
+    verboseprint("AVG Turns:", sum(turns) / len(turns))
+    verboseprint("AVG Duration:", sum(durations) / len(durations))
 
     for player in players:
         vps = results_by_player[player.color]
-        print("AVG VPS:", player, sum(vps) / len(vps))
+        verboseprint("AVG VPS:", player, sum(vps) / len(vps))
 
-    # Print Winners graph in command line:
-    fig = tpl.figure()
-    fig.barh([wins[str(p)] for p in players], players, force_ascii=False)
-    fig.show()
+    if verbose:
+        # Print Winners graph in command line:
+        fig = tpl.figure()
+        fig.barh([wins[str(p)] for p in players], players, force_ascii=False)
+        fig.show()
 
     return wins, results_by_player
 
