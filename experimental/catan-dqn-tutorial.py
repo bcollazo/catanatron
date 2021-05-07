@@ -84,7 +84,7 @@ FEATURES = [
     # "P2_KNIGHT_PLAYED",
     # "P3_KNIGHT_PLAYED",
 ]
-
+FEATURES = get_feature_ordering(2)
 NUM_FEATURES = len(FEATURES)
 
 DISCOUNT = 0.99
@@ -119,6 +119,26 @@ MIN_EPSILON = 0.001
 AGGREGATE_STATS_EVERY = 10  # episodes
 SHOW_PREVIEW = False
 
+# TODO: Simple Action Space:
+# Hold
+# Build Settlement on most production spot vs diff. need number to translate enemy potential to true prod.
+# Build City on most production spot.
+# Build City on spot that balances production the most.
+# Build Road towards more production. (again need to translate potential to true.)
+# Buy dev card
+# Play Knight to most powerful spot.
+# Play Year of Plenty towards most valueable play (city, settlement, dev). Bonus points if use rare resources.
+# Play Road Building towards most increase in production.
+# Play Monopoly most impactful resource.
+# Trade towards most valuable play.
+
+# TODO: Simple State Space:
+# Cards in Hand
+# Buildable Nodes
+# Production
+# Num Knights
+# Num Roads
+
 
 class CatanEnv:
     def __init__(self):
@@ -140,11 +160,11 @@ class CatanEnv:
 
         self._advance_until_p0_decision()
 
-        state = self._get_state()
-        return state
+        return self._get_state()
 
     def step(self, action):
-        # Take any action in the playable, that matches ACTIONS_ARRAY prototype
+        # Get "catan_action" based on action param.
+        # i.e. Take any action in the playable, that matches ACTIONS_ARRAY
         (action_type, value) = ACTIONS_ARRAY[action]
         catan_action = None
         for a in self.playable_actions():
@@ -152,12 +172,8 @@ class CatanEnv:
             if normalized.action_type == action_type and normalized.value == value:
                 catan_action = a
                 break
-        if catan_action is None:
-            print("Couldnt find", action, action_type, value, "in:")
-            print(self.playable_actions())
-            breakpoint()
-        else:
-            self.game.execute(catan_action)
+        assert catan_action is not None
+        self.game.execute(catan_action)
 
         self._advance_until_p0_decision()
         winning_color = self.game.winning_color()
@@ -168,6 +184,8 @@ class CatanEnv:
         return new_state, reward, done
 
     def render(self):
+        # TODO: Open up browser, if doesnt exists.
+        # navigate to latest state.
         pass
 
     def _get_state(self):
@@ -218,13 +236,15 @@ class DQNAgent:
         # outputs = normalizer_layer(outputs)
         # outputs = BatchNormalization()(outputs)
         # outputs = Dense(352, activation=tf.nn.relu)(outputs)
-        # outputs = Dense(64, activation=tf.nn.relu)(outputs)
-        # outputs = Dense(32, activation=tf.nn.relu)(outputs)
+        outputs = Dense(64, activation=tf.nn.relu)(outputs)
+        outputs = Dense(32, activation=tf.nn.relu)(outputs)
         outputs = Dense(32, activation="relu")(outputs)
         outputs = Dense(units=ACTION_SPACE_SIZE, activation="linear")(outputs)
         model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
-        model.compile(loss="mse", optimizer=Adam(learning_rate=0.0001), metrics=["mae"])
+        model.compile(
+            loss="mse", optimizer=Adam(learning_rate=0.000001), metrics=["mae"]
+        )
         return model
 
     # Adds step's data to a memory replay array

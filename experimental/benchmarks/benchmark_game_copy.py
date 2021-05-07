@@ -116,8 +116,8 @@ print(result / NUMBER, "secs")
 
 
 # Results:
-# 0.0006037695949198678 secs; game.copy()
-# 4.2668479960411786e-05 secs; hand-hydrated
-# 6.549044977873564e-06 secs; theoretical-limit? (arrays + dicts + map-reuse)
-# 9.11637395620346e-06 secs
-# 8.073947974480688e-06 secs
+# 0.00045712706199992683 secs; game.copy()
+# 8.875908100162633e-05 secs; hand-hydrated
+# 1.0377163001976441e-05 secs; theoretical-limit? (arrays + dicts + map-reuse)
+# 8.97490599891171e-06 secs
+# 8.097766003629659e-06 secs
