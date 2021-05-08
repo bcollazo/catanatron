@@ -26,6 +26,17 @@ class GameState(Base):
 
     # TODO: unique uuid and state_index
 
+    @staticmethod
+    def from_game(game):
+        state = json.dumps(game, cls=GameEncoder)
+        pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
+        return GameState(
+            uuid=game.id,
+            state_index=len(game.state.actions),
+            state=state,
+            pickle_data=pickle_data,
+        )
+
 
 db = SQLAlchemy(metadata=metadata)
 
@@ -45,21 +56,15 @@ def database_session():
     try:
         yield session
     finally:
+        session.expunge_all()
         session.close()
 
 
-def create_game_state(game):
-    state = json.dumps(game, cls=GameEncoder)
-    pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
-    game.id, len(game.state.actions), state, pickle_data
-    game_state = GameState(
-        uuid=game.id,
-        state_index=len(game.state.actions),
-        state=state,
-        pickle_data=pickle_data,
-    )
-    db.session.add(game_state)
-    db.session.commit()
+def create_game_state(game, session_param=None):
+    game_state = GameState.from_game(game)
+    session = session_param or db.session
+    session.add(game_state)
+    session.commit()
     return game_state
 
 
