@@ -13,16 +13,6 @@ from catanatron.models.map import number_probability
 
 
 # ===== Helpers
-def port_is_resource(game, port_id, resource):
-    port = game.state.board.map.get_port_by_id(port_id)
-    return port.resource == resource
-
-
-def port_is_threetoone(game, port_id):
-    port = game.state.board.map.get_port_by_id(port_id)
-    return port.resource is None
-
-
 def is_building(game, node_id, player, building_type):
     building = game.state.board.buildings.get(node_id, None)
     if building is None:
@@ -137,12 +127,10 @@ def tile_features(game, p0_color):
 def port_features(game, p0_color):
     # PORT0_WOOD, PORT0_THREE_TO_ONE, ...
     features = {}
-    for port_id in range(9):
+    for port_id, port in game.state.board.map.ports_by_id.items():
         for resource in Resource:
-            features[f"PORT{port_id}_IS_{resource.value}"] = port_is_resource(
-                game, port_id, resource
-            )
-        features[f"PORT{port_id}_IS_THREE_TO_ONE"] = port_is_threetoone(game, port_id)
+            features[f"PORT{port_id}_IS_{resource.value}"] = port.resource == resource
+        features[f"PORT{port_id}_IS_THREE_TO_ONE"] = port.resource is None
     return features
 
 
@@ -390,14 +378,14 @@ feature_extractors = [
     player_features,
     resource_hand_features,
     # TRANSFERABLE BOARD FEATURES =====
-    build_production_features(True),
-    build_production_features(False),
+    # build_production_features(True),
+    # build_production_features(False),
     # expansion_features,
-    reachability_features,
+    # reachability_features,
     # RAW BASE-MAP FEATURES =====
-    # tile_features,
-    # port_features,
-    # graph_features,
+    tile_features,
+    port_features,
+    graph_features,
     # GAME FEATURES =====
     game_features,
 ]
