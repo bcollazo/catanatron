@@ -81,7 +81,7 @@ class GameEncoder(json.JSONEncoder):
                 "winning_color": obj.winning_color(),
             }
         if isinstance(obj, Deck):
-            return {resource.value: count for resource, count in obj.cards.items()}
+            return {resource.value: obj.array[i] for i, resource in enumerate(Resource)}
         if isinstance(obj, Player):
             return {k: v for k, v in obj.__dict__.items() if k != "buildings"}
         if isinstance(obj, Water):

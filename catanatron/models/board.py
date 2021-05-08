@@ -153,7 +153,7 @@ class Board:
         return sorted(list(nodes.intersection(self.board_buildable_ids)))
 
     def buildable_edges(self, color: Color):
-        """List of (n1,n2) tuples. Edges are in n1 < n2 order. Result is also ordered."""
+        """List of (n1,n2) tuples. Edges are in n1 < n2 order."""
         global STATIC_GRAPH
         buildable_subgraph = STATIC_GRAPH.subgraph(range(NUM_NODES))
         expandable = set()
@@ -170,7 +170,7 @@ class Board:
             if self.get_edge_color(edge) is None:
                 expandable.add(tuple(sorted(edge)))
 
-        return sorted(list(expandable))
+        return list(expandable)
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
@@ -234,7 +234,16 @@ class Board:
         return paths
 
     def copy(self):
-        return pickle.loads(pickle.dumps(self))  # TODO: Optimize
+        board = Board(self.map, initialize=False)
+        board.map = self.map  # reuse since its immutable
+        board.buildings = self.buildings.copy()
+        board.roads = self.roads.copy()
+        board.connected_components = pickle.loads(
+            pickle.dumps(self.connected_components)
+        )
+        board.board_buildable_ids = self.board_buildable_ids.copy()
+        board.robber_coordinate = self.robber_coordinate
+        return board
 
     # ===== Helper functions
     def get_node_color(self, node_id):

@@ -1,4 +1,5 @@
 import random
+import array
 
 from catanatron.models.enums import Resource, DevelopmentCard
 
@@ -17,32 +18,26 @@ class Deck:
         Args:
             card_types (Enum): Describes cards to use
         """
-        self.card_types = card_types
-        self.cards = {card: 0 for card in self.card_types}
+        self.array = array.array("H", [0, 0, 0, 0, 0])
+        self.indices = {c: i for i, c in enumerate(card_types)}
 
     def includes(self, other):
-        for card_type in self.card_types:
-            if self.count(card_type) < other.count(card_type):
-                return False
-        return True
+        return all([a >= b for a, b in zip(self.array, other.array)])
 
     def count(self, card_type):
-        return self.cards[card_type]
+        return self.array[self.indices[card_type]]
 
     def num_cards(self):
-        total = 0
-        for card_type in self.card_types:
-            total += self.count(card_type)
-        return total
+        return sum(self.array)
 
     def can_draw(self, count: int, card_type):
-        return self.count(card_type) >= count
+        return self.array[self.indices[card_type]] >= count
 
     def draw(self, count: int, card_type):
         if not self.can_draw(count, card_type):
             raise ValueError(f"Cant draw {count} {card_type}. Not enough cards.")
 
-        self.cards[card_type] -= count
+        self.array[self.indices[card_type]] -= count
 
     def random_draw(self):
         array = self.to_array()
@@ -54,27 +49,29 @@ class Deck:
         return card_type
 
     def replenish(self, count: int, card_type):
-        self.cards[card_type] += count
+        self.array[self.indices[card_type]] += count
 
     def to_array(self):
         """Make it look like a deck of cards"""
         array = []
-        for card_type in self.card_types:
-            array.extend([card_type] * self.count(card_type))
+        for i, c in self.indices.items():
+            array.extend([i] * self.array[c])
         return array
 
     def __add__(self, other):
-        for card_type in self.card_types:
-            self.replenish(other.count(card_type), card_type)
+        for i, c in enumerate(other.array):
+            self.array[i] += c
         return self
 
     def __sub__(self, other):
-        for card_type in self.card_types:
-            self.draw(other.count(card_type), card_type)
+        if not self.includes(other):
+            raise ValueError("Invalid deck subtraction")
+        for i, c in enumerate(other.array):
+            self.array[i] -= c
         return self
 
     def __str__(self):
-        return str(self.cards)
+        return str(self.array)
 
 
 class ResourceDeck(Deck):
@@ -90,34 +87,19 @@ class ResourceDeck(Deck):
 
     @staticmethod
     def road_cost():
-        deck = ResourceDeck()
-        deck.replenish(1, Resource.WOOD)
-        deck.replenish(1, Resource.BRICK)
-        return deck
+        return ROAD_COST
 
     @staticmethod
     def settlement_cost():
-        deck = ResourceDeck()
-        deck.replenish(1, Resource.WOOD)
-        deck.replenish(1, Resource.BRICK)
-        deck.replenish(1, Resource.SHEEP)
-        deck.replenish(1, Resource.WHEAT)
-        return deck
+        return SETTLEMENT_COST
 
     @staticmethod
     def city_cost():
-        deck = ResourceDeck()
-        deck.replenish(2, Resource.WHEAT)
-        deck.replenish(3, Resource.ORE)
-        return deck
+        return CITY_COST
 
     @staticmethod
     def development_card_cost():
-        deck = ResourceDeck()
-        deck.replenish(1, Resource.SHEEP)
-        deck.replenish(1, Resource.WHEAT)
-        deck.replenish(1, Resource.ORE)
-        return deck
+        return DEVELOPMENT_CARD_COST
 
     def __init__(self):
         Deck.__init__(self, Resource)
@@ -141,3 +123,16 @@ class DevelopmentDeck(Deck):
 
     def __init__(self):
         Deck.__init__(self, DevelopmentCard)
+
+
+ROAD_COST = ResourceDeck()
+ROAD_COST.array = array.array("H", [1, 1, 0, 0, 0])
+
+SETTLEMENT_COST = ResourceDeck()
+SETTLEMENT_COST.array = array.array("H", [1, 1, 1, 1, 0])
+
+CITY_COST = ResourceDeck()
+CITY_COST.array = array.array("H", [0, 0, 0, 2, 3])
+
+DEVELOPMENT_CARD_COST = ResourceDeck()
+DEVELOPMENT_CARD_COST.array = array.array("H", [0, 0, 1, 1, 1])

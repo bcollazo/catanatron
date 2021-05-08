@@ -208,15 +208,7 @@ class Game:
     def copy(self) -> "Game":
         players = pickle.loads(pickle.dumps(self.state.players))
 
-        board = Board(self.state.board.map, initialize=False)
-        board.map = self.state.board.map  # reuse since its immutable
-        board.buildings = self.state.board.buildings.copy()
-        board.roads = self.state.board.roads.copy()
-        board.connected_components = pickle.loads(
-            pickle.dumps(self.state.board.connected_components)
-        )
-        board.board_buildable_ids = self.state.board.board_buildable_ids.copy()
-        board.robber_coordinate = self.state.board.robber_coordinate
+        board = self.state.board.copy()
 
         state_copy = State(None, None, initialize=False)
         state_copy.players = players
