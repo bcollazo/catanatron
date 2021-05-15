@@ -1,3 +1,5 @@
+from catanatron_server.utils import ensure_link
+from catanatron_server.models import database_session, upsert_game_state
 import traceback
 import time
 from collections import defaultdict
@@ -19,6 +21,7 @@ from experimental.machine_learning.players.reinforcement import (
     PRLPlayer,
     hot_one_encode_action,
 )
+from experimental.tensorforce_player import ForcePlayer
 from experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
     ValueFunctionPlayer,
@@ -32,6 +35,7 @@ from experimental.machine_learning.features import (
     create_sample,
     get_feature_ordering,
 )
+from experimental.dqn_player import DQNPlayer
 from experimental.machine_learning.board_tensor_features import (
     CHANNELS,
     HEIGHT,
@@ -66,10 +70,12 @@ PLAYER_CLASSES = {
     "M": MCTSPlayer,
     "AB": AlphaBetaPlayer,
     # Used like: --players=V:path/to/model.model,T:path/to.model
+    "C": ForcePlayer,
     "V": VRLPlayer,
     "Q": QRLPlayer,
     "P": PRLPlayer,
     "T": TensorRLPlayer,
+    "D": DQNPlayer,
 }
 
 
@@ -144,10 +150,12 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
         if games_directory:
             action_callbacks.append(build_action_callback(games_directory))
         if watch:
-            save_game_state(game)
+            with database_session() as session:
+                upsert_game_state(game, session)
 
             def callback(game):
-                save_game_state(game)
+                with database_session() as session:
+                    upsert_game_state(game, session)
                 time.sleep(0.25)
 
             action_callbacks.append(callback)
@@ -165,14 +173,14 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
         verboseprint("Took", duration, "seconds")
         verboseprint({str(p): p.actual_victory_points for p in players})
         if save_in_db and not watch:
-            save_game_state(game)
-            verboseprint(
-                "Saved in db. See result at http://localhost:3000/games/" + game.id
-            )
+            link = ensure_link(game)
+            verboseprint("Saved in db. See result at:", link)
         verboseprint("")
 
         winner = game.winning_player()
-        wins[str(winner)] += 1
+        if winner is None:
+            continue
+        wins[winner.color] += 1
         turns.append(game.state.num_turns)
         ticks.append(len(game.state.actions))
         durations.append(duration)
@@ -202,7 +210,7 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
     if verbose:
         # Print Winners graph in command line:
         fig = tpl.figure()
-        fig.barh([wins[str(p)] for p in players], players, force_ascii=False)
+        fig.barh([wins[p.color] for p in players], players, force_ascii=False)
         fig.show()
 
     return wins, results_by_player

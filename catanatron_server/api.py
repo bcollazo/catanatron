@@ -2,7 +2,7 @@ import json
 
 from flask import Response, Blueprint, jsonify, abort, request
 
-from catanatron_server.models import create_game_state, get_game_state
+from catanatron_server.models import upsert_game_state, get_game_state
 from catanatron.json import GameEncoder, action_from_json
 from catanatron.models.player import Color
 from catanatron.game import Game
@@ -24,7 +24,7 @@ def post_game_endpoint():
             ValueFunctionPlayer(Color.BLUE, "BAR"),
         ]
     )
-    create_game_state(game)
+    upsert_game_state(game)
     return jsonify({"game_id": game.id})
 
 
@@ -57,10 +57,10 @@ def post_action_endpoint(game_id):
 
     bots_turn = game.state.current_player().color == BOT_COLOR
     if bots_turn or request.json is None:  # TODO: Remove this or
-        game.play_tick([lambda g: create_game_state(g)])
+        game.play_tick([lambda g: upsert_game_state(g)])
     else:
         action = action_from_json(request.json)
-        game.execute(action, action_callbacks=[lambda g: create_game_state(g)])
+        game.execute(action, action_callbacks=[lambda g: upsert_game_state(g)])
 
     return Response(
         response=json.dumps(game, cls=GameEncoder),

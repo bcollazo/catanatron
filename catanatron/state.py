@@ -8,26 +8,46 @@ from catanatron.models.actions import Action, ActionPrompt, ActionType
 from catanatron.algorithms import longest_road, largest_army
 
 
+class FastState:
+    pass
+
+
+# 21 x 11 x N planes tensor where:
+# N = num+players
+# 4 color multiplier (2 per player), 5 resource probas, 1 robber, 6 port
+# bank: res-deck-planes, dev-deck-planes
+# player (x2): res-deck-planes, dev-deck-planes, has-road, has-army, has-rolled,
+#   availables. victory-points.
+#
+#
+#
+# , played-dev-deck-planes
+
+
+def build_road(core_state):
+    pass
+
+
 class State:
     """Small container object to group dynamic variables in state"""
 
     def __init__(self, players, catan_map, initialize=True):
         if initialize:
             self.players = random.sample(players, len(players))
-            self.players_by_color = {p.color: p for p in players}
             self.board = Board(catan_map)
-            self.actions = []  # log of all action taken by players
             self.resource_deck = ResourceDeck.starting_bank()
             self.development_deck = DevelopmentDeck.starting_bank()
-            self.tick_queue = initialize_tick_queue(self.players)
-            self.current_player_index = 0
-            self.num_turns = 0  # num_completed_turns
             self.road_color = None
             self.army_color = None
 
-            # To be set by Game
+            # Auxiliary attributes to implement game logic
             self.current_prompt = None
             self.playable_actions = None
+            self.players_by_color = {p.color: p for p in players}
+            self.actions = []  # log of all action taken by players
+            self.tick_queue = initialize_tick_queue(self.players)
+            self.current_player_index = 0
+            self.num_turns = 0  # num_completed_turns
 
     def current_player(self):
         return self.players[self.current_player_index]

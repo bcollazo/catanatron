@@ -118,6 +118,10 @@ class MCTSPlayer(Player):
         self.prunning = bool(prunning)
 
     def decide(self, game: Game, playable_actions):
+        # if len(game.state.actions) > 10:
+        #     import sys
+
+        #     sys.exit(1)
         actions = list_prunned_actions(game) if self.prunning else playable_actions
         if len(actions) == 1:
             return actions[0]

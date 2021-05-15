@@ -60,7 +60,7 @@ def database_session():
         session.close()
 
 
-def create_game_state(game, session_param=None):
+def upsert_game_state(game, session_param=None):
     game_state = GameState.from_game(game)
     session = session_param or db.session
     session.add(game_state)

@@ -158,6 +158,8 @@ class Game:
         for callback in action_callbacks:
             callback(self)
 
+        return action
+
     def advance_tick(self):
         if len(self.state.tick_queue) > 0:
             (seating, action_prompt) = self.state.tick_queue.pop(0)

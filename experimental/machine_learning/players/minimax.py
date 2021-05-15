@@ -64,7 +64,7 @@ def base_value_function(params):
     return fn
 
 
-DEFAULT_WEIGHTS = [1e10, 1e8, 1e8, 1e4, 1e3, 10]
+DEFAULT_WEIGHTS = [34385842392800.824, 1e8, 1e8, 1e4, 1e3, 10]
 
 
 def contender_value_function(params):
@@ -327,11 +327,14 @@ def prune_robber_actions(current_color, game, actions, action_type):
     for node_id in enemy.buildings[BuildingType.CITY]:
         enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
 
-    robber_moves = filter(
-        lambda a: a.action_type == action_type
-        and game.state.board.map.tiles[a.value[0]] in enemy_owned_tiles,
-        actions,
+    robber_moves = set(
+        filter(
+            lambda a: a.action_type == action_type
+            and game.state.board.map.tiles[a.value[0]] in enemy_owned_tiles,
+            actions,
+        )
     )
+
     production_features = build_production_features(True)
 
     def impact(action):
@@ -349,7 +352,8 @@ def prune_robber_actions(current_color, game, actions, action_type):
         robber_moves, key=impact
     )  # most production and variety producing
     actions = filter(
-        lambda a: a.action_type != action_type or a == most_impactful_robber_action,
+        # lambda a: a.action_type != action_type or a == most_impactful_robber_action,
+        lambda a: a.action_type != action_type or a in robber_moves,
         actions,
     )
     return actions

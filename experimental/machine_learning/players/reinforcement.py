@@ -74,8 +74,8 @@ def allow_feature(feature_name):
 
 ALL_FEATURES = get_feature_ordering(num_players=2)
 FEATURES = list(filter(allow_feature, ALL_FEATURES))
+FEATURES = get_feature_ordering(2)
 FEATURE_INDICES = [ALL_FEATURES.index(f) for f in FEATURES]
-
 
 BASE_TOPOLOGY = BaseMap().topology
 TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == Tile]
@@ -243,11 +243,11 @@ class PRLPlayer(Player):
 
 
 class QRLPlayer(Player):
-    def __init__(self, color, name, version=1):
+    def __init__(self, color, name, model_path):
         super(QRLPlayer, self).__init__(color, name)
-        self.version = version
+        self.model_path = model_path
         global Q_MODEL
-        Q_MODEL = keras.models.load_model(q_model_path(version))
+        Q_MODEL = keras.models.load_model(model_path)
 
     def decide(self, game, playable_actions):
         if len(playable_actions) == 1:
@@ -258,7 +258,7 @@ class QRLPlayer(Player):
         #     return playable_actions[index]
 
         # Create sample matrix of state + action vectors.
-        state = create_sample_vector(game, self.color)
+        state = create_sample_vector(game, self.color, FEATURES)
         samples = []
         for action in playable_actions:
             samples.append(np.concatenate((state, hot_one_encode_action(action))))

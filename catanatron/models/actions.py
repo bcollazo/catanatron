@@ -25,9 +25,9 @@ class ActionType(Enum):
     so that they can be used in reproducing a game.
     """
 
-    ROLL = "ROLL"  # value is None|(int, int)
-    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None, None|Resource)
-    DISCARD = "DISCARD"  # value is None|Resource[]
+    ROLL = "ROLL"  # value is None. Log instead sets it to (int, int) rolled.
+    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None). Log has extra element of card stolen.
+    DISCARD = "DISCARD"  # value is None|Resource[]. TODO: Should always be Resource[].
 
     # Building/Buying
     BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"  # value is node_id
@@ -36,12 +36,12 @@ class ActionType(Enum):
     BUILD_ROAD = "BUILD_ROAD"  # value is edge_id
     BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node_id
     BUILD_CITY = "BUILD_CITY"  # value is node_id
-    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None|DevelopmentCard
+    BUY_DEVELOPMENT_CARD = (
+        "BUY_DEVELOPMENT_CARD"  # value is None. Log instead sets it to card bought.
+    )
 
     # Dev Card Plays
-    PLAY_KNIGHT_CARD = (
-        "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None, None|Resource)
-    )
+    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None). Log has extra element of card stolen.
     PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is (Resource, Resource)
     PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
@@ -60,7 +60,7 @@ def action_repr(self):
     return f"Action({self.color.value} {self.action_type.value} {self.value})"
 
 
-# TODO: Distinguish between PossibleAction and FinalizedAction?
+# TODO: Distinguish between Action and ActionLog?
 Action = namedtuple("Action", ["color", "action_type", "value"])
 Action.__repr__ = action_repr
 
