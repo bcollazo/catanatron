@@ -528,15 +528,6 @@ def player_resource_deck_contains(state, color, deck):
     )
 
 
-def player_resource_deck_reset(state, color):
-    key = player_key(state, color)
-    state.player_state[f"{key}_WOOD_IN_HAND"] = 0
-    state.player_state[f"{key}_BRICK_IN_HAND"] = 0
-    state.player_state[f"{key}_SHEEP_IN_HAND"] = 0
-    state.player_state[f"{key}_WHEAT_IN_HAND"] = 0
-    state.player_state[f"{key}_ORE_IN_HAND"] = 0
-
-
 def player_deck_can_play(state, color, dev_card):
     key = player_key(state, color)
     return (
