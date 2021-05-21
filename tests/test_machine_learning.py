@@ -3,10 +3,10 @@ import random
 from tests.utils import advance_to_play_turn, build_initial_placements
 import tensorflow as tf
 
-from catanatron.models.enums import Resource
+from catanatron.state import player_deck_replenish
+from catanatron.models.enums import ORE, Action, ActionType, WHEAT
 from catanatron.models.board import Board, get_edges
 from catanatron.models.map import BaseMap, NUM_NODES, NodeRef
-from catanatron.models.actions import Action, ActionType
 from catanatron.game import Game
 from catanatron.models.map import number_probability
 from catanatron.models.player import SimplePlayer, Color
@@ -245,8 +245,8 @@ def test_create_board_tensor():
     assert tensor[10][6][0] == 1
     assert tensor[9][6][1] == 1
 
-    p0.resource_deck.replenish(2, Resource.WHEAT)
-    p0.resource_deck.replenish(3, Resource.ORE)
+    player_deck_replenish(game.state, p0.color, WHEAT, 2)
+    player_deck_replenish(game.state, p0.color, ORE, 3)
     advance_to_play_turn(game)
     game.execute(Action(p0.color, ActionType.BUILD_CITY, 3))
     tensor = create_board_tensor(game, p0.color)
