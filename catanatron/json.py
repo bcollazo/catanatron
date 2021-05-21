@@ -5,12 +5,15 @@ from catanatron.game import Game
 from catanatron.models.map import Water, Port, Tile
 from catanatron.models.player import Color, Player
 from catanatron.models.decks import Deck
-from catanatron.models.actions import Action, ActionType
-from catanatron.models.enums import Resource
+from catanatron.models.enums import Resource, Action, ActionType
+from catanatron.state import get_longest_road_length
 
 
 def longest_roads_by_player(state):
-    return {player.color.value: player.longest_road_length for player in state.players}
+    result = dict()
+    for player in state.players:
+        result[player.color.value] = get_longest_road_length(state, player.color)
+    return result
 
 
 def action_from_json(data):

@@ -1,4 +1,4 @@
-from catanatron.models.actions import Action, ActionType
+from catanatron.models.enums import Action, ActionType
 
 
 def build_initial_placements(

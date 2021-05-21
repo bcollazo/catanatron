@@ -1,6 +1,7 @@
 import networkx as nx
 import tensorflow as tf
 
+from catanatron.state import get_player_buildings
 from catanatron.models.player import Color
 from catanatron.game import Game
 from catanatron.models.enums import BuildingType, Resource
@@ -159,10 +160,14 @@ def create_board_tensor(game: Game, p0_color: Color):
 
         indices = []
         updates = []
-        for node_id in player.buildings[BuildingType.SETTLEMENT]:
+        for node_id in get_player_buildings(
+            game.state, player.color, BuildingType.SETTLEMENT
+        ):
             indices.append(node_map[node_id])
             updates.append(1)
-        for node_id in player.buildings[BuildingType.CITY]:
+        for node_id in get_player_buildings(
+            game.state, player.color, BuildingType.CITY
+        ):
             indices.append(node_map[node_id])
             updates.append(2)
         if len(indices) > 0:
@@ -170,7 +175,7 @@ def create_board_tensor(game: Game, p0_color: Color):
 
         indices = []
         updates = []
-        for edge in player.buildings[BuildingType.ROAD]:
+        for edge in get_player_buildings(game.state, player.color, BuildingType.ROAD):
             indices.append(edge_map[edge])
             updates.append(1)
         if len(indices) > 0:

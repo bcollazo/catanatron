@@ -274,12 +274,11 @@ import tensorflow as tf
 
 def predict(model, game_id, color):
     game = get_last_game_state(game_id)
-    player = game.players_by_color[color]
 
-    board_tensor = create_board_tensor(game, player.color)
+    board_tensor = create_board_tensor(game, color)
     inputs1 = [board_tensor]
 
-    sample = create_sample(game, player.color)
+    sample = create_sample(game, color)
     input2 = [float(sample[i]) for i in NUMERIC_FEATURES]
     inputs2 = [input2]
 

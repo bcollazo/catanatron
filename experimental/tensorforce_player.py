@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorforce import Agent, Environment
 import click
 
+from catanatron.state import player_key
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
 from experimental.machine_learning.features import (
@@ -108,9 +109,10 @@ class CustomEnvironment(Environment):
         winning_color = self.game.winning_color()
         next_state = build_states(self.game, self.p0)
         terminal = winning_color is not None
-        reward = (
-            int(winning_color == self.p0.color) * 1000 + self.p0.actual_victory_points
-        )
+
+        key = player_key(self.game.state, self.p0.color)
+        points = self.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+        reward = int(winning_color == self.p0.color) * 1000 + points
         return next_state, terminal, reward
 
     def _advance_until_p0_decision(self):

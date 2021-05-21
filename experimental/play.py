@@ -1,5 +1,3 @@
-from catanatron_server.utils import ensure_link
-from catanatron_server.models import database_session, upsert_game_state
 import traceback
 import time
 from collections import defaultdict
@@ -9,8 +7,9 @@ import termplotlib as tpl
 import numpy as np
 import pandas as pd
 
-from catanatron.models.enums import BuildingType, Resource
-from catanatron_server.database import save_game_state
+from catanatron.state import player_key
+from catanatron_server.utils import ensure_link
+from catanatron_server.models import database_session, upsert_game_state
 from catanatron.game import Game
 from catanatron.models.player import HumanPlayer, RandomPlayer, Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
@@ -139,8 +138,6 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
     if LOG_IN_TF:
         writer = tf.summary.create_file_writer(f"logs/play/{int(time.time())}")
     for i in range(num_games):
-        for player in players:
-            player.restart_state()
         game = Game(players)
 
         verboseprint(
@@ -171,7 +168,14 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
         finally:
             duration = time.time() - start
         verboseprint("Took", duration, "seconds")
-        verboseprint({str(p): p.actual_victory_points for p in players})
+        verboseprint(
+            {
+                str(p): game.state.player_state[
+                    f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
+                ]
+                for p in players
+            }
+        )
         if save_in_db and not watch:
             link = ensure_link(game)
             verboseprint("Saved in db. See result at:", link)
@@ -186,7 +190,9 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
         durations.append(duration)
         games.append(game)
         for player in players:
-            results_by_player[player.color].append(player.actual_victory_points)
+            key = player_key(game.state, player.color)
+            points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+            results_by_player[player.color].append(points)
         if LOG_IN_TF:
             with writer.as_default():
                 for player in players:
@@ -235,9 +241,8 @@ def build_action_callback(games_directory):
         if len(game.state.actions) == 0:
             return
 
-        action = game.state.actions[-1]
-        player = game.state.players_by_color[action.color]
-        data[player.color]["samples"].append(create_sample(game, player.color))
+        # action = game.state.actions[-1]
+        # data[player.color]["samples"].append(create_sample(game, player.color))
         # data[player.color]["actions"].append(hot_one_encode_action(action))
 
         # board_tensor = create_board_tensor(game, player.color)
@@ -246,30 +251,6 @@ def build_action_callback(games_directory):
         #     board_tensor, (shape[0] * shape[1] * shape[2],)
         # ).numpy()
         # data[player.color]["board_tensors"].append(flattened_tensor)
-
-        # player_tiles = set()
-        # for node_id in (
-        #     player.buildings[BuildingType.SETTLEMENT]
-        #     + player.buildings[BuildingType.CITY]
-        # ):
-        #     for tile in game.state.board.map.adjacent_tiles[node_id]:
-        #         player_tiles.add(tile.resource)
-        # data[player.color]["OWS_ONLY_LABEL"].append(
-        #     player_tiles == set([Resource.ORE, Resource.WHEAT, Resource.SHEEP])
-        # )
-        # data[player.color]["OWS_LABEL"].append(
-        #     Resource.ORE in player_tiles
-        #     and Resource.WHEAT in player_tiles
-        #     and Resource.SHEEP in player_tiles
-        # )
-        # data[player.color]["settlements"].append(
-        #     len(player.buildings[BuildingType.SETTLEMENT])
-        # )
-        # data[player.color]["cities"].append(len(player.buildings[BuildingType.CITY]))
-        # data[player.color]["prod_vps"].append(
-        #     len(player.buildings[BuildingType.SETTLEMENT])
-        #     + len(player.buildings[BuildingType.CITY])
-        # )
 
         if game.winning_player() is not None:
             flush_to_matrices(game, data, games_directory)

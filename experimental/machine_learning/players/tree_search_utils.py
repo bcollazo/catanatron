@@ -1,8 +1,7 @@
 from collections import defaultdict
 
 from catanatron.models.decks import DevelopmentDeck
-from catanatron.models.enums import DevelopmentCard, Resource
-from catanatron.models.actions import Action, ActionType
+from catanatron.models.enums import DevelopmentCard, Resource, Action, ActionType
 
 
 def execute_spectrum(game, action):

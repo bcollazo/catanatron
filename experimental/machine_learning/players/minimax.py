@@ -1,11 +1,18 @@
 import random
 import time
 
-from catanatron.models.enums import BuildingType, DevelopmentCard, Resource
+from catanatron.state import (
+    get_longest_road_length,
+    get_played_dev_cards,
+    get_player_buildings,
+    player_key,
+    player_num_dev_cards,
+    player_num_resource_cards,
+)
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
-from catanatron.models.enums import Resource, DevelopmentCard
+from catanatron.models.enums import BuildingType, Resource
 from experimental.machine_learning.features import (
     build_production_features,
     iter_players,
@@ -44,18 +51,19 @@ def base_value_function(params):
         production = value_production(our_production_sample, "P0")
         enemy_production = value_production(enemy_production_sample, "P1", False)
 
-        longest_road_length = game.state.players_by_color[p0_color].longest_road_length
+        key = player_key(game.state, p0_color)
+        longest_road_length = get_longest_road_length(game.state, p0_color)
 
         features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
         reachability_sample = reachability_features(game, p0_color, 2)
         reachable_production_at_one = sum([reachability_sample[f] for f in features])
 
         return float(
-            p0.public_victory_points * 1000000
+            game.state.player_state[f"{key}_VICTORY_POINTS"] * 1000000
             + longest_road_length * 10
-            + len(p0.development_deck.to_array()) * 10
-            + len(p0.played_development_cards.to_array()) * 10.1
-            + p0.played_development_cards.count(DevelopmentCard.KNIGHT) * 10.1
+            + player_num_dev_cards(game.state, p0_color) * 10
+            + get_played_dev_cards(game.state, p0_color) * 10.1
+            + get_played_dev_cards(game.state, p0_color, "KNIGHT") * 10.1
             + production * 1000
             - enemy_production * 1000
             + reachable_production_at_one * 10
@@ -78,7 +86,8 @@ def contender_value_function(params):
         production = value_production(our_production_sample, "P0")
         enemy_production = value_production(enemy_production_sample, "P1", False)
 
-        longest_road_length = game.state.players_by_color[p0_color].longest_road_length
+        key = player_key(game.state, p0_color)
+        longest_road_length = get_longest_road_length(game.state, p0_color)
 
         features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
         reachability_sample = reachability_features(game, p0_color, 2)
@@ -86,7 +95,7 @@ def contender_value_function(params):
 
         # hand_sample = resource_hand_features(game, p0_color)
         # features = [f"P0_{resource.value}_IN_HAND" for resource in Resource]
-        num_in_hand = p0.resource_deck.num_cards()
+        num_in_hand = player_num_resource_cards(game.state, p0_color)
         if num_in_hand > 7:
             hand_contribution = num_in_hand * -params[4]
         else:
@@ -95,16 +104,16 @@ def contender_value_function(params):
         num_buildable_nodes = len(game.state.board.buildable_node_ids(p0_color))
         longest_road_factor = params[5] if num_buildable_nodes == 0 else 0.1
         return float(
-            p0.public_victory_points * params[0]
+            game.state.player_state[f"{key}_VICTORY_POINTS"] * params[0]
             + production * params[1]
             - enemy_production * params[2]
             + reachable_production_at_one * params[3]
             # TODO: buildable nodes. or closeness to city or settlement.
             + hand_contribution
             + longest_road_length * longest_road_factor
-            + len(p0.development_deck.to_array()) * 10
-            + len(p0.played_development_cards.to_array()) * 10.1
-            + p0.played_development_cards.count(DevelopmentCard.KNIGHT) * 10.1
+            + player_num_dev_cards(game.state, p0_color) * 10
+            + get_played_dev_cards(game.state, p0_color) * 10.1
+            + get_played_dev_cards(game.state, p0_color, "KNIGHT") * 10.1
         )
 
     return fn
@@ -159,7 +168,8 @@ class VictoryPointPlayer(Player):
             game_copy = game.copy()
             game_copy.execute(action)
 
-            value = game_copy.state.players_by_color[self.color].actual_victory_points
+            key = player_key(game_copy.state, self.color)
+            value = game_copy.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
             if value == best_value:
                 best_actions.append(action)
             if value > best_value:
@@ -322,9 +332,11 @@ def prune_robber_actions(current_color, game, actions, action_type):
     """Eliminate all but the most impactful tile"""
     enemy = next(filter(lambda p: p.color != current_color, game.state.players))
     enemy_owned_tiles = set()
-    for node_id in enemy.buildings[BuildingType.SETTLEMENT]:
+    for node_id in get_player_buildings(
+        game.state, enemy.color, BuildingType.SETTLEMENT
+    ):
         enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
-    for node_id in enemy.buildings[BuildingType.CITY]:
+    for node_id in get_player_buildings(game.state, enemy.color, BuildingType.CITY):
         enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
 
     robber_moves = set(

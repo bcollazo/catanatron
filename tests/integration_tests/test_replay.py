@@ -1,11 +1,9 @@
-import copy
 import json
 
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.json import GameEncoder
 from catanatron.game import Game
-from catanatron.models.enums import Resource
-from catanatron.models.actions import Action, ActionType
+from catanatron.models.enums import Action, ActionType
 
 
 def test_play_many_games():

@@ -4,6 +4,7 @@ import random
 import sys, traceback
 from pathlib import Path
 import click
+from collections import Counter, deque
 
 import numpy as np
 from tensorflow.keras.models import Sequential
@@ -19,12 +20,12 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import TensorBoard
 import tensorflow as tf
-from collections import Counter, deque
 from tqdm import tqdm
 import selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
+from catanatron.state import player_key
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
 from experimental.machine_learning.features import (
@@ -130,10 +131,9 @@ class CatanEnvironment:
         winning_color = self.game.winning_color()
 
         new_state = self._get_state()
-        reward = (
-            int(winning_color == self.p0.color) * 10 * 1000
-            + self.p0.actual_victory_points
-        )
+        key = player_key(self.game.state, self.p0.color)
+        points = self.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+        reward = int(winning_color == self.p0.color) * 10 * 1000 + points
         done = winning_color is not None or self.game.state.num_turns > 500
         return new_state, reward, done
 

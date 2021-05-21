@@ -1,6 +1,4 @@
 import time
-import random
-from pprint import pprint
 import os
 import copy
 
@@ -10,10 +8,9 @@ from tensorflow import keras
 
 from catanatron.game import Game
 from catanatron.models.player import Player
-from catanatron.models.actions import Action, ActionType
 from catanatron.models.map import BaseMap, NUM_NODES, Tile
 from catanatron.models.board import get_edges
-from catanatron.models.enums import Resource
+from catanatron.models.enums import Resource, Action, ActionType
 from experimental.machine_learning.features import (
     create_sample,
     create_sample_vector,
@@ -350,126 +347,3 @@ class TensorRLPlayer(Player):
 
     def __repr__(self):
         return super(TensorRLPlayer, self).__repr__() + f"({self.model_path})"
-
-
-class MCTSRLPlayer(Player):
-    def __init__(self, color, name, model_path):
-        super(MCTSRLPlayer, self).__init__(color, name)
-        self.model_path = model_path
-
-    def decide(self, game: Game, playable_actions):
-        # for each playable_action, play it in a copy,
-        # At each node. Take most likely K plays from policy prediction.
-        #   Consider play (make game copy and apply).
-        #   Repeat until reach N levels deep.
-        # Should profile performance of this. AVG time per level. AVG branching factor.
-        # Do min-max? Backpropagate values.
-        # Keep dictio of level0play => worst_outcome value.
-        # Keep dictio of level0play => best_outcome value.
-        TICKS_IN_THE_FUTURE = 4
-        TICK_DIMENSIONS = 1  # kinda like PLAYOUTS per node.
-        simulation_decide = build_simulation_decide(self.model_path)
-
-        time0 = time.time()
-
-        # Initialize search agenda
-        top_k_actions = playable_actions[:]  # TODO: select top k
-        best_action = None
-        best_action_score = None
-        for action in top_k_actions:
-            time1 = time.time()
-            action_copy = copy.deepcopy(action)
-            game_copy = game.copy()
-            # TODO: Use (probas, outcomes) = game.execute_all(action_copy, decide)
-            # TODO: Append all possible outcomes (not selected only). game.execute_all
-            transition_proba = game_copy.execute(action_copy)
-
-            total_compounded_probas = 0
-            total_score = 0
-            for i in range(TICK_DIMENSIONS):
-                game_copy_copy = game_copy.copy()
-                compounded_proba = transition_proba
-                time2 = time.time()
-                for j in range(TICKS_IN_THE_FUTURE):
-                    proba = game_copy_copy.play_tick(decide_fn=simulation_decide)
-                    compounded_proba *= proba
-                # print("Time rolling TICKS_IN_THE_FUTURE", time.time() - time2)
-                # now we have an advanced leaf with proba "cp". score it.
-                time3 = time.time()
-                sample = create_sample_vector(game_copy_copy, self.color)
-                score = get_v_model(self.model_path).call(
-                    tf.convert_to_tensor([sample])
-                )[0]
-                # print("Time scoring advanced leaf", time.time() - time3)
-                total_score = compounded_proba * score
-                total_compounded_probas += compounded_proba
-
-            action_advanced_leaf_weighted_score = total_score / total_compounded_probas
-            if (
-                best_action is None
-                or best_action_score < action_advanced_leaf_weighted_score
-            ):
-                best_action = action
-                best_action_score = action_advanced_leaf_weighted_score
-
-            # print("Time exploring an action:", time.time() - time1)
-
-        # print("Time deciding...", time.time() - time0)
-        return best_action
-
-        # scores = get_v_model(self.model_path).call(tf.convert_to_tensor(samples))
-        # best_idx = np.argmax(scores)
-        # return playable_actions[best_idx]
-
-    def __repr__(self):
-        return super(MCTSRLPlayer, self).__repr__() + f"({self.model_path})"
-
-
-# need to overwrite de decide(self, method) to
-
-
-def build_simulation_decide(model_path):
-    def decide(self, game, playable_actions):
-        possible_actions = {
-            ActionType.ROLL,  # ill know this if you can roll
-            ActionType.MOVE_ROBBER,  # we know this 100% since this is via prompt. its play_knight the one we might not know
-            ActionType.DISCARD,
-            ActionType.BUILD_FIRST_SETTLEMENT,
-            ActionType.BUILD_SECOND_SETTLEMENT,
-            ActionType.BUILD_INITIAL_ROAD,
-            ActionType.END_TURN,
-        }
-        # TODO: Use a better estimate of hand, instead of num_cards
-        num_resource_cards = self.resource_deck.num_cards()
-        num_dev_cards = self.development_deck.num_cards()
-        if num_resource_cards >= 2:
-            possible_actions.add(ActionType.BUILD_ROAD)
-        if num_resource_cards >= 3:
-            possible_actions.add(ActionType.BUY_DEVELOPMENT_CARD)
-        if num_resource_cards >= 4:
-            possible_actions.add(ActionType.BUILD_SETTLEMENT)
-        if num_dev_cards >= 1:
-            possible_actions.add(ActionType.PLAY_KNIGHT_CARD)
-            possible_actions.add(ActionType.PLAY_YEAR_OF_PLENTY)
-            possible_actions.add(ActionType.PLAY_MONOPOLY)
-            possible_actions.add(ActionType.PLAY_ROAD_BUILDING)
-
-        guessable_actions = list(
-            filter(lambda a: a.action_type in possible_actions, playable_actions)
-        )
-        # index = random.randrange(0, len(guessable_actions))
-        # return guessable_actions[index]
-
-        samples = []
-        for action in guessable_actions:
-            game_copy = game.copy()
-            game_copy.execute(action)
-
-            state = create_sample_vector(game_copy, self.color)
-            samples.append(state)
-
-        scores = get_v_model(model_path).call(tf.convert_to_tensor(samples))
-        best_idx = np.argmax(scores)
-        return playable_actions[best_idx]
-
-    return decide

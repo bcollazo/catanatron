@@ -4,13 +4,17 @@ import random
 import sys
 from typing import Iterable
 
-from catanatron.state import State, apply_action
+from catanatron.state import (
+    State,
+    apply_action,
+    player_can_afford_dev_card,
+    player_deck_can_play,
+    player_has_rolled,
+    player_key,
+)
 from catanatron.models.map import BaseMap
-from catanatron.models.enums import DevelopmentCard, BuildingType
+from catanatron.models.enums import ActionPrompt, Action, ActionType
 from catanatron.models.actions import (
-    ActionPrompt,
-    Action,
-    ActionType,
     road_possible_actions,
     city_possible_actions,
     settlement_possible_actions,
@@ -25,7 +29,6 @@ from catanatron.models.actions import (
 )
 from catanatron.models.player import Player
 from catanatron.models.decks import ResourceDeck
-from catanatron.models.board import Board
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
@@ -55,7 +58,8 @@ class Game:
 
     def winning_player(self):
         for player in self.state.players:
-            if player.actual_victory_points >= 10:
+            key = player_key(self.state, player.color)
+            if self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] >= 10:
                 return player
         return None
 
@@ -86,28 +90,22 @@ class Game:
                 player, self.state.board, self.state.actions
             )
         elif action_prompt == ActionPrompt.MOVE_ROBBER:
-            return robber_possibilities(
-                player, self.state.board, self.state.players, False
-            )
+            return robber_possibilities(self.state, player.color, False)
         elif action_prompt == ActionPrompt.ROLL:
             actions = [Action(player.color, ActionType.ROLL, None)]
-            if player.can_play_knight():
-                actions.extend(
-                    robber_possibilities(
-                        player, self.state.board, self.state.players, True
-                    )
-                )
+            if player_deck_can_play(self.state, player.color, "KNIGHT"):
+                actions.extend(robber_possibilities(self.state, player.color, True))
             return actions
         elif action_prompt == ActionPrompt.DISCARD:
             return discard_possibilities(player)
         elif action_prompt == ActionPrompt.PLAY_TURN:
             # Buy / Build
             actions = [Action(player.color, ActionType.END_TURN, None)]
-            actions.extend(road_possible_actions(player, self.state.board))
-            actions.extend(settlement_possible_actions(player, self.state.board))
-            actions.extend(city_possible_actions(player))
+            actions.extend(road_possible_actions(self.state, player.color))
+            actions.extend(settlement_possible_actions(self.state, player.color))
+            actions.extend(city_possible_actions(self.state, player.color))
             can_buy_dev_card = (
-                player.resource_deck.includes(ResourceDeck.development_card_cost())
+                player_can_afford_dev_card(self.state, player.color)
                 and self.state.development_deck.num_cards() > 0
             )
             if can_buy_dev_card:
@@ -116,27 +114,19 @@ class Game:
                 )
 
             # Play Dev Cards
-            if player.can_play_year_of_plenty():
+            if player_deck_can_play(self.state, player.color, "YEAR_OF_PLENTY"):
                 actions.extend(
                     year_of_plenty_possible_actions(player, self.state.resource_deck)
                 )
-            if player.can_play_monopoly():
+            if player_deck_can_play(self.state, player.color, "MONOPOLY"):
                 actions.extend(monopoly_possible_actions(player))
-            if player.can_play_knight():
-                actions.extend(
-                    robber_possibilities(
-                        player, self.state.board, self.state.players, True
-                    )
-                )
-            if player.can_play_road_building():
+            if player_deck_can_play(self.state, player.color, "KNIGHT"):
+                actions.extend(robber_possibilities(self.state, player.color, True))
+            if player_deck_can_play(self.state, player.color, "ROAD_BUILDING"):
                 actions.extend(road_building_possibilities(player, self.state.board))
 
             # Trade
-            actions.extend(
-                maritime_trade_possibilities(
-                    player, self.state.resource_deck, self.state.board
-                )
-            )
+            actions.extend(maritime_trade_possibilities(self.state, player.color))
 
             return actions
         else:
@@ -150,9 +140,6 @@ class Game:
 
         action = apply_action(self.state, action)
 
-        # TODO: Think about possible-action/idea vs finalized-action design
-        self.state.actions.append(action)
-        self.count_victory_points()
         self.advance_tick()
 
         for callback in action_callbacks:
@@ -168,7 +155,9 @@ class Game:
         else:
             player = self.state.current_player()
             action_prompt = (
-                ActionPrompt.PLAY_TURN if player.has_rolled else ActionPrompt.ROLL
+                ActionPrompt.PLAY_TURN
+                if player_has_rolled(self.state, player.color)
+                else ActionPrompt.ROLL
             )
 
         self.state.current_prompt = action_prompt
@@ -181,40 +170,16 @@ class Game:
         player = self.winning_player()
         return None if player is None else player.color
 
-    def count_victory_points(self):
-        for player in self.state.players:
-            player.has_road = False
-            player.has_army = False
-        for player in self.state.players:
-            public_vps = 0
-            public_vps += len(player.buildings[BuildingType.SETTLEMENT])
-            public_vps += 2 * len(player.buildings[BuildingType.CITY])
-            if (
-                self.state.road_color != None
-                and self.state.players_by_color[self.state.road_color] == player
-            ):
-                public_vps += 2  # road
-                player.has_road = True
-            if (
-                self.state.army_color != None
-                and self.state.players_by_color[self.state.army_color] == player
-            ):
-                public_vps += 2  # army
-                player.has_army = True
-
-            player.public_victory_points = public_vps
-            player.actual_victory_points = public_vps + player.development_deck.count(
-                DevelopmentCard.VICTORY_POINT
-            )
-
     def copy(self) -> "Game":
-        players = pickle.loads(pickle.dumps(self.state.players))
-
         board = self.state.board.copy()
 
         state_copy = State(None, None, initialize=False)
-        state_copy.players = players
-        state_copy.players_by_color = {p.color: p for p in players}
+        state_copy.players = self.state.players
+        state_copy.player_state = self.state.player_state.copy()
+        state_copy.color_to_index = self.state.color_to_index
+        state_copy.buildings_by_color = pickle.loads(
+            pickle.dumps(self.state.buildings_by_color)
+        )
         state_copy.board = board
         state_copy.actions = self.state.actions.copy()
         # TODO: Move Deck to functional code, so as to quick-copy arrays.
@@ -226,8 +191,6 @@ class Game:
         state_copy.tick_queue = self.state.tick_queue.copy()
         state_copy.current_player_index = self.state.current_player_index
         state_copy.num_turns = self.state.num_turns
-        state_copy.road_color = self.state.road_color
-        state_copy.army_color = self.state.army_color
         state_copy.current_prompt = self.state.current_prompt
         state_copy.playable_actions = self.state.playable_actions
 

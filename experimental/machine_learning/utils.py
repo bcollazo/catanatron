@@ -2,6 +2,8 @@ import os
 
 import numpy as np
 
+from catanatron.state import player_key
+
 DISCOUNT_FACTOR = 0.99
 DATA_DIRECTORY = "data"
 
@@ -123,7 +125,9 @@ def get_tournament_return(game, p0, discount_factor):
     """A way to say winning is important, no matter how long it takes, and
     getting close to winning is a secondary metric"""
     episode_return = p0.color == game.winning_color()
-    episode_return = episode_return * 1000 + min(p0.actual_victory_points, 10)
+    key = player_key(game.state, p0.color)
+    points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    episode_return = episode_return * 1000 + min(points, 10)
     return episode_return * discount_factor ** len(game.state.actions)
 
 
@@ -131,7 +135,9 @@ def get_victory_points_return(game, p0):
     # This discount factor (0.9999) ensures a game won in less turns
     #   is better, and still a Game with 9vps is less than 10vps,
     #   no matter turns.
-    episode_return = min(p0.actual_victory_points, 10)
+    key = player_key(game.state, p0.color)
+    points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    episode_return = min(points, 10)
     return episode_return * 0.9999 ** len(game.state.actions)
 
 
