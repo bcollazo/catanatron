@@ -28,7 +28,6 @@ from catanatron.models.actions import (
     road_building_possibilities,
 )
 from catanatron.models.player import Player
-from catanatron.models.decks import ResourceDeck
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
@@ -171,8 +170,6 @@ class Game:
         return None if player is None else player.color
 
     def copy(self) -> "Game":
-        board = self.state.board.copy()
-
         state_copy = State(None, None, initialize=False)
         state_copy.players = self.state.players
         state_copy.player_state = self.state.player_state.copy()
@@ -180,7 +177,7 @@ class Game:
         state_copy.buildings_by_color = pickle.loads(
             pickle.dumps(self.state.buildings_by_color)
         )
-        state_copy.board = board
+        state_copy.board = self.state.board.copy()
         state_copy.actions = self.state.actions.copy()
         # TODO: Move Deck to functional code, so as to quick-copy arrays.
         state_copy.resource_deck = pickle.loads(pickle.dumps(self.state.resource_deck))
