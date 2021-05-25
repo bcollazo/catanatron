@@ -1,6 +1,8 @@
 import random
 import time
 
+from graphviz import Digraph
+
 from catanatron.state import (
     get_longest_road_length,
     get_played_dev_cards,
@@ -15,7 +17,6 @@ from catanatron.models.actions import ActionType
 from catanatron.models.enums import BuildingType, Resource
 from experimental.machine_learning.features import (
     build_production_features,
-    iter_players,
     reachability_features,
 )
 from experimental.machine_learning.players.tree_search_utils import expand_spectrum
@@ -43,43 +44,6 @@ def value_production(sample, player_name="P0", include_variety=True):
 
 def base_value_function(params):
     def fn(game, p0_color):
-        iterator = iter_players(game, p0_color)
-        _, p0 = next(iterator)
-
-        our_production_sample = production_features(game, p0_color)
-        enemy_production_sample = production_features(game, p0_color)
-        production = value_production(our_production_sample, "P0")
-        enemy_production = value_production(enemy_production_sample, "P1", False)
-
-        key = player_key(game.state, p0_color)
-        longest_road_length = get_longest_road_length(game.state, p0_color)
-
-        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
-        reachability_sample = reachability_features(game, p0_color, 2)
-        reachable_production_at_one = sum([reachability_sample[f] for f in features])
-
-        return float(
-            game.state.player_state[f"{key}_VICTORY_POINTS"] * 1000000
-            + longest_road_length * 10
-            + player_num_dev_cards(game.state, p0_color) * 10
-            + get_played_dev_cards(game.state, p0_color) * 10.1
-            + get_played_dev_cards(game.state, p0_color, "KNIGHT") * 10.1
-            + production * 1000
-            - enemy_production * 1000
-            + reachable_production_at_one * 10
-        )
-
-    return fn
-
-
-DEFAULT_WEIGHTS = [34385842392800.824, 1e8, 1e8, 1e4, 1e3, 10]
-
-
-def contender_value_function(params):
-    def fn(game, p0_color):
-        iterator = iter_players(game, p0_color)
-        _, p0 = next(iterator)
-
         production_features = build_production_features(True)
         our_production_sample = production_features(game, p0_color)
         enemy_production_sample = production_features(game, p0_color)
@@ -112,8 +76,50 @@ def contender_value_function(params):
             + hand_contribution
             + longest_road_length * longest_road_factor
             + player_num_dev_cards(game.state, p0_color) * 10
-            + get_played_dev_cards(game.state, p0_color) * 10.1
             + get_played_dev_cards(game.state, p0_color, "KNIGHT") * 10.1
+        )
+
+    return fn
+
+
+DEFAULT_WEIGHTS = [34385842392800.824, 1e8, 1e8, 1e4, 1e3, 10, 10, 10.1]
+
+
+def contender_value_function(params):
+    def fn(game, p0_color):
+        production_features = build_production_features(True)
+        our_production_sample = production_features(game, p0_color)
+        enemy_production_sample = production_features(game, p0_color)
+        production = value_production(our_production_sample, "P0")
+        enemy_production = value_production(enemy_production_sample, "P1", False)
+
+        key = player_key(game.state, p0_color)
+        longest_road_length = get_longest_road_length(game.state, p0_color)
+
+        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
+        reachability_sample = reachability_features(game, p0_color, 2)
+        reachable_production_at_one = sum([reachability_sample[f] for f in features])
+
+        # hand_sample = resource_hand_features(game, p0_color)
+        # features = [f"P0_{resource.value}_IN_HAND" for resource in Resource]
+        num_in_hand = player_num_resource_cards(game.state, p0_color)
+        if num_in_hand > 7:
+            hand_contribution = num_in_hand * -params[4]
+        else:
+            hand_contribution = num_in_hand * params[4]
+
+        num_buildable_nodes = len(game.state.board.buildable_node_ids(p0_color))
+        longest_road_factor = params[5] if num_buildable_nodes == 0 else 0.1
+        return float(
+            game.state.player_state[f"{key}_VICTORY_POINTS"] * 140386938603829.9
+            + production * 198101489092897.78
+            - enemy_production * 800744568677529.2
+            + reachable_production_at_one * params[3]
+            # TODO: buildable nodes. or closeness to city or settlement.
+            + hand_contribution
+            + longest_road_length * longest_road_factor
+            + player_num_dev_cards(game.state, p0_color) * params[6]
+            + get_played_dev_cards(game.state, p0_color, "KNIGHT") * params[7],
         )
 
     return fn
@@ -214,15 +220,14 @@ class AlphaBetaPlayer(Player):
             return actions[0]
 
         start = time.time()
+        state_id = str(len(game.state.actions))
+        node = DebugStateNode(state_id)  # i think it comes from outside
         deadline = start + MAX_SEARCH_TIME_SECS
         result = self.alphabeta(
-            game.copy(),
-            self.depth,
-            float("-inf"),
-            float("inf"),
-            deadline,
+            game.copy(), self.depth, float("-inf"), float("inf"), deadline, node
         )
-        # print("Decision Results:", self.depth, len(actions), time.time() - start)
+        print("Decision Results:", self.depth, len(actions), time.time() - start)
+        render_debug_tree(node)
         # breakpoint()
         return result[0]
 
@@ -232,29 +237,47 @@ class AlphaBetaPlayer(Player):
             + f"(depth={self.depth},value_fn={self.value_fn_builder_name},prunning={self.prunning})"
         )
 
-    def alphabeta(self, game, depth, alpha, beta, deadline):
+    def alphabeta(self, game, depth, alpha, beta, deadline, node):
         """AlphaBeta MiniMax Algorithm.
 
         NOTE: Sometimes returns a value, sometimes an (action, value). This is
         because some levels are state=>action, some are action=>state and in
         action=>state would probably need (action, proba, value) as return type.
+
+        {'value', 'action'|None if leaf, 'node' }
         """
         if depth == 0 or game.winning_color() is not None or time.time() >= deadline:
             value_fn = get_value_fn(self.value_fn_builder_name, self.params)
-            return value_fn(game, self.color)
+            value = value_fn(game, self.color)
+
+            node.expected_value = value
+            return None, value
 
         maximizingPlayer = game.state.current_player().color == self.color
-        actions = self.get_actions(game)
-        children = expand_spectrum(game, actions)
+        actions = self.get_actions(game)  # list of actions.
+        children = expand_spectrum(game, actions)  # action => (game, proba)[]
+
         if maximizingPlayer:
             best_action = None
             best_value = float("-inf")
-            for action, outprobas in children.items():
+            for i, (action, outprobas) in enumerate(children.items()):
+                action_node = DebugActionNode(action)
+
                 expected_value = 0
-                for (out, proba) in outprobas:
-                    result = self.alphabeta(out, depth - 1, alpha, beta, deadline)
-                    value = result if isinstance(result, float) else result[1]
+                for j, (out, proba) in enumerate(outprobas):
+                    out_node = DebugStateNode(f"{node.label} {i} {j}")
+
+                    result = self.alphabeta(
+                        out, depth - 1, alpha, beta, deadline, out_node
+                    )
+                    value = result[1]
                     expected_value += proba * value
+
+                    action_node.children.append(out_node)
+                    action_node.probas.append(proba)
+
+                action_node.expected_value = expected_value
+                node.children.append(action_node)
 
                 if expected_value > best_value:
                     best_action = action
@@ -263,16 +286,29 @@ class AlphaBetaPlayer(Player):
                 if alpha >= beta:
                     break  # beta cutoff
 
+            node.expected_value = best_value
             return best_action, best_value
         else:
             best_action = None
             best_value = float("inf")
-            for action, outprobas in children.items():
+            for i, (action, outprobas) in enumerate(children.items()):
+                action_node = DebugActionNode(action)
+
                 expected_value = 0
-                for (out, proba) in outprobas:
-                    result = self.alphabeta(out, depth - 1, alpha, beta, deadline)
-                    value = result if isinstance(result, float) else result[1]
+                for j, (out, proba) in enumerate(outprobas):
+                    out_node = DebugStateNode(f"{node.label} {i} {j}")
+
+                    result = self.alphabeta(
+                        out, depth - 1, alpha, beta, deadline, out_node
+                    )
+                    value = result[1]
                     expected_value += proba * value
+
+                    action_node.children.append(out_node)
+                    action_node.probas.append(proba)
+
+                action_node.expected_value = expected_value
+                node.children.append(action_node)
 
                 if expected_value < best_value:
                     best_action = action
@@ -281,7 +317,54 @@ class AlphaBetaPlayer(Player):
                 if beta <= alpha:
                     break  # alpha cutoff
 
+            node.expected_value = best_value
             return best_action, best_value
+
+
+class DebugStateNode:
+    def __init__(self, label):
+        self.label = label
+        self.children = []  # DebugActionNode[]
+        self.expected_value = None
+
+
+class DebugActionNode:
+    def __init__(self, action):
+        self.action = action
+        self.expected_value = None
+        self.children = []  # DebugStateNode[]
+        self.probas = []
+
+
+def render_debug_tree(node):
+    dot = Digraph("AlphaBetaSearch")
+
+    agenda = [node]
+
+    while len(agenda) != 0:
+        tmp = agenda.pop()
+        dot.node(
+            tmp.label,
+            label=f"<{tmp.label}<br /><font point-size='10'>{tmp.expected_value}</font>>",
+        )
+        for child in tmp.children:
+            action_label = (
+                f"{tmp.label} - {str(child.action).replace('<', '').replace('>', '')}"
+            )
+            dot.node(
+                action_label,
+                label=f"<{action_label}<br /><font point-size='10'>{child.expected_value}</font>>",
+                shape="box",
+            )
+            dot.edge(tmp.label, action_label)
+            for action_child, proba in zip(child.children, child.probas):
+                dot.node(
+                    action_child.label,
+                    label=f"<{action_child.label}<br /><font point-size='10'>{action_child.expected_value}</font>>",
+                )
+                dot.edge(action_label, action_child.label, label=str(proba))
+                agenda.append(action_child)
+    print(dot.render())
 
 
 def list_prunned_actions(game):
