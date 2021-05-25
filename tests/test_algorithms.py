@@ -1,8 +1,8 @@
 from catanatron.models.board import Board
 from catanatron.state import (
     State,
-    apply_buy_dev,
-    apply_play_dev_card,
+    buy_dev_card,
+    play_dev_card,
     compute_largest_army,
     player_deck_replenish,
 )
@@ -145,9 +145,9 @@ def test_largest_army_calculation_when_no_one_has_three():
 
     player_deck_replenish(state, red.color, KNIGHT, 2)
     player_deck_replenish(state, blue.color, KNIGHT, 1)
-    apply_buy_dev(state, Color.RED, KNIGHT)
-    apply_buy_dev(state, Color.RED, KNIGHT)
-    apply_buy_dev(state, Color.BLUE, KNIGHT)
+    buy_dev_card(state, Color.RED, KNIGHT)
+    buy_dev_card(state, Color.RED, KNIGHT)
+    buy_dev_card(state, Color.BLUE, KNIGHT)
     actions = [
         Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
         Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
@@ -166,12 +166,12 @@ def test_largest_army_calculation_on_tie():
 
     player_deck_replenish(state, red.color, KNIGHT, 3)
     player_deck_replenish(state, blue.color, KNIGHT, 4)
-    apply_play_dev_card(state, Color.RED, KNIGHT)
-    apply_play_dev_card(state, Color.RED, KNIGHT)
-    apply_play_dev_card(state, Color.RED, KNIGHT)
-    apply_play_dev_card(state, Color.BLUE, KNIGHT)
-    apply_play_dev_card(state, Color.BLUE, KNIGHT)
-    apply_play_dev_card(state, Color.BLUE, KNIGHT)
+    play_dev_card(state, Color.RED, KNIGHT)
+    play_dev_card(state, Color.RED, KNIGHT)
+    play_dev_card(state, Color.RED, KNIGHT)
+    play_dev_card(state, Color.BLUE, KNIGHT)
+    play_dev_card(state, Color.BLUE, KNIGHT)
+    play_dev_card(state, Color.BLUE, KNIGHT)
     actions = [
         Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
         Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
@@ -184,7 +184,7 @@ def test_largest_army_calculation_on_tie():
     color, count = compute_largest_army(state, actions)
     assert color is Color.RED and count == 3
 
-    apply_play_dev_card(state, Color.BLUE, KNIGHT)
+    play_dev_card(state, Color.BLUE, KNIGHT)
     actions.append(Action(Color.BLUE, ActionType.PLAY_KNIGHT_CARD, None))
 
     color, count = compute_largest_army(state, actions)

@@ -1,8 +1,7 @@
-from catanatron_server.models import Base
 from catanatron.state import (
     State,
-    apply_city,
-    apply_settlement,
+    build_city,
+    build_settlement,
     player_deck_add,
     player_deck_replenish,
 )
@@ -104,7 +103,7 @@ def test_city_playable_actions():
     assert len(city_possible_actions(state, Color.RED)) == 0  # no money or place
 
     state.board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    apply_settlement(state, player.color, 3, True)
+    build_settlement(state, player.color, 3, True)
     assert len(city_possible_actions(state, Color.RED)) == 0  # no money
 
     player_deck_replenish(state, Color.RED, WHEAT, 2)
@@ -112,7 +111,7 @@ def test_city_playable_actions():
     assert len(city_possible_actions(state, Color.RED)) == 1
 
     state.board.build_settlement(Color.RED, 0, initial_build_phase=True)
-    apply_settlement(state, player.color, 0, True)
+    build_settlement(state, player.color, 0, True)
     assert len(city_possible_actions(state, Color.RED)) == 2
 
 
@@ -148,7 +147,7 @@ def test_building_settlement_gives_vp():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players)
 
-    apply_settlement(state, state.players[0].color, 0, True)
+    build_settlement(state, state.players[0].color, 0, True)
     assert state.player_state["P0_VICTORY_POINTS"] == 1
     assert state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 1
 
@@ -157,10 +156,10 @@ def test_building_city_gives_vp():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players)
 
-    apply_settlement(state, state.players[0].color, 0, True)
+    build_settlement(state, state.players[0].color, 0, True)
     player_deck_replenish(state, state.players[0].color, WHEAT, 2)
     player_deck_replenish(state, state.players[0].color, ORE, 2)
-    apply_city(state, state.players[0].color, 0)
+    build_city(state, state.players[0].color, 0)
     assert state.player_state["P0_VICTORY_POINTS"] == 2
     assert state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 2
 

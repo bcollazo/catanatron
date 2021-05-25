@@ -159,11 +159,11 @@ def apply_action(state, action):
     elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
         node_id = action.value
         state.board.build_settlement(action.color, node_id, True)
-        apply_settlement(state, action.color, node_id, True)
+        build_settlement(state, action.color, node_id, True)
     elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
         node_id = action.value
         state.board.build_settlement(action.color, node_id, True)
-        apply_settlement(state, action.color, node_id, True)
+        build_settlement(state, action.color, node_id, True)
         # yield resources of second settlement
         key = player_key(state, action.color)
         for tile in state.board.map.adjacent_tiles[node_id]:
@@ -175,25 +175,25 @@ def apply_action(state, action):
         previous_road_color, road_color, road_lengths = state.board.build_settlement(
             action.color, node_id, False
         )
-        apply_settlement(state, action.color, node_id, False)
+        build_settlement(state, action.color, node_id, False)
         state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
         mantain_longest_road(state, previous_road_color, road_color, road_lengths)
     elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
         edge = action.value
         state.board.build_road(action.color, edge)
-        apply_road(state, action.color, edge, True)
+        build_road(state, action.color, edge, True)
     elif action.action_type == ActionType.BUILD_ROAD:
         edge = action.value
         previous_road_color, road_color, road_lengths = state.board.build_road(
             action.color, edge
         )
-        apply_road(state, action.color, edge, False)
+        build_road(state, action.color, edge, False)
         state.resource_deck += ResourceDeck.road_cost()  # replenish bank
         mantain_longest_road(state, previous_road_color, road_color, road_lengths)
     elif action.action_type == ActionType.BUILD_CITY:
         node_id = action.value
         state.board.build_city(action.color, node_id)
-        apply_city(state, action.color, node_id)
+        build_city(state, action.color, node_id)
         state.resource_deck += ResourceDeck.city_cost()  # replenish bank
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
         if state.development_deck.num_cards() == 0:
@@ -207,7 +207,7 @@ def apply_action(state, action):
             card = action.value
             state.development_deck.draw(1, card)
 
-        apply_buy_dev(state, action.color, card.value)
+        buy_dev_card(state, action.color, card.value)
         state.resource_deck += ResourceDeck.development_card_cost()
 
         action = Action(action.color, action.action_type, card)
@@ -267,7 +267,7 @@ def apply_action(state, action):
                 player_deck_draw(state, robbed_color, robbed_resource.value)
             player_deck_replenish(state, action.color, robbed_resource.value)
     elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
-        if not player_deck_can_play(state, action.color, "KNIGHT"):
+        if not player_can_play_dev(state, action.color, "KNIGHT"):
             raise ValueError("Player cant play knight card now")
         (coordinate, robbed_color, robbed_resource) = action.value
         state.board.robber_coordinate = coordinate
@@ -284,24 +284,24 @@ def apply_action(state, action):
             player_deck_replenish(state, action.color, robbed_resource.value)
 
         previous_army_color, previous_army_size = get_larget_army_color(state)
-        apply_play_dev_card(state, action.color, "KNIGHT")
+        play_dev_card(state, action.color, "KNIGHT")
         mantain_largets_army(
             state, action.color, previous_army_color, previous_army_size
         )
 
     elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
         cards_selected = ResourceDeck.from_array(action.value)
-        if not player_deck_can_play(state, action.color, "YEAR_OF_PLENTY"):
+        if not player_can_play_dev(state, action.color, "YEAR_OF_PLENTY"):
             raise ValueError("Player cant play year of plenty now")
         if not state.resource_deck.includes(cards_selected):
             raise ValueError("Not enough resources of this type (these types?) in bank")
         player_deck_add(state, action.color, cards_selected)
         state.resource_deck -= cards_selected
-        apply_play_dev_card(state, action.color, "YEAR_OF_PLENTY")
+        play_dev_card(state, action.color, "YEAR_OF_PLENTY")
     elif action.action_type == ActionType.PLAY_MONOPOLY:
         mono_resource = action.value
         cards_stolen = ResourceDeck()
-        if not player_deck_can_play(state, action.color, "MONOPOLY"):
+        if not player_can_play_dev(state, action.color, "MONOPOLY"):
             raise ValueError("Player cant play monopoly now")
         for player in state.players:
             if not player.color == action.color:
@@ -314,19 +314,19 @@ def apply_action(state, action):
                     state, player.color, mono_resource.value, number_of_cards_to_steal
                 )
         player_deck_add(state, action.color, cards_stolen)
-        apply_play_dev_card(state, action.color, MONOPOLY)
+        play_dev_card(state, action.color, MONOPOLY)
     elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
         (first_edge, second_edge) = action.value
-        if not player_deck_can_play(state, action.color, "ROAD_BUILDING"):
+        if not player_can_play_dev(state, action.color, "ROAD_BUILDING"):
             raise ValueError("Player cant play road building now")
 
         state.board.build_road(action.color, first_edge)
         previous_road_color, road_color, road_lengths = state.board.build_road(
             action.color, second_edge
         )
-        apply_road(state, action.color, first_edge, True)
-        apply_road(state, action.color, second_edge, True)
-        apply_play_dev_card(state, action.color, "ROAD_BUILDING")
+        build_road(state, action.color, first_edge, True)
+        build_road(state, action.color, second_edge, True)
+        play_dev_card(state, action.color, "ROAD_BUILDING")
         mantain_longest_road(state, previous_road_color, road_color, road_lengths)
     elif action.action_type == ActionType.MARITIME_TRADE:
         trade_offer = action.value
@@ -466,7 +466,7 @@ def get_player_buildings(state, color_param, building_type_param):
 
 
 # ===== State Mutators
-def apply_settlement(state, color, node_id, is_free):
+def build_settlement(state, color, node_id, is_free):
     state.buildings_by_color[color][BuildingType.SETTLEMENT].append(node_id)
 
     key = player_key(state, color)
@@ -482,7 +482,7 @@ def apply_settlement(state, color, node_id, is_free):
         state.player_state[f"{key}_WHEAT_IN_HAND"] -= 1
 
 
-def apply_road(state, color, edge, is_free):
+def build_road(state, color, edge, is_free):
     state.buildings_by_color[color][BuildingType.ROAD].append(edge)
 
     key = player_key(state, color)
@@ -492,7 +492,7 @@ def apply_road(state, color, edge, is_free):
         state.player_state[f"{key}_BRICK_IN_HAND"] -= 1
 
 
-def apply_city(state, color, node_id):
+def build_city(state, color, node_id):
     state.buildings_by_color[color][BuildingType.SETTLEMENT].remove(node_id)
     state.buildings_by_color[color][BuildingType.CITY].append(node_id)
 
@@ -528,7 +528,7 @@ def player_resource_deck_contains(state, color, deck):
     )
 
 
-def player_deck_can_play(state, color, dev_card):
+def player_can_play_dev(state, color, dev_card):
     key = player_key(state, color)
     return (
         not state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
@@ -545,7 +545,7 @@ def player_deck_add(state, color, deck):
     state.player_state[f"{key}_ORE_IN_HAND"] += deck.array[4]
 
 
-def apply_buy_dev(state, color, dev_card):
+def buy_dev_card(state, color, dev_card):
     key = player_key(state, color)
     state.player_state[f"{key}_{dev_card}_IN_HAND"] += 1
     state.player_state[f"{key}_SHEEP_IN_HAND"] -= 1
@@ -615,7 +615,7 @@ def player_deck_random_draw(state, color):
     return resource
 
 
-def apply_play_dev_card(state, color, dev_card):
+def play_dev_card(state, color, dev_card):
     key = player_key(state, color)
     player_deck_draw(state, color, dev_card)
     state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = True

@@ -2,7 +2,7 @@ from catanatron.models.map import BaseMap
 from catanatron.state import (
     State,
     player_clean_turn,
-    player_deck_can_play,
+    player_can_play_dev,
     player_deck_replenish,
 )
 from catanatron.models.player import Color, SimplePlayer
@@ -15,4 +15,4 @@ def test_playable_cards():
     player_deck_replenish(state, Color.RED, "KNIGHT")
     player_clean_turn(state, Color.RED)
 
-    assert player_deck_can_play(state, Color.RED, "KNIGHT")
+    assert player_can_play_dev(state, Color.RED, "KNIGHT")

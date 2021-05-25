@@ -8,7 +8,7 @@ from catanatron.state import (
     State,
     apply_action,
     player_can_afford_dev_card,
-    player_deck_can_play,
+    player_can_play_dev,
     player_has_rolled,
     player_key,
 )
@@ -92,7 +92,7 @@ class Game:
             return robber_possibilities(self.state, player.color, False)
         elif action_prompt == ActionPrompt.ROLL:
             actions = [Action(player.color, ActionType.ROLL, None)]
-            if player_deck_can_play(self.state, player.color, "KNIGHT"):
+            if player_can_play_dev(self.state, player.color, "KNIGHT"):
                 actions.extend(robber_possibilities(self.state, player.color, True))
             return actions
         elif action_prompt == ActionPrompt.DISCARD:
@@ -113,15 +113,15 @@ class Game:
                 )
 
             # Play Dev Cards
-            if player_deck_can_play(self.state, player.color, "YEAR_OF_PLENTY"):
+            if player_can_play_dev(self.state, player.color, "YEAR_OF_PLENTY"):
                 actions.extend(
                     year_of_plenty_possible_actions(player, self.state.resource_deck)
                 )
-            if player_deck_can_play(self.state, player.color, "MONOPOLY"):
+            if player_can_play_dev(self.state, player.color, "MONOPOLY"):
                 actions.extend(monopoly_possible_actions(player))
-            if player_deck_can_play(self.state, player.color, "KNIGHT"):
+            if player_can_play_dev(self.state, player.color, "KNIGHT"):
                 actions.extend(robber_possibilities(self.state, player.color, True))
-            if player_deck_can_play(self.state, player.color, "ROAD_BUILDING"):
+            if player_can_play_dev(self.state, player.color, "ROAD_BUILDING"):
                 actions.extend(road_building_possibilities(player, self.state.board))
 
             # Trade
