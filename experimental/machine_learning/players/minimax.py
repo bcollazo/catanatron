@@ -226,8 +226,8 @@ class AlphaBetaPlayer(Player):
         result = self.alphabeta(
             game.copy(), self.depth, float("-inf"), float("inf"), deadline, node
         )
-        print("Decision Results:", self.depth, len(actions), time.time() - start)
-        render_debug_tree(node)
+        # print("Decision Results:", self.depth, len(actions), time.time() - start)
+        # render_debug_tree(node)
         # breakpoint()
         return result[0]
 
