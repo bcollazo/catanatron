@@ -16,6 +16,7 @@ from experimental.machine_learning.features import (
     reachability_features,
     iter_players,
     port_distance_features,
+    resource_hand_features,
     tile_features,
     graph_features,
 )
@@ -60,6 +61,26 @@ def test_port_distance_features():
     features = port_distance_features(game, color)
     assert features["P0_HAS_WHEAT_PORT"] == False
     assert features[f"P0_{port_name}_PORT_DISTANCE"] == 3
+
+
+def test_resource_hand_features():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+    ]
+    game = Game(players)
+
+    red_index = game.state.color_to_index[Color.RED]
+    game.state.player_state[f"P{red_index}_WHEAT_IN_HAND"] = 20
+    player_deck_replenish(game.state, Color.BLUE, "ORE", 17)
+
+    features = resource_hand_features(game, Color.RED)
+    assert features["P0_WHEAT_IN_HAND"] == 20
+    assert features["P1_NUM_RESOURCES_IN_HAND"] == 17
+
+    features = resource_hand_features(game, Color.BLUE)
+    assert features["P0_ORE_IN_HAND"] == 17
+    assert features["P1_NUM_RESOURCES_IN_HAND"] == 20
 
 
 def test_expansion_features():
