@@ -79,13 +79,13 @@ TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == Tile]
 RESOURCE_LIST = list(Resource)
 ACTIONS_ARRAY = [
     (ActionType.ROLL, None),
-    (ActionType.MOVE_ROBBER, None),
+    # TODO: One for each tile (and abuse 1v1 setting).
+    *[(ActionType.MOVE_ROBBER, tile) for tile in TILE_COORDINATES],
     (ActionType.DISCARD, None),
     *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
     *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
     *[(ActionType.BUILD_CITY, node_id) for node_id in range(NUM_NODES)],
     (ActionType.BUY_DEVELOPMENT_CARD, None),
-    # TODO: Should we use a heuristic for this?
     (ActionType.PLAY_KNIGHT_CARD, None),
     *[
         (ActionType.PLAY_YEAR_OF_PLENTY, (first_card, RESOURCE_LIST[j]))
@@ -175,11 +175,8 @@ def normalize_action(action):
     normalized = copy.deepcopy(action)
     if normalized.action_type == ActionType.ROLL:
         return Action(action.color, action.action_type, None)
-    elif (
-        normalized.action_type == ActionType.MOVE_ROBBER
-        or normalized.action_type == ActionType.PLAY_KNIGHT_CARD
-    ):
-        return Action(action.color, action.action_type, None)
+    elif normalized.action_type == ActionType.MOVE_ROBBER:
+        return Action(action.color, action.action_type, action.value[0])
     elif normalized.action_type == ActionType.BUILD_ROAD:
         return Action(action.color, action.action_type, tuple(sorted(action.value)))
     elif normalized.action_type == ActionType.PLAY_ROAD_BUILDING:

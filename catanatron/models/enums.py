@@ -71,7 +71,7 @@ class ActionType(Enum):
     BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None. Log value is card
 
     # Dev Card Plays
-    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None). Log has extra element of card stolen.
+    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is None
     PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is (Resource, Resource)
     PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)

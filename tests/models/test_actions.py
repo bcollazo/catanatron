@@ -122,21 +122,21 @@ def test_robber_possibilities():
     state = State(players)
 
     # one for each resource tile (excluding desert)
-    assert len(robber_possibilities(state, Color.RED, True)) == 18
+    assert len(robber_possibilities(state, Color.RED)) == 18
 
     # assert same number of possibilities, b.c. players have no cards.
     state.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
     state.board.build_settlement(Color.ORANGE, 0, initial_build_phase=True)
-    assert len(robber_possibilities(state, Color.RED, True)) == 18
+    assert len(robber_possibilities(state, Color.RED)) == 18
 
     # assert same number of possibilities, b.c. only one player to rob in this tile
     player_deck_replenish(state, orange.color, WHEAT)
-    assert len(robber_possibilities(state, Color.RED, False)) == 18
+    assert len(robber_possibilities(state, Color.RED)) == 18
 
     # now possibilites increase by 1 b.c. we have to decide to steal from blue or orange
     # Unless desert is (0,0,0)... in which case still at 18...
     player_deck_replenish(state, blue.color, WHEAT)
-    possibilities = len(robber_possibilities(state, Color.RED, False))
+    possibilities = len(robber_possibilities(state, Color.RED))
     assert possibilities == 19 or (
         possibilities == 18 and state.board.map.tiles[(0, 0, 0)].resource is None
     )
@@ -171,7 +171,7 @@ def test_robber_possibilities_simple():
     state = State(players)
 
     # one for each resource tile (excluding desert)
-    assert len(robber_possibilities(state, Color.RED, True)) == 18
+    assert len(robber_possibilities(state, Color.RED)) == 18
 
 
 def test_initial_placement_possibilities():

@@ -400,15 +400,11 @@ def list_prunned_actions(game):
         actions = prune_robber_actions(
             current_color, game, actions, ActionType.MOVE_ROBBER
         )
-    if ActionType.PLAY_KNIGHT_CARD in types:
-        actions = prune_robber_actions(
-            current_color, game, actions, ActionType.PLAY_KNIGHT_CARD
-        )
 
     return list(actions)
 
 
-def prune_robber_actions(current_color, game, actions, action_type):
+def prune_robber_actions(current_color, game, actions):
     """Eliminate all but the most impactful tile"""
     enemy = next(filter(lambda p: p.color != current_color, game.state.players))
     enemy_owned_tiles = set()
@@ -421,7 +417,7 @@ def prune_robber_actions(current_color, game, actions, action_type):
 
     robber_moves = set(
         filter(
-            lambda a: a.action_type == action_type
+            lambda a: a.action_type == ActionType.MOVE_ROBBER
             and game.state.board.map.tiles[a.value[0]] in enemy_owned_tiles,
             actions,
         )
@@ -445,7 +441,7 @@ def prune_robber_actions(current_color, game, actions, action_type):
     )  # most production and variety producing
     actions = filter(
         # lambda a: a.action_type != action_type or a == most_impactful_robber_action,
-        lambda a: a.action_type != action_type or a in robber_moves,
+        lambda a: a.action_type != ActionType.MOVE_ROBBER or a in robber_moves,
         actions,
     )
     return actions

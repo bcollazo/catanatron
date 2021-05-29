@@ -15,6 +15,7 @@ def execute_spectrum(game, action):
             ActionType.BUILD_SETTLEMENT,
             ActionType.BUILD_ROAD,
             ActionType.BUILD_CITY,
+            ActionType.PLAY_KNIGHT_CARD,
             ActionType.PLAY_YEAR_OF_PLENTY,
             ActionType.PLAY_ROAD_BUILDING,
             ActionType.MARITIME_TRADE,
@@ -50,10 +51,7 @@ def execute_spectrum(game, action):
             option_game.execute(option_action, validate_action=False)
             results.append((option_game, number_probability(roll)))
         return results
-    elif action.action_type in [
-        ActionType.MOVE_ROBBER,
-        ActionType.PLAY_KNIGHT_CARD,
-    ]:
+    elif action.action_type == ActionType.MOVE_ROBBER:
         (coordinate, robbed_color, _) = action.value
         if robbed_color is None:  # no one to steal, then deterministic
             copy = game.copy()

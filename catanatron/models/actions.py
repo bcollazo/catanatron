@@ -113,9 +113,7 @@ def city_possible_actions(state, color):
         return []
 
 
-def robber_possibilities(state, color, is_dev_card):
-    action_type = ActionType.PLAY_KNIGHT_CARD if is_dev_card else ActionType.MOVE_ROBBER
-
+def robber_possibilities(state, color):
     actions = []
     for coordinate, tile in state.board.map.resource_tiles:
         if coordinate == state.board.robber_coordinate:
@@ -135,11 +133,15 @@ def robber_possibilities(state, color, is_dev_card):
                     to_steal_from.add(candidate_color)
 
         if len(to_steal_from) == 0:
-            actions.append(Action(color, action_type, (coordinate, None, None)))
+            actions.append(
+                Action(color, ActionType.MOVE_ROBBER, (coordinate, None, None))
+            )
         else:
             for enemy_color in to_steal_from:
                 actions.append(
-                    Action(color, action_type, (coordinate, enemy_color, None))
+                    Action(
+                        color, ActionType.MOVE_ROBBER, (coordinate, enemy_color, None)
+                    )
                 )
 
     return actions
@@ -258,12 +260,12 @@ def generate_playable_actions(state):
     elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
         return initial_road_possibilities(state, player.color)
     elif action_prompt == ActionPrompt.MOVE_ROBBER:
-        return robber_possibilities(state, player.color, False)
+        return robber_possibilities(state, player.color)
     elif action_prompt == ActionPrompt.PLAY_TURN:
         if not player_has_rolled(state, player.color):
             actions = [Action(player.color, ActionType.ROLL, None)]
             if player_can_play_dev(state, player.color, "KNIGHT"):
-                actions.extend(robber_possibilities(state, player.color, True))
+                actions.append(Action(player.color, ActionType.PLAY_KNIGHT_CARD, None))
         else:
             actions = [Action(player.color, ActionType.END_TURN, None)]
             actions.extend(road_possible_actions(state, player.color))
@@ -286,7 +288,7 @@ def generate_playable_actions(state):
             if player_can_play_dev(state, player.color, "MONOPOLY"):
                 actions.extend(monopoly_possible_actions(player))
             if player_can_play_dev(state, player.color, "KNIGHT"):
-                actions.extend(robber_possibilities(state, player.color, True))
+                actions.append(Action(player.color, ActionType.PLAY_KNIGHT_CARD, None))
             if player_can_play_dev(state, player.color, "ROAD_BUILDING"):
                 actions.extend(road_building_possibilities(player, state.board))
 

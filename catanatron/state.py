@@ -378,24 +378,11 @@ def apply_action(state: State, action: Action):
     elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
         if not player_can_play_dev(state, action.color, "KNIGHT"):
             raise ValueError("Player cant play knight card now")
-        (coordinate, robbed_color, robbed_resource) = action.value
-        state.board.robber_coordinate = coordinate
-        if robbed_color is not None:
-            if robbed_resource is None:
-                robbed_resource = player_deck_random_draw(state, robbed_color)
-                action = Action(
-                    action.color,
-                    action.action_type,
-                    (coordinate, robbed_color, resource),
-                )
-            else:  # for replay functionality
-                player_deck_draw(state, robbed_color, robbed_resource.value)
-            player_deck_replenish(state, action.color, robbed_resource.value)
 
         play_dev_card(state, action.color, "KNIGHT")
 
         # state.current_player_index stays the same
-        state.current_prompt = ActionPrompt.PLAY_TURN
+        state.current_prompt = ActionPrompt.MOVE_ROBBER
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
         cards_selected = ResourceDeck.from_array(action.value)
