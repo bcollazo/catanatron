@@ -93,13 +93,7 @@ ACTIONS_ARRAY = [
         for j in range(i, len(RESOURCE_LIST))
     ],
     *[(ActionType.PLAY_YEAR_OF_PLENTY, (first_card,)) for first_card in RESOURCE_LIST],
-    # TODO: consider simetric options to reduce complexity by half.
-    *[
-        (ActionType.PLAY_ROAD_BUILDING, (tuple(sorted(i)), tuple(sorted(j))))
-        for i in get_edges()
-        for j in get_edges()
-        if i != j
-    ],
+    (ActionType.PLAY_ROAD_BUILDING, None),
     *[(ActionType.PLAY_MONOPOLY, r) for r in Resource],
     # 4:1 with bank
     *[
@@ -179,11 +173,6 @@ def normalize_action(action):
         return Action(action.color, action.action_type, action.value[0])
     elif normalized.action_type == ActionType.BUILD_ROAD:
         return Action(action.color, action.action_type, tuple(sorted(action.value)))
-    elif normalized.action_type == ActionType.PLAY_ROAD_BUILDING:
-        i, j = action.value
-        return Action(
-            action.color, action.action_type, (tuple(sorted(i)), tuple(sorted(j)))
-        )
     elif normalized.action_type == ActionType.BUY_DEVELOPMENT_CARD:
         return Action(action.color, action.action_type, None)
     elif normalized.action_type == ActionType.DISCARD:

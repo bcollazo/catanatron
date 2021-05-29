@@ -15,7 +15,10 @@ from catanatron.models.enums import (
     ActionType,
 )
 from catanatron.models.decks import DevelopmentDeck, ResourceDeck
-from catanatron.models.actions import generate_playable_actions
+from catanatron.models.actions import (
+    generate_playable_actions,
+    road_possible_actions,
+)
 from catanatron.state_functions import (
     build_city,
     build_road,
@@ -97,6 +100,7 @@ class State:
             self.is_discarding = False
             self.is_moving_knight = False
             self.is_road_building = False
+            self.free_roads_available = 0
 
             self.playable_actions = generate_playable_actions(self)
 
@@ -106,22 +110,35 @@ class State:
     def copy(self):
         state_copy = State(None, None, initialize=False)
         state_copy.players = self.players
+
+        state_copy.board = self.board.copy()
+
         state_copy.player_state = self.player_state.copy()
         state_copy.color_to_index = self.color_to_index
         state_copy.colors = self.colors.copy()
-        state_copy.buildings_by_color = pickle.loads(
-            pickle.dumps(self.buildings_by_color)
-        )
-        state_copy.board = self.board.copy()
-        state_copy.actions = self.actions.copy()
-        state_copy.is_initial_build_phase = self.is_initial_build_phase
+
         # TODO: Move Deck to functional code, so as to quick-copy arrays.
         state_copy.resource_deck = pickle.loads(pickle.dumps(self.resource_deck))
         state_copy.development_deck = pickle.loads(pickle.dumps(self.development_deck))
 
-        state_copy.current_player_index = self.current_player_index
+        state_copy.buildings_by_color = pickle.loads(
+            pickle.dumps(self.buildings_by_color)
+        )
+        state_copy.actions = self.actions.copy()
         state_copy.num_turns = self.num_turns
+
+        # Current prompt / player
+        # Two variables since there can be out-of-turn plays
+        state_copy.current_player_index = self.current_player_index
+        state_copy.current_turn_index = self.current_turn_index
+
         state_copy.current_prompt = self.current_prompt
+        state_copy.is_initial_build_phase = self.is_initial_build_phase
+        state_copy.is_discarding = self.is_discarding
+        state_copy.is_moving_knight = self.is_moving_knight
+        state_copy.is_road_building = self.is_road_building
+        state_copy.free_roads_available = self.free_roads_available
+
         state_copy.playable_actions = self.playable_actions
         return state_copy
 
@@ -257,6 +274,22 @@ def apply_action(state: State, action: Action):
             else:
                 advance_turn(state, -1)
                 state.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
+            state.playable_actions = generate_playable_actions(state)
+        elif state.is_road_building and state.free_roads_available > 0:
+            result = state.board.build_road(action.color, edge)
+            previous_road_color, road_color, road_lengths = result
+            build_road(state, action.color, edge, True)
+            mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+
+            state.free_roads_available -= 1
+            if (
+                state.free_roads_available == 0
+                or len(road_possible_actions(state, action.color)) == 0
+            ):
+                state.is_road_building = False
+                state.free_roads_available == 0
+                # state.current_player_index stays the same
+                # state.current_prompt stays as PLAY
             state.playable_actions = generate_playable_actions(state)
         else:
             result = state.board.build_road(action.color, edge)
@@ -419,18 +452,12 @@ def apply_action(state: State, action: Action):
         state.current_prompt = ActionPrompt.PLAY_TURN
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
-        (first_edge, second_edge) = action.value
         if not player_can_play_dev(state, action.color, "ROAD_BUILDING"):
             raise ValueError("Player cant play road building now")
 
-        state.board.build_road(action.color, first_edge)
-        previous_road_color, road_color, road_lengths = state.board.build_road(
-            action.color, second_edge
-        )
-        build_road(state, action.color, first_edge, True)
-        build_road(state, action.color, second_edge, True)
         play_dev_card(state, action.color, "ROAD_BUILDING")
-        mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+        state.is_road_building = True
+        state.free_roads_available = 2
 
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.PLAY_TURN

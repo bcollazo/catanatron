@@ -41,23 +41,20 @@ def test_playable_actions():
 
 
 def test_year_of_plenty_possible_actions_full_resource_bank():
-    player = SimplePlayer(Color.RED)
     bank_resource_deck = ResourceDeck.starting_bank()
-    actions = year_of_plenty_possibilities(player, bank_resource_deck)
+    actions = year_of_plenty_possibilities(Color.RED, bank_resource_deck)
     assert len(actions) == 15
 
 
 def test_year_of_plenty_possible_actions_not_enough_cards():
-    player = SimplePlayer(Color.RED)
     bank_resource_deck = ResourceDeck()
     bank_resource_deck.replenish(2, Resource.ORE)
-    actions = year_of_plenty_possibilities(player, bank_resource_deck)
+    actions = year_of_plenty_possibilities(Color.RED, bank_resource_deck)
     assert len(actions) == 2  # one ORE, or 2 OREs.
 
 
 def test_monopoly_possible_actions():
-    player = SimplePlayer(Color.RED)
-    assert len(monopoly_possible_actions(player)) == len(Resource)
+    assert len(monopoly_possible_actions(Color.RED)) == len(Resource)
 
 
 def test_road_possible_actions():
@@ -242,7 +239,7 @@ def test_year_of_plenty_same_resource():
     bank.replenish(1, Resource.WHEAT)
 
     player = SimplePlayer(Color.RED)
-    actions = year_of_plenty_possibilities(player, bank)
+    actions = year_of_plenty_possibilities(Color.RED, bank)
 
     assert len(actions) == 1
     assert actions[0].value[0] == Resource.WHEAT

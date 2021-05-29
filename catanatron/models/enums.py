@@ -74,7 +74,7 @@ class ActionType(Enum):
     PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is None
     PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is (Resource, Resource)
     PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
-    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
+    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is None
 
     # Trade
     # MARITIME_TRADE value is 5-resouce tuple, where last resource is resource asked.
