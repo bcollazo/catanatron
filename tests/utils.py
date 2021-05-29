@@ -6,16 +6,16 @@ def build_initial_placements(
 ):
     p0_color = game.state.players[0].color
     p1_color = game.state.players[1].color
-    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, p0_actions[0]))
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, p0_actions[1]))
+    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, p0_actions[0]))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, p0_actions[1]))
 
-    game.execute(Action(p1_color, ActionType.BUILD_FIRST_SETTLEMENT, p1_actions[0]))
-    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, p1_actions[1]))
-    game.execute(Action(p1_color, ActionType.BUILD_SECOND_SETTLEMENT, p1_actions[2]))
-    game.execute(Action(p1_color, ActionType.BUILD_INITIAL_ROAD, p1_actions[3]))
+    game.execute(Action(p1_color, ActionType.BUILD_SETTLEMENT, p1_actions[0]))
+    game.execute(Action(p1_color, ActionType.BUILD_ROAD, p1_actions[1]))
+    game.execute(Action(p1_color, ActionType.BUILD_SETTLEMENT, p1_actions[2]))
+    game.execute(Action(p1_color, ActionType.BUILD_ROAD, p1_actions[3]))
 
-    game.execute(Action(p0_color, ActionType.BUILD_SECOND_SETTLEMENT, p0_actions[2]))
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, p0_actions[3]))
+    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, p0_actions[2]))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, p0_actions[3]))
 
 
 def advance_to_play_turn(game):

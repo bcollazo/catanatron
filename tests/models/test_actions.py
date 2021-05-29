@@ -6,14 +6,13 @@ from catanatron.state import (
     player_deck_replenish,
 )
 from catanatron.models.actions import (
+    generate_playable_actions,
     monopoly_possible_actions,
-    year_of_plenty_possible_actions,
+    year_of_plenty_possibilities,
     road_possible_actions,
     settlement_possible_actions,
     city_possible_actions,
     robber_possibilities,
-    initial_settlement_possibilites,
-    discard_possibilities,
     maritime_trade_possibilities,
     road_building_possibilities,
 )
@@ -34,17 +33,17 @@ from catanatron.models.decks import ResourceDeck
 
 def test_playable_actions():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
+    state = State(players)
 
-    actions = game.playable_actions(players[0], ActionPrompt.ROLL)
-    assert len(actions) == 1
-    assert actions[0].action_type == ActionType.ROLL
+    actions = generate_playable_actions(state)
+    assert len(actions) == 54
+    assert actions[0].action_type == ActionType.BUILD_SETTLEMENT
 
 
 def test_year_of_plenty_possible_actions_full_resource_bank():
     player = SimplePlayer(Color.RED)
     bank_resource_deck = ResourceDeck.starting_bank()
-    actions = year_of_plenty_possible_actions(player, bank_resource_deck)
+    actions = year_of_plenty_possibilities(player, bank_resource_deck)
     assert len(actions) == 15
 
 
@@ -52,7 +51,7 @@ def test_year_of_plenty_possible_actions_not_enough_cards():
     player = SimplePlayer(Color.RED)
     bank_resource_deck = ResourceDeck()
     bank_resource_deck.replenish(2, Resource.ORE)
-    actions = year_of_plenty_possible_actions(player, bank_resource_deck)
+    actions = year_of_plenty_possibilities(player, bank_resource_deck)
     assert len(actions) == 2  # one ORE, or 2 OREs.
 
 
@@ -176,9 +175,9 @@ def test_robber_possibilities_simple():
 
 
 def test_initial_placement_possibilities():
-    board = Board()
     red = SimplePlayer(Color.RED)
-    assert len(initial_settlement_possibilites(red, board, True)) == 54
+    state = State([red])
+    assert len(settlement_possible_actions(state, Color.RED, True)) == 54
 
 
 # TODO: Forcing random selection to ease dimensionality.
@@ -243,7 +242,7 @@ def test_year_of_plenty_same_resource():
     bank.replenish(1, Resource.WHEAT)
 
     player = SimplePlayer(Color.RED)
-    actions = year_of_plenty_possible_actions(player, bank)
+    actions = year_of_plenty_possibilities(player, bank)
 
     assert len(actions) == 1
     assert actions[0].value[0] == Resource.WHEAT

@@ -6,7 +6,7 @@ from catanatron.models.map import Water, Port, Tile
 from catanatron.models.player import Color, Player
 from catanatron.models.decks import Deck
 from catanatron.models.enums import Resource, Action, ActionType
-from catanatron.state import get_longest_road_length
+from catanatron.state_functions import get_longest_road_length
 
 
 def longest_roads_by_player(state):
@@ -19,10 +19,7 @@ def longest_roads_by_player(state):
 def action_from_json(data):
     color = Color[data[0]]
     action_type = ActionType[data[1]]
-    if (
-        action_type == ActionType.BUILD_INITIAL_ROAD
-        or action_type == ActionType.BUILD_ROAD
-    ):
+    if action_type == ActionType.BUILD_ROAD:
         action = Action(color, action_type, tuple(data[2]))
     elif action_type == ActionType.MARITIME_TRADE:
         action = Action(

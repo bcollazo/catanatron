@@ -158,10 +158,7 @@ class Board:
         buildable = self.buildable_edges(color)
         inverted_edge = (edge[1], edge[0])
         if edge not in buildable and inverted_edge not in buildable:
-            raise ValueError("Invalid Road Placement: not connected")
-
-        if self.get_edge_color(edge) is not None:
-            raise ValueError("Invalid Road Placement: a road exists there")
+            raise ValueError("Invalid Road Placement")
 
         self.roads[edge] = color
         self.roads[inverted_edge] = color

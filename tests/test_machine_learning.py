@@ -50,8 +50,8 @@ def test_port_distance_features():
     ]
     game = Game(players)
     color = game.state.players[0].color
-    game.execute(Action(color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
+    game.execute(Action(color, ActionType.BUILD_SETTLEMENT, 3))
+    game.execute(Action(color, ActionType.BUILD_ROAD, (2, 3)))
 
     ports = game.state.board.map.port_nodes
     se_port_resource = next(filter(lambda entry: 29 in entry[1], ports.items()))[0]
@@ -71,8 +71,8 @@ def test_expansion_features():
     ]
     game = Game(players)
     color = game.state.players[0].color
-    game.execute(Action(color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
+    game.execute(Action(color, ActionType.BUILD_SETTLEMENT, 3))
+    game.execute(Action(color, ActionType.BUILD_ROAD, (2, 3)))
 
     neighbor_tile_resource = game.state.board.map.tiles[(1, -1, 0)].resource
     if neighbor_tile_resource is None:
@@ -101,7 +101,7 @@ def test_reachability_features():
     game = Game(players, seed=123, catan_map=catan_map)
     p0_color = game.state.players[0].color
 
-    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 5))
+    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 5))
     features = reachability_features(game, p0_color)
     assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
@@ -115,7 +115,7 @@ def test_reachability_features():
     assert features["P0_1_ROAD_REACHABLE_BRICK"] == number_probability(4)
     assert features["P0_1_ROAD_REACHABLE_SHEEP"] == number_probability(6)
 
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (0, 5)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 5)))
     features = reachability_features(game, p0_color)
     assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
@@ -136,7 +136,7 @@ def test_reachability_features():
 
     # Test enemy making building removes buildability
     p1_color = game.state.players[1].color
-    game.execute(Action(p1_color, ActionType.BUILD_FIRST_SETTLEMENT, 1))
+    game.execute(Action(p1_color, ActionType.BUILD_SETTLEMENT, 1))
     features = reachability_features(game, p0_color)
     assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(8)
     assert math.isclose(
@@ -172,8 +172,8 @@ def test_graph_features():
     ]
     game = Game(players)
     p0_color = game.state.players[0].color
-    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
+    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
 
     features = graph_features(game, p0_color)
     assert features[f"NODE3_P0_SETTLEMENT"]

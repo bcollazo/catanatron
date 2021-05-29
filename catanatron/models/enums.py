@@ -45,10 +45,8 @@ class BuildingType(Enum):
 
 
 class ActionPrompt(Enum):
-    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"
-    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"
+    BUILD_INITIAL_SETTLEMENT = "BUILD_INITIAL_SETTLEMENT"
     BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"
-    ROLL = "ROLL"
     PLAY_TURN = "PLAY_TURN"
     DISCARD = "DISCARD"
     MOVE_ROBBER = "MOVE_ROBBER"
@@ -67,15 +65,10 @@ class ActionType(Enum):
     DISCARD = "DISCARD"  # value is None|Resource[]. TODO: Should always be Resource[].
 
     # Building/Buying
-    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"  # value is node_id
-    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"  # value is node_id
-    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"  # value is edge_id
     BUILD_ROAD = "BUILD_ROAD"  # value is edge_id
     BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node_id
     BUILD_CITY = "BUILD_CITY"  # value is node_id
-    BUY_DEVELOPMENT_CARD = (
-        "BUY_DEVELOPMENT_CARD"  # value is None. Log instead sets it to card bought.
-    )
+    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None. Log value is card
 
     # Dev Card Plays
     PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None). Log has extra element of card stolen.

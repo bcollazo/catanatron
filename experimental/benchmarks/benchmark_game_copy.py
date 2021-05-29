@@ -46,7 +46,6 @@ state_copy['board'] = board
 state_copy['actions'] = game.state.actions.copy()
 state_copy['resource_deck'] = pickle.loads(pickle.dumps(game.state.resource_deck))
 state_copy['development_deck'] = pickle.loads(pickle.dumps(game.state.development_deck))
-state_copy['tick_queue'] = game.state.tick_queue.copy()
 state_copy['current_player_index'] = game.state.current_player_index
 state_copy['num_turns'] = game.state.num_turns
 
@@ -79,7 +78,6 @@ state_copy = {
 'players': players,
 'board': board,
 'array_state': array_state.copy(),
-'tick_queue': game.state.tick_queue.copy(),
 'actions': game.state.actions.copy(),
 }
 """,

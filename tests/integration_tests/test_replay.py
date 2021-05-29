@@ -44,9 +44,9 @@ def test_execute_action_on_copies_doesnt_conflict():
     ]
     game = Game(players)
     p0 = game.state.players[0]
-    game.execute(Action(p0.color, ActionType.BUILD_FIRST_SETTLEMENT, 0))
+    game.execute(Action(p0.color, ActionType.BUILD_SETTLEMENT, 0))
 
-    action = Action(p0.color, ActionType.BUILD_INITIAL_ROAD, (0, 1))
+    action = Action(p0.color, ActionType.BUILD_ROAD, (0, 1))
 
     game_copy = game.copy()
     game_copy.execute(action)

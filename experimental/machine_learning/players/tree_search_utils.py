@@ -12,10 +12,7 @@ def execute_spectrum(game, action):
     deterministic_actions = set(
         [
             ActionType.END_TURN,
-            ActionType.BUILD_FIRST_SETTLEMENT,
-            ActionType.BUILD_SECOND_SETTLEMENT,
             ActionType.BUILD_SETTLEMENT,
-            ActionType.BUILD_INITIAL_ROAD,
             ActionType.BUILD_ROAD,
             ActionType.BUILD_CITY,
             ActionType.PLAY_YEAR_OF_PLENTY,

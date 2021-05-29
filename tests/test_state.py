@@ -1,8 +1,7 @@
 import pytest
 
-from catanatron.state import (
-    State,
-    apply_action,
+from catanatron.state import State, apply_action
+from catanatron.state_functions import (
     get_dev_cards_in_hand,
     player_deck_add,
     player_deck_replenish,
@@ -11,6 +10,7 @@ from catanatron.state import (
 )
 from catanatron.models.map import BaseMap
 from catanatron.models.enums import (
+    ActionPrompt,
     BRICK,
     MONOPOLY,
     ORE,
@@ -31,6 +31,7 @@ def test_buying_road_is_payed_for():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players, BaseMap())
 
+    state.is_initial_build_phase = False
     state.board.build_settlement(players[0].color, 3, True)
     action = Action(players[0].color, ActionType.BUILD_ROAD, (3, 4))
     player_deck_add(
@@ -187,3 +188,20 @@ def test_can_only_play_one_dev_card_per_turn():
     apply_action(state, action)
     with pytest.raises(ValueError):  # shouldnt be able to play two dev cards
         apply_action(state, action)
+
+
+def test_sequence():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    state = State(players)
+
+    p0 = state.players[0]
+    assert state.current_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT
+    assert Action(p0.color, ActionType.BUILD_SETTLEMENT, 0) in state.playable_actions
+    assert Action(p0.color, ActionType.BUILD_SETTLEMENT, 50) in state.playable_actions
+
+    apply_action(state, state.playable_actions[0])

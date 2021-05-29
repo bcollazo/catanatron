@@ -4,7 +4,7 @@ from collections import Counter
 
 import networkx as nx
 
-from catanatron.state import (
+from catanatron.state_functions import (
     get_player_buildings,
     player_key,
     player_num_dev_cards,

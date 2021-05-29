@@ -3,7 +3,7 @@ import time
 
 from graphviz import Digraph
 
-from catanatron.state import (
+from catanatron.state_functions import (
     get_longest_road_length,
     get_played_dev_cards,
     get_player_buildings,
@@ -374,10 +374,7 @@ def list_prunned_actions(game):
     types = set(map(lambda a: a.action_type, playable_actions))
 
     # Prune Initial Settlements at 1-tile places
-    if (
-        ActionType.BUILD_FIRST_SETTLEMENT in types
-        or ActionType.BUILD_SECOND_SETTLEMENT in types
-    ):
+    if ActionType.BUILD_SETTLEMENT in types and game.state.is_initial_build_phase:
         actions = filter(
             lambda a: len(game.state.board.map.adjacent_tiles[a.value]) != 1, actions
         )

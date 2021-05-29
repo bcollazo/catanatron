@@ -1,17 +1,15 @@
 from catanatron.models.board import Board
 from catanatron.state import (
     State,
+)
+from catanatron.state_functions import (
     buy_dev_card,
+    get_larget_army_color,
     play_dev_card,
-    compute_largest_army,
     player_deck_replenish,
 )
 from catanatron.models.player import SimplePlayer, Color
-from catanatron.models.enums import (
-    Action,
-    ActionType,
-    KNIGHT,
-)
+from catanatron.models.enums import KNIGHT
 
 
 def test_longest_road_simple():
@@ -148,13 +146,8 @@ def test_largest_army_calculation_when_no_one_has_three():
     buy_dev_card(state, Color.RED, KNIGHT)
     buy_dev_card(state, Color.RED, KNIGHT)
     buy_dev_card(state, Color.BLUE, KNIGHT)
-    actions = [
-        Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
-        Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
-        Action(Color.BLUE, ActionType.PLAY_KNIGHT_CARD, None),
-    ]
 
-    color, count = compute_largest_army(state, actions)
+    color, count = get_larget_army_color(state)
     assert color is None and count is None
 
 
@@ -172,22 +165,13 @@ def test_largest_army_calculation_on_tie():
     play_dev_card(state, Color.BLUE, KNIGHT)
     play_dev_card(state, Color.BLUE, KNIGHT)
     play_dev_card(state, Color.BLUE, KNIGHT)
-    actions = [
-        Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
-        Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
-        Action(Color.RED, ActionType.PLAY_KNIGHT_CARD, None),
-        Action(Color.BLUE, ActionType.PLAY_KNIGHT_CARD, None),
-        Action(Color.BLUE, ActionType.PLAY_KNIGHT_CARD, None),
-        Action(Color.BLUE, ActionType.PLAY_KNIGHT_CARD, None),
-    ]
 
-    color, count = compute_largest_army(state, actions)
+    color, count = get_larget_army_color(state)
     assert color is Color.RED and count == 3
 
     play_dev_card(state, Color.BLUE, KNIGHT)
-    actions.append(Action(Color.BLUE, ActionType.PLAY_KNIGHT_CARD, None))
 
-    color, count = compute_largest_army(state, actions)
+    color, count = get_larget_army_color(state)
     assert color is Color.BLUE and count == 4
 
 

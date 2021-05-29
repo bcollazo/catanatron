@@ -81,9 +81,6 @@ ACTIONS_ARRAY = [
     (ActionType.ROLL, None),
     (ActionType.MOVE_ROBBER, None),
     (ActionType.DISCARD, None),
-    *[(ActionType.BUILD_FIRST_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
-    *[(ActionType.BUILD_INITIAL_ROAD, tuple(sorted(edge))) for edge in get_edges()],
-    *[(ActionType.BUILD_SECOND_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
     *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
     *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
     *[(ActionType.BUILD_CITY, node_id) for node_id in range(NUM_NODES)],
@@ -183,10 +180,7 @@ def normalize_action(action):
         or normalized.action_type == ActionType.PLAY_KNIGHT_CARD
     ):
         return Action(action.color, action.action_type, None)
-    elif (
-        normalized.action_type == ActionType.BUILD_INITIAL_ROAD
-        or normalized.action_type == ActionType.BUILD_ROAD
-    ):
+    elif normalized.action_type == ActionType.BUILD_ROAD:
         return Action(action.color, action.action_type, tuple(sorted(action.value)))
     elif normalized.action_type == ActionType.PLAY_ROAD_BUILDING:
         i, j = action.value

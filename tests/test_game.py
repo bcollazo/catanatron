@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch
 
+from catanatron.state_functions import player_has_rolled
 from catanatron.models.actions import maritime_trade_possibilities
 from catanatron.game import Game
 from catanatron.state import (
@@ -11,6 +12,7 @@ from catanatron.state import (
 )
 from catanatron.models.board import Board
 from catanatron.models.enums import (
+    ActionPrompt,
     Resource,
     BuildingType,
     ActionType,
@@ -25,10 +27,45 @@ from catanatron.models.decks import ResourceDeck
 def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
+    actions = []
     while not any(
         a.action_type == ActionType.ROLL for a in game.state.playable_actions
     ):
-        game.play_tick()
+        actions.append(game.play_tick())
+
+    p0_color = game.state.colors[0]
+    assert (
+        actions[0].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[0].color == p0_color
+    )
+    assert (
+        actions[1].action_type == ActionType.BUILD_ROAD and actions[1].color == p0_color
+    )
+    assert (
+        actions[2].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[2].color != p0_color
+    )
+    assert (
+        actions[3].action_type == ActionType.BUILD_ROAD and actions[3].color != p0_color
+    )
+    assert (
+        actions[4].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[4].color != p0_color
+    )
+    assert (
+        actions[5].action_type == ActionType.BUILD_ROAD and actions[5].color != p0_color
+    )
+    assert (
+        actions[6].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[6].color == p0_color
+    )
+    assert (
+        actions[7].action_type == ActionType.BUILD_ROAD and actions[7].color == p0_color
+    )
+    assert (
+        game.state.current_prompt == ActionPrompt.PLAY_TURN
+        and game.state.current_player().color == p0_color
+    )
 
     # assert there are 4 houses and 4 roads
     settlements = [
@@ -74,6 +111,7 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     assert player_num_resource_cards(game.state, players[1].color) == 7
     game.play_tick()  # should be player 0 rolling.
 
+    print(game.state.playable_actions)
     assert not any(
         a.action_type == ActionType.DISCARD for a in game.state.playable_actions
     )
@@ -101,6 +139,40 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
 
     game.play_tick()
     assert player_num_resource_cards(game.state, players[1].color) == 5
+
+
+@patch("catanatron.state.roll_dice")
+def test_end_turn_goes_to_next_player(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 2)  # not a 7
+
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    actions = []
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        actions.append(game.play_tick())
+
+    p0_color = game.state.colors[0]
+    p1_color = game.state.colors[1]
+    assert (
+        game.state.current_prompt == ActionPrompt.PLAY_TURN
+        and game.state.current_player().color == p0_color
+    )
+    assert game.state.playable_actions == [Action(p0_color, ActionType.ROLL, None)]
+
+    game.execute(Action(p0_color, ActionType.ROLL, None))
+    assert game.state.current_prompt == ActionPrompt.PLAY_TURN
+    assert game.state.current_player().color == p0_color
+    assert player_has_rolled(game.state, p0_color)
+    assert Action(p0_color, ActionType.END_TURN, None) in game.state.playable_actions
+
+    game.execute(Action(p0_color, ActionType.END_TURN, None))
+    assert game.state.current_prompt == ActionPrompt.PLAY_TURN
+    assert game.state.current_player().color == p1_color
+    assert not player_has_rolled(game.state, p0_color)
+    assert not player_has_rolled(game.state, p1_color)
+    assert game.state.playable_actions == [Action(p1_color, ActionType.ROLL, None)]
 
 
 # ===== Development Cards
