@@ -241,9 +241,9 @@ def build_action_callback(games_directory):
         if len(game.state.actions) == 0:
             return
 
-        # action = game.state.actions[-1]
-        # data[player.color]["samples"].append(create_sample(game, player.color))
-        # data[player.color]["actions"].append(hot_one_encode_action(action))
+        # action = game.state.actions[-1]  # the action that just happened
+        # data[action.color]["samples"].append(create_sample(game, action.color))
+        # data[action.color]["actions"].append(hot_one_encode_action(action))
 
         # board_tensor = create_board_tensor(game, player.color)
         # shape = board_tensor.shape
@@ -253,8 +253,9 @@ def build_action_callback(games_directory):
         # data[player.color]["board_tensors"].append(flattened_tensor)
 
         if game.winning_player() is not None:
+            for color in game.state.colors:
+                data[color]["samples"].append(create_sample(game, color))
             flush_to_matrices(game, data, games_directory)
-            return
 
     return action_callback
 
@@ -266,19 +267,19 @@ def flush_to_matrices(game, data, games_directory):
     actions = []
     board_tensors = []
     labels = []
-    for player in game.state.players:
-        player_data = data[player.color]
+    for color in game.state.colors:
+        player_data = data[color]
         samples.extend(player_data["samples"])
         # actions.extend(player_data["actions"])
         # board_tensors.extend(player_data["board_tensors"])
 
         # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
-        episode_return = get_discounted_return(game, player, 1)
-        discounted_return = get_discounted_return(game, player, DISCOUNT_FACTOR)
-        tournament_return = get_tournament_return(game, player, 1)
-        vp_return = get_victory_points_return(game, player)
+        episode_return = get_discounted_return(game, color, 1)
+        discounted_return = get_discounted_return(game, color, DISCOUNT_FACTOR)
+        tournament_return = get_tournament_return(game, color, 1)
+        vp_return = get_victory_points_return(game, color)
         discounted_tournament_return = get_tournament_return(
-            game, player, DISCOUNT_FACTOR
+            game, color, DISCOUNT_FACTOR
         )
         return_matrix = np.tile(
             [

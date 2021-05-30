@@ -111,34 +111,34 @@ def generate_arrays_from_file(
                     batchcount = 0
 
 
-def get_discounted_return(game, p0, discount_factor):
+def get_discounted_return(game, p0_color, discount_factor):
     """G_t = d**1*r_1 + d**2*r_2 + ... + d**T*r_T.
 
     Taking r_i = 0 for all i < T. And r_T = 1 if wins
     """
     assert discount_factor <= 1
-    episode_return = p0.color == game.winning_color()
-    return episode_return * discount_factor ** len(game.state.actions)
+    episode_return = p0_color == game.winning_color()
+    return episode_return * discount_factor ** game.state.num_turns
 
 
-def get_tournament_return(game, p0, discount_factor):
+def get_tournament_return(game, p0_color, discount_factor):
     """A way to say winning is important, no matter how long it takes, and
     getting close to winning is a secondary metric"""
-    episode_return = p0.color == game.winning_color()
-    key = player_key(game.state, p0.color)
+    episode_return = p0_color == game.winning_color()
+    key = player_key(game.state, p0_color)
     points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
     episode_return = episode_return * 1000 + min(points, 10)
-    return episode_return * discount_factor ** len(game.state.actions)
+    return episode_return * discount_factor ** game.state.num_turns
 
 
-def get_victory_points_return(game, p0):
+def get_victory_points_return(game, p0_color):
     # This discount factor (0.9999) ensures a game won in less turns
     #   is better, and still a Game with 9vps is less than 10vps,
     #   no matter turns.
-    key = player_key(game.state, p0.color)
+    key = player_key(game.state, p0_color)
     points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
     episode_return = min(points, 10)
-    return episode_return * 0.9999 ** len(game.state.actions)
+    return episode_return * 0.9999 ** game.state.num_turns
 
 
 def populate_matrices(
