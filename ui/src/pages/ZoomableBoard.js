@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import clsx from "clsx";
+import classnames from "classnames";
 import memoize from "fast-memoize";
 
 import useWindowSize from "../utils/useWindowSize";
@@ -48,11 +48,12 @@ function buildNodeActions(state) {
   }
 
   const nodeActions = {};
-  const buildInitialSettlementActions = state.gameState.current_playable_actions.filter(
-    (action) =>
-      action[1] === "BUILD_FIRST_SETTLEMENT" ||
-      action[1] === "BUILD_SECOND_SETTLEMENT"
-  );
+  const buildInitialSettlementActions =
+    state.gameState.current_playable_actions.filter(
+      (action) =>
+        action[1] === "BUILD_FIRST_SETTLEMENT" ||
+        action[1] === "BUILD_SECOND_SETTLEMENT"
+    );
   const inInitialBuildPhase = buildInitialSettlementActions.length > 0;
   if (inInitialBuildPhase) {
     buildInitialSettlementActions.forEach((action) => {
@@ -80,9 +81,10 @@ function buildEdgeActions(state) {
   }
 
   const edgeActions = {};
-  const buildInitialRoadActions = state.gameState.current_playable_actions.filter(
-    (action) => action[1] === "BUILD_INITIAL_ROAD"
-  );
+  const buildInitialRoadActions =
+    state.gameState.current_playable_actions.filter(
+      (action) => action[1] === "BUILD_INITIAL_ROAD"
+    );
   const inInitialBuildPhase = buildInitialRoadActions.length > 0;
   if (inInitialBuildPhase) {
     buildInitialRoadActions.forEach((action) => {
@@ -146,38 +148,38 @@ export default function ZoomableBoard({ replayMode }) {
         size={size}
       />
     ));
-    const nodes = Object.values(
-      state.gameState.nodes
-    ).map(({ color, building, direction, tile_coordinate, id }) => (
-      <Node
-        key={id}
-        center={center}
-        size={size}
-        coordinate={tile_coordinate}
-        direction={direction}
-        building={building}
-        color={color}
-        flashing={!replayMode && id in nodeActions}
-        onClick={buildOnNodeClick(id, nodeActions[id])}
-      />
-    ));
-    const edges = Object.values(
-      state.gameState.edges
-    ).map(({ color, direction, tile_coordinate, id }) => (
-      <Edge
-        id={id}
-        key={id}
-        center={center}
-        size={size}
-        coordinate={tile_coordinate}
-        direction={direction}
-        color={color}
-        flashing={id in edgeActions}
-        onClick={buildOnEdgeClick(id, edgeActions[id])}
-      />
-    ));
+    const nodes = Object.values(state.gameState.nodes).map(
+      ({ color, building, direction, tile_coordinate, id }) => (
+        <Node
+          key={id}
+          center={center}
+          size={size}
+          coordinate={tile_coordinate}
+          direction={direction}
+          building={building}
+          color={color}
+          flashing={!replayMode && id in nodeActions}
+          onClick={buildOnNodeClick(id, nodeActions[id])}
+        />
+      )
+    );
+    const edges = Object.values(state.gameState.edges).map(
+      ({ color, direction, tile_coordinate, id }) => (
+        <Edge
+          id={id}
+          key={id}
+          center={center}
+          size={size}
+          coordinate={tile_coordinate}
+          direction={direction}
+          color={color}
+          flashing={id in edgeActions}
+          onClick={buildOnEdgeClick(id, edgeActions[id])}
+        />
+      )
+    );
     board = (
-      <div className={clsx("board", { show })}>
+      <div className={classnames("board", { show })}>
         {tiles}
         {edges}
         {nodes}
