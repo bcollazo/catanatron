@@ -147,10 +147,10 @@ MODEL = None
 
 
 class ForcePlayer(Player):
-    def __init__(self, color, name):
+    def __init__(self, color, name, model_name):
         super(ForcePlayer, self).__init__(color, name)
         global MODEL
-        MODEL = Agent.load(directory="data/checkpoints")
+        MODEL = Agent.load(directory="data/checkpoints/" + model_name)
 
     def decide(self, game, playable_actions):
         if len(playable_actions) == 1:
