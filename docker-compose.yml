@@ -8,24 +8,24 @@ services:
       - POSTGRES_DB=catanatron_db
     ports:
       - 5432:5432
-  # server:
-  #   image: bcollazo/catanatron-server:latest
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.web
-  #   environment:
-  #     - DATABASE_URL=postgresql://catanatron:victorypoint@db:5432/catanatron_db
-  #   ports:
-  #     - 5000:5000
-  #   stdin_open: true
-  #   volumes:
-  #     - .:/app
-  # react-ui:
-  #   image: bcollazo/catanatron-react-ui:latest
-  #   build: ./ui
-  #   ports:
-  #     - 3000:3000
-  #   stdin_open: true
-  #   volumes:
-  #     - /app/node_modules
-  #     - ./ui:/app
+  server:
+    image: bcollazo/catanatron-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    environment:
+      - DATABASE_URL=postgresql://catanatron:victorypoint@db:5432/catanatron_db
+    ports:
+      - 5000:5000
+    stdin_open: true
+    volumes:
+      - .:/app
+  react-ui:
+    image: bcollazo/catanatron-react-ui:latest
+    build: ./ui
+    ports:
+      - 3000:3000
+    stdin_open: true
+    volumes:
+      - /app/node_modules
+      - ./ui:/app
