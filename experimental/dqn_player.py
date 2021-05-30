@@ -403,7 +403,7 @@ def main(experiment_name):
         os.makedirs(models_folder)
 
     agent = DQNAgent()
-    metrics_path = f"logs/catan-dql/{model_name}"
+    metrics_path = f"data/logs/catan-dql/{model_name}"
     output_model_path = models_folder + model_name
     writer = tf.summary.create_file_writer(metrics_path)
     print("Will be writing metrics to", metrics_path)
