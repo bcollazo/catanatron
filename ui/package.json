@@ -11,14 +11,14 @@
     "axios": "^0.20.0",
     "classnames": "^2.2.6",
     "fast-memoize": "^2.5.2",
-    "node-sass": "^4.14.1",
     "notistack": "^1.0.6",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-loader-spinner": "^4.0.0",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^3.4.3",
-    "react-zoom-pan-pinch": "^1.6.1"
+    "react-zoom-pan-pinch": "^1.6.1",
+    "sass": "^1.34.0"
   },
   "scripts": {
     "start": "react-scripts start",
