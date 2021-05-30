@@ -14,12 +14,14 @@ h6.MuiTypography-h6 {
   left: 50% !important;
   bottom: 0px;
   transform: translateX(-50%);
+  max-width: 100%;
   .MuiCollapse-container {
     padding: 0 10px;
     .MuiCollapse-wrapper {
       margin-top: 10px;
       margin-bottom: 10px;
       height: 60px;
+      padding: 0;
 
       > div > div {
         height: 100%;
