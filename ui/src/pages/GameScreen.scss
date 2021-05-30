@@ -61,23 +61,6 @@ main {
   }
 }
 
-.left-drawer {
-  .MuiDrawer-paper {
-    width: 250px;
-  }
-
-  .log {
-    overflow-y: auto;
-
-    // To ensure always clipped towards bottom
-    display: flex;
-    flex-direction: column-reverse;
-    .action {
-      padding: $sm-gutter;
-    }
-  }
-}
-
 .board-container {
   .react-transform-component {
     height: 100%;

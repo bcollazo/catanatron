@@ -48,13 +48,12 @@ function buildNodeActions(state) {
   }
 
   const nodeActions = {};
-  const buildInitialSettlementActions =
-    state.gameState.current_playable_actions.filter(
-      (action) =>
-        action[1] === "BUILD_FIRST_SETTLEMENT" ||
-        action[1] === "BUILD_SECOND_SETTLEMENT"
-    );
-  const inInitialBuildPhase = buildInitialSettlementActions.length > 0;
+  const buildInitialSettlementActions = state.gameState.is_initial_build_phase
+    ? state.gameState.current_playable_actions.filter(
+        (action) => action[1] === "BUILD_SETTLEMENT"
+      )
+    : [];
+  const inInitialBuildPhase = state.gameState.is_initial_build_phase;
   if (inInitialBuildPhase) {
     buildInitialSettlementActions.forEach((action) => {
       nodeActions[action[2]] = action;
@@ -81,11 +80,12 @@ function buildEdgeActions(state) {
   }
 
   const edgeActions = {};
-  const buildInitialRoadActions =
-    state.gameState.current_playable_actions.filter(
-      (action) => action[1] === "BUILD_INITIAL_ROAD"
-    );
-  const inInitialBuildPhase = buildInitialRoadActions.length > 0;
+  const buildInitialRoadActions = state.gameState.is_initial_build_phase
+    ? state.gameState.current_playable_actions.filter(
+        (action) => action[1] === "BUILD_ROAD"
+      )
+    : [];
+  const inInitialBuildPhase = state.gameState.is_initial_build_phase;
   if (inInitialBuildPhase) {
     buildInitialRoadActions.forEach((action) => {
       edgeActions[action[2]] = action;
