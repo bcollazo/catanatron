@@ -12,8 +12,6 @@ export function humanizeAction(action) {
       return `${player} DISCARDED ${action[2]}`;
     case "BUY_DEVELOPMENT_CARD":
       return `${player} BOUGHT DEVELOPMENT CARD`;
-    case "BUILD_FIRST_SETTLEMENT":
-    case "BUILD_SECOND_SETTLEMENT":
     case "BUILD_SETTLEMENT":
     case "BUILD_CITY": {
       const parts = action[1].split("_");
@@ -21,14 +19,12 @@ export function humanizeAction(action) {
       const tile = action[2];
       return `${player} BUILT ${building} ON ${tile}`;
     }
-    case "BUILD_INITIAL_ROAD":
     case "BUILD_ROAD": {
       const edge = action[2];
       return `${player} BUILT ROAD ON ${edge}`;
     }
     case "PLAY_KNIGHT_CARD": {
-      const tile = action[2];
-      return `${player} PLAYED KNIGHT CARD TO ${tile}`;
+      return `${player} PLAYED KNIGHT CARD`;
     }
     case "MOVE_ROBBER": {
       const tile = action[2];
@@ -47,8 +43,7 @@ function humanizePrompt(current_prompt) {
       return `YOUR TURN`;
     case "PLAY_TURN":
       return `YOUR TURN`;
-    case "BUILD_FIRST_SETTLEMENT":
-    case "BUILD_SECOND_SETTLEMENT":
+    case "BUILD_INITIAL_SETTLEMENT":
     case "BUILD_INITIAL_ROAD":
     default: {
       const prompt = current_prompt.replaceAll("_", " ");

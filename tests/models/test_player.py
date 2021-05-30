@@ -1,10 +1,18 @@
+from catanatron.models.map import BaseMap
+from catanatron.state import (
+    State,
+    player_clean_turn,
+    player_can_play_dev,
+    player_deck_replenish,
+)
 from catanatron.models.player import Color, SimplePlayer
-from catanatron.models.enums import Resource, DevelopmentCard
 
 
 def test_playable_cards():
     player = SimplePlayer(Color.RED)
-    player.development_deck.replenish(1, DevelopmentCard.KNIGHT)
-    player.clean_turn_state()
 
-    assert player.can_play_knight()
+    state = State([player], BaseMap())
+    player_deck_replenish(state, Color.RED, "KNIGHT")
+    player_clean_turn(state, Color.RED)
+
+    assert player_can_play_dev(state, Color.RED, "KNIGHT")

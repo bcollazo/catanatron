@@ -7,8 +7,9 @@ import termplotlib as tpl
 import numpy as np
 import pandas as pd
 
-from catanatron.models.enums import BuildingType, Resource
-from catanatron_server.database import save_game_state
+from catanatron.state import player_key
+from catanatron_server.utils import ensure_link
+from catanatron_server.models import database_session, upsert_game_state
 from catanatron.game import Game
 from catanatron.models.player import HumanPlayer, RandomPlayer, Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
@@ -19,6 +20,7 @@ from experimental.machine_learning.players.reinforcement import (
     PRLPlayer,
     hot_one_encode_action,
 )
+from experimental.tensorforce_player import ForcePlayer
 from experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
     ValueFunctionPlayer,
@@ -32,6 +34,7 @@ from experimental.machine_learning.features import (
     create_sample,
     get_feature_ordering,
 )
+from experimental.dqn_player import DQNPlayer
 from experimental.machine_learning.board_tensor_features import (
     CHANNELS,
     HEIGHT,
@@ -53,15 +56,38 @@ if LOG_IN_TF:
     import tensorflow as tf
 
 
+PLAYER_CLASSES = {
+    "R": RandomPlayer,
+    "H": HumanPlayer,
+    "W": WeightedRandomPlayer,
+    "O": OnlineMCTSDQNPlayer,
+    "S": ScikitPlayer,
+    "VP": VictoryPointPlayer,
+    "F": ValueFunctionPlayer,
+    # Tree Search Players
+    "G": GreedyPlayoutsPlayer,
+    "M": MCTSPlayer,
+    "AB": AlphaBetaPlayer,
+    # Used like: --players=V:path/to/model.model,T:path/to.model
+    "C": ForcePlayer,
+    "V": VRLPlayer,
+    "Q": QRLPlayer,
+    "P": PRLPlayer,
+    "T": TensorRLPlayer,
+    "D": DQNPlayer,
+}
+
+
 @click.command()
 @click.option("-n", "--num", default=5, help="Number of games to play.")
 @click.option(
     "--players",
     default="R,R,R,R",
-    help="""
-        Comma-separated 4 players to use. R=Random, W=WeightedRandom, VX=VRLPlayer(Version X),
-            PX=PRLPlayer(Version X), QX=QRLPlayer(Version X). X >= 1.
-    """,
+    help=f"""
+        Comma-separated players to use. Use : to specify additional params.\n
+        (e.g. --players=R,G:25,AB:2:C,W).\n
+        {", ".join(map(lambda e: f"{e[0]}={e[1].__name__}", PLAYER_CLASSES.items()))}
+        """,
 )
 @click.option(
     "-o",
@@ -92,52 +118,17 @@ def simulate(num, players, outpath, save_in_db, watch):
     colors = [c for c in Color]
     pseudonyms = ["Foo", "Bar", "Baz", "Qux"]
     for i, key in enumerate(player_keys):
-        param = key[1:]
-        if key == "R":
-            initialized_players.append(RandomPlayer(colors[i], pseudonyms[i]))
-        elif key == "H":
-            initialized_players.append(HumanPlayer(colors[i], pseudonyms[i]))
-        elif key == "W":
-            initialized_players.append(WeightedRandomPlayer(colors[i], pseudonyms[i]))
-        elif key == "O":
-            initialized_players.append(OnlineMCTSDQNPlayer(colors[i], pseudonyms[i]))
-        elif key == "S":
-            initialized_players.append(ScikitPlayer(colors[i], pseudonyms[i]))
-        elif key == "VP":
-            initialized_players.append(VictoryPointPlayer(colors[i], pseudonyms[i]))
-        # Parametrized players
-        elif key[0:2] == "AB":
-            initialized_players.append(
-                AlphaBetaPlayer(colors[i], pseudonyms[i], int(key[2]))
-            )
-        elif key[0] == "F":
-            initialized_players.append(
-                ValueFunctionPlayer(
-                    colors[i], pseudonyms[i], "build_value_function", [float(key[1:])]
-                )
-            )
-        elif key[0] == "V":
-            initialized_players.append(VRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "Q":
-            initialized_players.append(QRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "P":
-            initialized_players.append(PRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "T":
-            initialized_players.append(TensorRLPlayer(colors[i], pseudonyms[i], param))
-        elif key[0] == "G":
-            initialized_players.append(
-                GreedyPlayoutsPlayer(colors[i], pseudonyms[i], int(param))
-            )
-        elif key[0] == "M":
-            initialized_players.append(MCTSPlayer(colors[i], pseudonyms[i], int(param)))
-        else:
-            raise ValueError("Invalid player key")
+        for player_key, player_class in PLAYER_CLASSES.items():
+            if key.startswith(player_key):
+                params = [colors[i], pseudonyms[i]] + key.split(":")[1:]
+                initialized_players.append(player_class(*params))
 
     play_batch(num, initialized_players, outpath, save_in_db, watch)
 
 
-def play_batch(num_games, players, games_directory, save_in_db, watch):
+def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=True):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
+    verboseprint = print if verbose else lambda *a, **k: None
     wins = defaultdict(int)
     turns = []
     ticks = []
@@ -147,23 +138,27 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
     if LOG_IN_TF:
         writer = tf.summary.create_file_writer(f"logs/play/{int(time.time())}")
     for i in range(num_games):
-        for player in players:
-            player.restart_state()
         game = Game(players)
 
-        print(f"Playing game {i + 1} / {num_games}. Seating:", game.state.players)
+        verboseprint(
+            f"Playing game {i + 1} / {num_games}. Seating:", game.state.players
+        )
         action_callbacks = []
         if games_directory:
             action_callbacks.append(build_action_callback(games_directory))
         if watch:
-            save_game_state(game)
+            with database_session() as session:
+                upsert_game_state(game, session)
 
             def callback(game):
-                save_game_state(game)
+                with database_session() as session:
+                    upsert_game_state(game, session)
                 time.sleep(0.25)
 
             action_callbacks.append(callback)
-            print("Watch game by refreshing http://localhost:3000/games/" + game.id)
+            verboseprint(
+                "Watch game by refreshing http://localhost:3000/games/" + game.id
+            )
 
         start = time.time()
         try:
@@ -172,21 +167,32 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
             traceback.print_exc()
         finally:
             duration = time.time() - start
-        print("Took", duration, "seconds")
-        print({str(p): p.actual_victory_points for p in players})
+        verboseprint("Took", duration, "seconds")
+        verboseprint(
+            {
+                str(p): game.state.player_state[
+                    f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
+                ]
+                for p in players
+            }
+        )
         if save_in_db and not watch:
-            save_game_state(game)
-            print("Saved in db. See result at http://localhost:3000/games/" + game.id)
-        print("")
+            link = ensure_link(game)
+            verboseprint("Saved in db. See result at:", link)
+        verboseprint("")
 
         winner = game.winning_player()
-        wins[str(winner)] += 1
+        if winner is None:
+            continue
+        wins[winner.color] += 1
         turns.append(game.state.num_turns)
         ticks.append(len(game.state.actions))
         durations.append(duration)
         games.append(game)
         for player in players:
-            results_by_player[player.color].append(player.actual_victory_points)
+            key = player_key(game.state, player.color)
+            points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+            results_by_player[player.color].append(points)
         if LOG_IN_TF:
             with writer.as_default():
                 for player in players:
@@ -199,18 +205,19 @@ def play_batch(num_games, players, games_directory, save_in_db, watch):
                         )
                 writer.flush()
 
-    print("AVG Ticks:", sum(ticks) / len(ticks))
-    print("AVG Turns:", sum(turns) / len(turns))
-    print("AVG Duration:", sum(durations) / len(durations))
+    verboseprint("AVG Ticks:", sum(ticks) / len(ticks))
+    verboseprint("AVG Turns:", sum(turns) / len(turns))
+    verboseprint("AVG Duration:", sum(durations) / len(durations))
 
     for player in players:
         vps = results_by_player[player.color]
-        print("AVG VPS:", player, sum(vps) / len(vps))
+        verboseprint("AVG VPS:", player, sum(vps) / len(vps))
 
-    # Print Winners graph in command line:
-    fig = tpl.figure()
-    fig.barh([wins[str(p)] for p in players], players, force_ascii=False)
-    fig.show()
+    if verbose:
+        # Print Winners graph in command line:
+        fig = tpl.figure()
+        fig.barh([wins[p.color] for p in players], players, force_ascii=False)
+        fig.show()
 
     return wins, results_by_player
 
@@ -234,10 +241,9 @@ def build_action_callback(games_directory):
         if len(game.state.actions) == 0:
             return
 
-        action = game.state.actions[-1]
-        player = game.state.players_by_color[action.color]
-        data[player.color]["samples"].append(create_sample(game, player.color))
-        # data[player.color]["actions"].append(hot_one_encode_action(action))
+        # action = game.state.actions[-1]  # the action that just happened
+        # data[action.color]["samples"].append(create_sample(game, action.color))
+        # data[action.color]["actions"].append(hot_one_encode_action(action))
 
         # board_tensor = create_board_tensor(game, player.color)
         # shape = board_tensor.shape
@@ -246,33 +252,10 @@ def build_action_callback(games_directory):
         # ).numpy()
         # data[player.color]["board_tensors"].append(flattened_tensor)
 
-        # player_tiles = set()
-        # for node_id in (
-        #     player.buildings[BuildingType.SETTLEMENT]
-        #     + player.buildings[BuildingType.CITY]
-        # ):
-        #     for tile in game.state.board.map.adjacent_tiles[node_id]:
-        #         player_tiles.add(tile.resource)
-        # data[player.color]["OWS_ONLY_LABEL"].append(
-        #     player_tiles == set([Resource.ORE, Resource.WHEAT, Resource.SHEEP])
-        # )
-        # data[player.color]["OWS_LABEL"].append(
-        #     Resource.ORE in player_tiles
-        #     and Resource.WHEAT in player_tiles
-        #     and Resource.SHEEP in player_tiles
-        # )
-        # data[player.color]["settlements"].append(
-        #     len(player.buildings[BuildingType.SETTLEMENT])
-        # )
-        # data[player.color]["cities"].append(len(player.buildings[BuildingType.CITY]))
-        # data[player.color]["prod_vps"].append(
-        #     len(player.buildings[BuildingType.SETTLEMENT])
-        #     + len(player.buildings[BuildingType.CITY])
-        # )
-
         if game.winning_player() is not None:
+            for color in game.state.colors:
+                data[color]["samples"].append(create_sample(game, color))
             flush_to_matrices(game, data, games_directory)
-            return
 
     return action_callback
 
@@ -284,19 +267,19 @@ def flush_to_matrices(game, data, games_directory):
     actions = []
     board_tensors = []
     labels = []
-    for player in game.state.players:
-        player_data = data[player.color]
+    for color in game.state.colors:
+        player_data = data[color]
         samples.extend(player_data["samples"])
         # actions.extend(player_data["actions"])
         # board_tensors.extend(player_data["board_tensors"])
 
         # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
-        episode_return = get_discounted_return(game, player, 1)
-        discounted_return = get_discounted_return(game, player, DISCOUNT_FACTOR)
-        tournament_return = get_tournament_return(game, player, 1)
-        vp_return = get_victory_points_return(game, player)
+        episode_return = get_discounted_return(game, color, 1)
+        discounted_return = get_discounted_return(game, color, DISCOUNT_FACTOR)
+        tournament_return = get_tournament_return(game, color, 1)
+        vp_return = get_victory_points_return(game, color)
         discounted_tournament_return = get_tournament_return(
-            game, player, DISCOUNT_FACTOR
+            game, color, DISCOUNT_FACTOR
         )
         return_matrix = np.tile(
             [

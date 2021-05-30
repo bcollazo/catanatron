@@ -20,29 +20,29 @@ export default function HomePage() {
   return (
     <div className="home-page">
       <h1 className="logo">Catanatron</h1>
-      <ul>
-        <li>1v1 against a bot</li>
-        <li>
-          open hand <small>(but the bot doesnt use this)</small>
-        </li>
-        <li>
-          no choice during discard <small>(neither does the bot)</small>
-        </li>
-      </ul>
-      {!loading && (
-        <Button variant="contained" color="primary" onClick={onClick}>
-          Start Game
-        </Button>
-      )}
-      {loading && (
-        <Loader
-          className="loader"
-          type="Grid"
-          color="#ffffff"
-          height={60}
-          width={60}
-        />
-      )}
+      <div className="switchable">
+        {!loading && (
+          <>
+            <ul>
+              <li>1V1</li>
+              <li>OPEN HAND</li>
+              <li>NO CHOICE DURING DISCARD</li>
+            </ul>
+            <Button variant="contained" color="primary" onClick={onClick}>
+              Start Game
+            </Button>
+          </>
+        )}
+        {loading && (
+          <Loader
+            className="loader"
+            type="Grid"
+            color="#ffffff"
+            height={60}
+            width={60}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -25,7 +25,7 @@ import Prompt from "../components/Prompt";
 import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { isInitialPhase } from "../utils/stateUtils";
+import { playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 
 import "./ActionsToolbar.scss";
@@ -46,11 +46,15 @@ function PlayButtons() {
     [enqueueSnackbar, closeSnackbar]
   );
 
-  const isRoll = state.gameState.current_prompt === "ROLL";
-  const isDiscard = state.gameState.current_prompt === "DISCARD";
-  const isMove = state.gameState.current_prompt === "MOVE_ROBBER";
+  const { gameState } = state;
+  const key = playerKey(gameState, gameState.current_color);
+  const isRoll =
+    gameState.current_prompt === "PLAY_TURN" &&
+    !gameState.player_state[`${key}_HAS_ROLLED`];
+  const isDiscard = gameState.current_prompt === "DISCARD";
+  const isMove = gameState.current_prompt === "MOVE_ROBBER";
   const playableDevCardTypes = new Set(
-    state.gameState.current_playable_actions
+    gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
       .map((action) => action[1])
   );
@@ -74,15 +78,14 @@ function PlayButtons() {
   ];
 
   const buildActionTypes = new Set(
-    state.gameState.current_playable_actions
-      .filter(
-        (action) =>
-          (action[1].startsWith("BUY") || action[1].startsWith("BUILD")) &&
-          !action[1].includes("FIRST") &&
-          !action[1].includes("SECOND") &&
-          !action[1].includes("INITIAL")
-      )
-      .map((a) => a[1])
+    state.gameState.is_initial_build_phase
+      ? []
+      : state.gameState.current_playable_actions
+          .filter(
+            (action) =>
+              action[1].startsWith("BUY") || action[1].startsWith("BUILD")
+          )
+          .map((a) => a[1])
   );
   const buyDevCard = useCallback(async () => {
     const action = [HUMAN_COLOR, "BUY_DEVELOPMENT_CARD", null];
@@ -164,7 +167,7 @@ function PlayButtons() {
         Trade
       </OptionsButton>
       <Button
-        disabled={isInitialPhase(state.gameState)}
+        disabled={gameState.is_initial_build_phase}
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}
@@ -182,7 +185,12 @@ function PlayButtons() {
   );
 }
 
-export default function ActionsToolbar({ zoomIn, zoomOut, isBotThinking }) {
+export default function ActionsToolbar({
+  zoomIn,
+  zoomOut,
+  isBotThinking,
+  replayMode,
+}) {
   const { state, dispatch } = useContext(store);
 
   const openLeftDrawer = useCallback(() => {
@@ -193,19 +201,21 @@ export default function ActionsToolbar({ zoomIn, zoomOut, isBotThinking }) {
   }, [dispatch]);
 
   const botsTurn = state.gameState.current_color === BOT_COLOR;
-  const human =
-    state.gameState &&
-    state.gameState.players.find((x) => x.color === HUMAN_COLOR);
   return (
     <>
       <div className="state-summary">
         <Button className="open-drawer-btn" onClick={openLeftDrawer}>
           <ChevronLeftIcon />
         </Button>
-        <ResourceCards playerState={human} />
+        <ResourceCards
+          playerState={state.gameState.player_state}
+          playerKey={playerKey(state.gameState, HUMAN_COLOR)}
+        />
       </div>
       <div className="actions-toolbar">
-        {!botsTurn && <PlayButtons gameState={state.gameState} />}
+        {!botsTurn && !replayMode && (
+          <PlayButtons gameState={state.gameState} />
+        )}
         {botsTurn && (
           <Prompt gameState={state.gameState} isBotThinking={isBotThinking} />
         )}

@@ -14,12 +14,16 @@ h6.MuiTypography-h6 {
   left: 50% !important;
   bottom: 0px;
   transform: translateX(-50%);
+  max-width: $sm-breakpoint;
+  width: 100%;
   .MuiCollapse-container {
     padding: 0 10px;
+    width: 100%;
     .MuiCollapse-wrapper {
       margin-top: 10px;
       margin-bottom: 10px;
       height: 60px;
+      padding: 0;
 
       > div > div {
         height: 100%;
@@ -58,23 +62,6 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-  }
-}
-
-.left-drawer {
-  .MuiDrawer-paper {
-    width: 250px;
-  }
-
-  .log {
-    overflow-y: auto;
-
-    // To ensure always clipped towards bottom
-    display: flex;
-    flex-direction: column-reverse;
-    .action {
-      padding: $sm-gutter;
-    }
   }
 }
 

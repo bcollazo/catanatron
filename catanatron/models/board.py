@@ -54,6 +54,10 @@ class Board:
             # color => int{}[] (list of node_id sets) one per component
             #   nodes in sets are incidental (might not be owned by player)
             self.connected_components = defaultdict(list)
+            self.board_buildable_ids = set(range(NUM_NODES))
+            self.road_lengths = defaultdict(int)
+            self.road_color = None
+            self.road_length = 0
 
             # assumes there is at least one desert:
             self.robber_coordinate = filter(
@@ -84,40 +88,93 @@ class Board:
 
         self.buildings[node_id] = (color, BuildingType.SETTLEMENT)
 
+        previous_road_color = self.road_color
         if initial_build_phase:
             self.connected_components[color].append(set([node_id]))
         else:
-            # TODO: Maybe cut connected components
-            self.update_connected_components()
+            # Maybe cut connected components.
+            edges_by_color = defaultdict(list)
+            for edge in STATIC_GRAPH.edges(node_id):
+                edges_by_color[self.roads.get(edge, None)].append(edge)
+
+            for edge_color, edges in edges_by_color.items():
+                if edge_color == color or edge_color is None:
+                    continue  # ignore
+                if len(edges) == 2:  # rip, edge_color has been plowed
+                    # consider cut was at b=node_id for edges (a, b) and (b, c)
+                    a = [n for n in edges[0] if n != node_id].pop()
+                    c = [n for n in edges[1] if n != node_id].pop()
+
+                    # do bfs from a adding all encountered nodes
+                    a_nodeset = self.bfs_walk(a, edge_color)
+                    c_nodeset = self.bfs_walk(c, edge_color)
+
+                    # split this components on here.
+                    b_index = self._get_connected_component_index(node_id, edge_color)
+                    del self.connected_components[edge_color][b_index]
+                    self.connected_components[edge_color].append(a_nodeset)
+                    self.connected_components[edge_color].append(c_nodeset)
+
+                    # Update longest road by plowed player. Compare again with all
+                    self.road_lengths[edge_color] = max(
+                        *[
+                            len(longest_acyclic_path(self, component, edge_color))
+                            for component in self.connected_components[edge_color]
+                        ]
+                    )
+                    self.road_color, self.road_length = max(
+                        self.road_lengths.items(), key=lambda e: e[1]
+                    )
+
+        self.board_buildable_ids.discard(node_id)
+        for n in STATIC_GRAPH.neighbors(node_id):
+            self.board_buildable_ids.discard(n)
+
+        return previous_road_color, self.road_color, self.road_lengths
+
+    def bfs_walk(self, node_id, color):
+        agenda = [node_id]  # assuming node_id is owned.
+        visited = set()
+
+        while len(agenda) != 0:
+            n = agenda.pop()
+            visited.add(n)
+
+            if self.is_enemy_node(n, color):
+                continue  # end of the road
+
+            neighbors = [v for v in STATIC_GRAPH.neighbors(n) if v not in visited]
+            expandable = [v for v in neighbors if self.roads.get((n, v), None) == color]
+            agenda.extend(expandable)
+
+        return visited
+
+    def _get_connected_component_index(self, node_id, color):
+        for i, component in enumerate(self.connected_components[color]):
+            if node_id in component:
+                return i
 
     def build_road(self, color, edge):
         buildable = self.buildable_edges(color)
         inverted_edge = (edge[1], edge[0])
         if edge not in buildable and inverted_edge not in buildable:
-            raise ValueError("Invalid Road Placement: not connected")
-
-        if self.get_edge_color(edge) is not None:
-            raise ValueError("Invalid Road Placement: a road exists there")
+            raise ValueError("Invalid Road Placement")
 
         self.roads[edge] = color
         self.roads[inverted_edge] = color
 
-        # Update self.connected_components accordingly
+        # Update self.connected_components accordingly. Maybe merge.
         a, b = edge
-        a_index = None
-        b_index = None
-        for i, component in enumerate(self.connected_components[color]):
-            if a in component:
-                a_index = i
-            if b in component:
-                b_index = i
-
+        a_index = self._get_connected_component_index(a, color)
+        b_index = self._get_connected_component_index(b, color)
         if a_index is None and b_index is not None and not self.is_enemy_node(a, color):
             self.connected_components[color][b_index].add(a)
+            component = self.connected_components[color][b_index]
         elif (
             a_index is not None and b_index is None and not self.is_enemy_node(b, color)
         ):
             self.connected_components[color][a_index].add(b)
+            component = self.connected_components[color][a_index]
         elif a_index is not None and b_index is not None and a_index != b_index:
             # merge
             merged_component = self.connected_components[color][a_index].union(
@@ -126,7 +183,20 @@ class Board:
             for index in sorted([a_index, b_index], reverse=True):
                 del self.connected_components[color][index]
             self.connected_components[color].append(merged_component)
-        # else: both are equal, and got nothing to do (already added)
+            component = merged_component
+        else:  # both nodes in same component; got nothing to do (already added)
+            component = self.connected_components[color][
+                a_index if a_index is not None else b_index
+            ]
+
+        # find longest path on component under question
+        previous_road_color = self.road_color
+        candidate_length = len(longest_acyclic_path(self, component, color))
+        self.road_lengths[color] = max(self.road_lengths[color], candidate_length)
+        if candidate_length >= 5 and candidate_length > self.road_length:
+            self.road_color = color
+            self.road_length = candidate_length
+        return previous_road_color, self.road_color, self.road_lengths
 
     def build_city(self, color, node_id):
         building = self.buildings.get(node_id, None)
@@ -140,38 +210,15 @@ class Board:
         self.buildings[node_id] = (color, BuildingType.CITY)
 
     def buildable_node_ids(self, color: Color, initial_build_phase=False):
-        buildable = set()
-
-        def is_buildable(node_id):
-            """true if this and neighboring nodes are empty"""
-            under_consideration = [node_id] + list(STATIC_GRAPH.neighbors(node_id))
-            are_empty = map(
-                lambda node_id: node_id not in self.buildings,
-                under_consideration,
-            )
-            return all(are_empty)
-
-        # if initial-placement, iterate over non-water/port tiles, for each
-        # of these nodes check if its a buildable node.
         if initial_build_phase:
-            for (_, tile) in self.map.resource_tiles:
-                for (_, node_id) in tile.nodes.items():
-                    if is_buildable(node_id):
-                        buildable.add(node_id)
+            return sorted(list(self.board_buildable_ids))
 
-        # if not initial-placement, find all connected components. For each
-        #   node in this connected subgraph, iterate checking buildability
         subgraphs = self.find_connected_components(color)
-        for subgraph in subgraphs:
-            for node_id in subgraph:
-                # by definition node is "connected", so only need to check buildable
-                if is_buildable(node_id):
-                    buildable.add(node_id)
-
-        return sorted(list(buildable))
+        nodes = set().union(*subgraphs)
+        return sorted(list(nodes.intersection(self.board_buildable_ids)))
 
     def buildable_edges(self, color: Color):
-        """List of (n1,n2) tuples. Edges are in n1 < n2 order. Result is also ordered."""
+        """List of (n1,n2) tuples. Edges are in n1 < n2 order."""
         global STATIC_GRAPH
         buildable_subgraph = STATIC_GRAPH.subgraph(range(NUM_NODES))
         expandable = set()
@@ -188,7 +235,7 @@ class Board:
             if self.get_edge_color(edge) is None:
                 expandable.add(tuple(sorted(edge)))
 
-        return sorted(list(expandable))
+        return list(expandable)
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
@@ -206,44 +253,6 @@ class Board:
         """
         return self.connected_components[color]
 
-    def update_connected_components(self):
-        global STATIC_GRAPH
-        components = defaultdict(list)
-        edge_agenda = set(tuple(sorted(e)) for e in self.roads.keys())
-        while len(edge_agenda) != 0:
-            seed = edge_agenda.pop()
-            color = self.roads[seed]
-            subagenda = [seed]
-            visited = set()
-
-            while len(subagenda) != 0:
-                edge = subagenda.pop()
-                visited.add(edge)
-                if edge in edge_agenda:
-                    edge_agenda.remove(edge)
-
-                for node in edge:
-                    # try to explore in this direction
-                    node_color = self.get_node_color(node)
-                    if node_color == color or node_color is None:
-                        explorable_edges = [
-                            e
-                            for e in STATIC_GRAPH.edges(node)
-                            if e != edge
-                            and self.get_edge_color(e) == color
-                            and e not in visited
-                        ]
-                        subagenda.extend(explorable_edges)
-
-            node_set = set()
-            for edge in visited:
-                node_set.add(edge[0])
-                node_set.add(edge[1])
-
-            components[color].append(node_set)
-
-        self.connected_components = components
-
     def continuous_roads_by_player(self, color: Color):
         paths = []
         components = self.find_connected_components(color)
@@ -252,7 +261,20 @@ class Board:
         return paths
 
     def copy(self):
-        return pickle.loads(pickle.dumps(self))  # TODO: Optimize
+        board = Board(self.map, initialize=False)
+        board.map = self.map  # reuse since its immutable
+        board.buildings = self.buildings.copy()
+        board.roads = self.roads.copy()
+        board.connected_components = pickle.loads(
+            pickle.dumps(self.connected_components)
+        )
+        board.board_buildable_ids = self.board_buildable_ids.copy()
+        board.road_lengths = self.road_lengths.copy()
+        board.road_color = self.road_color
+        board.road_length = self.road_length
+
+        board.robber_coordinate = self.robber_coordinate
+        return board
 
     # ===== Helper functions
     def get_node_color(self, node_id):

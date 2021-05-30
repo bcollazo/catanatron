@@ -1,4 +1,7 @@
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+    from = "/*"
+    status = 200
+    to = "/index.html"
+
+[context.branch-deploy.environment]
+    REACT_APP_API_URL = "https://catanatron-staging.herokuapp.com"

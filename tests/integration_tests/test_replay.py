@@ -1,11 +1,9 @@
-import copy
 import json
 
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.json import GameEncoder
 from catanatron.game import Game
-from catanatron.models.enums import Resource
-from catanatron.models.actions import Action, ActionType
+from catanatron.models.enums import Action, ActionType
 
 
 def test_play_many_games():
@@ -46,9 +44,9 @@ def test_execute_action_on_copies_doesnt_conflict():
     ]
     game = Game(players)
     p0 = game.state.players[0]
-    game.execute(Action(p0.color, ActionType.BUILD_FIRST_SETTLEMENT, 0))
+    game.execute(Action(p0.color, ActionType.BUILD_SETTLEMENT, 0))
 
-    action = Action(p0.color, ActionType.BUILD_INITIAL_ROAD, (0, 1))
+    action = Action(p0.color, ActionType.BUILD_ROAD, (0, 1))
 
     game_copy = game.copy()
     game_copy.execute(action)

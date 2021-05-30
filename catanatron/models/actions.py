@@ -1,78 +1,37 @@
 import operator as op
 from functools import reduce
-from enum import Enum
-from collections import namedtuple
 
 from catanatron.models.decks import ResourceDeck
-from catanatron.models.enums import Resource, BuildingType
+from catanatron.models.enums import (
+    Action,
+    ActionPrompt,
+    ActionType,
+    BRICK,
+    ORE,
+    Resource,
+    BuildingType,
+    SHEEP,
+    WHEAT,
+    WOOD,
+)
+from catanatron.state_functions import (
+    get_player_buildings,
+    player_can_afford_dev_card,
+    player_can_play_dev,
+    player_has_rolled,
+    player_key,
+    player_num_resource_cards,
+    player_resource_deck_contains,
+)
 
 
-class ActionPrompt(Enum):
-    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"
-    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"
-    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"
-    ROLL = "ROLL"
-    PLAY_TURN = "PLAY_TURN"
-    DISCARD = "DISCARD"
-    MOVE_ROBBER = "MOVE_ROBBER"
-
-
-class ActionType(Enum):
-    """
-    Action types are associated with a "value" that can be seen as the "params"
-    of such action. They usually hold None for to-be-defined values by the
-    execution of the action. After execution, the Actions will be hydrated
-    so that they can be used in reproducing a game.
-    """
-
-    ROLL = "ROLL"  # value is None|(int, int)
-    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None, None|Resource)
-    DISCARD = "DISCARD"  # value is None|Resource[]
-
-    # Building/Buying
-    BUILD_FIRST_SETTLEMENT = "BUILD_FIRST_SETTLEMENT"  # value is node_id
-    BUILD_SECOND_SETTLEMENT = "BUILD_SECOND_SETTLEMENT"  # value is node_id
-    BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"  # value is edge_id
-    BUILD_ROAD = "BUILD_ROAD"  # value is edge_id
-    BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node_id
-    BUILD_CITY = "BUILD_CITY"  # value is node_id
-    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None|DevelopmentCard
-
-    # Dev Card Plays
-    PLAY_KNIGHT_CARD = (
-        "PLAY_KNIGHT_CARD"  # value is (coordinate, Color|None, None|Resource)
-    )
-    PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is (Resource, Resource)
-    PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
-    PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is (edge_id1, edge_id2)
-
-    # Trade
-    # MARITIME_TRADE value is 5-resouce tuple, where last resource is resource asked.
-    #   resources in index 2 and 3 might be None, denoting a port-trade.
-    MARITIME_TRADE = "MARITIME_TRADE"
-
-    # TODO: Domestic trade. Im thinking should contain SUGGEST_TRADE, ACCEPT_TRADE actions...
-
-    END_TURN = "END_TURN"  # value is None
-
-
-def action_repr(self):
-    return f"Action({self.color.value} {self.action_type.value} {self.value})"
-
-
-# TODO: Distinguish between PossibleAction and FinalizedAction?
-Action = namedtuple("Action", ["color", "action_type", "value"])
-Action.__repr__ = action_repr
-
-
-def monopoly_possible_actions(player):
+def monopoly_possible_actions(color):
     return [
-        Action(player.color, ActionType.PLAY_MONOPOLY, card_type)
-        for card_type in Resource
+        Action(color, ActionType.PLAY_MONOPOLY, card_type) for card_type in Resource
     ]
 
 
-def year_of_plenty_possible_actions(player, resource_deck: ResourceDeck):
+def year_of_plenty_possibilities(color, resource_deck: ResourceDeck):
     resource_list = list(Resource)
 
     options = set()
@@ -90,127 +49,116 @@ def year_of_plenty_possible_actions(player, resource_deck: ResourceDeck):
 
     return list(
         map(
-            lambda cards: Action(
-                player.color, ActionType.PLAY_YEAR_OF_PLENTY, tuple(cards)
-            ),
+            lambda cards: Action(color, ActionType.PLAY_YEAR_OF_PLENTY, tuple(cards)),
             options,
         )
     )
 
 
-def road_possible_actions(player, board):
-    has_money = player.resource_deck.includes(ResourceDeck.road_cost())
-    has_roads_available = player.roads_available > 0
+def road_possible_actions(state, color):
+    key = player_key(state, color)
+
+    has_money = player_resource_deck_contains(state, color, ResourceDeck.road_cost())
+    has_roads_available = state.player_state[f"{key}_ROADS_AVAILABLE"] > 0
 
     if has_money and has_roads_available:
-        buildable_edges = board.buildable_edges(player.color)
-        return [
-            Action(player.color, ActionType.BUILD_ROAD, edge)
-            for edge in buildable_edges
-        ]
+        buildable_edges = state.board.buildable_edges(color)
+        return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
     else:
         return []
 
 
-def settlement_possible_actions(player, board):
-    has_money = player.resource_deck.includes(ResourceDeck.settlement_cost())
-    has_settlements_available = player.settlements_available > 0
-
-    if has_money and has_settlements_available:
-        buildable_node_ids = board.buildable_node_ids(player.color)
+def settlement_possible_actions(state, color, initial_build_phase=False):
+    if initial_build_phase:
+        buildable_node_ids = state.board.buildable_node_ids(
+            color, initial_build_phase=True
+        )
         return [
-            Action(player.color, ActionType.BUILD_SETTLEMENT, node_id)
+            Action(color, ActionType.BUILD_SETTLEMENT, node_id)
             for node_id in buildable_node_ids
         ]
     else:
-        return []
+        key = player_key(state, color)
+        has_money = player_resource_deck_contains(
+            state, color, ResourceDeck.settlement_cost()
+        )
+        has_settlements_available = (
+            state.player_state[f"{key}_SETTLEMENTS_AVAILABLE"] > 0
+        )
+        if has_money and has_settlements_available:
+            buildable_node_ids = state.board.buildable_node_ids(color)
+            return [
+                Action(color, ActionType.BUILD_SETTLEMENT, node_id)
+                for node_id in buildable_node_ids
+            ]
+        else:
+            return []
 
 
-def city_possible_actions(player):
-    has_money = player.resource_deck.includes(ResourceDeck.city_cost())
-    has_cities_available = player.cities_available > 0
+def city_possible_actions(state, color):
+    key = player_key(state, color)
+
+    has_money = player_resource_deck_contains(state, color, ResourceDeck.city_cost())
+    has_cities_available = state.player_state[f"{key}_CITIES_AVAILABLE"] > 0
 
     if has_money and has_cities_available:
         return [
-            Action(player.color, ActionType.BUILD_CITY, node_id)
-            for node_id in player.buildings[BuildingType.SETTLEMENT]
+            Action(color, ActionType.BUILD_CITY, node_id)
+            for node_id in get_player_buildings(state, color, BuildingType.SETTLEMENT)
         ]
     else:
         return []
 
 
-def robber_possibilities(player, board, players, is_dev_card):
-    action_type = ActionType.PLAY_KNIGHT_CARD if is_dev_card else ActionType.MOVE_ROBBER
-
-    players_by_color = {p.color: p for p in players}
+def robber_possibilities(state, color):
     actions = []
-    for coordinate, tile in board.map.resource_tiles:
-        if coordinate == board.robber_coordinate:
+    for coordinate, tile in state.board.map.resource_tiles:
+        if coordinate == state.board.robber_coordinate:
             continue  # ignore. must move robber.
 
         # each tile can yield a (move-but-cant-steal) action or
         #   several (move-and-steal-from-x) actions.
         to_steal_from = set()  # set of player_indexs
         for _, node_id in tile.nodes.items():
-            building = board.buildings.get(node_id, None)
+            building = state.board.buildings.get(node_id, None)
             if building is not None:
-                candidate = players_by_color[building[0]]
+                candidate_color = building[0]
                 if (
-                    candidate.resource_deck.num_cards() >= 1
-                    and candidate.color != player.color  # can't play yourself
+                    player_num_resource_cards(state, candidate_color) >= 1
+                    and color != candidate_color  # can't play yourself
                 ):
-                    to_steal_from.add(candidate.color)
+                    to_steal_from.add(candidate_color)
 
         if len(to_steal_from) == 0:
-            actions.append(Action(player.color, action_type, (coordinate, None, None)))
+            actions.append(
+                Action(color, ActionType.MOVE_ROBBER, (coordinate, None, None))
+            )
         else:
-            for color in to_steal_from:
+            for enemy_color in to_steal_from:
                 actions.append(
-                    Action(player.color, action_type, (coordinate, color, None))
+                    Action(
+                        color, ActionType.MOVE_ROBBER, (coordinate, enemy_color, None)
+                    )
                 )
 
     return actions
 
 
-def initial_settlement_possibilites(player, board, is_first):
-    action_type = (
-        ActionType.BUILD_FIRST_SETTLEMENT
-        if is_first
-        else ActionType.BUILD_SECOND_SETTLEMENT
-    )
-    buildable_node_ids = board.buildable_node_ids(
-        player.color, initial_build_phase=True
-    )
-    return list(
-        map(
-            lambda node_id: Action(player.color, action_type, node_id),
-            buildable_node_ids,
-        )
-    )
-
-
-def initial_road_possibilities(player, board, actions):
+def initial_road_possibilities(state, color):
     # Must be connected to last settlement
-    node_building_actions_by_player = filter(
-        lambda action: action.color == player.color
-        and action.action_type == ActionType.BUILD_FIRST_SETTLEMENT
-        or action.action_type == ActionType.BUILD_SECOND_SETTLEMENT,
-        actions,
-    )
-    last_settlement_node_id = list(node_building_actions_by_player)[-1].value
+    last_settlement_node_id = state.buildings_by_color[color][BuildingType.SETTLEMENT][
+        -1
+    ]
 
     buildable_edges = filter(
         lambda edge: last_settlement_node_id in edge,
-        board.buildable_edges(player.color),
+        state.board.buildable_edges(color),
     )
-    return [
-        Action(player.color, ActionType.BUILD_INITIAL_ROAD, edge)
-        for edge in buildable_edges
-    ]
+    return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
 
 
-def discard_possibilities(player):
-    return [Action(player.color, ActionType.DISCARD, None)]
+def discard_possibilities(color):
+    return [Action(color, ActionType.DISCARD, None)]
     # TODO: Be robust to high dimensionality of DISCARD
     # hand = player.resource_deck.to_array()
     # num_cards = player.resource_deck.num_cards()
@@ -237,46 +185,33 @@ def ncr(n, r):
     return numer // denom
 
 
-def maritime_trade_possibilities(player, bank, board):
-    possibilities = []
-    # 4:1 trade
+def maritime_trade_possibilities(state, color):
+    trade_offers = set()
+
+    # Get lowest rate per resource
+    port_resources = set(state.board.get_player_port_resources(color))
+    rates = {WOOD: 4, BRICK: 4, SHEEP: 4, WHEAT: 4, ORE: 4}
+    if None in port_resources:
+        rates = {WOOD: 3, BRICK: 3, SHEEP: 3, WHEAT: 3, ORE: 3}
+    for resource in port_resources:
+        if resource != None:
+            rates[resource.value] = 2
+
+    # For resource in hand
     for resource in Resource:
-        if player.resource_deck.count(resource) >= 4:
+        amount = player_num_resource_cards(state, color, resource.value)
+        if amount >= rates[resource.value]:
+            resource_out = [resource] * rates[resource.value] + [None] * (
+                4 - rates[resource.value]
+            )
             for j_resource in Resource:
-                # cant trade for same resource, and bank must have enough
-                if resource != j_resource and bank.count(j_resource) > 0:
-                    trade_offer = tuple([resource] * 4 + [j_resource])
-                    possibilities.append(
-                        Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
-                    )
+                if resource != j_resource and state.resource_deck.count(j_resource) > 0:
+                    trade_offer = tuple(resource_out + [j_resource])
+                    trade_offers.add(trade_offer)
 
-    port_resources = board.get_player_port_resources(player.color)
-    for port_resource in port_resources:
-        if port_resource is None:  # then has 3:1
-            for resource in Resource:
-                if player.resource_deck.count(resource) >= 3:
-                    for j_resource in Resource:
-                        # cant trade for same resource, and bank must have enough
-                        if resource != j_resource and bank.count(j_resource) > 0:
-                            trade_offer = tuple([resource] * 3 + [None, j_resource])
-                            possibilities.append(
-                                Action(
-                                    player.color, ActionType.MARITIME_TRADE, trade_offer
-                                )
-                            )
-        else:  # has 2:1
-            if player.resource_deck.count(port_resource) >= 2:
-                for j_resource in Resource:
-                    # cant trade for same resource, and bank must have enough
-                    if port_resource != j_resource and bank.count(j_resource) > 0:
-                        trade_offer = tuple(
-                            [port_resource] * 2 + [None, None, j_resource]
-                        )
-                        possibilities.append(
-                            Action(player.color, ActionType.MARITIME_TRADE, trade_offer)
-                        )
-
-    return possibilities
+    return list(
+        map(lambda t: Action(color, ActionType.MARITIME_TRADE, t), trade_offers)
+    )
 
 
 def road_building_possibilities(player, board):
@@ -311,3 +246,55 @@ def road_building_possibilities(player, board):
             dedupped,
         )
     )
+
+
+def generate_playable_actions(state):
+    action_prompt = state.current_prompt
+    color = state.current_player().color
+
+    if action_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT:
+        return settlement_possible_actions(state, color, True)
+    elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
+        return initial_road_possibilities(state, color)
+    elif action_prompt == ActionPrompt.MOVE_ROBBER:
+        return robber_possibilities(state, color)
+    elif action_prompt == ActionPrompt.PLAY_TURN:
+        if state.is_road_building:
+            actions = road_possible_actions(state, color)
+        elif not player_has_rolled(state, color):
+            actions = [Action(color, ActionType.ROLL, None)]
+            if player_can_play_dev(state, color, "KNIGHT"):
+                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
+        else:
+            actions = [Action(color, ActionType.END_TURN, None)]
+            actions.extend(road_possible_actions(state, color))
+            actions.extend(settlement_possible_actions(state, color))
+            actions.extend(city_possible_actions(state, color))
+
+            can_buy_dev_card = (
+                player_can_afford_dev_card(state, color)
+                and state.development_deck.num_cards() > 0
+            )
+            if can_buy_dev_card:
+                actions.append(Action(color, ActionType.BUY_DEVELOPMENT_CARD, None))
+
+            # Play Dev Cards
+            if player_can_play_dev(state, color, "YEAR_OF_PLENTY"):
+                actions.extend(year_of_plenty_possibilities(color, state.resource_deck))
+            if player_can_play_dev(state, color, "MONOPOLY"):
+                actions.extend(monopoly_possible_actions(color))
+            if player_can_play_dev(state, color, "KNIGHT"):
+                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
+            if (
+                player_can_play_dev(state, color, "ROAD_BUILDING")
+                and len(road_possible_actions(state, color)) > 0
+            ):
+                actions.append(Action(color, ActionType.PLAY_ROAD_BUILDING, None))
+
+            # Trade
+            actions.extend(maritime_trade_possibilities(state, color))
+        return actions
+    elif action_prompt == ActionPrompt.DISCARD:
+        return discard_possibilities(color)
+    else:
+        raise RuntimeError("Unknown ActionPrompt")

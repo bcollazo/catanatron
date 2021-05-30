@@ -1,12 +1,25 @@
 import pytest
 from unittest.mock import patch
 
-from tests.utils import advance_to_play_turn, build_initial_placements
+from catanatron.state_functions import player_has_rolled
+from catanatron.models.actions import maritime_trade_possibilities
 from catanatron.game import Game
-from catanatron.state import yield_resources
+from catanatron.state import (
+    State,
+    player_deck_replenish,
+    player_num_resource_cards,
+    yield_resources,
+)
 from catanatron.models.board import Board
-from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
-from catanatron.models.actions import ActionType, Action, ActionPrompt
+from catanatron.models.enums import (
+    ActionPrompt,
+    Resource,
+    BuildingType,
+    ActionType,
+    Action,
+    WHEAT,
+    YEAR_OF_PLENTY,
+)
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.decks import ResourceDeck
 
@@ -14,10 +27,50 @@ from catanatron.models.decks import ResourceDeck
 def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
+    actions = []
     while not any(
         a.action_type == ActionType.ROLL for a in game.state.playable_actions
     ):
-        game.play_tick()
+        actions.append(game.play_tick())
+
+    p0_color = game.state.colors[0]
+    assert (
+        actions[0].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[0].color == p0_color
+    )
+    assert (
+        actions[1].action_type == ActionType.BUILD_ROAD and actions[1].color == p0_color
+    )
+    assert (
+        actions[2].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[2].color != p0_color
+    )
+    assert (
+        actions[3].action_type == ActionType.BUILD_ROAD and actions[3].color != p0_color
+    )
+    assert (
+        actions[4].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[4].color != p0_color
+    )
+    assert (
+        actions[5].action_type == ActionType.BUILD_ROAD and actions[5].color != p0_color
+    )
+    assert (
+        actions[6].action_type == ActionType.BUILD_SETTLEMENT
+        and actions[6].color == p0_color
+    )
+    assert (
+        actions[7].action_type == ActionType.BUILD_ROAD and actions[7].color == p0_color
+    )
+    assert (
+        game.state.current_prompt == ActionPrompt.PLAY_TURN
+        and game.state.current_player().color == p0_color
+    )
+
+    assert game.state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 2
+    assert game.state.player_state["P1_ACTUAL_VICTORY_POINTS"] == 2
+    assert game.state.player_state["P0_VICTORY_POINTS"] == 2
+    assert game.state.player_state["P1_VICTORY_POINTS"] == 2
 
     # assert there are 4 houses and 4 roads
     settlements = [
@@ -35,8 +88,8 @@ def test_initial_build_phase():
 
     # assert should have resources from last house.
     # can only assert <= 3 b.c. player might place on a corner desert
-    assert players[0].resource_deck.num_cards() <= 3
-    assert players[1].resource_deck.num_cards() <= 3
+    assert player_num_resource_cards(game.state, players[0].color) <= 3
+    assert player_num_resource_cards(game.state, players[1].color) <= 3
 
 
 def test_can_play_for_a_bit():  # assert no exception thrown
@@ -50,16 +103,20 @@ def test_can_play_for_a_bit():  # assert no exception thrown
 def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+
+    # Play initial build phase
     game = Game(players)
     while not any(
         a.action_type == ActionType.ROLL for a in game.state.playable_actions
     ):
         game.play_tick()
 
-    players[1].resource_deck = ResourceDeck()
-    players[1].resource_deck.replenish(7, Resource.WHEAT)
+    until_seven = 7 - player_num_resource_cards(game.state, players[1].color)
+    player_deck_replenish(game.state, players[1].color, WHEAT, until_seven)
+    assert player_num_resource_cards(game.state, players[1].color) == 7
     game.play_tick()  # should be player 0 rolling.
 
+    print(game.state.playable_actions)
     assert not any(
         a.action_type == ActionType.DISCARD for a in game.state.playable_actions
     )
@@ -75,8 +132,9 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     ):
         game.play_tick()
 
-    players[1].resource_deck = ResourceDeck()
-    players[1].resource_deck.replenish(9, Resource.WHEAT)
+    until_nine = 9 - player_num_resource_cards(game.state, players[1].color)
+    player_deck_replenish(game.state, players[1].color, WHEAT, until_nine)
+    assert player_num_resource_cards(game.state, players[1].color) == 9
     game.play_tick()  # should be player 0 rolling.
 
     assert len(game.state.playable_actions) == 1
@@ -85,7 +143,41 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
     ]
 
     game.play_tick()
-    assert players[1].resource_deck.num_cards() == 5
+    assert player_num_resource_cards(game.state, players[1].color) == 5
+
+
+@patch("catanatron.state.roll_dice")
+def test_end_turn_goes_to_next_player(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 2)  # not a 7
+
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    actions = []
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        actions.append(game.play_tick())
+
+    p0_color = game.state.colors[0]
+    p1_color = game.state.colors[1]
+    assert (
+        game.state.current_prompt == ActionPrompt.PLAY_TURN
+        and game.state.current_player().color == p0_color
+    )
+    assert game.state.playable_actions == [Action(p0_color, ActionType.ROLL, None)]
+
+    game.execute(Action(p0_color, ActionType.ROLL, None))
+    assert game.state.current_prompt == ActionPrompt.PLAY_TURN
+    assert game.state.current_player().color == p0_color
+    assert player_has_rolled(game.state, p0_color)
+    assert Action(p0_color, ActionType.END_TURN, None) in game.state.playable_actions
+
+    game.execute(Action(p0_color, ActionType.END_TURN, None))
+    assert game.state.current_prompt == ActionPrompt.PLAY_TURN
+    assert game.state.current_player().color == p1_color
+    assert not player_has_rolled(game.state, p0_color)
+    assert not player_has_rolled(game.state, p1_color)
+    assert game.state.playable_actions == [Action(p1_color, ActionType.ROLL, None)]
 
 
 # ===== Development Cards
@@ -96,9 +188,8 @@ def test_play_year_of_plenty_not_enough_resources():
     player_to_act = players[0]
     game = Game(players)
     game.state.resource_deck = ResourceDeck()
-    player_to_act.development_deck.replenish(1, DevelopmentCard.YEAR_OF_PLENTY)
+    player_deck_replenish(game.state, player_to_act.color, YEAR_OF_PLENTY)
 
-    player_to_act.clean_turn_state()
     action_to_execute = Action(
         player_to_act.color,
         ActionType.PLAY_YEAR_OF_PLENTY,
@@ -113,7 +204,6 @@ def test_play_year_of_plenty_no_year_of_plenty_card():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
-    players[0].clean_turn_state()
     action_to_execute = Action(
         players[0].color, ActionType.PLAY_YEAR_OF_PLENTY, [Resource.ORE, Resource.WHEAT]
     )
@@ -126,7 +216,6 @@ def test_play_monopoly_no_monopoly_card():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
 
-    players[0].clean_turn_state()
     action_to_execute = Action(players[0].color, ActionType.PLAY_MONOPOLY, Resource.ORE)
 
     with pytest.raises(ValueError):  # no monopoly
@@ -144,9 +233,6 @@ def test_yield_resources():
 
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     payout, depleted = yield_resources(board, resource_deck, tile.number)
-    print(tile)
-    print(payout, depleted)
-    print(board.map.tiles)
     assert len(depleted) == 0
     assert payout[Color.RED].count(tile.resource) >= 1
 
@@ -217,27 +303,23 @@ def test_empty_payout_if_not_enough_resources():
     resource_deck.draw(18, tile.resource)
 
     payout, depleted = yield_resources(board, resource_deck, tile.number)
-    print(board.map.tiles)
-    print(payout, depleted)
-    print(resource_deck)
     assert depleted == [tile.resource]
     assert Color.RED not in payout or payout[Color.RED].count(tile.resource) == 0
 
 
 def test_can_trade_with_port():
-    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
-    port_tile = game.state.board.map.tiles[(3, -3, 0)]  # port with node_id=25
-    build_initial_placements(game)  # p1 builds at 26, so has (3,-3,0) port
-    advance_to_play_turn(game)
+    players = [SimplePlayer(Color.RED)]
 
+    state = State(players)
+    state.board.build_settlement(Color.RED, 26, initial_build_phase=True)
+
+    port_tile = state.board.map.tiles[(3, -3, 0)]  # port with node_id=25,26
     resource_out = port_tile.resource or Resource.WHEAT
     num_out = 3 if port_tile.resource is None else 2
-    game.state.players[1].resource_deck.replenish(num_out, resource_out)
-    actions = game.playable_actions(game.state.players[1], ActionPrompt.PLAY_TURN)
-    assert len(actions) >= 5
-    assert any(a.action_type == ActionType.MARITIME_TRADE for a in actions)
-    # assert Action(game.state.players[1].color, ActionType.MARITIME_TRADE, value)
+    player_deck_replenish(state, Color.RED, resource_out.value, num_out)
+
+    possibilities = maritime_trade_possibilities(state, Color.RED)
+    assert len(possibilities) == 4
 
 
 def test_second_placement_takes_cards_from_bank():

@@ -1,6 +1,6 @@
 import random
 from enum import Enum
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.coordinate_system import generate_coordinate_system, Direction
@@ -175,12 +175,50 @@ class BaseMap:
 
         # (coordinate) => Tile (with nodes and edges initialized)
         self.tiles = initialize_board(self)
+
+        # initialize auxiliary data structures for fast-lookups
         self.port_nodes = init_port_nodes(self)
         self.resource_tiles = init_resource_tiles(self)
-
         self.adjacent_tiles = init_adjacent_tiles(self.resource_tiles)
+        self.node_production = init_node_production(
+            self.adjacent_tiles
+        )  # node-id => Counter
         self.tiles_by_id = {t.id: t for t in self.tiles.values() if isinstance(t, Tile)}
         self.ports_by_id = {p.id: p for p in self.tiles.values() if isinstance(p, Port)}
+
+
+def init_node_production(adjacent_tiles):
+    node_production = dict()
+    for node_id in range(NUM_NODES):
+        node_production[node_id] = get_node_counter_production(adjacent_tiles, node_id)
+    return node_production
+
+
+def get_node_counter_production(adjacent_tiles, node_id):
+    tiles = adjacent_tiles[node_id]
+    return Counter(
+        {
+            t.resource: number_probability(t.number)
+            for t in tiles
+            if t.resource is not None
+        }
+    )
+
+
+def number_probability(number):
+    return {
+        2: 2.778,
+        3: 5.556,
+        4: 8.333,
+        5: 11.111,
+        6: 13.889,
+        7: 16.667,
+        8: 13.889,
+        9: 11.111,
+        10: 8.333,
+        11: 5.556,
+        12: 2.778,
+    }[number] / 100
 
 
 # Given a tile, the reference to the node.

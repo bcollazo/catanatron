@@ -22,7 +22,7 @@ class GreedyPlayoutsPlayer(Player):
 
     def __init__(self, color, name, num_playouts=DEFAULT_NUM_PLAYOUTS):
         super().__init__(color, name=name)
-        self.num_playouts = num_playouts
+        self.num_playouts = int(num_playouts)
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:

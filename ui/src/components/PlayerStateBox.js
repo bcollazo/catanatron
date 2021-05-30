@@ -3,68 +3,65 @@ import cn from "classnames";
 
 import "./PlayerStateBox.scss";
 
-export function ResourceCards({ playerState }) {
-  const numDevCards = Object.values(playerState.development_deck).reduce(
-    (a, b) => a + b,
-    0
-  );
-  const resdeck = playerState.resource_deck;
+export function ResourceCards({ playerState, playerKey }) {
+  const amount = (card) => playerState[`${playerKey}_${card}_IN_HAND`];
   return (
     <div className="resource-cards" title="Resource Cards">
-      {resdeck.WOOD !== 0 && (
-        <div className="wood-cards center-text">{resdeck.WOOD}</div>
+      {amount("WOOD") !== 0 && (
+        <div className="wood-cards center-text">{amount("WOOD")}</div>
       )}
-      {resdeck.BRICK !== 0 && (
-        <div className="brick-cards center-text">{resdeck.BRICK}</div>
+      {amount("BRICK") !== 0 && (
+        <div className="brick-cards center-text">{amount("BRICK")}</div>
       )}
-      {resdeck.SHEEP !== 0 && (
-        <div className="sheep-cards center-text">{resdeck.SHEEP}</div>
+      {amount("SHEEP") !== 0 && (
+        <div className="sheep-cards center-text">{amount("SHEEP")}</div>
       )}
-      {resdeck.WHEAT !== 0 && (
-        <div className="wheat-cards center-text">{resdeck.WHEAT}</div>
+      {amount("WHEAT") !== 0 && (
+        <div className="wheat-cards center-text">{amount("WHEAT")}</div>
       )}
-      {resdeck.ORE !== 0 && (
-        <div className="ore-cards center-text">{resdeck.ORE}</div>
+      {amount("ORE") !== 0 && (
+        <div className="ore-cards center-text">{amount("ORE")}</div>
       )}
-      {numDevCards !== 0 && (
+      {/* {numDevCards !== 0 && (
         <div className="dev-cards center-text" title="Development Cards">
           {numDevCards}
         </div>
-      )}
+      )} */}
     </div>
   );
 }
 
-export default function PlayerStateBox({ playerState, longestRoad }) {
+export default function PlayerStateBox({ playerState, playerKey }) {
+  const actualVps = playerState[`${playerKey}_ACTUAL_VPS`];
   return (
     <div className="player-state-box">
-      <ResourceCards playerState={playerState} />
+      <ResourceCards playerState={playerState} playerKey={playerKey} />
       <div className="scores">
         <div
           className={cn("num-knights center-text", {
-            has_army: playerState.has_army,
+            bold: playerState[`${playerKey}_HAS_ARMY`],
           })}
           title="Knights Played"
         >
-          <span>{playerState.played_development_cards.KNIGHT}</span>
+          <span>{playerState[`${playerKey}_KNIGHT_PLAYED`]}</span>
           <small>knights</small>
         </div>
         <div
           className={cn("num-roads center-text", {
-            has_road: playerState.has_road,
+            bold: playerState[`${playerKey}_HAS_ROAD`],
           })}
           title="Longest Road"
         >
-          {longestRoad}
+          {playerState[`${playerKey}_LONGEST_ROAD_LENGTH`]}
           <small>roads</small>
         </div>
         <div
           className={cn("victory-points center-text", {
-            has_road: playerState.actual_victory_points >= 10,
+            bold: actualVps >= 10,
           })}
           title="Victory Points"
         >
-          {playerState.actual_victory_points}
+          {actualVps}
           <small>VPs</small>
         </div>
       </div>

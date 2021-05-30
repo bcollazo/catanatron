@@ -1,49 +1,146 @@
 import random
+import pickle
 from collections import defaultdict
 
+from catanatron.models.map import BaseMap
 from catanatron.models.board import Board
-from catanatron.models.enums import DevelopmentCard, Resource, BuildingType
+from catanatron.models.enums import (
+    DEVELOPMENT_CARDS,
+    MONOPOLY,
+    RESOURCES,
+    Resource,
+    BuildingType,
+    Action,
+    ActionPrompt,
+    ActionType,
+)
 from catanatron.models.decks import DevelopmentDeck, ResourceDeck
-from catanatron.models.actions import Action, ActionPrompt, ActionType
-from catanatron.algorithms import longest_road, largest_army
+from catanatron.models.actions import (
+    generate_playable_actions,
+    road_possible_actions,
+)
+from catanatron.state_functions import (
+    build_city,
+    build_road,
+    build_settlement,
+    buy_dev_card,
+    mantain_longest_road,
+    play_dev_card,
+    player_can_afford_dev_card,
+    player_can_play_dev,
+    player_clean_turn,
+    player_deck_add,
+    player_deck_draw,
+    player_deck_random_draw,
+    player_deck_replenish,
+    player_deck_subtract,
+    player_deck_to_array,
+    player_key,
+    player_num_resource_cards,
+    player_resource_deck_contains,
+)
+
+
+# These will be prefixed by P0_, P1_, ...
+# Create Player State blueprint
+PLAYER_INITIAL_STATE = {
+    "VICTORY_POINTS": 0,
+    "ROADS_AVAILABLE": 15,
+    "SETTLEMENTS_AVAILABLE": 5,
+    "CITIES_AVAILABLE": 4,
+    "HAS_ROAD": False,
+    "HAS_ARMY": False,
+    "HAS_ROLLED": False,
+    "HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN": False,
+    # de-normalized features (for performance since we think they are good features)
+    "ACTUAL_VICTORY_POINTS": 0,
+    "LONGEST_ROAD_LENGTH": 0,
+}
+for resource in RESOURCES:
+    PLAYER_INITIAL_STATE[f"{resource}_IN_HAND"] = 0
+for dev_card in DEVELOPMENT_CARDS:
+    PLAYER_INITIAL_STATE[f"{dev_card}_IN_HAND"] = 0
+    PLAYER_INITIAL_STATE[f"PLAYED_{dev_card}"] = 0
 
 
 class State:
     """Small container object to group dynamic variables in state"""
 
-    def __init__(self, players, catan_map, initialize=True):
+    def __init__(self, players, catan_map=None, initialize=True):
         if initialize:
             self.players = random.sample(players, len(players))
-            self.players_by_color = {p.color: p for p in players}
-            self.board = Board(catan_map)
-            self.actions = []  # log of all action taken by players
+            self.board = Board(catan_map or BaseMap())
+
+            # feature-ready dictionary
+            self.player_state = dict()
+            for index in range(len(self.players)):
+                for key, value in PLAYER_INITIAL_STATE.items():
+                    self.player_state[f"P{index}_{key}"] = value
+            self.color_to_index = {
+                player.color: index for index, player in enumerate(self.players)
+            }
+            self.colors = [player.color for player in self.players]
+
             self.resource_deck = ResourceDeck.starting_bank()
             self.development_deck = DevelopmentDeck.starting_bank()
-            self.tick_queue = initialize_tick_queue(self.players)
-            self.current_player_index = 0
-            self.num_turns = 0  # num_completed_turns
-            self.road_color = None
-            self.army_color = None
 
-            # To be set by Game
-            self.current_prompt = None
-            self.playable_actions = None
+            # Auxiliary attributes to implement game logic
+            self.buildings_by_color = {p.color: defaultdict(list) for p in players}
+            self.actions = []  # log of all action taken by players
+            self.num_turns = 0  # num_completed_turns
+
+            # Current prompt / player
+            # Two variables since there can be out-of-turn plays
+            self.current_player_index = 0
+            self.current_turn_index = 0
+
+            # TODO: Deprecate self.current_prompt in favor of indicator variables
+            self.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
+            self.is_initial_build_phase = True
+            self.is_discarding = False
+            self.is_moving_knight = False
+            self.is_road_building = False
+            self.free_roads_available = 0
+
+            self.playable_actions = generate_playable_actions(self)
 
     def current_player(self):
         return self.players[self.current_player_index]
 
+    def copy(self):
+        state_copy = State(None, None, initialize=False)
+        state_copy.players = self.players
 
-def initialize_tick_queue(players):
-    """First player goes, settlement and road, ..."""
-    tick_queue = []
-    for seating in range(len(players)):
-        tick_queue.append((seating, ActionPrompt.BUILD_FIRST_SETTLEMENT))
-        tick_queue.append((seating, ActionPrompt.BUILD_INITIAL_ROAD))
-    for seating in range(len(players) - 1, -1, -1):
-        tick_queue.append((seating, ActionPrompt.BUILD_SECOND_SETTLEMENT))
-        tick_queue.append((seating, ActionPrompt.BUILD_INITIAL_ROAD))
-    tick_queue.append((0, ActionPrompt.ROLL))
-    return tick_queue
+        state_copy.board = self.board.copy()
+
+        state_copy.player_state = self.player_state.copy()
+        state_copy.color_to_index = self.color_to_index
+        state_copy.colors = self.colors.copy()
+
+        # TODO: Move Deck to functional code, so as to quick-copy arrays.
+        state_copy.resource_deck = pickle.loads(pickle.dumps(self.resource_deck))
+        state_copy.development_deck = pickle.loads(pickle.dumps(self.development_deck))
+
+        state_copy.buildings_by_color = pickle.loads(
+            pickle.dumps(self.buildings_by_color)
+        )
+        state_copy.actions = self.actions.copy()
+        state_copy.num_turns = self.num_turns
+
+        # Current prompt / player
+        # Two variables since there can be out-of-turn plays
+        state_copy.current_player_index = self.current_player_index
+        state_copy.current_turn_index = self.current_turn_index
+
+        state_copy.current_prompt = self.current_prompt
+        state_copy.is_initial_build_phase = self.is_initial_build_phase
+        state_copy.is_discarding = self.is_discarding
+        state_copy.is_moving_knight = self.is_moving_knight
+        state_copy.is_road_building = self.is_road_building
+        state_copy.free_roads_available = self.free_roads_available
+
+        state_copy.playable_actions = self.playable_actions
+        return state_copy
 
 
 def roll_dice():
@@ -94,58 +191,128 @@ def yield_resources(board, resource_deck, number):
     return payout, depleted
 
 
-def apply_action(state, action):
+def advance_turn(state, direction=1):
+    """Sets .current_player_index"""
+    next_index = next_player_index(state, direction)
+    state.current_player_index = next_index
+    state.current_turn_index = next_index
+    state.num_turns += 1
+
+
+def next_player_index(state, direction=1):
+    return (state.current_player_index + direction) % len(state.players)
+
+
+def apply_action(state: State, action: Action):
+    """Action router function. Reducer-like function.
+
+    Each branch is responsible of mantaining:
+        .current_player_index, .current_turn_index,
+        .current_prompt (and similars), .playable_actions
+    """
     if action.action_type == ActionType.END_TURN:
-        next_player_index = (state.current_player_index + 1) % len(state.players)
-        state.current_player_index = next_player_index
-        state.players[next_player_index].clean_turn_state()
-        state.tick_queue.append((next_player_index, ActionPrompt.ROLL))
-        state.num_turns += 1
-    elif action.action_type == ActionType.BUILD_FIRST_SETTLEMENT:
-        player, node_id = state.players_by_color[action.color], action.value
-        state.board.build_settlement(player.color, node_id, True)
-        player.build_settlement(node_id, True)
-    elif action.action_type == ActionType.BUILD_SECOND_SETTLEMENT:
-        player, node_id = state.players_by_color[action.color], action.value
-        state.board.build_settlement(player.color, node_id, True)
-        player.build_settlement(node_id, True)
-        # yield resources of second settlement
-        for tile in state.board.map.adjacent_tiles[node_id]:
-            if tile.resource != None:
-                state.resource_deck.draw(1, tile.resource)
-                player.resource_deck.replenish(1, tile.resource)
+        player_clean_turn(state, action.color)
+        advance_turn(state)
+        state.current_prompt = ActionPrompt.PLAY_TURN
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.BUILD_SETTLEMENT:
-        player, node_id = state.players_by_color[action.color], action.value
-        state.board.build_settlement(player.color, node_id, False)
-        player.build_settlement(node_id, False)
-        state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
-        result = longest_road(state.board, state.players, state.actions)
-        state.road_color = result[0]
-        for color, length in result[2].items():
-            state.players_by_color[color].longest_road_length = length
-    elif action.action_type == ActionType.BUILD_INITIAL_ROAD:
-        player, edge = state.players_by_color[action.color], action.value
-        state.board.build_road(player.color, edge)
-        player.build_road(edge, True)
+        node_id = action.value
+        if state.is_initial_build_phase:
+            state.board.build_settlement(action.color, node_id, True)
+            build_settlement(state, action.color, node_id, True)
+            buildings = state.buildings_by_color[action.color][BuildingType.SETTLEMENT]
+
+            # yield resources if second settlement
+            is_second_house = len(buildings) == 2
+            if is_second_house:
+                key = player_key(state, action.color)
+                for tile in state.board.map.adjacent_tiles[node_id]:
+                    if tile.resource != None:
+                        state.resource_deck.draw(1, tile.resource)
+                        state.player_state[f"{key}_{tile.resource.value}_IN_HAND"] += 1
+
+            # state.current_player_index stays the same
+            state.current_prompt = ActionPrompt.BUILD_INITIAL_ROAD
+            state.playable_actions = generate_playable_actions(state)
+        else:
+            (
+                previous_road_color,
+                road_color,
+                road_lengths,
+            ) = state.board.build_settlement(action.color, node_id, False)
+            build_settlement(state, action.color, node_id, False)
+            state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
+            mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+
+            # state.current_player_index stays the same
+            # state.current_prompt stays as PLAY
+            state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.BUILD_ROAD:
-        player, edge = state.players_by_color[action.color], action.value
-        state.board.build_road(player.color, edge)
-        player.build_road(edge, False)
-        state.resource_deck += ResourceDeck.road_cost()  # replenish bank
-        result = longest_road(state.board, state.players, state.actions)
-        state.road_color = result[0]
-        for color, length in result[2].items():
-            state.players_by_color[color].longest_road_length = length
+        edge = action.value
+        if state.is_initial_build_phase:
+            state.board.build_road(action.color, edge)
+            build_road(state, action.color, edge, True)
+
+            # state.current_player_index depend on what index are we
+            # state.current_prompt too
+            buildings = [
+                len(state.buildings_by_color[color][BuildingType.SETTLEMENT])
+                for color in state.color_to_index.keys()
+            ]
+            num_buildings = sum(buildings)
+            num_players = len(buildings)
+            going_forward = num_buildings < num_players
+            at_the_end = num_buildings == num_players
+            if going_forward:
+                advance_turn(state)
+                state.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
+            elif at_the_end:
+                state.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
+            elif num_buildings == 2 * num_players:
+                state.is_initial_build_phase = False
+                state.current_prompt = ActionPrompt.PLAY_TURN
+            else:
+                advance_turn(state, -1)
+                state.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
+            state.playable_actions = generate_playable_actions(state)
+        elif state.is_road_building and state.free_roads_available > 0:
+            result = state.board.build_road(action.color, edge)
+            previous_road_color, road_color, road_lengths = result
+            build_road(state, action.color, edge, True)
+            mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+
+            state.free_roads_available -= 1
+            if (
+                state.free_roads_available == 0
+                or len(road_possible_actions(state, action.color)) == 0
+            ):
+                state.is_road_building = False
+                state.free_roads_available == 0
+                # state.current_player_index stays the same
+                # state.current_prompt stays as PLAY
+            state.playable_actions = generate_playable_actions(state)
+        else:
+            result = state.board.build_road(action.color, edge)
+            previous_road_color, road_color, road_lengths = result
+            build_road(state, action.color, edge, False)
+            mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+
+            # state.current_player_index stays the same
+            # state.current_prompt stays as PLAY
+            state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.BUILD_CITY:
-        player, node_id = state.players_by_color[action.color], action.value
-        state.board.build_city(player.color, node_id)
-        player.build_city(node_id)
+        node_id = action.value
+        state.board.build_city(action.color, node_id)
+        build_city(state, action.color, node_id)
         state.resource_deck += ResourceDeck.city_cost()  # replenish bank
+
+        # state.current_player_index stays the same
+        # state.current_prompt stays as PLAY
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-        player = state.players_by_color[action.color]
         if state.development_deck.num_cards() == 0:
             raise ValueError("No more development cards")
-        if not player.resource_deck.includes(ResourceDeck.development_card_cost()):
+        if not player_can_afford_dev_card(state, action.color):
             raise ValueError("No money to buy development card")
 
         if action.value is None:
@@ -154,43 +321,48 @@ def apply_action(state, action):
             card = action.value
             state.development_deck.draw(1, card)
 
-        player.development_deck.replenish(1, card)
-        player.resource_deck -= ResourceDeck.development_card_cost()
+        buy_dev_card(state, action.color, card.value)
         state.resource_deck += ResourceDeck.development_card_cost()
 
         action = Action(action.color, action.action_type, card)
+        # state.current_player_index stays the same
+        # state.current_prompt stays as PLAY
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.ROLL:
-        player = state.players_by_color[action.color]
-        player.has_rolled = True
+        key = player_key(state, action.color)
+        state.player_state[f"{key}_HAS_ROLLED"] = True
+
         dices = action.value or roll_dice()
         number = dices[0] + dices[1]
+        action = Action(action.color, action.action_type, dices)
 
         if number == 7:
-            seatings_to_discard = [
-                seating
-                for seating, player in enumerate(state.players)
-                if player.resource_deck.num_cards() > 7
+            discarders = [
+                player_num_resource_cards(state, color) > 7 for color in state.colors
             ]
-            state.tick_queue.extend(
-                [(seating, ActionPrompt.DISCARD) for seating in seatings_to_discard]
-            )
-            state.tick_queue.append(
-                (state.current_player_index, ActionPrompt.MOVE_ROBBER)
-            )
+            is_discarding = any(discarders)
+
+            if is_discarding:
+                state.current_player_index = discarders.index(True)
+                state.current_prompt = ActionPrompt.DISCARD
+                state.is_discarding = True
+            else:
+                # state.current_player_index stays the same
+                state.current_prompt = ActionPrompt.MOVE_ROBBER
+                state.is_moving_knight = True
+            state.playable_actions = generate_playable_actions(state)
         else:
             payout, _ = yield_resources(state.board, state.resource_deck, number)
             for color, resource_deck in payout.items():
-                player = state.players_by_color[color]
-
                 # Atomically add to player's hand and remove from bank
-                player.resource_deck += resource_deck
+                player_deck_add(state, color, resource_deck)
                 state.resource_deck -= resource_deck
 
-        action = Action(action.color, action.action_type, dices)
-        state.tick_queue.append((state.current_player_index, ActionPrompt.PLAY_TURN))
+            # state.current_player_index stays the same
+            state.current_prompt = ActionPrompt.PLAY_TURN
+            state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.DISCARD:
-        player = state.players_by_color[action.color]
-        hand = player.resource_deck.to_array()
+        hand = player_deck_to_array(state, action.color)
         num_to_discard = len(hand) // 2
         if action.value is None:
             # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
@@ -199,107 +371,118 @@ def apply_action(state, action):
             discarded = action.value  # for replay functionality
         to_discard = ResourceDeck.from_array(discarded)
 
-        player.resource_deck -= to_discard
+        player_deck_subtract(state, action.color, to_discard)
         state.resource_deck += to_discard
         action = Action(action.color, action.action_type, discarded)
+
+        # Advance turn
+        discarders_left = [
+            player_num_resource_cards(state, color) > 7 for color in state.colors
+        ][state.current_player_index + 1 :]
+        if any(discarders_left):
+            to_skip = discarders_left.index(True)
+            state.current_player_index = state.current_player_index + 1 + to_skip
+            # state.current_prompt stays the same
+        else:
+            state.current_player_index = state.current_turn_index
+            state.current_prompt = ActionPrompt.MOVE_ROBBER
+            state.is_discarding = False
+            state.is_moving_knight = True
+
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.MOVE_ROBBER:
-        player = state.players_by_color[action.color]
         (coordinate, robbed_color, robbed_resource) = action.value
         state.board.robber_coordinate = coordinate
         if robbed_color is not None:
-            player_to_steal_from = state.players_by_color[robbed_color]
-            enemy_cards = player_to_steal_from.resource_deck.num_cards()
             if robbed_resource is None:
-                resource = player_to_steal_from.resource_deck.random_draw()
+                robbed_resource = player_deck_random_draw(state, robbed_color)
                 action = Action(
                     action.color,
                     action.action_type,
-                    (coordinate, robbed_color, resource),
+                    (coordinate, robbed_color, robbed_resource),
                 )
             else:  # for replay functionality
-                resource = robbed_resource
-                player_to_steal_from.resource_deck.draw(1, resource)
-            player.resource_deck.replenish(1, resource)
+                player_deck_draw(state, robbed_color, robbed_resource.value)
+            player_deck_replenish(state, action.color, robbed_resource.value)
+
+        # state.current_player_index stays the same
+        state.current_prompt = ActionPrompt.PLAY_TURN
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
-        player = state.players_by_color[action.color]
-        if not player.can_play_knight():
+        if not player_can_play_dev(state, action.color, "KNIGHT"):
             raise ValueError("Player cant play knight card now")
-        (coordinate, robbed_color, robbed_resource) = action.value
-        state.board.robber_coordinate = coordinate
-        if robbed_color is not None:
-            player_to_steal_from = state.players_by_color[robbed_color]
-            enemy_cards = player_to_steal_from.resource_deck.num_cards()
-            if robbed_resource is None:
-                resource = player_to_steal_from.resource_deck.random_draw()
-                action = Action(
-                    action.color,
-                    action.action_type,
-                    (coordinate, robbed_color, resource),
-                )
-            else:  # for replay functionality
-                resource = robbed_resource
-                player_to_steal_from.resource_deck.draw(1, resource)
-            player.resource_deck.replenish(1, resource)
-        player.mark_played_dev_card(DevelopmentCard.KNIGHT)
-        state.army_color = largest_army(state.players, state.actions)[0]
+
+        play_dev_card(state, action.color, "KNIGHT")
+
+        # state.current_player_index stays the same
+        state.current_prompt = ActionPrompt.MOVE_ROBBER
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
-        player = state.players_by_color[action.color]
         cards_selected = ResourceDeck.from_array(action.value)
-        if not player.can_play_year_of_plenty():
+        if not player_can_play_dev(state, action.color, "YEAR_OF_PLENTY"):
             raise ValueError("Player cant play year of plenty now")
         if not state.resource_deck.includes(cards_selected):
             raise ValueError("Not enough resources of this type (these types?) in bank")
-        player.resource_deck += cards_selected
+        player_deck_add(state, action.color, cards_selected)
         state.resource_deck -= cards_selected
-        player.mark_played_dev_card(DevelopmentCard.YEAR_OF_PLENTY)
+        play_dev_card(state, action.color, "YEAR_OF_PLENTY")
+
+        # state.current_player_index stays the same
+        state.current_prompt = ActionPrompt.PLAY_TURN
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_MONOPOLY:
-        player, mono_resource = (
-            state.players_by_color[action.color],
-            action.value,
-        )
+        mono_resource = action.value
         cards_stolen = ResourceDeck()
-        if not player.can_play_monopoly():
+        if not player_can_play_dev(state, action.color, "MONOPOLY"):
             raise ValueError("Player cant play monopoly now")
-        total_enemy_cards = 0
-        for p in state.players:
-            if not p.color == action.color:
-                number_of_cards_to_steal = p.resource_deck.count(mono_resource)
+        for player in state.players:
+            if not player.color == action.color:
+                key = player_key(state, player.color)
+                number_of_cards_to_steal = state.player_state[
+                    f"{key}_{mono_resource.value}_IN_HAND"
+                ]
                 cards_stolen.replenish(number_of_cards_to_steal, mono_resource)
-                p.resource_deck.draw(number_of_cards_to_steal, mono_resource)
-                total_enemy_cards += p.resource_deck.num_cards()
-        player.resource_deck += cards_stolen
-        player.mark_played_dev_card(DevelopmentCard.MONOPOLY)
+                player_deck_draw(
+                    state, player.color, mono_resource.value, number_of_cards_to_steal
+                )
+        player_deck_add(state, action.color, cards_stolen)
+        play_dev_card(state, action.color, MONOPOLY)
+
+        # state.current_player_index stays the same
+        state.current_prompt = ActionPrompt.PLAY_TURN
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
-        player, (first_edge, second_edge) = (
-            state.players_by_color[action.color],
-            action.value,
-        )
-        if not player.can_play_road_building():
+        if not player_can_play_dev(state, action.color, "ROAD_BUILDING"):
             raise ValueError("Player cant play road building now")
 
-        state.board.build_road(player.color, first_edge)
-        state.board.build_road(player.color, second_edge)
-        player.build_road(first_edge, True)
-        player.build_road(second_edge, True)
-        player.mark_played_dev_card(DevelopmentCard.ROAD_BUILDING)
-        result = longest_road(state.board, state.players, state.actions)
-        state.road_color = result[0]
-        for color, length in result[2].items():
-            state.players_by_color[color].longest_road_length = length
+        play_dev_card(state, action.color, "ROAD_BUILDING")
+        state.is_road_building = True
+        state.free_roads_available = 2
+
+        # state.current_player_index stays the same
+        state.current_prompt = ActionPrompt.PLAY_TURN
+        state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.MARITIME_TRADE:
-        player, trade_offer = (state.players_by_color[action.color], action.value)
+        trade_offer = action.value
         offering = ResourceDeck.from_array(
             filter(lambda r: r is not None, trade_offer[:-1])
         )
         asking = ResourceDeck.from_array(trade_offer[-1:])
-        if not player.resource_deck.includes(offering):
+        if not player_resource_deck_contains(state, action.color, offering):
             raise ValueError("Trying to trade without money")
         if not state.resource_deck.includes(asking):
             raise ValueError("Bank doenst have those cards")
-        player.resource_deck -= offering
+        player_deck_subtract(state, action.color, offering)
         state.resource_deck += offering
-        player.resource_deck += asking
+        player_deck_add(state, action.color, asking)
         state.resource_deck -= asking
+
+        # state.current_player_index stays the same
+        state.current_prompt = ActionPrompt.PLAY_TURN
+        state.playable_actions = generate_playable_actions(state)
     else:
         raise RuntimeError("Unknown ActionType " + str(action.action_type))
+
+    # TODO: Think about possible-action/idea vs finalized-action design
+    state.actions.append(action)
     return action

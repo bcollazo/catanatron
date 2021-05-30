@@ -1,27 +1,24 @@
-from collections import Counter
 from typing import Generator, Tuple
 import functools
+from collections import Counter
 
 import networkx as nx
 
+from catanatron.state_functions import (
+    get_player_buildings,
+    player_key,
+    player_num_dev_cards,
+    player_num_resource_cards,
+)
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.map import NUM_NODES, NUM_TILES
 from catanatron.models.player import Color, Player, SimplePlayer
-from catanatron.models.enums import Resource, DevelopmentCard, BuildingType
-from catanatron.game import Game, number_probability
+from catanatron.models.enums import Resource, DevelopmentCard, BuildingType, ActionType
+from catanatron.game import Game
+from catanatron.models.map import number_probability
 
 
 # ===== Helpers
-def port_is_resource(game, port_id, resource):
-    port = game.state.board.map.get_port_by_id(port_id)
-    return port.resource == resource
-
-
-def port_is_threetoone(game, port_id):
-    port = game.state.board.map.get_port_by_id(port_id)
-    return port.resource is None
-
-
 def is_building(game, node_id, player, building_type):
     building = game.state.board.buildings.get(node_id, None)
     if building is None:
@@ -53,17 +50,26 @@ def player_features(game, p0_color):
     # P{i}_HAS_ROLLED, P{i}_LONGEST_ROAD_LENGTH
     features = dict()
     for i, player in iter_players(game, p0_color):
+        key = player_key(game.state, player.color)
         if player.color == p0_color:
-            features["P0_ACTUAL_VPS"] = player.actual_victory_points
+            features["P0_ACTUAL_VPS"] = game.state.player_state[
+                key + "_ACTUAL_VICTORY_POINTS"
+            ]
 
-        features[f"P{i}_PUBLIC_VPS"] = player.public_victory_points
-        features[f"P{i}_HAS_ARMY"] = player.has_army
-        features[f"P{i}_HAS_ROAD"] = player.has_road
-        features[f"P{i}_ROADS_LEFT"] = player.roads_available
-        features[f"P{i}_SETTLEMENTS_LEFT"] = player.settlements_available
-        features[f"P{i}_CITIES_LEFT"] = player.cities_available
-        features[f"P{i}_HAS_ROLLED"] = player.has_rolled
-        features[f"P{i}_LONGEST_ROAD_LENGTH"] = player.longest_road_length
+        features[f"P{i}_PUBLIC_VPS"] = game.state.player_state[key + "_VICTORY_POINTS"]
+        features[f"P{i}_HAS_ARMY"] = game.state.player_state[key + "_HAS_ARMY"]
+        features[f"P{i}_HAS_ROAD"] = game.state.player_state[key + "_HAS_ROAD"]
+        features[f"P{i}_ROADS_LEFT"] = game.state.player_state[key + "_ROADS_AVAILABLE"]
+        features[f"P{i}_SETTLEMENTS_LEFT"] = game.state.player_state[
+            key + "_SETTLEMENTS_AVAILABLE"
+        ]
+        features[f"P{i}_CITIES_LEFT"] = game.state.player_state[
+            key + "_CITIES_AVAILABLE"
+        ]
+        features[f"P{i}_HAS_ROLLED"] = game.state.player_state[key + "_HAS_ROLLED"]
+        features[f"P{i}_LONGEST_ROAD_LENGTH"] = game.state.player_state[
+            key + "_LONGEST_ROAD_LENGTH"
+        ]
 
     return features
 
@@ -78,30 +84,38 @@ def resource_hand_features(game, p0_color):
     # TODO: P1_WHEATS_INFERENCE, P1_WOODS_INFERENCE, ...
     # TODO: P1_ROAD_BUILDINGS_INFERENCE, P1_KNIGHT_INFERENCE, ...
 
+    state = game.state
+    player_state = state.player_state
+
     features = {}
     for i, player in iter_players(game, p0_color):
+        key = player_key(game.state, player.color)
+
         if player.color == p0_color:
             for resource in Resource:
-                features[f"P0_{resource.value}_IN_HAND"] = player.resource_deck.count(
-                    resource
-                )
+                features[f"P0_{resource.value}_IN_HAND"] = player_state[
+                    key + f"_{resource.value}_IN_HAND"
+                ]
                 for card in DevelopmentCard:
-                    features[
-                        f"P0_{card.value}_IN_HAND"
-                    ] = player.development_deck.count(card)
-                    if card != DevelopmentCard.VICTORY_POINT:
-                        features[f"P0_{card.value}_PLAYABLE"] = (
-                            card in player.playable_development_cards
-                        )
+                    features[f"P0_{card.value}_IN_HAND"] = player_state[
+                        key + f"_{card.value}_IN_HAND"
+                    ]
+            features[f"P0_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = player_state[
+                key + "_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"
+            ]
 
         for card in DevelopmentCard:
             if card == DevelopmentCard.VICTORY_POINT:
                 continue  # cant play VPs
-            features[
-                f"P{i}_{card.value}_PLAYED"
-            ] = player.played_development_cards.count(card)
-            features[f"P{i}_NUM_RESOURCES_IN_HAND"] = player.resource_deck.num_cards()
-            features[f"P{i}_NUM_DEVS_IN_HAND"] = player.development_deck.num_cards()
+            features[f"P{i}_{card.value}_PLAYED"] = player_state[
+                key + f"_PLAYED_{card.value}"
+            ]
+            features[f"P{i}_NUM_RESOURCES_IN_HAND"] = player_num_resource_cards(
+                state, player.color
+            )
+            features[f"P{i}_NUM_DEVS_IN_HAND"] = player_num_dev_cards(
+                state, player.color
+            )
 
     return features
 
@@ -136,12 +150,10 @@ def tile_features(game, p0_color):
 def port_features(game, p0_color):
     # PORT0_WOOD, PORT0_THREE_TO_ONE, ...
     features = {}
-    for port_id in range(9):
+    for port_id, port in game.state.board.map.ports_by_id.items():
         for resource in Resource:
-            features[f"PORT{port_id}_IS_{resource.value}"] = port_is_resource(
-                game, port_id, resource
-            )
-        features[f"PORT{port_id}_IS_THREE_TO_ONE"] = port_is_threetoone(game, port_id)
+            features[f"PORT{port_id}_IS_{resource.value}"] = port.resource == resource
+        features[f"PORT{port_id}_IS_THREE_TO_ONE"] = port.resource is None
     return features
 
 
@@ -171,13 +183,17 @@ def build_production_features(consider_robber):
         for resource in Resource:
             for i, player in iter_players(game, p0_color):
                 production = 0
-                for node_id in player.buildings[BuildingType.SETTLEMENT]:
+                for node_id in get_player_buildings(
+                    game.state, player.color, BuildingType.SETTLEMENT
+                ):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += get_node_production(
                         game.state.board, node_id, resource
                     )
-                for node_id in player.buildings[BuildingType.CITY]:
+                for node_id in get_player_buildings(
+                    game.state, player.color, BuildingType.CITY
+                ):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += 2 * get_node_production(
@@ -201,8 +217,12 @@ def get_player_expandable_nodes(game, player):
     enemies = [enemy for enemy in game.state.players if enemy.color != player.color]
     enemy_node_ids = set()
     for enemy in enemies:
-        enemy_node_ids.update(enemy.buildings[BuildingType.SETTLEMENT])
-        enemy_node_ids.update(enemy.buildings[BuildingType.CITY])
+        enemy_node_ids.update(
+            get_player_buildings(game.state, enemy.color, BuildingType.SETTLEMENT)
+        )
+        enemy_node_ids.update(
+            get_player_buildings(game.state, enemy.color, BuildingType.CITY)
+        )
 
     expandable_node_ids = [
         node_id
@@ -216,15 +236,16 @@ def get_player_expandable_nodes(game, player):
 REACHABLE_FEATURES_MAX = 3  # exclusive
 
 
-def reachability_features(game, p0_color):
+def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
     features = {}
 
-    board_buildable = frozenset(game.state.board.buildable_node_ids(p0_color, True))
+    board_buildable = game.state.board.buildable_node_ids(p0_color, True)
     for i, player in iter_players(game, p0_color):
         color = player.color
-        owned_nodes = frozenset(
-            player.buildings[BuildingType.SETTLEMENT]
-            + player.buildings[BuildingType.CITY]
+        owned_or_buildable = frozenset(
+            get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
+            + get_player_buildings(game.state, color, BuildingType.CITY)
+            + board_buildable
         )
 
         # Do layer 0
@@ -234,14 +255,14 @@ def reachability_features(game, p0_color):
                 zero_nodes.add(node_id)
 
         production = count_production(
-            frozenset(zero_nodes), board_buildable, game.state.board, owned_nodes
+            frozenset(owned_or_buildable.intersection(zero_nodes)), game.state.board
         )
         for resource in Resource:
             features[f"P{i}_0_ROAD_REACHABLE_{resource.value}"] = production[resource]
 
         # for layers deep:
         last_layer_nodes = zero_nodes
-        for level in range(1, REACHABLE_FEATURES_MAX):
+        for level in range(1, levels):
             level_nodes = set(last_layer_nodes)
             for node_id in last_layer_nodes:
                 if game.state.board.is_enemy_node(node_id, color):
@@ -255,10 +276,8 @@ def reachability_features(game, p0_color):
                 level_nodes.update(expandable)
 
             production = count_production(
-                frozenset(level_nodes),
-                board_buildable,
+                frozenset(owned_or_buildable.intersection(level_nodes)),
                 game.state.board,
-                owned_nodes,
             )
             for resource in Resource:
                 features[f"P{i}_{level}_ROAD_REACHABLE_{resource.value}"] = production[
@@ -271,28 +290,11 @@ def reachability_features(game, p0_color):
 
 
 @functools.lru_cache(maxsize=1000)
-def count_production(nodes, board_buildable, board, owned_nodes):
-    level_buildable_nodes = {
-        node_id
-        for node_id in nodes
-        if node_id in board_buildable or node_id in owned_nodes
-    }
+def count_production(nodes, board):
     production = Counter()
-    for node_id in level_buildable_nodes:
-        production += get_node_counter_production(board, node_id)
+    for node_id in nodes:
+        production += board.map.node_production[node_id]
     return production
-
-
-@functools.lru_cache(maxsize=200)
-def get_node_counter_production(board, node_id):
-    tiles = board.map.adjacent_tiles[node_id]
-    return Counter(
-        {
-            t.resource: number_probability(t.number)
-            for t in tiles
-            if t.resource is not None
-        }
-    )
 
 
 def expansion_features(game, p0_color):
@@ -304,7 +306,9 @@ def expansion_features(game, p0_color):
     # For each connected component node, bfs_edges (skipping enemy edges and nodes nodes)
     empty_edges = set(get_edges())
     for i, player in iter_players(game, p0_color):
-        empty_edges.difference_update(player.buildings[BuildingType.ROAD])
+        empty_edges.difference_update(
+            get_player_buildings(game.state, player.color, BuildingType.ROAD)
+        )
     searchable_subgraph = STATIC_GRAPH.edge_subgraph(empty_edges)
 
     board_buildable_node_ids = game.state.board.buildable_node_ids(
@@ -320,7 +324,7 @@ def expansion_features(game, p0_color):
     for i, player in iter_players(game, p0_color):
         expandable_node_ids = get_player_expandable_nodes(game, player)
 
-        # owned_edges = player.buildings[BuildingType.ROAD]
+        # owned_edges = get_player_buildings(state, color, BuildingType.ROAD)
         dis_res_prod = {
             distance: {k: 0 for k in Resource}
             for distance in range(MAX_EXPANSION_DISTANCE)
@@ -396,7 +400,12 @@ def port_distance_features(game, p0_color):
 
 def game_features(game, p0_color):
     # BANK_WOODS, BANK_WHEATS, ..., BANK_DEV_CARDS
-    features = {"BANK_DEV_CARDS": game.state.development_deck.num_cards()}
+    possibilities = set([a.action_type for a in game.state.playable_actions])
+    features = {
+        "BANK_DEV_CARDS": game.state.development_deck.num_cards(),
+        "IS_MOVING_ROBBER": ActionType.MOVE_ROBBER in possibilities,
+        "IS_DISCARDING": ActionType.DISCARD in possibilities,
+    }
     for resource in Resource:
         features[f"BANK_{resource.value}"] = game.state.resource_deck.count(resource)
     return features
@@ -407,14 +416,14 @@ feature_extractors = [
     player_features,
     resource_hand_features,
     # TRANSFERABLE BOARD FEATURES =====
-    build_production_features(True),
-    build_production_features(False),
+    # build_production_features(True),
+    # build_production_features(False),
     # expansion_features,
-    reachability_features,
+    # reachability_features,
     # RAW BASE-MAP FEATURES =====
-    # tile_features,
-    # port_features,
-    # graph_features,
+    tile_features,
+    port_features,
+    graph_features,
     # GAME FEATURES =====
     game_features,
 ]

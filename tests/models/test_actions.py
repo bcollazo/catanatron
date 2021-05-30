@@ -1,19 +1,31 @@
+from catanatron.state import (
+    State,
+    build_city,
+    build_settlement,
+    player_deck_add,
+    player_deck_replenish,
+)
 from catanatron.models.actions import (
+    generate_playable_actions,
     monopoly_possible_actions,
-    year_of_plenty_possible_actions,
+    year_of_plenty_possibilities,
     road_possible_actions,
     settlement_possible_actions,
     city_possible_actions,
     robber_possibilities,
-    initial_settlement_possibilites,
-    discard_possibilities,
     maritime_trade_possibilities,
     road_building_possibilities,
-    ActionType,
-    ActionPrompt,
 )
 from catanatron.models.board import Board
-from catanatron.models.enums import Resource
+from catanatron.models.enums import (
+    BRICK,
+    ORE,
+    Resource,
+    ActionType,
+    ActionPrompt,
+    WHEAT,
+    WOOD,
+)
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.game import Game
 from catanatron.models.decks import ResourceDeck
@@ -21,148 +33,179 @@ from catanatron.models.decks import ResourceDeck
 
 def test_playable_actions():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    game = Game(players)
+    state = State(players)
 
-    actions = game.playable_actions(players[0], ActionPrompt.ROLL)
-    assert len(actions) == 1
-    assert actions[0].action_type == ActionType.ROLL
+    actions = generate_playable_actions(state)
+    assert len(actions) == 54
+    assert actions[0].action_type == ActionType.BUILD_SETTLEMENT
 
 
 def test_year_of_plenty_possible_actions_full_resource_bank():
-    player = SimplePlayer(Color.RED)
     bank_resource_deck = ResourceDeck.starting_bank()
-    actions = year_of_plenty_possible_actions(player, bank_resource_deck)
+    actions = year_of_plenty_possibilities(Color.RED, bank_resource_deck)
     assert len(actions) == 15
 
 
 def test_year_of_plenty_possible_actions_not_enough_cards():
-    player = SimplePlayer(Color.RED)
     bank_resource_deck = ResourceDeck()
     bank_resource_deck.replenish(2, Resource.ORE)
-    actions = year_of_plenty_possible_actions(player, bank_resource_deck)
+    actions = year_of_plenty_possibilities(Color.RED, bank_resource_deck)
     assert len(actions) == 2  # one ORE, or 2 OREs.
 
 
 def test_monopoly_possible_actions():
-    player = SimplePlayer(Color.RED)
-    assert len(monopoly_possible_actions(player)) == len(Resource)
+    assert len(monopoly_possible_actions(Color.RED)) == len(Resource)
 
 
 def test_road_possible_actions():
-    board = Board()
     player = SimplePlayer(Color.RED)
+    state = State([player])
 
-    assert len(road_possible_actions(player, board)) == 0  # no money or place
+    assert len(road_possible_actions(state, Color.RED)) == 0  # no money or place
 
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    assert len(road_possible_actions(player, board)) == 0  # no money
+    state.board.build_settlement(Color.RED, 3, initial_build_phase=True)
+    assert len(road_possible_actions(state, Color.RED)) == 0  # no money
 
-    player.resource_deck.replenish(1, Resource.WOOD)
-    player.resource_deck.replenish(1, Resource.BRICK)
-    assert len(road_possible_actions(player, board)) == 3
+    player_deck_replenish(state, player.color, WOOD)
+    player_deck_replenish(state, player.color, BRICK)
+    assert len(road_possible_actions(state, Color.RED)) == 3
 
-    board.build_settlement(Color.RED, 1, initial_build_phase=True)
-    assert len(road_possible_actions(player, board)) == 6
+    state.board.build_settlement(Color.RED, 1, initial_build_phase=True)
+    assert len(road_possible_actions(state, Color.RED)) == 6
 
 
 def test_settlement_possible_actions():
-    board = Board()
     player = SimplePlayer(Color.RED)
+    state = State([player])
 
-    assert len(settlement_possible_actions(player, board)) == 0  # no money or place
+    assert len(settlement_possible_actions(state, Color.RED)) == 0  # no money or place
 
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    board.build_road(Color.RED, (3, 4))
-    board.build_road(Color.RED, (4, 5))
-    assert len(settlement_possible_actions(player, board)) == 0  # no money
+    state.board.build_settlement(Color.RED, 3, initial_build_phase=True)
+    state.board.build_road(Color.RED, (3, 4))
+    state.board.build_road(Color.RED, (4, 5))
+    assert len(settlement_possible_actions(state, Color.RED)) == 0  # no money
 
-    player.resource_deck += ResourceDeck.settlement_cost()
-    assert len(settlement_possible_actions(player, board)) == 1
+    player_deck_add(state, player.color, ResourceDeck.settlement_cost())
+    assert len(settlement_possible_actions(state, Color.RED)) == 1
 
-    board.build_road(Color.RED, (5, 0))
-    assert len(settlement_possible_actions(player, board)) == 2
+    state.board.build_road(Color.RED, (5, 0))
+    assert len(settlement_possible_actions(state, Color.RED)) == 2
 
 
 def test_city_playable_actions():
-    board = Board()
     player = SimplePlayer(Color.RED)
+    state = State([player])
 
-    assert len(city_possible_actions(player)) == 0  # no money or place
+    assert len(city_possible_actions(state, Color.RED)) == 0  # no money or place
 
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    player.build_settlement(3, True)
-    assert len(city_possible_actions(player)) == 0  # no money
+    state.board.build_settlement(Color.RED, 3, initial_build_phase=True)
+    build_settlement(state, player.color, 3, True)
+    assert len(city_possible_actions(state, Color.RED)) == 0  # no money
 
-    player.resource_deck.replenish(2, Resource.WHEAT)
-    player.resource_deck.replenish(3, Resource.ORE)
-    assert len(city_possible_actions(player)) == 1
+    player_deck_replenish(state, Color.RED, WHEAT, 2)
+    player_deck_replenish(state, Color.RED, ORE, 3)
+    assert len(city_possible_actions(state, Color.RED)) == 1
 
-    board.build_settlement(Color.RED, 0, initial_build_phase=True)
-    player.build_settlement(3, True)
-    assert len(city_possible_actions(player)) == 2
+    state.board.build_settlement(Color.RED, 0, initial_build_phase=True)
+    build_settlement(state, player.color, 0, True)
+    assert len(city_possible_actions(state, Color.RED)) == 2
 
 
 def test_robber_possibilities():
-    board = Board()
     red = SimplePlayer(Color.RED)
     blue = SimplePlayer(Color.BLUE)
     orange = SimplePlayer(Color.ORANGE)
     players = [red, blue, orange]
+    state = State(players)
 
     # one for each resource tile (excluding desert)
-    assert len(robber_possibilities(red, board, players, True)) == 18
+    assert len(robber_possibilities(state, Color.RED)) == 18
 
     # assert same number of possibilities, b.c. players have no cards.
-    board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
-    board.build_settlement(Color.ORANGE, 0, initial_build_phase=True)
-    assert len(robber_possibilities(red, board, players, True)) == 18
+    state.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
+    state.board.build_settlement(Color.ORANGE, 0, initial_build_phase=True)
+    assert len(robber_possibilities(state, Color.RED)) == 18
 
     # assert same number of possibilities, b.c. only one player to rob in this tile
-    orange.resource_deck.replenish(1, Resource.WHEAT)
-    assert len(robber_possibilities(red, board, players, False)) == 18
+    player_deck_replenish(state, orange.color, WHEAT)
+    assert len(robber_possibilities(state, Color.RED)) == 18
 
     # now possibilites increase by 1 b.c. we have to decide to steal from blue or orange
     # Unless desert is (0,0,0)... in which case still at 18...
-    blue.resource_deck.replenish(1, Resource.WHEAT)
-    possibilities = len(robber_possibilities(red, board, players, False))
+    player_deck_replenish(state, blue.color, WHEAT)
+    possibilities = len(robber_possibilities(state, Color.RED))
     assert possibilities == 19 or (
-        possibilities == 18 and board.map.tiles[(0, 0, 0)].resource is None
+        possibilities == 18 and state.board.map.tiles[(0, 0, 0)].resource is None
     )
 
 
-def test_initial_placement_possibilities():
-    board = Board()
+def test_building_settlement_gives_vp():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    state = State(players)
+
+    build_settlement(state, state.players[0].color, 0, True)
+    assert state.player_state["P0_VICTORY_POINTS"] == 1
+    assert state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 1
+
+
+def test_building_city_gives_vp():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    state = State(players)
+
+    build_settlement(state, state.players[0].color, 0, True)
+    player_deck_replenish(state, state.players[0].color, WHEAT, 2)
+    player_deck_replenish(state, state.players[0].color, ORE, 2)
+    build_city(state, state.players[0].color, 0)
+    assert state.player_state["P0_VICTORY_POINTS"] == 2
+    assert state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 2
+
+
+def test_robber_possibilities_simple():
     red = SimplePlayer(Color.RED)
-    assert len(initial_settlement_possibilites(red, board, True)) == 54
+    blue = SimplePlayer(Color.BLUE)
+    orange = SimplePlayer(Color.ORANGE)
+    players = [red, blue, orange]
+    state = State(players)
+
+    # one for each resource tile (excluding desert)
+    assert len(robber_possibilities(state, Color.RED)) == 18
+
+
+def test_initial_placement_possibilities():
+    red = SimplePlayer(Color.RED)
+    state = State([red])
+    assert len(settlement_possible_actions(state, Color.RED, True)) == 54
 
 
 # TODO: Forcing random selection to ease dimensionality.
 # def test_discard_possibilities():
 #     player = SimplePlayer(Color.RED)
-#     player.resource_deck.replenish(8, Resource.WHEAT)
+#     player_deck_replenish(state, player.color, Resource.WHEAT)
 #     assert len(discard_possibilities(player)) == 70
 
 
 def test_4to1_maritime_trade_possibilities():
-    board = Board()
     player = SimplePlayer(Color.RED)
+    state = State([player])
 
-    bank = ResourceDeck.starting_bank()
-    assert len(maritime_trade_possibilities(player, bank, board)) == 0
+    possibilities = maritime_trade_possibilities(state, player.color)
+    assert len(possibilities) == 0
 
-    player.resource_deck.replenish(4, Resource.WHEAT)
-    assert len(maritime_trade_possibilities(player, bank, board)) == 4
+    player_deck_replenish(state, player.color, WHEAT, 4)
+    possibilities = maritime_trade_possibilities(state, player.color)
+    print(possibilities)
+    assert len(possibilities) == 4
 
-    player.resource_deck.replenish(4, Resource.BRICK)
-    assert len(maritime_trade_possibilities(player, bank, board)) == 8
+    player_deck_replenish(state, player.color, BRICK, 4)
+    possibilities = maritime_trade_possibilities(state, player.color)
+    assert len(possibilities) == 8
 
 
 def test_maritime_possibities_respect_bank_not_having_cards():
-    board = Board()
     player = SimplePlayer(Color.RED)
-    player.resource_deck.replenish(4, Resource.WHEAT)
-    bank = ResourceDeck()
-    assert len(maritime_trade_possibilities(player, bank, board)) == 0
+    state = State([player])
+    player_deck_replenish(state, player.color, WHEAT)
+    assert len(maritime_trade_possibilities(state, player.color)) == 0
 
 
 def test_road_building_possibilities():
@@ -196,7 +239,7 @@ def test_year_of_plenty_same_resource():
     bank.replenish(1, Resource.WHEAT)
 
     player = SimplePlayer(Color.RED)
-    actions = year_of_plenty_possible_actions(player, bank)
+    actions = year_of_plenty_possibilities(Color.RED, bank)
 
     assert len(actions) == 1
     assert actions[0].value[0] == Resource.WHEAT
