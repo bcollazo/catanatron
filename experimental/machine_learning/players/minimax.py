@@ -397,9 +397,7 @@ def list_prunned_actions(game):
         actions = tmp_actions
 
     if ActionType.MOVE_ROBBER in types:
-        actions = prune_robber_actions(
-            current_color, game, actions, ActionType.MOVE_ROBBER
-        )
+        actions = prune_robber_actions(current_color, game, actions)
 
     return list(actions)
 
