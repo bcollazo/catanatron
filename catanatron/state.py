@@ -229,7 +229,7 @@ def apply_action(state: State, action: Action):
                 for tile in state.board.map.adjacent_tiles[node_id]:
                     if tile.resource != None:
                         state.resource_deck.draw(1, tile.resource)
-                        state.player_state[f"{key}_{resource}_IN_HAND"] += 1
+                        state.player_state[f"{key}_{tile.resource.value}_IN_HAND"] += 1
 
             # state.current_player_index stays the same
             state.current_prompt = ActionPrompt.BUILD_INITIAL_ROAD
