@@ -67,6 +67,11 @@ def test_initial_build_phase():
         and game.state.current_player().color == p0_color
     )
 
+    assert game.state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 2
+    assert game.state.player_state["P1_ACTUAL_VICTORY_POINTS"] == 2
+    assert game.state.player_state["P0_VICTORY_POINTS"] == 2
+    assert game.state.player_state["P1_VICTORY_POINTS"] == 2
+
     # assert there are 4 houses and 4 roads
     settlements = [
         building
