@@ -1,8 +1,6 @@
 import random
 import time
 
-from graphviz import Digraph
-
 from catanatron.state_functions import (
     get_longest_road_length,
     get_played_dev_cards,
@@ -337,6 +335,8 @@ class DebugActionNode:
 
 
 def render_debug_tree(node):
+    from graphviz import Digraph
+
     dot = Digraph("AlphaBetaSearch")
 
     agenda = [node]
