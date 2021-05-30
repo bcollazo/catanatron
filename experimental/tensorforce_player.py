@@ -110,9 +110,15 @@ class CustomEnvironment(Environment):
         next_state = build_states(self.game, self.p0)
         terminal = winning_color is not None
 
-        key = player_key(self.game.state, self.p0.color)
-        points = self.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-        reward = int(winning_color == self.p0.color) * 1000 + points
+        # key = player_key(self.game.state, self.p0.color)
+        # points = self.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+        # reward = int(winning_color == self.p0.color) * 1000 + points
+        if self.p0.color == winning_color:
+            reward = 1
+        elif winning_color is None:
+            reward = 0
+        else:
+            reward = -1
         return next_state, terminal, reward
 
     def _advance_until_p0_decision(self):
