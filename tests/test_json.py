@@ -19,7 +19,6 @@ def test_serialization():
     result = json.loads(string)
 
     # Loosely assert looks like expected
-    assert len(result["players"]) == 4
     assert isinstance(result["robber_coordinate"], list)
     assert isinstance(result["tiles"], list)
     assert isinstance(result["edges"], list)

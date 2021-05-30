@@ -18,8 +18,8 @@ import { dispatchSnackbar } from "../components/Snackbar";
 
 const ROBOT_THINKING_TIME = 2000;
 
-function GameScreen() {
-  const { gameId } = useParams();
+function GameScreen({ replayMode }) {
+  const { gameId, stateIndex } = useParams();
   const { state, dispatch } = useContext(store);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [isBotThinking, setIsBotThinking] = useState(false);
@@ -30,13 +30,13 @@ function GameScreen() {
     }
 
     (async () => {
-      const gameState = await getState(gameId);
+      const gameState = await getState(gameId, stateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
-  }, [gameId, dispatch]);
+  }, [gameId, stateIndex, dispatch]);
 
   useEffect(() => {
-    if (!state.gameState) {
+    if (!state.gameState || replayMode) {
       return;
     }
 
@@ -55,7 +55,14 @@ function GameScreen() {
         }, ROBOT_THINKING_TIME - requestTime);
       })();
     }
-  }, [gameId, state.gameState, dispatch, enqueueSnackbar, closeSnackbar]);
+  }, [
+    gameId,
+    replayMode,
+    state.gameState,
+    dispatch,
+    enqueueSnackbar,
+    closeSnackbar,
+  ]);
 
   if (!state.gameState) {
     return (
@@ -74,8 +81,8 @@ function GameScreen() {
   return (
     <main>
       <h1 className="logo">Catanatron</h1>
-      <ZoomableBoard state={state.gameState} />
-      <ActionsToolbar isBotThinking={isBotThinking} />
+      <ZoomableBoard replayMode={replayMode} />
+      <ActionsToolbar isBotThinking={isBotThinking} replayMode={replayMode} />
       <LeftDrawer />
     </main>
   );

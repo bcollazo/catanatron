@@ -222,6 +222,8 @@ tuner/round |0 |1
 - Tried Bayesian Optimization to search better weights for hand-crafted heuristic,
   but seems too slow and inefective.
 
+- Note: In a random game, 38.6% of actions are roll (action=0), 27% are end turn (action=5557).
+
 ## Future Work:
 
 - Should probably try to do NN player with better tuning (more layers, different label).

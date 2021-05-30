@@ -3,11 +3,12 @@ import random
 from tests.utils import advance_to_play_turn, build_initial_placements
 import tensorflow as tf
 
-from catanatron.models.enums import Resource
+from catanatron.state import player_deck_replenish
+from catanatron.models.enums import ORE, Action, ActionType, WHEAT
 from catanatron.models.board import Board, get_edges
 from catanatron.models.map import BaseMap, NUM_NODES, NodeRef
-from catanatron.models.actions import Action, ActionType
-from catanatron.game import Game, number_probability
+from catanatron.game import Game
+from catanatron.models.map import number_probability
 from catanatron.models.player import SimplePlayer, Color
 from experimental.machine_learning.features import (
     create_sample,
@@ -15,6 +16,7 @@ from experimental.machine_learning.features import (
     reachability_features,
     iter_players,
     port_distance_features,
+    resource_hand_features,
     tile_features,
     graph_features,
 )
@@ -49,8 +51,8 @@ def test_port_distance_features():
     ]
     game = Game(players)
     color = game.state.players[0].color
-    game.execute(Action(color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
+    game.execute(Action(color, ActionType.BUILD_SETTLEMENT, 3))
+    game.execute(Action(color, ActionType.BUILD_ROAD, (2, 3)))
 
     ports = game.state.board.map.port_nodes
     se_port_resource = next(filter(lambda entry: 29 in entry[1], ports.items()))[0]
@@ -59,6 +61,26 @@ def test_port_distance_features():
     features = port_distance_features(game, color)
     assert features["P0_HAS_WHEAT_PORT"] == False
     assert features[f"P0_{port_name}_PORT_DISTANCE"] == 3
+
+
+def test_resource_hand_features():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+    ]
+    game = Game(players)
+
+    red_index = game.state.color_to_index[Color.RED]
+    game.state.player_state[f"P{red_index}_WHEAT_IN_HAND"] = 20
+    player_deck_replenish(game.state, Color.BLUE, "ORE", 17)
+
+    features = resource_hand_features(game, Color.RED)
+    assert features["P0_WHEAT_IN_HAND"] == 20
+    assert features["P1_NUM_RESOURCES_IN_HAND"] == 17
+
+    features = resource_hand_features(game, Color.BLUE)
+    assert features["P0_ORE_IN_HAND"] == 17
+    assert features["P1_NUM_RESOURCES_IN_HAND"] == 20
 
 
 def test_expansion_features():
@@ -70,8 +92,8 @@ def test_expansion_features():
     ]
     game = Game(players)
     color = game.state.players[0].color
-    game.execute(Action(color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
+    game.execute(Action(color, ActionType.BUILD_SETTLEMENT, 3))
+    game.execute(Action(color, ActionType.BUILD_ROAD, (2, 3)))
 
     neighbor_tile_resource = game.state.board.map.tiles[(1, -1, 0)].resource
     if neighbor_tile_resource is None:
@@ -100,7 +122,7 @@ def test_reachability_features():
     game = Game(players, seed=123, catan_map=catan_map)
     p0_color = game.state.players[0].color
 
-    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 5))
+    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 5))
     features = reachability_features(game, p0_color)
     assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
@@ -114,7 +136,7 @@ def test_reachability_features():
     assert features["P0_1_ROAD_REACHABLE_BRICK"] == number_probability(4)
     assert features["P0_1_ROAD_REACHABLE_SHEEP"] == number_probability(6)
 
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (0, 5)))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 5)))
     features = reachability_features(game, p0_color)
     assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
@@ -135,7 +157,7 @@ def test_reachability_features():
 
     # Test enemy making building removes buildability
     p1_color = game.state.players[1].color
-    game.execute(Action(p1_color, ActionType.BUILD_FIRST_SETTLEMENT, 1))
+    game.execute(Action(p1_color, ActionType.BUILD_SETTLEMENT, 1))
     features = reachability_features(game, p0_color)
     assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(8)
     assert math.isclose(
@@ -171,8 +193,8 @@ def test_graph_features():
     ]
     game = Game(players)
     p0_color = game.state.players[0].color
-    game.execute(Action(p0_color, ActionType.BUILD_FIRST_SETTLEMENT, 3))
-    game.execute(Action(p0_color, ActionType.BUILD_INITIAL_ROAD, (2, 3)))
+    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
 
     features = graph_features(game, p0_color)
     assert features[f"NODE3_P0_SETTLEMENT"]
@@ -244,8 +266,8 @@ def test_create_board_tensor():
     assert tensor[10][6][0] == 1
     assert tensor[9][6][1] == 1
 
-    p0.resource_deck.replenish(2, Resource.WHEAT)
-    p0.resource_deck.replenish(3, Resource.ORE)
+    player_deck_replenish(game.state, p0.color, WHEAT, 2)
+    player_deck_replenish(game.state, p0.color, ORE, 3)
     advance_to_play_turn(game)
     game.execute(Action(p0.color, ActionType.BUILD_CITY, 3))
     tensor = create_board_tensor(game, p0.color)

@@ -306,38 +306,39 @@ def test_many_buildings():
     board.build_road(Color.ORANGE, (6, 7))
     board.build_road(Color.ORANGE, (7, 8))
     board.build_road(Color.ORANGE, (8, 9))
-    board.build_road(Color.ORANGE, (9, 10))
     board.build_road(Color.ORANGE, (8, 27))
-    board.build_road(Color.ORANGE, (11, 12))
+    board.build_road(Color.ORANGE, (26, 27))
+    board.build_road(Color.ORANGE, (9, 10))
     board.build_road(Color.ORANGE, (10, 11))
+    board.build_road(Color.ORANGE, (11, 12))
     board.build_road(Color.ORANGE, (12, 13))
     board.build_road(Color.ORANGE, (13, 34))
-    board.build_road(Color.ORANGE, (26, 27))
     assert len(board.find_connected_components(Color.ORANGE)) == 1
 
-    board.build_settlement(Color.WHITE, 10, True)
+    board.build_settlement(Color.WHITE, 30, True)
+    board.build_road(Color.WHITE, (29, 30))
     board.build_road(Color.WHITE, (10, 29))
     board.build_road(Color.WHITE, (28, 29))
     board.build_road(Color.WHITE, (27, 28))
-    board.build_road(Color.WHITE, (29, 30))
-    board.build_settlement(Color.WHITE, 30, True)
+    board.build_settlement(Color.WHITE, 10)  # cut
     board.build_road(Color.WHITE, (30, 31))
     board.build_road(Color.WHITE, (31, 32))
-    board.build_settlement(Color.WHITE, 32, True)
+    board.build_settlement(Color.WHITE, 32)
     board.build_road(Color.WHITE, (11, 32))
     board.build_road(Color.WHITE, (32, 33))
     board.build_road(Color.WHITE, (33, 34))
-    board.build_settlement(Color.WHITE, 34, True)
+    board.build_settlement(Color.WHITE, 34)
     board.build_road(Color.WHITE, (34, 35))
     board.build_road(Color.WHITE, (35, 36))
+
     board.build_settlement(Color.WHITE, 41, True)
     board.build_city(Color.WHITE, 41)
     board.build_road(Color.WHITE, (41, 42))
     board.build_road(Color.WHITE, (40, 42))
-    board.build_settlement(Color.WHITE, 27)
+    board.build_settlement(Color.WHITE, 27)  # cut
 
     assert len(board.find_connected_components(Color.WHITE)) == 2
-    assert len(board.find_connected_components(Color.ORANGE)) == 4
+    assert len(board.find_connected_components(Color.ORANGE)) == 3
 
 
 # TODO: Test super long road, cut at many places, to yield 5+ component graph

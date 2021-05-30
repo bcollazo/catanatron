@@ -1,3 +1,4 @@
+# NOTE: This file is deprecated. Please use catanatron_server.models SQLAlchemy models.
 import os
 import json
 import pickle

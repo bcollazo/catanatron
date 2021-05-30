@@ -14,4 +14,11 @@
   ul {
     color: white;
   }
+
+  .switchable {
+    height: 122px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 }

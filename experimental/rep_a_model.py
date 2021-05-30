@@ -1,3 +1,4 @@
+from experimental.machine_learning.features import get_feature_ordering
 import time
 from pathlib import Path
 import random
@@ -7,24 +8,51 @@ import tensorflow as tf
 
 # import kerastuner as kt
 
-from experimental.machine_learning.players.reinforcement import (
-    FEATURES,
-    FEATURE_INDICES,
-)
+# from experimental.machine_learning.players.reinforcement import (
+#     FEATURES,
+#     FEATURE_INDICES,
+# )
+def allow_feature(feature_name):
+    return (
+        feature_name != "IS_DISCARDING"
+        and feature_name != "IS_MOVING_ROBBER"
+        and "HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN" not in feature_name
+        and "VICTORY_POINT" not in feature_name
+        and "2_ROAD_REACHABLE" not in feature_name
+        and "0_ROAD_REACHABLE" not in feature_name
+        and "1_ROAD_REACHABLE" not in feature_name
+        and "HAND" not in feature_name
+        and "BANK" not in feature_name
+        and "P0_ACTUAL_VPS" != feature_name
+        and "PLAYABLE" not in feature_name
+        # and "LEFT" not in feature_name
+        and "ROLLED" not in feature_name
+        and "PLAYED" not in feature_name
+        and "PUBLIC_VPS" not in feature_name
+        and not ("EFFECTIVE" in feature_name and "P1" in feature_name)
+        and not ("EFFECTIVE" in feature_name and "P0" in feature_name)
+        and (feature_name[-6:] != "PLAYED" or "KNIGHT" in feature_name)
+    )
+
+
+ALL_FEATURES = get_feature_ordering(num_players=2)
+FEATURES = list(filter(allow_feature, ALL_FEATURES))
 
 # ===== Configuration
-DATA_DIRECTORY = "data/reachability100k"
-DATA_SIZE = 85761634  # use zcat data/mcts-playouts/labels.csv.gzip | wc
-EPOCHS = 1
+DATA_DIRECTORY = "data/reachability"
+DATA_SIZE = 17_994_609  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+DATA_SIZE = 1_000_000  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+EPOCHS = 100
 BATCH_SIZE = 2 ** 5
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
 PREFETCH_BUFFER_SIZE = 10
 LABEL_FILE = "rewards.csv.gzip"
-LABEL_COLUMN = "VICTORY_POINTS_RETURN"
+LABEL_COLUMN = "RETURN"
 VALIDATION_DATA_SIZE = 820507
+VALIDATION_DATA_SIZE = 10_000
 VALIDATION_DATA_DIRECTORY = "data/reachability-validation"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
-NORMALIZATION = True
+NORMALIZATION = False
 NORMALIZATION_DIRECTORY = "data/reachability"
 NORMALIZATION_MEAN_PATH = Path(NORMALIZATION_DIRECTORY, "samples-mean.npy")
 NORMALIZATION_VARIANCE_PATH = Path(NORMALIZATION_DIRECTORY, "samples-variance.npy")
@@ -36,7 +64,7 @@ SHUFFLE_BUFFER_SIZE = 100000
 NUM_FEATURES = len(FEATURES)
 MODEL_NAME = "1v1-rep-a"
 MODEL_PATH = f"experimental/models/{MODEL_NAME}"
-LOG_DIR = f"logs/rep-a-value-model/{MODEL_NAME}/{int(time.time())}"
+LOG_DIR = f"data/logs/{MODEL_NAME}/{int(time.time())}"
 
 
 # ===== Create Dataset Objects
@@ -143,20 +171,28 @@ if NORMALIZATION:
     outputs = normalizer_layer(outputs)
 
 # outputs = tf.keras.layers.BatchNormalization()(outputs)
-# outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(320, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(160, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(512, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(352, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(64, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(32, activation=tf.nn.relu)(outputs)
-# outputs = tf.keras.layers.Dense(8, activation=tf.nn.relu)(outputs)
-outputs = tf.keras.layers.Dense(units=1, kernel_initializer=init)(outputs)
+# outputs = tf.keras.layers.Dense(352, activation="relu")(outputs)
+# outputs = tf.keras.layers.Dense(320, activation="relu")(outputs)
+# outputs = tf.keras.layers.Dense(160, activation="relu")(outputs)
+# outputs = tf.keras.layers.Dense(512, activation="relu")(outputs)
+# outputs = tf.keras.layers.Dense(352, activation="relu")(outputs)
+# outputs = tf.keras.layers.Dense(64, activation="relu")(outputs)
+# outputs = tf.keras.layers.Dense(32, activation="relu")(outputs)
+# outputs = tf.keras.layers.Dense(
+#     8, activation="relu", kernel_initializer="random_normal"
+# )(outputs)
+outputs = tf.keras.layers.Dense(
+    units=1,
+    activation="sigmoid",
+    kernel_initializer="random_normal",
+    kernel_regularizer="l2",
+)(outputs)
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 model.compile(
-    metrics=["mae"],
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001, clipnorm=1),
-    loss="mean_squared_error",
+    metrics=["mae", "accuracy"],
+    optimizer=tf.keras.optimizers.Adam(learning_rate=3e-6, clipnorm=1),
+    # optimizer="adam",
+    loss="binary_crossentropy",
 )
 model.summary()
 
@@ -216,9 +252,9 @@ model.fit(
     validation_data=test_dataset,
     validation_steps=VALIDATION_DATA_SIZE // BATCH_SIZE,
     callbacks=[
-        tf.keras.callbacks.EarlyStopping(
-            monitor="val_mae", patience=1, min_delta=0.0001
-        ),
+        # tf.keras.callbacks.EarlyStopping(
+        #     monitor="val_mae", patience=1, min_delta=0.0001
+        # ),
         tf.keras.callbacks.TensorBoard(
             log_dir=LOG_DIR, histogram_freq=1, write_graph=True
         ),

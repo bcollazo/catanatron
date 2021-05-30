@@ -6,6 +6,33 @@
 
 Settlers of Catan Python implementation and Machine-Learning player.
 
+<!-- Best AVG duration of 1v1 random games is 0.13755289793014527 -->
+<!-- There is a catanatron PyPi package. Core implementation -->
+<!-- There is a catanatron_server and React UI that host
+    serve catanatron.com. You can run these locally with Docker -->
+<!-- There is an experimental/ folder that has fast-paced unorganized
+    code, in search of experiments to find the best player. There
+    are some useful scripts here as well. -->
+
+<!-- catanatron (Python Package) -->
+<!-- You can use this to simulate games. It holds core game
+    logic, allows you to inspect state at each step, and you
+    can create your own players to test against the computer. -->
+
+<!-- pip install catanatron -->
+
+<!-- Play a game. Implement your own Bot -->
+
+<!-- Catanatron Web. Uses React FE and Flask BE. Can run with docker.
+    Can run independently; yarn start and flask run (pip install reqs)
+    BE uses an ephemeral sqlite database in memory (optionally overrided with DATABASE_URL).
+-->
+
+<!-- Experimental. Simulate many games. Install dev-requirements.txt. Use experimental/play.py. Games can be saved for viewing. Use --save-in-db, run Catanatron.com docker image and visit http://localhost/games/123/replay -->
+
+<!-- Contributing. If you find contributions in any part of the project. Some ideas include: better bot. ui improvements. testing.
+    a terminal UI (for ease of debugging). There exists Test Suite. -->
+
 ## Usage
 
 Create a virtualenv with Python 3.8 and install requirements:
@@ -231,3 +258,16 @@ twine check dist/*
 twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 twine upload dist/*
 ```
+
+## TODO:
+
+- Move State to be an array.
+
+  - Move RESOURCE to be ints.
+
+- Pruning at MCTS
+- Bayesian Methods for contender
+- DQN Render Method. Use models/mbs=64\_\_1619973412.model. Try to understand it.
+- DQN Two Layer Algo. With Simple Action Space.
+- Speed up copy game
+- Simple Alpha Go

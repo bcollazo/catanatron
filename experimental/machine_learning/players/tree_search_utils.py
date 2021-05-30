@@ -1,8 +1,9 @@
+import math
 from collections import defaultdict
 
+from catanatron.models.map import number_probability
 from catanatron.models.decks import DevelopmentDeck
-from catanatron.models.enums import DevelopmentCard, Resource
-from catanatron.models.actions import Action, ActionType
+from catanatron.models.enums import DevelopmentCard, Resource, Action, ActionType
 
 
 def execute_spectrum(game, action):
@@ -11,12 +12,10 @@ def execute_spectrum(game, action):
     deterministic_actions = set(
         [
             ActionType.END_TURN,
-            ActionType.BUILD_FIRST_SETTLEMENT,
-            ActionType.BUILD_SECOND_SETTLEMENT,
             ActionType.BUILD_SETTLEMENT,
-            ActionType.BUILD_INITIAL_ROAD,
             ActionType.BUILD_ROAD,
             ActionType.BUILD_CITY,
+            ActionType.PLAY_KNIGHT_CARD,
             ActionType.PLAY_YEAR_OF_PLENTY,
             ActionType.PLAY_ROAD_BUILDING,
             ActionType.MARITIME_TRADE,
@@ -44,18 +43,15 @@ def execute_spectrum(game, action):
         return results
     elif action.action_type == ActionType.ROLL:
         results = []
-        for outcome_a in range(1, 7):
-            for outcome_b in range(1, 7):
-                outcome = (outcome_a, outcome_b)
-                option_action = Action(action.color, action.action_type, outcome)
-                option_game = game.copy()
-                option_game.execute(option_action, validate_action=False)
-                results.append((option_game, 1 / 36.0))
+        for roll in range(2, 13):
+            outcome = (roll // 2, math.ceil(roll / 2))
+
+            option_action = Action(action.color, action.action_type, outcome)
+            option_game = game.copy()
+            option_game.execute(option_action, validate_action=False)
+            results.append((option_game, number_probability(roll)))
         return results
-    elif action.action_type in [
-        ActionType.MOVE_ROBBER,
-        ActionType.PLAY_KNIGHT_CARD,
-    ]:
+    elif action.action_type == ActionType.MOVE_ROBBER:
         (coordinate, robbed_color, _) = action.value
         if robbed_color is None:  # no one to steal, then deterministic
             copy = game.copy()

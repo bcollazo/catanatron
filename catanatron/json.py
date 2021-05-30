@@ -5,21 +5,21 @@ from catanatron.game import Game
 from catanatron.models.map import Water, Port, Tile
 from catanatron.models.player import Color, Player
 from catanatron.models.decks import Deck
-from catanatron.models.actions import Action, ActionType
-from catanatron.models.enums import Resource
+from catanatron.models.enums import Resource, Action, ActionType
+from catanatron.state_functions import get_longest_road_length
 
 
 def longest_roads_by_player(state):
-    return {player.color.value: player.longest_road_length for player in state.players}
+    result = dict()
+    for player in state.players:
+        result[player.color.value] = get_longest_road_length(state, player.color)
+    return result
 
 
 def action_from_json(data):
     color = Color[data[0]]
     action_type = ActionType[data[1]]
-    if (
-        action_type == ActionType.BUILD_INITIAL_ROAD
-        or action_type == ActionType.BUILD_ROAD
-    ):
+    if action_type == ActionType.BUILD_ROAD:
         action = Action(color, action_type, tuple(data[2]))
     elif action_type == ActionType.MARITIME_TRADE:
         action = Action(
@@ -72,7 +72,9 @@ class GameEncoder(json.JSONEncoder):
                 "nodes": nodes,
                 "edges": list(edges.values()),
                 "actions": [self.default(a) for a in obj.state.actions],
-                "players": [self.default(p) for p in obj.state.players],
+                "player_state": obj.state.player_state,
+                "colors": obj.state.colors,
+                "is_initial_build_phase": obj.state.is_initial_build_phase,
                 "robber_coordinate": obj.state.board.robber_coordinate,
                 "current_color": obj.state.current_player().color,
                 "current_prompt": obj.state.current_prompt,
@@ -81,7 +83,7 @@ class GameEncoder(json.JSONEncoder):
                 "winning_color": obj.winning_color(),
             }
         if isinstance(obj, Deck):
-            return {resource.value: count for resource, count in obj.cards.items()}
+            return {resource.value: obj.array[i] for i, resource in enumerate(Resource)}
         if isinstance(obj, Player):
             return {k: v for k, v in obj.__dict__.items() if k != "buildings"}
         if isinstance(obj, Water):

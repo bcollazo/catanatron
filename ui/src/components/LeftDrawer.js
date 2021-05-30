@@ -6,23 +6,21 @@ import PlayerStateBox from "../components/PlayerStateBox";
 import { humanizeAction } from "../components/Prompt";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { HUMAN_COLOR } from "../constants";
+import { BOT_COLOR, HUMAN_COLOR } from "../constants";
+import { playerKey } from "../utils/stateUtils";
+
+import "./LeftDrawer.scss";
 
 function DrawerContent({ gameState }) {
-  const bot =
-    gameState && gameState.players.find((x) => x.color !== HUMAN_COLOR);
-  const human =
-    gameState && gameState.players.find((x) => x.color === HUMAN_COLOR);
+  const botKey = playerKey(gameState, BOT_COLOR);
+  const humanKey = playerKey(gameState, HUMAN_COLOR);
   return (
     <>
-      <PlayerStateBox
-        playerState={bot}
-        longestRoad={gameState.longest_roads_by_player[bot.color]}
-      />
+      <PlayerStateBox playerState={gameState.player_state} playerKey={botKey} />
       <Divider />
       <PlayerStateBox
-        playerState={human}
-        longestRoad={gameState.longest_roads_by_player[HUMAN_COLOR]}
+        playerState={gameState.player_state}
+        playerKey={humanKey}
       />
       <Divider />
       <div className="log">
