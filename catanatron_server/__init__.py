@@ -11,6 +11,8 @@ def create_app(test_config=None):
 
     # ===== Load base configuration
     database_url = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
     secret_key = os.environ.get("SECRET_KEY", "dev")
     app.config.from_mapping(
         SECRET_KEY=secret_key,
