@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import { useHistory } from "react-router-dom";
 
 import "./HomePage.scss";
@@ -10,12 +10,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const history = useHistory();
 
-  const onClick = useCallback(async () => {
+  const handleCreateGame = async (players) => {
     setLoading(true);
-    const gameId = await createGame();
+    const gameId = await createGame(players);
     setLoading(false);
     history.push("/games/" + gameId);
-  }, [history]);
+  };
 
   return (
     <div className="home-page">
@@ -28,8 +28,26 @@ export default function HomePage() {
               <li>OPEN HAND</li>
               <li>NO CHOICE DURING DISCARD</li>
             </ul>
-            <Button variant="contained" color="primary" onClick={onClick}>
-              Start Game
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => handleCreateGame(["HUMAN", "CATANATRON"])}
+            >
+              Play against Catanatron
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => handleCreateGame(["RANDOM", "RANDOM"])}
+            >
+              Watch Random Bots
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => handleCreateGame(["CATANATRON", "CATANATRON"])}
+            >
+              Watch Catanatron
             </Button>
           </>
         )}

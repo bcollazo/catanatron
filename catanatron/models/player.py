@@ -10,8 +10,9 @@ class Color(Enum):
 
 
 class Player:
-    def __init__(self, color):
+    def __init__(self, color, is_bot=True):
         self.color = color
+        self.is_bot = is_bot
 
     def decide(self, game, playable_actions):
         """Should return one of the playable_actions.
@@ -21,6 +22,10 @@ class Player:
             playable_actions (Iterable[Action]): options right now
         """
         raise NotImplementedError
+
+    def reset_state(self):
+        """Hook for resetting state between games"""
+        pass
 
     def __repr__(self):
         return f"{type(self).__name__}:{self.color.value}"

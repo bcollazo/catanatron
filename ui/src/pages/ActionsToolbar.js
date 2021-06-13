@@ -22,10 +22,9 @@ import { useParams } from "react-router";
 
 import { ResourceCards } from "../components/PlayerStateBox";
 import Prompt from "../components/Prompt";
-import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { playerKey } from "../utils/stateUtils";
+import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 
 import "./ActionsToolbar.scss";
@@ -87,12 +86,13 @@ function PlayButtons() {
           )
           .map((a) => a[1])
   );
+  const humanColor = getHumanColor(state.gameState);
   const buyDevCard = useCallback(async () => {
-    const action = [HUMAN_COLOR, "BUY_DEVELOPMENT_CARD", null];
+    const action = [humanColor, "BUY_DEVELOPMENT_CARD", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
-  }, [gameId, dispatch, enqueueSnackbar, closeSnackbar]);
+  }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
   const setIsBuildingSettlement = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_BUILDING_SETTLEMENT });
   }, [dispatch]);
@@ -137,9 +137,9 @@ function PlayButtons() {
     };
   });
 
-  const rollAction = carryOutAction([HUMAN_COLOR, "ROLL", null]);
+  const rollAction = carryOutAction([humanColor, "ROLL", null]);
   const proceedAction = carryOutAction();
-  const endTurnAction = carryOutAction([HUMAN_COLOR, "END_TURN", null]);
+  const endTurnAction = carryOutAction([humanColor, "END_TURN", null]);
   return (
     <>
       <OptionsButton
@@ -200,17 +200,22 @@ export default function ActionsToolbar({
     });
   }, [dispatch]);
 
-  const botsTurn = state.gameState.current_color === BOT_COLOR;
+  const botsTurn = state.gameState.bot_colors.includes(
+    state.gameState.current_color
+  );
+  const humanColor = getHumanColor(state.gameState);
   return (
     <>
       <div className="state-summary">
         <Button className="open-drawer-btn" onClick={openLeftDrawer}>
           <ChevronLeftIcon />
         </Button>
-        <ResourceCards
-          playerState={state.gameState.player_state}
-          playerKey={playerKey(state.gameState, HUMAN_COLOR)}
-        />
+        {humanColor && (
+          <ResourceCards
+            playerState={state.gameState.player_state}
+            playerKey={playerKey(state.gameState, humanColor)}
+          />
+        )}
       </div>
       <div className="actions-toolbar">
         {!botsTurn && !replayMode && (

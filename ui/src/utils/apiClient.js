@@ -2,8 +2,8 @@ import axios from "axios";
 
 import { API_URL } from "../configuration";
 
-export async function createGame() {
-  const response = await axios.post(API_URL + "/api/games");
+export async function createGame(players) {
+  const response = await axios.post(API_URL + "/api/games", { players });
   return response.data.game_id;
 }
 

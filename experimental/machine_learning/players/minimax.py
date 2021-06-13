@@ -130,8 +130,10 @@ def get_value_fn(name, params):
 
 
 class ValueFunctionPlayer(Player):
-    def __init__(self, color, value_fn_builder_name=None, params=DEFAULT_WEIGHTS):
-        super().__init__(color)
+    def __init__(
+        self, color, value_fn_builder_name=None, params=DEFAULT_WEIGHTS, is_bot=True
+    ):
+        super().__init__(color, is_bot)
         self.value_fn_builder_name = (
             "contender_value_function"
             if value_fn_builder_name == "C"

@@ -1,3 +1,5 @@
+@import "../variables.scss";
+
 .home-page {
   height: 100%;
 
@@ -16,9 +18,13 @@
   }
 
   .switchable {
-    height: 122px;
+    height: 224px; // NOTE: Fixed to avoid loading jump
     display: flex;
     flex-direction: column;
     justify-content: center;
+
+    button {
+      margin-bottom: $sm-gutter;
+    }
   }
 }
