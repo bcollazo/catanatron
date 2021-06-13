@@ -182,8 +182,8 @@ def normalize_action(action):
 
 
 class PRLPlayer(Player):
-    def __init__(self, color, name, model_path):
-        super(PRLPlayer, self).__init__(color, name)
+    def __init__(self, color, model_path):
+        super(PRLPlayer, self).__init__(color)
         global P_MODEL
         P_MODEL = keras.models.load_model(model_path)
 
@@ -220,8 +220,8 @@ class PRLPlayer(Player):
 
 
 class QRLPlayer(Player):
-    def __init__(self, color, name, model_path):
-        super(QRLPlayer, self).__init__(color, name)
+    def __init__(self, color, model_path):
+        super(QRLPlayer, self).__init__(color)
         self.model_path = model_path
         global Q_MODEL
         Q_MODEL = keras.models.load_model(model_path)
@@ -251,8 +251,8 @@ class QRLPlayer(Player):
 # Play game, take reward G (discounted by num turns), then for each
 #   state S (sample): change params by delta_w = alpha * (G - v(S)) grad_w(S)
 class VRLPlayer(Player):
-    def __init__(self, color, name, model_path):
-        super(VRLPlayer, self).__init__(color, name)
+    def __init__(self, color, model_path):
+        super(VRLPlayer, self).__init__(color)
         self.model_path = model_path
 
     def decide(self, game, playable_actions):
@@ -291,8 +291,8 @@ class VRLPlayer(Player):
 
 
 class TensorRLPlayer(Player):
-    def __init__(self, color, name, model_path):
-        super(TensorRLPlayer, self).__init__(color, name)
+    def __init__(self, color, model_path):
+        super(TensorRLPlayer, self).__init__(color)
         self.model_path = model_path
 
     def decide(self, game, playable_actions):

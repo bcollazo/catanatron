@@ -23,10 +23,10 @@ def black_box_function(x, y, z):
     weights[1] = y
     weights[2] = z
     players = [
-        # AlphaBetaPlayer(Color.RED, "Foo", 2, True),
-        # AlphaBetaPlayer(Color.BLUE, "Bar", 2, True, "C", weights),
-        ValueFunctionPlayer(Color.RED, "ThetaPlus", "C", params=DEFAULT_WEIGHTS),
-        ValueFunctionPlayer(Color.BLUE, "ThetaMinus", "C", params=weights),
+        # AlphaBetaPlayer(Color.RED, 2, True),
+        # AlphaBetaPlayer(Color.BLUE, 2, True, "C", weights),
+        ValueFunctionPlayer(Color.RED, "C", params=DEFAULT_WEIGHTS),
+        ValueFunctionPlayer(Color.BLUE, "C", params=weights),
     ]
     wins, results_by_player = play_batch(
         100, players, None, False, False, verbose=False

@@ -64,7 +64,7 @@ from experimental.machine_learning.players.reinforcement import get_t_model, get
 
 # ===== Start a game from scratch. In a specific board. is there better position?
 players = [
-    GreedyPlayoutsPlayer(Color.RED, "Foo", 10),
+    GreedyPlayoutsPlayer(Color.RED, 10),
     RandomPlayer(Color.BLUE),
     RandomPlayer(Color.WHITE),
     RandomPlayer(Color.ORANGE),
