@@ -12,7 +12,7 @@ def mantain_longest_road(state, previous_road_color, road_color, road_lengths):
         return  # do nothing
 
     if previous_road_color != road_color:
-        winner_key = player_key(state, color)
+        winner_key = player_key(state, road_color)
         state.player_state[f"{winner_key}_HAS_ROAD"] = True
         state.player_state[f"{winner_key}_VICTORY_POINTS"] += 2
         state.player_state[f"{winner_key}_ACTUAL_VICTORY_POINTS"] += 2
