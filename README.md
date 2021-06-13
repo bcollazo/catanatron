@@ -261,13 +261,27 @@ twine upload dist/*
 
 ## TODO:
 
-- Move State to be an array.
+- Improve `catanatron` package performance.
 
-  - Move RESOURCE to be ints.
+  - Continue refactoring the State to be more and more like a primitive `dict` or `array`.
+    (Copies are much faster if State is just a native python object).
+  - Move RESOURCE to be ints. Python `enums` turned out to be slow for hashing and using.
+  - Move .actions to a Game concept. (to avoid copying when copying State)
+  - Remove .current_prompt. It seems its redundant with (is_moving_knight, etc...) and not needed.
 
-- Pruning at MCTS
-- Bayesian Methods for contender
-- DQN Render Method. Use models/mbs=64\_\_1619973412.model. Try to understand it.
-- DQN Two Layer Algo. With Simple Action Space.
-- Speed up copy game
-- Simple Alpha Go
+- Improve AlphaBetaPlayer:
+
+  - Explore and improve prunning
+  - Use Bayesian Methods or SPSA to tune weights and find better ones.
+
+- Experiment ideas:
+
+  - DQN Render Method. Use models/mbs=64\_\_1619973412.model. Try to understand it.
+  - DQN Two Layer Algo. With Simple Action Space.
+  - Simple Alpha Go
+  - Try Tensorforce with simple action space.
+  - Try simple flat CSV approach but with AlphaBeta-generated games.
+  - Visualize tree with graphviz. With colors per maximizing/minimizing.
+
+- Bugs:
+  - Cant use dev card just bought
