@@ -39,18 +39,18 @@ ALL_FEATURES = get_feature_ordering(num_players=2)
 FEATURES = list(filter(allow_feature, ALL_FEATURES))
 
 # ===== Configuration
-DATA_DIRECTORY = "data/reachability"
-DATA_SIZE = 17_994_609  # use zcat data/mcts-playouts/labels.csv.gzip | wc
-DATA_SIZE = 1_000_000  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+DATA_DIRECTORY = "data/simple-return-1m"
+DATA_SIZE = 101479  # use zcat data/mcts-playouts/labels.csv.gzip | wc
+DATA_SIZE = 101479  # use zcat data/mcts-playouts/labels.csv.gzip | wc
 EPOCHS = 100
-BATCH_SIZE = 2 ** 5
+BATCH_SIZE = 1024
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
 PREFETCH_BUFFER_SIZE = 10
 LABEL_FILE = "rewards.csv.gzip"
 LABEL_COLUMN = "RETURN"
-VALIDATION_DATA_SIZE = 820507
-VALIDATION_DATA_SIZE = 10_000
-VALIDATION_DATA_DIRECTORY = "data/reachability-validation"
+VALIDATION_DATA_SIZE = 99573
+VALIDATION_DATA_SIZE = 99573
+VALIDATION_DATA_DIRECTORY = "data/simple-return"
 VALIDATION_STEPS = VALIDATION_DATA_SIZE // BATCH_SIZE
 NORMALIZATION = False
 NORMALIZATION_DIRECTORY = "data/reachability"
@@ -178,9 +178,9 @@ if NORMALIZATION:
 # outputs = tf.keras.layers.Dense(352, activation="relu")(outputs)
 # outputs = tf.keras.layers.Dense(64, activation="relu")(outputs)
 # outputs = tf.keras.layers.Dense(32, activation="relu")(outputs)
-# outputs = tf.keras.layers.Dense(
-#     8, activation="relu", kernel_initializer="random_normal"
-# )(outputs)
+outputs = tf.keras.layers.Dense(
+    8, activation="relu", kernel_initializer="random_normal"
+)(outputs)
 outputs = tf.keras.layers.Dense(
     units=1,
     activation="sigmoid",

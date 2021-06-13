@@ -4,6 +4,7 @@ from collections import deque
 import uuid
 
 import numpy as np
+from tensorflow.python.keras import regularizers
 from tqdm import tqdm
 import tensorflow as tf
 
@@ -46,11 +47,13 @@ def main():
     # initialize neural network
     model = create_model()
 
-    # TODO: Ensure AlphaTan plays better than random.
-    MCTS_TREES["FOO"] = AlphaMCTS(model)
-    players = [AlphaTan(Color.ORANGE, "FOO", 0), RandomPlayer(Color.WHITE, "BAR")]
-    wins, vp_history = play_batch(1, players, None, False, False, False)
-    breakpoint()
+    # # TODO: Ensure AlphaTan plays better than random.
+    # players = [
+    #     AlphaTan(Color.ORANGE, "FOO", model, tmp=1),
+    #     RandomPlayer(Color.WHITE, "BAR"),
+    # ]
+    # wins, vp_history = play_batch(100, players, None, False, False, True)
+    # breakpoint()
 
     # for each iteration.
     # for each episode in iteration
@@ -68,9 +71,10 @@ def main():
         train(candidate_model, replay_memory)
 
         # pit new vs old (with temp=0). If new wins, replace.
-        MCTS_TREES["OLD"] = AlphaMCTS(model)
-        MCTS_TREES["NEW"] = AlphaMCTS(candidate_model)
-        players = [AlphaTan(Color.ORANGE, "OLD", 0), Player(Color.WHITE, "NEW", 0)]
+        players = [
+            AlphaTan(Color.ORANGE, model, temp=0),
+            AlphaTan(Color.WHITE, candidate_model, temp=0),
+        ]
         wins, vp_history = play_batch(
             NUM_GAMES_TO_PIT, players, None, False, False, False
         )
@@ -82,14 +86,10 @@ def main():
 
 
 def execute_episode(model):
-    mcts = AlphaMCTS(model)
-    tree_uuid = str(uuid.uuid4())
-    MCTS_TREES[tree_uuid] = mcts
-    LOGS = []
-
-    game = Game(
-        players=[AlphaTan(Color.ORANGE, tree_uuid), AlphaTan(Color.WHITE, tree_uuid)]
-    )
+    mcts = AlphaMCTS(model)  # so that its shared
+    p0 = AlphaTan(Color.ORANGE, model, mcts)
+    p1 = AlphaTan(Color.WHITE, model, mcts)
+    game = Game(players=[p0, p1])
     game.play()
 
     winning_player = game.winning_player()
@@ -99,7 +99,8 @@ def execute_episode(model):
 
     winning_color = winning_player.color
     examples = [
-        (state, pi, 1 if color == winning_color else -1) for (color, state, pi) in LOGS
+        (state, pi, 1 if color == winning_color else -1)
+        for (color, state, pi) in p0.logs + p1.logs
     ]
     return examples
 
@@ -114,31 +115,36 @@ def train(model, replay_memory):
     )
 
 
-MCTS_TREES = dict()
-LOGS = dict()
-
-
 class AlphaTan(Player):
-    def __init__(self, color, name, temp=None):
-        super().__init__(color, name=name)
+    def __init__(self, color, model, mcts, temp=None):
+        super().__init__(color)
+        self.model = model
+        self.mcts = mcts or AlphaMCTS(model)
         self.temp = temp
+        self.logs = []
+
+    def reset_state(self):
+        self.mcts = AlphaMCTS(self.model)
+        self.logs = []
 
     def decide(self, game, playable_actions):
-        mcts = MCTS_TREES[self.name]
+        if len(playable_actions) == 1:
+            return playable_actions[0]
         start = time.time()
 
         temp = self.temp or int(game.state.num_turns < TEMP_TRESHOLD)
         for _ in range(NUM_SIMULATIONS_PER_TURN):
-            mcts.search(game)
+            self.mcts.search(game)
 
         sample = create_sample_vector(game, self.color)
         s = tuple(sample)  # hashable s
         counts = [
-            mcts.Nsa[(s, a)] if (s, a) in mcts.Nsa else 0
+            self.mcts.Nsa[(s, a)] if (s, a) in self.mcts.Nsa else 0
             for a in range(ACTION_SPACE_SIZE)
         ]
 
-        # TODO: Include playable_actions
+        # TODO: I think playable_actions is not needed b.c. search and counts force
+        #   not-playable actions to have a 0.
         if temp == 0:
             bestAs = np.array(np.argwhere(counts == np.max(counts))).flatten()
             bestA = np.random.choice(bestAs)
@@ -151,18 +157,22 @@ class AlphaTan(Player):
 
         action = np.random.choice(len(pi), p=pi)
         best_action = from_action_space(action, game.state.playable_actions)
-        # LOGS[self.name].append((self.color, sample, pi))
+        self.logs.append((self.color, sample, pi))
 
-        print("AlphaTan decision took", time.time() - start)
+        # print("AlphaTan decision took", time.time() - start)
         return best_action
 
 
 def create_model():
     inputs = tf.keras.Input(shape=(NUM_FEATURES,))
 
-    outputs = tf.keras.layers.Dense(32, activation="relu")(inputs)
+    outputs = tf.keras.layers.Dense(32, activation="relu", kernel_regularizer="l2")(
+        inputs
+    )
 
-    pi_output = tf.keras.layers.Dense(ACTION_SPACE_SIZE, activation="softmax")(outputs)
+    pi_output = tf.keras.layers.Dense(
+        ACTION_SPACE_SIZE, activation="softmax", kernel_regularizer="l2"
+    )(outputs)
     v_output = tf.keras.layers.Dense(1, activation="tanh")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=[pi_output, v_output])
 

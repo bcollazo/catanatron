@@ -47,13 +47,13 @@ def main(experiment_name):
             environment=environment,  # alternatively: states, actions, (max_episode_timesteps)
             memory=50000,  # alphazero is 500,000
             update=dict(unit="episodes", batch_size=32),
-            optimizer=dict(type="adam", learning_rate=10e-3),
+            optimizer=dict(type="adam", learning_rate=1e-3),
             policy=dict(network="auto"),
             exploration=0.10,
             # policy=dict(network=dict(type='layered', layers=[dict(type='dense', size=32)])),
             objective="policy_gradient",
             reward_estimation=dict(horizon=20),
-            l2_regularization=10e-2,
+            l2_regularization=1e-4,
             summarizer=dict(
                 directory="data/logs",
                 summaries=["reward", "action-value"],
@@ -162,7 +162,7 @@ class ForcePlayer(Player):
 def create_model():
     inputs = tf.keras.Input(shape=(NUM_FEATURES,))
     outputs = tf.keras.layers.Dense(32, activation="relu")(inputs)
-    outputs = tf.keras.layers.Dense(ACTION_SPACE_SIZE)(outputs)
+    outputs = tf.keras.layers.Dense(ACTION_SPACE_SIZE, kernel_regularizer="l2")(outputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
     model.compile(loss="mse", optimizer=tf.keras.optimizers.Adam(), metrics=["mae"])

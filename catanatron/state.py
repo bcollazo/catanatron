@@ -435,15 +435,15 @@ def apply_action(state: State, action: Action):
         cards_stolen = ResourceDeck()
         if not player_can_play_dev(state, action.color, "MONOPOLY"):
             raise ValueError("Player cant play monopoly now")
-        for player in state.players:
-            if not player.color == action.color:
-                key = player_key(state, player.color)
+        for color in state.colors:
+            if not color == action.color:
+                key = player_key(state, color)
                 number_of_cards_to_steal = state.player_state[
                     f"{key}_{mono_resource.value}_IN_HAND"
                 ]
                 cards_stolen.replenish(number_of_cards_to_steal, mono_resource)
                 player_deck_draw(
-                    state, player.color, mono_resource.value, number_of_cards_to_steal
+                    state, color, mono_resource.value, number_of_cards_to_steal
                 )
         player_deck_add(state, action.color, cards_stolen)
         play_dev_card(state, action.color, MONOPOLY)

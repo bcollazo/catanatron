@@ -32,6 +32,7 @@ from experimental.machine_learning.players.playouts import GreedyPlayoutsPlayer
 from experimental.machine_learning.players.online_mcts_dqn import OnlineMCTSDQNPlayer
 from experimental.machine_learning.features import (
     create_sample,
+    create_sample_vector,
     get_feature_ordering,
 )
 from experimental.dqn_player import DQNPlayer
@@ -137,6 +138,8 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
     if LOG_IN_TF:
         writer = tf.summary.create_file_writer(f"logs/play/{int(time.time())}")
     for i in range(num_games):
+        for player in players:
+            player.reset_state()
         game = Game(players)
 
         verboseprint(
@@ -156,7 +159,7 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
 
             action_callbacks.append(callback)
             verboseprint(
-                "Watch game by refreshing http://localhost:3000/games/" + game.id
+                f"Watch game by refreshing http://localhost:3000/games/{game.id}/states/latest"
             )
 
         start = time.time()

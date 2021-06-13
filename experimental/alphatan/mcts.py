@@ -1,6 +1,7 @@
 import logging
 import math
 
+import tensorflow as tf
 import numpy as np
 
 from experimental.machine_learning.players.reinforcement import ACTION_SPACE_SIZE
@@ -48,7 +49,6 @@ class AlphaMCTS:
         Returns:
             v: the negative of the value of the current canonicalBoard
         """
-        # TODO: Pass model in constructor
         current_color = game.state.current_player().color
         sample = create_sample_vector(game, current_color)
         s = tuple(sample)  # hashable s
@@ -60,7 +60,8 @@ class AlphaMCTS:
 
         if s not in self.Ps:
             # leaf node
-            result = self.model.predict([sample])
+            # result = self.model.predict([sample])
+            result = self.model.call(tf.convert_to_tensor([sample]))
             self.Ps[s], v = (result[0][0], result[1][0])
 
             # TODO: Is valids correctly formulated?
