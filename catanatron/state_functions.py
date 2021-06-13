@@ -191,6 +191,11 @@ def player_deck_add(state, color, deck):
 
 def buy_dev_card(state, color, dev_card):
     key = player_key(state, color)
+
+    assert state.player_state[f"{key}_SHEEP_IN_HAND"] >= 1
+    assert state.player_state[f"{key}_WHEAT_IN_HAND"] >= 1
+    assert state.player_state[f"{key}_ORE_IN_HAND"] >= 1
+
     state.player_state[f"{key}_{dev_card}_IN_HAND"] += 1
     state.player_state[f"{key}_SHEEP_IN_HAND"] -= 1
     state.player_state[f"{key}_WHEAT_IN_HAND"] -= 1
@@ -244,6 +249,7 @@ def player_deck_subtract(state, color, to_discard):
 
 def player_deck_draw(state, color, card, amount=1):
     key = player_key(state, color)
+    assert state.player_state[f"{key}_{card}_IN_HAND"] >= amount
     state.player_state[f"{key}_{card}_IN_HAND"] -= amount
 
 
