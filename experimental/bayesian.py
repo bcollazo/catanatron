@@ -19,9 +19,9 @@ def black_box_function(x, y, z):
     """
     # Needs to use the above params as weights for a players
     weights = DEFAULT_WEIGHTS.copy()
-    weights[0] = x
-    weights[1] = y
-    weights[2] = z
+    weights["public_vps"] = x
+    weights["production"] = y
+    weights["enemy_production"] = z
     players = [
         # AlphaBetaPlayer(Color.RED, 2, True),
         # AlphaBetaPlayer(Color.BLUE, 2, True, "C", weights),
