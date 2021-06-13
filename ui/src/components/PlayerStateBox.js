@@ -32,7 +32,7 @@ export function ResourceCards({ playerState, playerKey }) {
 }
 
 export default function PlayerStateBox({ playerState, playerKey }) {
-  const actualVps = playerState[`${playerKey}_ACTUAL_VPS`];
+  const actualVps = playerState[`${playerKey}_ACTUAL_VICTORY_POINTS`];
   return (
     <div className="player-state-box">
       <ResourceCards playerState={playerState} playerKey={playerKey} />
@@ -43,7 +43,7 @@ export default function PlayerStateBox({ playerState, playerKey }) {
           })}
           title="Knights Played"
         >
-          <span>{playerState[`${playerKey}_KNIGHT_PLAYED`]}</span>
+          <span>{playerState[`${playerKey}_PLAYED_KNIGHT`]}</span>
           <small>knights</small>
         </div>
         <div
