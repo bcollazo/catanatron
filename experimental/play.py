@@ -116,11 +116,10 @@ def simulate(num, players, outpath, save_in_db, watch):
 
     initialized_players = []
     colors = [c for c in Color]
-    pseudonyms = ["Foo", "Bar", "Baz", "Qux"]
     for i, key in enumerate(player_keys):
         for player_key, player_class in PLAYER_CLASSES.items():
             if key.startswith(player_key):
-                params = [colors[i], pseudonyms[i]] + key.split(":")[1:]
+                params = [colors[i]] + key.split(":")[1:]
                 initialized_players.append(player_class(*params))
 
     play_batch(num, initialized_players, outpath, save_in_db, watch)

@@ -130,8 +130,8 @@ def get_value_fn(name, params):
 
 
 class ValueFunctionPlayer(Player):
-    def __init__(self, color, name, value_fn_builder_name=None, params=DEFAULT_WEIGHTS):
-        super().__init__(color, name=name)
+    def __init__(self, color, value_fn_builder_name=None, params=DEFAULT_WEIGHTS):
+        super().__init__(color)
         self.value_fn_builder_name = (
             "contender_value_function"
             if value_fn_builder_name == "C"
@@ -191,13 +191,12 @@ class AlphaBetaPlayer(Player):
     def __init__(
         self,
         color,
-        name,
         depth=ALPHABETA_DEFAULT_DEPTH,
         prunning=False,
         value_fn_builder_name=None,
         params=DEFAULT_WEIGHTS,
     ):
-        super().__init__(color, name=name)
+        super().__init__(color)
         self.depth = int(depth)
         self.prunning = str(prunning).lower() != "false"
         self.value_fn_builder_name = (

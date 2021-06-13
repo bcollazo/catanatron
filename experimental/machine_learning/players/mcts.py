@@ -112,8 +112,8 @@ class StateNode:
 
 
 class MCTSPlayer(Player):
-    def __init__(self, color, name, num_simulations=SIMULATIONS, prunning=False):
-        super().__init__(color, name=name)
+    def __init__(self, color, num_simulations=SIMULATIONS, prunning=False):
+        super().__init__(color)
         self.num_simulations = int(num_simulations)
         self.prunning = bool(prunning)
 

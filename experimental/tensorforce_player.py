@@ -136,10 +136,7 @@ def build_states(game, p0):
     mask = np.zeros(ACTION_SPACE_SIZE, dtype=bool)
     mask[action_ints] = True
 
-    states = dict(
-        state=sample,
-        action_mask=mask,
-    )
+    states = dict(state=sample, action_mask=mask)
     return states
 
 
@@ -147,8 +144,8 @@ MODEL = None
 
 
 class ForcePlayer(Player):
-    def __init__(self, color, name, model_name):
-        super(ForcePlayer, self).__init__(color, name)
+    def __init__(self, color, model_name):
+        super(ForcePlayer, self).__init__(color)
         global MODEL
         MODEL = Agent.load(directory="data/checkpoints/" + model_name)
 

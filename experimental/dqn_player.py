@@ -361,8 +361,8 @@ DNQ_MODEL = None
 
 
 class DQNPlayer(Player):
-    def __init__(self, color, name, model_path):
-        super(DQNPlayer, self).__init__(color, name)
+    def __init__(self, color, model_path):
+        super(DQNPlayer, self).__init__(color)
         self.model_path = model_path
         global DNQ_MODEL
         # DNQ_MODEL = tf.keras.models.load_model(model_path)

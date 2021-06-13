@@ -10,8 +10,7 @@ class Color(Enum):
 
 
 class Player:
-    def __init__(self, color, name=None):
-        self.name = name
+    def __init__(self, color):
         self.color = color
 
     def decide(self, game, playable_actions):
@@ -24,7 +23,7 @@ class Player:
         raise NotImplementedError
 
     def __repr__(self):
-        return f"{type(self).__name__}:{self.name}[{self.color.value}]"
+        return f"{type(self).__name__}:{self.color.value}"
 
 
 class SimplePlayer(Player):
