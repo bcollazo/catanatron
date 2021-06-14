@@ -10,7 +10,7 @@ from catanatron.models.player import Color
 from experimental.play import play_batch
 
 
-def black_box_function(x, y, z):
+def black_box_function(a, b, c, d, e, f, g, h, i, j, k, l):
     """Function with unknown internals we wish to maximize.
 
     This is just serving as an example, for all intents and
@@ -18,10 +18,25 @@ def black_box_function(x, y, z):
     which generates its output values, as unknown.
     """
     # Needs to use the above params as weights for a players
-    weights = DEFAULT_WEIGHTS.copy()
-    weights["public_vps"] = x
-    weights["production"] = y
-    weights["enemy_production"] = z
+    weights = {
+        # Where to place. Note winning is best at all costs
+        "public_vps": a,
+        "production": b,
+        "enemy_production": -c,
+        "num_tiles": d,
+        # Towards where to expand and when
+        "reachable_production_0": e,
+        "reachable_production_1": f,
+        "buildable_nodes": g,
+        "longest_road": h,
+        # Hand, when to hold and when to use.
+        # TODO: Hand synergy
+        "hand_resources": i,
+        "discard_penalty": -j,
+        "hand_devs": k,
+        "army_size": l,
+    }
+
     players = [
         # AlphaBetaPlayer(Color.RED, 2, True),
         # AlphaBetaPlayer(Color.BLUE, 2, True, "C", weights),
@@ -39,7 +54,7 @@ def black_box_function(x, y, z):
 logger = JSONLogger(path="./bayesian-logs.json")
 
 # Bounded region of parameter space
-pbounds = {"x": (1e4, 1e15), "y": (1e4, 1e15), "z": (1e4, 1e15)}
+pbounds = {k: (1e-5, 1e5) for k in "abcdefghijkl"}
 
 optimizer = BayesianOptimization(
     f=black_box_function,
@@ -48,7 +63,7 @@ optimizer = BayesianOptimization(
 )
 
 optimizer.maximize(
-    init_points=10,
+    init_points=100,
     n_iter=10,
 )
 print(optimizer.res)
