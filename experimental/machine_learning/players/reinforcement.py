@@ -166,7 +166,7 @@ def hot_one_encode_action(action):
 
 
 def normalize_action(action):
-    normalized = copy.deepcopy(action)
+    normalized = action
     if normalized.action_type == ActionType.ROLL:
         return Action(action.color, action.action_type, None)
     elif normalized.action_type == ActionType.MOVE_ROBBER:

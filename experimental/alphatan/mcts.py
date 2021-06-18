@@ -20,7 +20,7 @@ class AlphaMCTS:
     """
 
     def __init__(self, model):
-        self.model = model
+        self.model = tf.function(model)
 
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)
         self.Nsa = {}  # stores #times edge s,a was visited
@@ -61,7 +61,8 @@ class AlphaMCTS:
         if s not in self.Ps:
             # leaf node
             # result = self.model.predict([sample])
-            result = self.model.call(tf.convert_to_tensor([sample]))
+            tensor_sample = tf.convert_to_tensor([sample])
+            result = self.model(tensor_sample)
             self.Ps[s], v = (result[0][0], result[1][0])
 
             # TODO: Is valids correctly formulated?

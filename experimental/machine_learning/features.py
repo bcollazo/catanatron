@@ -1,4 +1,4 @@
-from typing import Generator, Tuple
+from typing import Tuple
 import functools
 from collections import Counter
 
@@ -12,8 +12,15 @@ from catanatron.state_functions import (
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.map import NUM_NODES, NUM_TILES
-from catanatron.models.player import Color, Player, SimplePlayer
-from catanatron.models.enums import Resource, DevelopmentCard, BuildingType, ActionType
+from catanatron.models.player import Color, SimplePlayer
+from catanatron.models.enums import (
+    DEVELOPMENT_CARDS,
+    RESOURCES,
+    Resource,
+    BuildingType,
+    ActionType,
+    VICTORY_POINT,
+)
 from catanatron.game import Game
 from catanatron.models.map import number_probability
 
@@ -50,7 +57,7 @@ def player_features(game, p0_color):
     # P{i}_ROADS_LEFT, P{i}_SETTLEMENTS_LEFT, P{i}_CITIES_LEFT, P1_...
     # P{i}_HAS_ROLLED, P{i}_LONGEST_ROAD_LENGTH
     features = dict()
-    for i, color in iter_players(tuple(game.state.colors), p0_color):
+    for i, color in iter_players(game.state.colors, p0_color):
         key = player_key(game.state, color)
         if color == p0_color:
             features["P0_ACTUAL_VPS"] = game.state.player_state[
@@ -89,32 +96,29 @@ def resource_hand_features(game, p0_color):
     player_state = state.player_state
 
     features = {}
-    for i, color in iter_players(tuple(game.state.colors), p0_color):
+    for i, color in iter_players(game.state.colors, p0_color):
         key = player_key(game.state, color)
 
         if color == p0_color:
-            for resource in Resource:
-                features[f"P0_{resource.value}_IN_HAND"] = player_state[
-                    key + f"_{resource.value}_IN_HAND"
+            for resource in RESOURCES:
+                features[f"P0_{resource}_IN_HAND"] = player_state[
+                    key + f"_{resource}_IN_HAND"
                 ]
-                for card in DevelopmentCard:
-                    features[f"P0_{card.value}_IN_HAND"] = player_state[
-                        key + f"_{card.value}_IN_HAND"
-                    ]
+            for card in DEVELOPMENT_CARDS:
+                features[f"P0_{card}_IN_HAND"] = player_state[key + f"_{card}_IN_HAND"]
             features[f"P0_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = player_state[
                 key + "_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"
             ]
 
-        for card in DevelopmentCard:
-            if card == DevelopmentCard.VICTORY_POINT:
+        for card in DEVELOPMENT_CARDS:
+            if card == VICTORY_POINT:
                 continue  # cant play VPs
-            features[f"P{i}_{card.value}_PLAYED"] = player_state[
-                key + f"_PLAYED_{card.value}"
-            ]
-            features[f"P{i}_NUM_RESOURCES_IN_HAND"] = player_num_resource_cards(
-                state, color
-            )
-            features[f"P{i}_NUM_DEVS_IN_HAND"] = player_num_dev_cards(state, color)
+            features[f"P{i}_{card}_PLAYED"] = player_state[key + f"_PLAYED_{card}"]
+
+        features[f"P{i}_NUM_RESOURCES_IN_HAND"] = player_num_resource_cards(
+            state, color
+        )
+        features[f"P{i}_NUM_DEVS_IN_HAND"] = player_num_dev_cards(state, color)
 
     return features
 
@@ -145,14 +149,19 @@ def tile_features(game, p0_color):
     return map_tile_features(game.state.board.map, game.state.board.robber_coordinate)
 
 
-def port_features(game, p0_color):
-    # PORT0_WOOD, PORT0_THREE_TO_ONE, ...
+@functools.lru_cache(1)
+def map_port_features(catan_map):
     features = {}
-    for port_id, port in game.state.board.map.ports_by_id.items():
+    for port_id, port in catan_map.ports_by_id.items():
         for resource in Resource:
             features[f"PORT{port_id}_IS_{resource.value}"] = port.resource == resource
         features[f"PORT{port_id}_IS_THREE_TO_ONE"] = port.resource is None
     return features
+
+
+def port_features(game, p0_color):
+    # PORT0_WOOD, PORT0_THREE_TO_ONE, ...
+    return map_port_features(game.state.board.map)
 
 
 @functools.lru_cache(4)
@@ -207,7 +216,7 @@ def build_production_features(consider_robber):
         board = game.state.board
         robbed_nodes = set(board.map.tiles[board.robber_coordinate].nodes.values())
         for resource in Resource:
-            for i, color in iter_players(tuple(game.state.colors), p0_color):
+            for i, color in iter_players(game.state.colors, p0_color):
                 production = 0
                 for node_id in get_player_buildings(
                     game.state, color, BuildingType.SETTLEMENT
@@ -266,7 +275,7 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
     features = {}
 
     board_buildable = game.state.board.buildable_node_ids(p0_color, True)
-    for i, color in iter_players(tuple(game.state.colors), p0_color):
+    for i, color in iter_players(game.state.colors, p0_color):
         owned_or_buildable = frozenset(
             get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
             + get_player_buildings(game.state, color, BuildingType.CITY)
@@ -330,7 +339,7 @@ def expansion_features(game, p0_color):
 
     # For each connected component node, bfs_edges (skipping enemy edges and nodes nodes)
     empty_edges = set(get_edges())
-    for i, color in iter_players(tuple(game.state.colors), p0_color):
+    for i, color in iter_players(game.state.colors, p0_color):
         empty_edges.difference_update(
             get_player_buildings(game.state, color, BuildingType.ROAD)
         )
@@ -340,7 +349,7 @@ def expansion_features(game, p0_color):
         p0_color, True
     )  # this should be the same for all players. TODO: Can maintain internally (instead of re-compute).
 
-    for i, color in iter_players(tuple(game.state.colors), p0_color):
+    for i, color in iter_players(game.state.colors, p0_color):
         expandable_node_ids = get_player_expandable_nodes(game, color)
 
         def skip_blocked_by_enemy(neighbor_ids):
@@ -405,7 +414,7 @@ def port_distance_features(game, p0_color):
     distances = get_node_distances()
     for resource_or_none in list(Resource) + [None]:
         port_name = "3:1" if resource_or_none is None else resource_or_none.value
-        for i, color in iter_players(tuple(game.state.colors), p0_color):
+        for i, color in iter_players(game.state.colors, p0_color):
             expandable_node_ids = get_player_expandable_nodes(game, color)
             if len(expandable_node_ids) == 0:
                 features[f"P{i}_HAS_{port_name}_PORT"] = False
