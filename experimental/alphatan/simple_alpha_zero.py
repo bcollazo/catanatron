@@ -1,7 +1,7 @@
 import random
+from pprint import pprint
 import time
 from collections import deque
-import uuid
 
 import numpy as np
 from tensorflow.python.keras import regularizers
@@ -24,42 +24,46 @@ from experimental.machine_learning.features import (
     get_feature_ordering,
 )
 
+# For more repetitive results
+random.seed(2)
+np.random.seed(2)
+tf.random.set_seed(2)
+
 FEATURES = get_feature_ordering(2)
 NUM_FEATURES = len(FEATURES)
 
-REPLAY_MEMORY_SIZE = 10_000
-TURNS_LIMIT = 10
-NUM_ITERATIONS = 10
-NUM_EPISODES_PER_ITERATION = 3
-NUM_GAMES_TO_PIT = 10
-MODEL_ACCEPTANCE_TRESHOLD = 0.55
-
-NUM_SIMULATIONS_PER_TURN = 5
-TEMP_TRESHOLD = 30
-
-EPOCHS = 10
-BATCH_SIZE = 32
+ARGS = {
+    "replay_memory_size": 10_000,
+    "num_iterations": 10,
+    "num_episodes_per_iteration": 3,
+    "num_games_to_pit": 25,
+    "model_acceptance_threshold": 0.55,
+    "num_simulations_per_turn": 10,
+    "temp_threshold": 30,
+    "epochs": 10,
+    "batch_size": 32,
+}
 
 
 def main():
-    replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
+    pprint(ARGS)
+    replay_memory = deque(maxlen=ARGS["replay_memory_size"])
 
     # initialize neural network
     model = create_model()
 
-    # # TODO: Ensure AlphaTan plays better than random.
-    # players = [
-    #     AlphaTan(Color.ORANGE, "FOO", model, tmp=1),
-    #     RandomPlayer(Color.WHITE, "BAR"),
-    # ]
-    # wins, vp_history = play_batch(100, players, None, False, False, True)
-    # breakpoint()
+    players = [
+        AlphaTan(Color.ORANGE, model, temp=1),
+        RandomPlayer(Color.WHITE),
+    ]
+    wins, vp_history = play_batch(2, players, None, False, False, True)
+    breakpoint()
 
     # for each iteration.
     # for each episode in iteration
     #   play game and produce many (s_t, policy_t, _) samples.
-    for i in tqdm(range(NUM_ITERATIONS), unit="iteration"):
-        for e in tqdm(range(NUM_EPISODES_PER_ITERATION), unit="episode"):
+    for i in tqdm(range(ARGS["num_iterations"]), unit="iteration"):
+        for e in tqdm(range(ARGS["num_episodes_per_iteration"]), unit="episode"):
             replay_memory += execute_episode(model)
 
         # create new neural network from old one
@@ -69,6 +73,7 @@ def main():
         # train new neural network
         random.shuffle(replay_memory)
         train(candidate_model, replay_memory)
+        print("Dont Training... Starting Pit")
 
         # pit new vs old (with temp=0). If new wins, replace.
         players = [
@@ -76,9 +81,11 @@ def main():
             AlphaTan(Color.WHITE, candidate_model, temp=0),
         ]
         wins, vp_history = play_batch(
-            NUM_GAMES_TO_PIT, players, None, False, False, False
+            ARGS["num_games_to_pit"], players, None, False, False, True
         )
-        if wins[Color.WHITE] >= int(sum(wins.values()) * MODEL_ACCEPTANCE_TRESHOLD):
+        if wins[Color.WHITE] >= int(
+            sum(wins.values()) * ARGS["model_acceptance_threshold"]
+        ):
             print("Accepting model")
             model = candidate_model
         else:
@@ -111,12 +118,15 @@ def train(model, replay_memory):
     target_pis = np.asarray(target_pis)
     target_vs = np.asarray(target_vs)
     model.fit(
-        x=input_boards, y=[target_pis, target_vs], batch_size=BATCH_SIZE, epochs=EPOCHS
+        x=input_boards,
+        y=[target_pis, target_vs],
+        batch_size=ARGS["batch_size"],
+        epochs=ARGS["epochs"],
     )
 
 
 class AlphaTan(Player):
-    def __init__(self, color, model, mcts, temp=None):
+    def __init__(self, color, model, mcts=None, temp=None):
         super().__init__(color)
         self.model = model
         self.mcts = mcts or AlphaMCTS(model)
@@ -132,8 +142,8 @@ class AlphaTan(Player):
             return playable_actions[0]
         start = time.time()
 
-        temp = self.temp or int(game.state.num_turns < TEMP_TRESHOLD)
-        for _ in range(NUM_SIMULATIONS_PER_TURN):
+        temp = self.temp or int(game.state.num_turns < ARGS["temp_threshold"])
+        for _ in range(ARGS["num_simulations_per_turn"]):
             self.mcts.search(game)
 
         sample = create_sample_vector(game, self.color)
@@ -174,8 +184,8 @@ def create_model():
         ACTION_SPACE_SIZE, activation="softmax", kernel_regularizer="l2"
     )(outputs)
     v_output = tf.keras.layers.Dense(1, activation="tanh")(outputs)
-    model = tf.keras.Model(inputs=inputs, outputs=[pi_output, v_output])
 
+    model = tf.keras.Model(inputs=inputs, outputs=[pi_output, v_output])
     model.compile(
         loss=["categorical_crossentropy", "mse"],
         optimizer=tf.keras.optimizers.Adam(),
