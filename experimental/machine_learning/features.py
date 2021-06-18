@@ -156,18 +156,46 @@ def port_features(game, p0_color):
     return features
 
 
-def graph_features(game, p0_color):
-    # Features like P0_SETTLEMENT_NODE_1, P0_CITY_NODE_1, ...
+@functools.lru_cache(4)
+def initialize_graph_features_template(num_players):
     features = {}
-    for node_id in range(NUM_NODES):
-        for i, color in iter_players(tuple(game.state.colors), p0_color):
+    for i in range(num_players):
+        for node_id in range(NUM_NODES):
             for building in [BuildingType.SETTLEMENT, BuildingType.CITY]:
-                features[f"NODE{node_id}_P{i}_{building.value}"] = is_building(
-                    game, node_id, color, building
-                )
-    for edge in get_edges():
-        for i, color in iter_players(tuple(game.state.colors), p0_color):
-            features[f"EDGE{edge}_P{i}_ROAD"] = is_road(game, edge, color)
+                features[f"NODE{node_id}_P{i}_{building.value}"] = False
+        for edge in get_edges():
+            features[f"EDGE{edge}_P{i}_ROAD"] = False
+    return features
+
+
+@functools.lru_cache(1024 * 2 * 2 * 2)
+def get_node_hot_encoded(player_index, colors, settlements, cities, roads):
+    features = {}
+
+    for node_id in settlements:
+        features[f"NODE{node_id}_P{player_index}_SETTLEMENT"] = True
+    for node_id in cities:
+        features[f"NODE{node_id}_P{player_index}_CITY"] = True
+    for edge in roads:
+        features[f"EDGE{tuple(sorted(edge))}_P{player_index}_ROAD"] = True
+
+    return features
+
+
+def graph_features(game, p0_color):
+    features = initialize_graph_features_template(len(game.state.colors)).copy()
+
+    for i, color in iter_players(game.state.colors, p0_color):
+        settlements = tuple(
+            game.state.buildings_by_color[color][BuildingType.SETTLEMENT]
+        )
+        cities = tuple(game.state.buildings_by_color[color][BuildingType.CITY])
+        roads = tuple(game.state.buildings_by_color[color][BuildingType.ROAD])
+        to_update = get_node_hot_encoded(
+            i, game.state.colors, settlements, cities, roads
+        )
+        features.update(to_update)
+
     return features
 
 

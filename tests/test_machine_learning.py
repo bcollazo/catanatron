@@ -6,7 +6,7 @@ import tensorflow as tf
 from catanatron.state import player_deck_replenish
 from catanatron.models.enums import ORE, Action, ActionType, WHEAT
 from catanatron.models.board import Board, get_edges
-from catanatron.models.map import BaseMap, NUM_NODES, NodeRef
+from catanatron.models.map import BaseMap, NUM_EDGES, NUM_NODES, NodeRef
 from catanatron.game import Game
 from catanatron.models.map import number_probability
 from catanatron.models.player import SimplePlayer, Color
@@ -201,6 +201,14 @@ def test_graph_features():
     assert features[f"EDGE(2, 3)_P0_ROAD"]
     assert not features[f"NODE3_P1_SETTLEMENT"]
     assert not features[f"NODE0_P1_SETTLEMENT"]
+    assert len(features) == NUM_NODES * len(players) * 2 + NUM_EDGES * len(players)
+    assert sum(features.values()) == 2
+
+    haystack = "".join(features.keys())
+    for edge in get_edges():
+        assert str(edge) in haystack
+    for node in range(NUM_NODES):
+        assert ("NODE" + str(node)) in haystack
 
 
 def test_init_board_tensor_map():
