@@ -79,7 +79,7 @@ class State:
             self.color_to_index = {
                 player.color: index for index, player in enumerate(self.players)
             }
-            self.colors = [player.color for player in self.players]
+            self.colors = tuple([player.color for player in self.players])
 
             self.resource_deck = ResourceDeck.starting_bank()
             self.development_deck = DevelopmentDeck.starting_bank()
@@ -115,7 +115,7 @@ class State:
 
         state_copy.player_state = self.player_state.copy()
         state_copy.color_to_index = self.color_to_index
-        state_copy.colors = self.colors.copy()
+        state_copy.colors = self.colors  # immutable, so no need to copy
 
         # TODO: Move Deck to functional code, so as to quick-copy arrays.
         state_copy.resource_deck = pickle.loads(pickle.dumps(self.resource_deck))
