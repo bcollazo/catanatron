@@ -1,7 +1,9 @@
 import traceback
 import time
 from collections import defaultdict
+import logging
 
+import coloredlogs
 import click
 import termplotlib as tpl
 import numpy as np
@@ -48,6 +50,18 @@ from experimental.machine_learning.utils import (
     get_victory_points_return,
     populate_matrices,
     DISCOUNT_FACTOR,
+)
+
+# Create a logger object.
+logger = logging.getLogger(__name__)
+
+# If you don't want to see log messages from libraries, you can pass a
+# specific logger object to the install() function. In this case only log
+# messages originating from that logger will show up on the terminal.
+coloredlogs.install(
+    level="DEBUG",
+    logger=logger,
+    fmt="%(asctime)s,%(msecs)03d %(levelname)s %(message)s",
 )
 
 LOG_IN_TF = False
@@ -111,7 +125,12 @@ PLAYER_CLASSES = {
         This will artificially slow down the game by 1s per move.
         """,
 )
-def simulate(num, players, outpath, save_in_db, watch):
+@click.option(
+    "--loglevel",
+    default="DEBUG",
+    help="Controls verbosity. Values: DEBUG, INFO, ERROR",
+)
+def simulate(num, players, outpath, save_in_db, watch, loglevel):
     """Simple program simulates NUM Catan games."""
     player_keys = players.split(",")
 
@@ -123,12 +142,15 @@ def simulate(num, players, outpath, save_in_db, watch):
                 params = [colors[i]] + key.split(":")[1:]
                 initialized_players.append(player_class(*params))
 
-    play_batch(num, initialized_players, outpath, save_in_db, watch)
+    play_batch(num, initialized_players, outpath, save_in_db, watch, loglevel)
 
 
-def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=True):
+def play_batch(
+    num_games, players, games_directory, save_in_db, watch, loglevel="DEBUG"
+):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
-    verboseprint = print if verbose else lambda *a, **k: None
+    logger.setLevel(loglevel)
+
     wins = defaultdict(int)
     turns = []
     ticks = []
@@ -142,8 +164,8 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
             player.reset_state()
         game = Game(players)
 
-        verboseprint(
-            f"Playing game {i + 1} / {num_games}. Seating:", game.state.players
+        logger.debug(
+            f"Playing game {i + 1} / {num_games}. Seating: {game.state.players}"
         )
         action_callbacks = []
         if games_directory:
@@ -158,7 +180,7 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
                 time.sleep(0.25)
 
             action_callbacks.append(callback)
-            verboseprint(
+            logger.debug(
                 f"Watch game by refreshing http://localhost:3000/games/{game.id}/states/latest"
             )
 
@@ -169,19 +191,20 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
             traceback.print_exc()
         finally:
             duration = time.time() - start
-        verboseprint("Took", duration, "seconds")
-        verboseprint(
-            {
-                str(p): game.state.player_state[
-                    f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
-                ]
-                for p in players
-            }
+        logger.debug(
+            str(
+                {
+                    str(p): game.state.player_state[
+                        f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
+                    ]
+                    for p in players
+                }
+            )
+            + f" ({duration} secs)"
         )
         if save_in_db and not watch:
             link = ensure_link(game)
-            verboseprint("Saved in db. See result at:", link)
-        verboseprint("")
+            logger.info(f"Saved in db. See result at: {link}")
 
         winner = game.winning_player()
         if winner is None:
@@ -207,19 +230,19 @@ def play_batch(num_games, players, games_directory, save_in_db, watch, verbose=T
                         )
                 writer.flush()
 
-    verboseprint("AVG Ticks:", sum(ticks) / len(ticks))
-    verboseprint("AVG Turns:", sum(turns) / len(turns))
-    verboseprint("AVG Duration:", sum(durations) / len(durations))
+    logger.info(f"AVG Ticks: {sum(ticks) / len(ticks)}")
+    logger.info(f"AVG Turns: {sum(turns) / len(turns)}")
+    logger.info(f"AVG Duration: {sum(durations) / len(durations)}")
 
     for player in players:
         vps = results_by_player[player.color]
-        verboseprint("AVG VPS:", player, sum(vps) / len(vps))
+        logger.info(f"AVG VPS: {player} {sum(vps) / len(vps)}")
 
-    if verbose:
-        # Print Winners graph in command line:
-        fig = tpl.figure()
-        fig.barh([wins[p.color] for p in players], players, force_ascii=False)
-        fig.show()
+    # Print Winners graph in command line:
+    fig = tpl.figure()
+    fig.barh([wins[p.color] for p in players], players, force_ascii=False)
+    for row in fig.get_string().split("\n"):
+        logger.info(row)
 
     return wins, results_by_player
 
