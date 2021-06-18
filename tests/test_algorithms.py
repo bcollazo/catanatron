@@ -9,7 +9,7 @@ from catanatron.state_functions import (
     player_deck_replenish,
 )
 from catanatron.models.player import SimplePlayer, Color
-from catanatron.models.enums import KNIGHT
+from catanatron.models.enums import KNIGHT, ORE, SHEEP, WHEAT
 
 
 def test_longest_road_simple():
@@ -141,11 +141,17 @@ def test_largest_army_calculation_when_no_one_has_three():
     white = SimplePlayer(Color.WHITE)
     state = State([red, blue, white])
 
-    player_deck_replenish(state, red.color, KNIGHT, 2)
-    player_deck_replenish(state, blue.color, KNIGHT, 1)
+    player_deck_replenish(state, Color.RED, WHEAT, 2)
+    player_deck_replenish(state, Color.RED, SHEEP, 2)
+    player_deck_replenish(state, Color.RED, ORE, 2)
+    player_deck_replenish(state, Color.BLUE, WHEAT, 1)
+    player_deck_replenish(state, Color.BLUE, SHEEP, 1)
+    player_deck_replenish(state, Color.BLUE, ORE, 1)
     buy_dev_card(state, Color.RED, KNIGHT)
     buy_dev_card(state, Color.RED, KNIGHT)
     buy_dev_card(state, Color.BLUE, KNIGHT)
+
+    play_dev_card(state, Color.RED, KNIGHT)
 
     color, count = get_larget_army_color(state)
     assert color is None and count is None
