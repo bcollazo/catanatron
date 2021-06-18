@@ -3,7 +3,10 @@ import timeit
 setup = """
 from catanatron.game import Game
 from catanatron.models.player import RandomPlayer, Color
-from experimental.machine_learning.features import create_sample_vector, expansion_features, reachability_features
+from experimental.machine_learning.features import (
+    create_sample_vector, expansion_features, reachability_features,
+    graph_features
+)
 
 game = Game(
     [
@@ -22,21 +25,28 @@ result = timeit.timeit(
     setup=setup,
     number=NUMBER,
 )
-print("create_sample_vector", result / NUMBER, "secs")
+print("create_sample_vector\t", result / NUMBER, "secs")
 
 result = timeit.timeit(
     "expansion_features(game, game.state.players[0].color)",
     setup=setup,
     number=NUMBER,
 )
-print("expansion_features", result / NUMBER, "secs")
+print("expansion_features\t", result / NUMBER, "secs")
 
 result = timeit.timeit(
     "reachability_features(game, game.state.players[0].color)",
     setup=setup,
     number=NUMBER,
 )
-print("reachability_features", result / NUMBER, "secs")
+print("reachability_features\t", result / NUMBER, "secs")
+
+result = timeit.timeit(
+    "graph_features(game, game.state.players[0].color)",
+    setup=setup,
+    number=NUMBER,
+)
+print("graph_features\t\t", result / NUMBER, "secs")
 
 # Notes:
 # road seems to add 0.0025 secs
