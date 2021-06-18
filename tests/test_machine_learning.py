@@ -410,20 +410,20 @@ def test_iter_players():
 
     # Test the firsts look good.
     for i in range(4):
-        j, p = next(iter_players(game, game.state.players[i].color))
-        assert p.color == game.state.players[i].color
+        j, c = iter_players(tuple(game.state.colors), game.state.players[i].color)[0]
+        assert c == game.state.players[i].color
 
     # Test a specific case (p0=game.state.players[0])
-    iterator = iter_players(game, game.state.players[0].color)
-    i, p = next(iterator)
+    iterator = iter_players(tuple(game.state.colors), game.state.players[0].color)
+    i, c = iterator[0]
     assert i == 0
-    assert p.color == game.state.players[0].color
-    i, p = next(iterator)
+    assert c == game.state.players[0].color
+    i, c = iterator[1]
     assert i == 1
-    assert p.color == game.state.players[1].color
-    i, p = next(iterator)
+    assert c == game.state.players[1].color
+    i, c = iterator[2]
     assert i == 2
-    assert p.color == game.state.players[2].color
-    i, p = next(iterator)
+    assert c == game.state.players[2].color
+    i, c = iterator[3]
     assert i == 3
-    assert p.color == game.state.players[3].color
+    assert c == game.state.players[3].color

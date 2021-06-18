@@ -19,26 +19,27 @@ from catanatron.models.map import number_probability
 
 
 # ===== Helpers
-def is_building(game, node_id, player, building_type):
+def is_building(game, node_id, color, building_type):
     building = game.state.board.buildings.get(node_id, None)
     if building is None:
         return False
     else:
-        return building[0] == player.color and building[1] == building_type
+        return building[0] == color and building[1] == building_type
 
 
-def is_road(game, edge, player):
-    return game.state.board.get_edge_color(edge) == player.color
+def is_road(game, edge, color):
+    return game.state.board.get_edge_color(edge) == color
 
 
-def iter_players(
-    game: Game, p0_color: Color
-) -> Generator[Tuple[int, Player], any, any]:
+@functools.lru_cache(1024)
+def iter_players(colors: Tuple[Color], p0_color: Color):
     """Iterator: for i, player in iter_players(game, p0.color)"""
-    p0_index = next(i for i, p in enumerate(game.state.players) if p.color == p0_color)
-    for i in range(len(game.state.players)):
-        player_index = (p0_index + i) % len(game.state.players)
-        yield i, game.state.players[player_index]
+    start_index = colors.index(p0_color)
+    result = []
+    for i in range(len(colors)):
+        actual_index = (start_index + i) % len(colors)
+        result.append((i, colors[actual_index]))
+    return result
 
 
 # ===== Extractors
@@ -49,9 +50,9 @@ def player_features(game, p0_color):
     # P{i}_ROADS_LEFT, P{i}_SETTLEMENTS_LEFT, P{i}_CITIES_LEFT, P1_...
     # P{i}_HAS_ROLLED, P{i}_LONGEST_ROAD_LENGTH
     features = dict()
-    for i, player in iter_players(game, p0_color):
-        key = player_key(game.state, player.color)
-        if player.color == p0_color:
+    for i, color in iter_players(tuple(game.state.colors), p0_color):
+        key = player_key(game.state, color)
+        if color == p0_color:
             features["P0_ACTUAL_VPS"] = game.state.player_state[
                 key + "_ACTUAL_VICTORY_POINTS"
             ]
@@ -88,10 +89,10 @@ def resource_hand_features(game, p0_color):
     player_state = state.player_state
 
     features = {}
-    for i, player in iter_players(game, p0_color):
-        key = player_key(game.state, player.color)
+    for i, color in iter_players(tuple(game.state.colors), p0_color):
+        key = player_key(game.state, color)
 
-        if player.color == p0_color:
+        if color == p0_color:
             for resource in Resource:
                 features[f"P0_{resource.value}_IN_HAND"] = player_state[
                     key + f"_{resource.value}_IN_HAND"
@@ -111,11 +112,9 @@ def resource_hand_features(game, p0_color):
                 key + f"_PLAYED_{card.value}"
             ]
             features[f"P{i}_NUM_RESOURCES_IN_HAND"] = player_num_resource_cards(
-                state, player.color
+                state, color
             )
-            features[f"P{i}_NUM_DEVS_IN_HAND"] = player_num_dev_cards(
-                state, player.color
-            )
+            features[f"P{i}_NUM_DEVS_IN_HAND"] = player_num_dev_cards(state, color)
 
     return features
 
@@ -161,14 +160,14 @@ def graph_features(game, p0_color):
     # Features like P0_SETTLEMENT_NODE_1, P0_CITY_NODE_1, ...
     features = {}
     for node_id in range(NUM_NODES):
-        for i, player in iter_players(game, p0_color):
+        for i, color in iter_players(tuple(game.state.colors), p0_color):
             for building in [BuildingType.SETTLEMENT, BuildingType.CITY]:
                 features[f"NODE{node_id}_P{i}_{building.value}"] = is_building(
-                    game, node_id, player, building
+                    game, node_id, color, building
                 )
     for edge in get_edges():
-        for i, player in iter_players(game, p0_color):
-            features[f"EDGE{edge}_P{i}_ROAD"] = is_road(game, edge, player)
+        for i, color in iter_players(tuple(game.state.colors), p0_color):
+            features[f"EDGE{edge}_P{i}_ROAD"] = is_road(game, edge, color)
     return features
 
 
@@ -181,10 +180,10 @@ def build_production_features(consider_robber):
         board = game.state.board
         robbed_nodes = set(board.map.tiles[board.robber_coordinate].nodes.values())
         for resource in Resource:
-            for i, player in iter_players(game, p0_color):
+            for i, color in iter_players(tuple(game.state.colors), p0_color):
                 production = 0
                 for node_id in get_player_buildings(
-                    game.state, player.color, BuildingType.SETTLEMENT
+                    game.state, color, BuildingType.SETTLEMENT
                 ):
                     if consider_robber and node_id in robbed_nodes:
                         continue
@@ -192,7 +191,7 @@ def build_production_features(consider_robber):
                         game.state.board, node_id, resource
                     )
                 for node_id in get_player_buildings(
-                    game.state, player.color, BuildingType.CITY
+                    game.state, color, BuildingType.CITY
                 ):
                     if consider_robber and node_id in robbed_nodes:
                         continue
@@ -212,9 +211,9 @@ def get_node_production(board, node_id, resource):
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 
-def get_player_expandable_nodes(game, player):
-    node_sets = game.state.board.find_connected_components(player.color)
-    enemies = [enemy for enemy in game.state.players if enemy.color != player.color]
+def get_player_expandable_nodes(game, color):
+    node_sets = game.state.board.find_connected_components(color)
+    enemies = [enemy for enemy in game.state.players if enemy.color != color]
     enemy_node_ids = set()
     for enemy in enemies:
         enemy_node_ids.update(
@@ -240,8 +239,7 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
     features = {}
 
     board_buildable = game.state.board.buildable_node_ids(p0_color, True)
-    for i, player in iter_players(game, p0_color):
-        color = player.color
+    for i, color in iter_players(tuple(game.state.colors), p0_color):
         owned_or_buildable = frozenset(
             get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
             + get_player_buildings(game.state, color, BuildingType.CITY)
@@ -305,9 +303,9 @@ def expansion_features(game, p0_color):
 
     # For each connected component node, bfs_edges (skipping enemy edges and nodes nodes)
     empty_edges = set(get_edges())
-    for i, player in iter_players(game, p0_color):
+    for i, color in iter_players(tuple(game.state.colors), p0_color):
         empty_edges.difference_update(
-            get_player_buildings(game.state, player.color, BuildingType.ROAD)
+            get_player_buildings(game.state, color, BuildingType.ROAD)
         )
     searchable_subgraph = STATIC_GRAPH.edge_subgraph(empty_edges)
 
@@ -315,14 +313,14 @@ def expansion_features(game, p0_color):
         p0_color, True
     )  # this should be the same for all players. TODO: Can maintain internally (instead of re-compute).
 
-    def skip_blocked_by_enemy(neighbor_ids):
-        for node_id in neighbor_ids:
-            color = game.state.board.get_node_color(node_id)
-            if color is None or color == player.color:
-                yield node_id  # not owned by enemy, can explore
+    for i, color in iter_players(tuple(game.state.colors), p0_color):
+        expandable_node_ids = get_player_expandable_nodes(game, color)
 
-    for i, player in iter_players(game, p0_color):
-        expandable_node_ids = get_player_expandable_nodes(game, player)
+        def skip_blocked_by_enemy(neighbor_ids):
+            for node_id in neighbor_ids:
+                node_color = game.state.board.get_node_color(node_id)
+                if node_color is None or node_color == color:
+                    yield node_id  # not owned by enemy, can explore
 
         # owned_edges = get_player_buildings(state, color, BuildingType.ROAD)
         dis_res_prod = {
@@ -380,8 +378,8 @@ def port_distance_features(game, p0_color):
     distances = get_node_distances()
     for resource_or_none in list(Resource) + [None]:
         port_name = "3:1" if resource_or_none is None else resource_or_none.value
-        for i, player in iter_players(game, p0_color):
-            expandable_node_ids = get_player_expandable_nodes(game, player)
+        for i, color in iter_players(tuple(game.state.colors), p0_color):
+            expandable_node_ids = get_player_expandable_nodes(game, color)
             if len(expandable_node_ids) == 0:
                 features[f"P{i}_HAS_{port_name}_PORT"] = False
                 features[f"P{i}_{port_name}_PORT_DISTANCE"] = float("inf")
