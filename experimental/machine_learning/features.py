@@ -119,31 +119,30 @@ def resource_hand_features(game, p0_color):
     return features
 
 
+@functools.lru_cache(NUM_TILES)  # one for each robber
+def map_tile_features(catan_map, robber_coordinate):
+    # Returns list of functions that take a game and output a feature.
+    # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
+    features = {}
+
+    for tile_id in range(NUM_TILES):
+        tile = catan_map.tiles_by_id[tile_id]
+        for resource in Resource:
+            features[f"TILE{tile_id}_IS_{resource.value}"] = tile.resource == resource
+        features[f"TILE{tile_id}_IS_DESERT"] = tile.resource == None
+        features[f"TILE{tile_id}_PROBA"] = (
+            0 if tile.resource is None else number_probability(tile.number)
+        )
+        features[f"TILE{tile_id}_HAS_ROBBER"] = (
+            catan_map.tiles[robber_coordinate] == tile
+        )
+    return features
+
+
 def tile_features(game, p0_color):
     # Returns list of functions that take a game and output a feature.
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
-    # TODO: Cacheable
-    def f(game, tile_id, resource):
-        tile = game.state.board.map.tiles_by_id[tile_id]
-        return tile.resource == resource
-
-    # TODO: Cacheable
-    def g(game, tile_id):
-        tile = game.state.board.map.tiles_by_id[tile_id]
-        return 0 if tile.resource is None else number_probability(tile.number)
-
-    def h(game, tile_id):
-        tile = game.state.board.map.tiles_by_id[tile_id]
-        return game.state.board.map.tiles[game.state.board.robber_coordinate] == tile
-
-    features = {}
-    for tile_id in range(NUM_TILES):
-        for resource in Resource:
-            features[f"TILE{tile_id}_IS_{resource.value}"] = f(game, tile_id, resource)
-        features[f"TILE{tile_id}_IS_DESERT"] = f(game, tile_id, None)
-        features[f"TILE{tile_id}_PROBA"] = g(game, tile_id)
-        features[f"TILE{tile_id}_HAS_ROBBER"] = h(game, tile_id)
-    return features
+    return map_tile_features(game.state.board.map, game.state.board.robber_coordinate)
 
 
 def port_features(game, p0_color):
