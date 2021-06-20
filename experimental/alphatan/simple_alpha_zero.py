@@ -1,4 +1,6 @@
+import gc
 import os
+import uuid
 import random
 from pprint import pprint
 import time
@@ -42,8 +44,8 @@ tf.random.set_seed(2)
 
 FEATURES = get_feature_ordering(2)
 NUM_FEATURES = len(FEATURES)
-DATA_DIRECTORY = "data/alphatan-memory"
-LOAD_MODEL = True
+DATA_DIRECTORY = "data/alphatan-memory-validation"
+LOAD_MODEL = False
 
 # 50 games per iteration, 10 iterations, 15 game pits takes ~8 hours.
 ARGS = {
@@ -64,11 +66,12 @@ def main():
     replay_memory = deque(maxlen=ARGS["replay_memory_size"])
     flushable_samples = []
     ensure_dir(DATA_DIRECTORY)
+    name = "alphatan"
 
     # initialize neural network
     model = create_model()
     if LOAD_MODEL:
-        model.load_weights("data/checkpoints/alphatan")
+        model.load_weights(f"data/checkpoints/{name}")
 
     # TODO: Load checkpoint
     # TODO: Simplify feature space. Only use board tensor and cards in hand (including dev cards).
@@ -106,8 +109,8 @@ def main():
         model = pit(model, candidate_model)
 
         # TODO: Save checkpoint
-        model.save_weights("data/checkpoints/alphatan")
-        model.save("experimental/models/alphatan")
+        model.save_weights(f"data/checkpoints/{name}")
+        model.save(f"experimental/models/{name}")
 
 
 def save_replay_memory(data_directory, examples):
@@ -172,8 +175,8 @@ def pit(model, candidate_model, num_games=ARGS["num_games_to_pit"]):
     # Games seem to take ~16s (num_sim=10), so pitting 25 takes 6 mins.
     print("Starting Pit")
     players = [
-        AlphaTan(Color.ORANGE, model, temp=0),
-        AlphaTan(Color.WHITE, candidate_model, temp=0),
+        AlphaTan(Color.ORANGE, uuid.uuid4(), model, temp=0),
+        AlphaTan(Color.WHITE, uuid.uuid4(), candidate_model, temp=0),
     ]
     wins, vp_history = play_batch(num_games, players, None, False, False, "DEBUG")
     if wins[Color.WHITE] >= (sum(wins.values()) * ARGS["model_acceptance_threshold"]):
@@ -185,9 +188,9 @@ def pit(model, candidate_model, num_games=ARGS["num_games_to_pit"]):
 
 
 def execute_episode(model):
-    mcts = AlphaMCTS(model)  # so that its shared
-    p0 = AlphaTan(Color.ORANGE, model, mcts)
-    p1 = AlphaTan(Color.WHITE, model, mcts)
+    # mcts = AlphaMCTS(model)  # so that its shared
+    p0 = AlphaTan(Color.ORANGE, uuid.uuid4(), model)
+    p1 = AlphaTan(Color.WHITE, uuid.uuid4(), model)
     game = Game(players=[p0, p1])
     game.play()
 
@@ -234,7 +237,15 @@ def train(iteration, model, replay_memory):
 
 
 class AlphaTan(Player):
-    def __init__(self, color, model, mcts=None, temp=None):
+    def __init__(
+        self,
+        color,
+        name,
+        model,
+        mcts=None,
+        temp=None,
+        num_simulations=ARGS["num_simulations_per_turn"],
+    ):
         super().__init__(color)
         self.model = model
         self.mcts = mcts or AlphaMCTS(model)
@@ -288,6 +299,7 @@ class AlphaTan(Player):
         # if self.color == Color.WHITE:
         #     breakpoint()
         # print("AlphaTan decision took", time.time() - start)
+        # breakpoint()
 
         return best_action
 

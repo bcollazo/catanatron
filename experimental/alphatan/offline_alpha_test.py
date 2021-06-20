@@ -48,9 +48,9 @@ NUM_FEATURES = len(FEATURES)
 CHANNELS = get_channels(2)
 
 DATA_DIRECTORY = "data/alphatan-memory"
-DATA_SIZE = 146104
+DATA_SIZE = 377824
 BATCH_SIZE = 1024
-EPOCHS = 4
+EPOCHS = 10
 STEPS_PER_EPOCH = DATA_SIZE // BATCH_SIZE
 # (states, board_tensors, pis, vs) = load_replay_memory(data_directory)
 SHUFFLE = True
@@ -65,18 +65,15 @@ PIS_PATH = Path(DATA_DIRECTORY, "pis.csv.gzip")
 VS_PATH = Path(DATA_DIRECTORY, "vs.csv.gzip")
 
 dfa = pd.read_csv("data/alphatan-memory/pis-mean.csv", index_col=0)
+means = dfa.to_numpy()[:, 0]
+class_weight = np.nan_to_num(1 / means, posinf=0)
 
 # === Define Generator
 def preprocess(states_batch, pis_batch, vs_batch):
     """Input are dictionary of tensors"""
     input1 = simple_stack(states_batch)
     label = (simple_stack(pis_batch), simple_stack(vs_batch))
-    # Normalize pis to avoid END_TURN bias...(?)
-    pis = label[0] / (
-        tf.constant(dfa.to_numpy().reshape(1, 290), dtype=tf.float32)
-        + tf.fill((1, 290), 0.01)
-    )
-    return (input1, (pis, label[1]))
+    return (input1, label)
 
 
 def simple_stack(batch):
@@ -85,9 +82,10 @@ def simple_stack(batch):
 
 def build_generator(dataset):
     def generator():
-        for input1, label in dataset:
-            # breakpoint()
-            yield input1, label
+        for input1, (pis, vs) in dataset:
+            target_pis = pis.numpy()
+            sample_weight = [class_weight[pi.argmax()] for pi in target_pis]
+            yield input1, (pis, vs), sample_weight
 
     return generator
 
@@ -130,48 +128,12 @@ train_dataset = tf.data.Dataset.from_generator(
             tf.TensorSpec(shape=(None, ACTION_SPACE_SIZE), dtype=tf.float32),
             tf.TensorSpec(shape=(None, 1), dtype=tf.float32),
         ),
+        tf.TensorSpec(shape=(None,), dtype=tf.float32),
     ),
 )
 
-# labels = list(zip(pis.values, vs.values))
-# X_train, X_test, y_train, y_test = train_test_split(
-#     states.values, labels, test_size=0.33, random_state=42, shuffle=True
-# )
-# y_train_dt = (list(map(lambda t: t[0], y_train)), list(map(lambda t: t[1], y_train)))
-# y_test_dt = (list(map(lambda t: t[0], y_test)), list(map(lambda t: t[1], y_test)))
-
-
-# def build_generator(X, y):
-#     def f():
-#         for i in range(0, len(X), BATCH_SIZE):
-#             state = X[i * BATCH_SIZE : i * BATCH_SIZE + BATCH_SIZE]
-#             list_of_tuples = y[
-#                 i * BATCH_SIZE : i * BATCH_SIZE + BATCH_SIZE
-#             ]  # a list of tuples
-#             pi = list(map(lambda t: t[0], list_of_tuples))  # list of arrays
-#             v = list(map(lambda t: t[1], list_of_tuples))
-#             if state.shape[0] > 0:
-#                 yield state, (np.array(pi), np.array(v))
-
-#     return f
-
-
-# output_signature = (
-#     tf.TensorSpec(shape=(None, len(X_train[0])), dtype=tf.float64),
-#     (
-#         tf.TensorSpec(shape=(None, len(y_train[0][0])), dtype=tf.float32),
-#         tf.TensorSpec(shape=(None, len(y_train[0][1])), dtype=tf.float32),
-#     ),
-# )
-# train_dataset = tf.data.Dataset.from_generator(
-#     build_generator(X_train, y_train), output_signature=output_signature
-# )
-# test_dataset = tf.data.Dataset.from_generator(
-#     build_generator(X_test, y_test), output_signature=output_signature
-# )
-
 # ===== Build Model
-NEURONS_PER_LAYER = [64, 32]
+NEURONS_PER_LAYER = [64, 64, 64, 64, 32]
 inputs = tf.keras.Input(shape=(NUM_FEATURES,))
 outputs = inputs
 

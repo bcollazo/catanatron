@@ -200,7 +200,7 @@ def play_batch(
                     for p in players
                 }
             )
-            + f" ({duration} secs)"
+            + f" ({duration:.3g} secs) [{game.winning_color()}:{game.state.num_turns}({len(game.state.actions)})]"
         )
         if save_in_db and not watch:
             link = ensure_link(game)
