@@ -9,14 +9,14 @@ import ActionsToolbar from "./ActionsToolbar";
 
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import "./GameScreen.scss";
-import { BOT_COLOR } from "../constants";
 import LeftDrawer from "../components/LeftDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { getState, postAction } from "../utils/apiClient";
 import { dispatchSnackbar } from "../components/Snackbar";
+import { getHumanColor } from "../utils/stateUtils";
 
-const ROBOT_THINKING_TIME = 2000;
+const ROBOT_THINKING_TIME = 300;
 
 function GameScreen({ replayMode }) {
   const { gameId, stateIndex } = useParams();
@@ -24,6 +24,7 @@ function GameScreen({ replayMode }) {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [isBotThinking, setIsBotThinking] = useState(false);
 
+  // Load game state
   useEffect(() => {
     if (!gameId) {
       return;
@@ -35,13 +36,16 @@ function GameScreen({ replayMode }) {
     })();
   }, [gameId, stateIndex, dispatch]);
 
+  // Maybe kick off next query?
   useEffect(() => {
     if (!state.gameState || replayMode) {
       return;
     }
-
-    // Kick off next query?
-    if (state.gameState.current_color === BOT_COLOR) {
+    if (
+      state.gameState.bot_colors.includes(state.gameState.current_color) &&
+      !state.gameState.winning_color
+    ) {
+      // Make bot click next action.
       (async () => {
         setIsBotThinking(true);
         const start = new Date();
@@ -51,7 +55,9 @@ function GameScreen({ replayMode }) {
           // simulate thinking
           setIsBotThinking(false);
           dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-          dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+          if (getHumanColor(gameState)) {
+            dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+          }
         }, ROBOT_THINKING_TIME - requestTime);
       })();
     }

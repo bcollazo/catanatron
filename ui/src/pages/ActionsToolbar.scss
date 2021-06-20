@@ -15,6 +15,7 @@
 
 $btn-height: 60px;
 .actions-toolbar {
+  height: $btn-height + 2 * $sm-gutter;
   width: 100%;
   max-width: $sm-breakpoint;
   margin-left: auto;

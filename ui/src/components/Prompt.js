@@ -1,10 +1,10 @@
 import React from "react";
-import { HUMAN_COLOR } from "../constants";
+import { isPlayersTurn } from "../utils/stateUtils";
 
 import "./Prompt.scss";
 
-export function humanizeAction(action) {
-  const player = action[0] === HUMAN_COLOR ? "YOU" : "BOT";
+export function humanizeAction(action, botColors) {
+  const player = botColors.includes(action[0]) ? "BOT" : "YOU";
   switch (action[1]) {
     case "ROLL":
       return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
@@ -58,10 +58,10 @@ export default function Prompt({ gameState, isBotThinking }) {
     // Do nothing, but still render.
   } else if (gameState.winning_color) {
     prompt = `Game Over. Congrats, ${gameState.winning_color}!`;
-  } else if (gameState.current_color === HUMAN_COLOR) {
+  } else if (isPlayersTurn(gameState)) {
     prompt = humanizePrompt(gameState.current_prompt);
   } else {
-    // prompt = humanizeAction(gameState.actions[gameState.actions.length - 1]);
+    // prompt = humanizeAction(gameState.actions[gameState.actions.length - 1], gameState.bot_colors);
   }
   return <div className="prompt">{prompt}</div>;
 }

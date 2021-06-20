@@ -6,7 +6,6 @@ import tensorflow as tf
 from experimental.machine_learning.features import (
     create_sample_vector,
     get_feature_ordering,
-    iter_players,
 )
 from experimental.machine_learning.board_tensor_features import (
     CHANNELS,

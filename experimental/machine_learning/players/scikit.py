@@ -10,9 +10,12 @@ from experimental.machine_learning.features import create_sample, create_sample_
 
 
 from experimental.simple_model import FEATURES
+
 # from experimental.simple_forest import FEATURES
 
 clf = None
+
+
 def load_model():
     global clf
     with open("experimental/models/simple-scikit-linear.model", "rb") as file:
@@ -22,8 +25,8 @@ def load_model():
 
 
 class ScikitPlayer(Player):
-    def __init__(self, color, name):
-        super().__init__(color, name=name)
+    def __init__(self, color):
+        super().__init__(color)
         load_model()
 
     def decide(self, game: Game, playable_actions):

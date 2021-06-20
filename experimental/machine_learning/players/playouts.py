@@ -20,8 +20,8 @@ PLAYOUTS_BUDGET = 100
 class GreedyPlayoutsPlayer(Player):
     """For each playable action, play N random playouts."""
 
-    def __init__(self, color, name, num_playouts=DEFAULT_NUM_PLAYOUTS):
-        super().__init__(color, name=name)
+    def __init__(self, color, num_playouts=DEFAULT_NUM_PLAYOUTS):
+        super().__init__(color)
         self.num_playouts = int(num_playouts)
 
     def decide(self, game: Game, playable_actions):

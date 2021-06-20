@@ -39,6 +39,10 @@ from experimental.machine_learning.players.reinforcement import (
     ACTION_SPACE_SIZE,
     normalize_action,
 )
+from experimental.machine_learning.players.minimax import (
+    ValueFunctionPlayer,
+    VictoryPointPlayer,
+)
 
 
 FEATURES = get_feature_ordering(2)
@@ -49,10 +53,10 @@ DISCOUNT = 0.9
 # Every 5 episodes we have ~MINIBATCH_SIZE=1024 samples.
 # With batch-size=16k we are likely to hit 1 sample per action(?)
 REPLAY_MEMORY_SIZE = 50_000  # How many last steps to keep for model training
-MIN_REPLAY_MEMORY_SIZE = 1_000  # Min number of steps in a memory to start training
-MINIBATCH_SIZE = 128  # How many steps (samples) to use for training
+MIN_REPLAY_MEMORY_SIZE = 5_000  # Min number of steps in a memory to start training
+MINIBATCH_SIZE = 1024  # How many steps (samples) to use for training
 TRAIN_EVERY_N_EPISODES = 1
-TRAIN_EVERY_N_STEPS = 10  # catan steps / decisions by agent
+TRAIN_EVERY_N_STEPS = 100  # catan steps / decisions by agent
 UPDATE_MODEL_EVERY_N_TRAININGS = 5  # Terminal states (end of episodes)
 
 # Environment exploration settings
@@ -111,10 +115,7 @@ class CatanEnvironment:
 
     def reset(self):
         p0 = Player(Color.BLUE)
-        players = [
-            p0,
-            RandomPlayer(Color.RED),
-        ]
+        players = [p0, VictoryPointPlayer(Color.RED)]
         game = Game(players=players)
         self.game = game
         self.p0 = p0
@@ -131,9 +132,17 @@ class CatanEnvironment:
         winning_color = self.game.winning_color()
 
         new_state = self._get_state()
-        key = player_key(self.game.state, self.p0.color)
-        points = self.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-        reward = int(winning_color == self.p0.color) * 10 * 1000 + points
+
+        # key = player_key(self.game.state, self.p0.color)
+        # points = self.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+        # reward = int(winning_color == self.p0.color) * 10 * 1000 + points
+        if winning_color is None:
+            reward = 0
+        elif winning_color == self.p0.color:
+            reward = 1
+        else:
+            reward = -1
+
         done = winning_color is not None or self.game.state.num_turns > 500
         return new_state, reward, done
 
@@ -190,12 +199,16 @@ class DQNAgent:
         outputs = BatchNormalization()(outputs)
         # outputs = Dense(352, activation="relu")(outputs)
         # outputs = Dense(256, activation="relu")(outputs)
-        # outputs = Dense(64, activation="relu")(outputs)
+        outputs = Dense(64, activation="relu")(outputs)
         outputs = Dense(32, activation="relu")(outputs)
         outputs = Dense(units=ACTION_SPACE_SIZE, activation="linear")(outputs)
         model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
-        model.compile(loss="mse", optimizer=Adam(), metrics=["mae"])
+        model.compile(
+            loss="mse",
+            optimizer=Adam(lr=1e-5),
+            metrics=["accuracy"],
+        )
         return model
 
     # Adds step's data to a memory replay array
@@ -361,8 +374,8 @@ DNQ_MODEL = None
 
 
 class DQNPlayer(Player):
-    def __init__(self, color, name, model_path):
-        super(DQNPlayer, self).__init__(color, name)
+    def __init__(self, color, model_path):
+        super(DQNPlayer, self).__init__(color)
         self.model_path = model_path
         global DNQ_MODEL
         # DNQ_MODEL = tf.keras.models.load_model(model_path)

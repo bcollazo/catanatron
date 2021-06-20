@@ -31,7 +31,7 @@ def get_node_distances():
 def get_edges():
     global EDGES, STATIC_GRAPH
     if EDGES is None:
-        EDGES = STATIC_GRAPH.subgraph(range(NUM_NODES)).edges()
+        EDGES = list(STATIC_GRAPH.subgraph(range(NUM_NODES)).edges())
     return EDGES
 
 

@@ -79,7 +79,7 @@ class State:
             self.color_to_index = {
                 player.color: index for index, player in enumerate(self.players)
             }
-            self.colors = [player.color for player in self.players]
+            self.colors = tuple([player.color for player in self.players])
 
             self.resource_deck = ResourceDeck.starting_bank()
             self.development_deck = DevelopmentDeck.starting_bank()
@@ -115,7 +115,7 @@ class State:
 
         state_copy.player_state = self.player_state.copy()
         state_copy.color_to_index = self.color_to_index
-        state_copy.colors = self.colors.copy()
+        state_copy.colors = self.colors  # immutable, so no need to copy
 
         # TODO: Move Deck to functional code, so as to quick-copy arrays.
         state_copy.resource_deck = pickle.loads(pickle.dumps(self.resource_deck))
@@ -435,15 +435,15 @@ def apply_action(state: State, action: Action):
         cards_stolen = ResourceDeck()
         if not player_can_play_dev(state, action.color, "MONOPOLY"):
             raise ValueError("Player cant play monopoly now")
-        for player in state.players:
-            if not player.color == action.color:
-                key = player_key(state, player.color)
+        for color in state.colors:
+            if not color == action.color:
+                key = player_key(state, color)
                 number_of_cards_to_steal = state.player_state[
                     f"{key}_{mono_resource.value}_IN_HAND"
                 ]
                 cards_stolen.replenish(number_of_cards_to_steal, mono_resource)
                 player_deck_draw(
-                    state, player.color, mono_resource.value, number_of_cards_to_steal
+                    state, color, mono_resource.value, number_of_cards_to_steal
                 )
         player_deck_add(state, action.color, cards_stolen)
         play_dev_card(state, action.color, MONOPOLY)

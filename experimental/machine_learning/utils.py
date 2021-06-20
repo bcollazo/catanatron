@@ -148,9 +148,7 @@ def populate_matrices(
         games_directory
     )
 
-    # Ensure directory exists.
-    if not os.path.exists(games_directory):
-        os.makedirs(games_directory)
+    ensure_dir(games_directory)
 
     is_first_training = not os.path.isfile(samples_path)
     samples_df.to_csv(
@@ -181,3 +179,8 @@ def populate_matrices(
         index=False,
         compression="gzip",
     )
+
+
+def ensure_dir(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)

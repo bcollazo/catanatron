@@ -6,30 +6,31 @@ import PlayerStateBox from "../components/PlayerStateBox";
 import { humanizeAction } from "../components/Prompt";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { BOT_COLOR, HUMAN_COLOR } from "../constants";
 import { playerKey } from "../utils/stateUtils";
 
 import "./LeftDrawer.scss";
 
 function DrawerContent({ gameState }) {
-  const botKey = playerKey(gameState, BOT_COLOR);
-  const humanKey = playerKey(gameState, HUMAN_COLOR);
+  const playerSections = gameState.colors.map((color) => {
+    const key = playerKey(gameState, color);
+    return (
+      <>
+        <PlayerStateBox playerState={gameState.player_state} playerKey={key} />
+        <Divider />
+      </>
+    );
+  });
+
   return (
     <>
-      <PlayerStateBox playerState={gameState.player_state} playerKey={botKey} />
-      <Divider />
-      <PlayerStateBox
-        playerState={gameState.player_state}
-        playerKey={humanKey}
-      />
-      <Divider />
+      {playerSections}
       <div className="log">
         {gameState.actions
           .slice()
           .reverse()
           .map((action, i) => (
             <div key={i} className="action">
-              {humanizeAction(action)}
+              {humanizeAction(action, gameState.bot_colors)}
             </div>
           ))}
       </div>

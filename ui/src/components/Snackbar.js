@@ -18,10 +18,13 @@ export const snackbarActions = (closeSnackbar) => (key) =>
   );
 
 export function dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState) {
-  enqueueSnackbar(humanizeAction(gameState.actions.slice(-1)[0]), {
-    action: snackbarActions(closeSnackbar),
-    onClick: () => {
-      closeSnackbar();
-    },
-  });
+  enqueueSnackbar(
+    humanizeAction(gameState.actions.slice(-1)[0], gameState.bot_colors),
+    {
+      action: snackbarActions(closeSnackbar),
+      onClick: () => {
+        closeSnackbar();
+      },
+    }
+  );
 }

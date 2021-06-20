@@ -141,12 +141,11 @@ def init_tile_coordinate_map():
 def create_board_tensor(game: Game, p0_color: Color):
     """Creates a tensor of shape (WIDTH, HEIGHT, CHANNELS).
 
-    We have one hot-encoded multiplier planes (2 and 1s for city/settlements) per
-    player (thats 4 planes in total). We have another set of planes for the roads
-    built by each player.
-    Then 5 tile resources planes, one per resource.
-    Then 1 robber plane (to note nodes blocked by robber).
-    Then 6 port planes (one for each resource and one for the 3:1 ports)
+    1 x n hot-encoded planes (2 and 1s for city/settlements).
+    1 x n planes for the roads built by each player.
+    5 tile resources planes, one per resource.
+    1 robber plane (to note nodes blocked by robber).
+    6 port planes (one for each resource and one for the 3:1 ports)
 
     Example:
         - To see WHEAT plane: tf.transpose(board_tensor[:,:,3])
@@ -154,20 +153,16 @@ def create_board_tensor(game: Game, p0_color: Color):
     # add 4 hot-encoded color multiplier planes (nodes), and 4 edge planes. 8 planes
     color_multiplier_planes = []
     node_map, edge_map = get_node_and_edge_maps()
-    for _, player in iter_players(game, p0_color):
+    for _, color in iter_players(tuple(game.state.colors), p0_color):
         node_plane = tf.zeros((WIDTH, HEIGHT))
         edge_plane = tf.zeros((WIDTH, HEIGHT))
 
         indices = []
         updates = []
-        for node_id in get_player_buildings(
-            game.state, player.color, BuildingType.SETTLEMENT
-        ):
+        for node_id in get_player_buildings(game.state, color, BuildingType.SETTLEMENT):
             indices.append(node_map[node_id])
             updates.append(1)
-        for node_id in get_player_buildings(
-            game.state, player.color, BuildingType.CITY
-        ):
+        for node_id in get_player_buildings(game.state, color, BuildingType.CITY):
             indices.append(node_map[node_id])
             updates.append(2)
         if len(indices) > 0:
@@ -175,7 +170,7 @@ def create_board_tensor(game: Game, p0_color: Color):
 
         indices = []
         updates = []
-        for edge in get_player_buildings(game.state, player.color, BuildingType.ROAD):
+        for edge in get_player_buildings(game.state, color, BuildingType.ROAD):
             indices.append(edge_map[edge])
             updates.append(1)
         if len(indices) > 0:

@@ -86,8 +86,8 @@ DATA_LOGGER = DataLogger(DATA_PATH)
 
 
 class OnlineMCTSDQNPlayer(Player):
-    def __init__(self, color, name):
-        super().__init__(color, name=name)
+    def __init__(self, color):
+        super().__init__(color)
         self.step = 0
 
     def decide(self, game: Game, playable_actions):

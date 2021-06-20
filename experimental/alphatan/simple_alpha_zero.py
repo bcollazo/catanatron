@@ -1,144 +1,287 @@
+import gc
+import os
+import uuid
 import random
+from pprint import pprint
 import time
 from collections import deque
-import uuid
 
+import pandas as pd
 import numpy as np
+from tensorflow.python.keras import regularizers
 from tqdm import tqdm
 import tensorflow as tf
 
-
 from catanatron.game import Game
 from experimental.alphatan.mcts import AlphaMCTS, game_end_value
+from experimental.machine_learning.utils import ensure_dir
 from catanatron.models.player import Color, Player, RandomPlayer
 from experimental.play import play_batch
-from experimental.machine_learning.players.reinforcement import ACTION_SPACE_SIZE
+from experimental.machine_learning.players.reinforcement import (
+    ACTIONS_ARRAY,
+    ACTION_SPACE_SIZE,
+)
 from experimental.dqn_player import (
     epsilon_greedy_policy,
     from_action_space,
     to_action_space,
+)
+from experimental.machine_learning.board_tensor_features import (
+    CHANNELS,
+    HEIGHT,
+    WIDTH,
+    create_board_tensor,
 )
 from experimental.machine_learning.features import (
     create_sample_vector,
     get_feature_ordering,
 )
 
+# For more repetitive results
+random.seed(2)
+np.random.seed(2)
+tf.random.set_seed(2)
+
 FEATURES = get_feature_ordering(2)
 NUM_FEATURES = len(FEATURES)
+DATA_DIRECTORY = "data/alphatan-memory-validation"
+LOAD_MODEL = False
 
-REPLAY_MEMORY_SIZE = 10_000
-TURNS_LIMIT = 10
-NUM_ITERATIONS = 10
-NUM_EPISODES_PER_ITERATION = 3
-NUM_GAMES_TO_PIT = 10
-MODEL_ACCEPTANCE_TRESHOLD = 0.55
-
-NUM_SIMULATIONS_PER_TURN = 5
-TEMP_TRESHOLD = 30
-
-EPOCHS = 10
-BATCH_SIZE = 32
+# 50 games per iteration, 10 iterations, 15 game pits takes ~8 hours.
+ARGS = {
+    "replay_memory_size": 200_000,
+    "num_iterations": 10,
+    "num_episodes_per_iteration": 50,
+    "num_games_to_pit": 15,
+    "model_acceptance_threshold": 0.55,
+    "num_simulations_per_turn": 10,
+    "temp_threshold": 30,
+    "epochs": 10,
+    "batch_size": 32,
+}
 
 
 def main():
-    replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
+    pprint(ARGS)
+    replay_memory = deque(maxlen=ARGS["replay_memory_size"])
+    flushable_samples = []
+    ensure_dir(DATA_DIRECTORY)
+    name = "alphatan"
 
     # initialize neural network
     model = create_model()
+    if LOAD_MODEL:
+        model.load_weights(f"data/checkpoints/{name}")
 
-    # TODO: Ensure AlphaTan plays better than random.
-    MCTS_TREES["FOO"] = AlphaMCTS(model)
-    players = [AlphaTan(Color.ORANGE, "FOO", 0), RandomPlayer(Color.WHITE, "BAR")]
-    wins, vp_history = play_batch(1, players, None, False, False, False)
-    breakpoint()
+    # TODO: Load checkpoint
+    # TODO: Simplify feature space. Only use board tensor and cards in hand (including dev cards).
+    #   Has Road and Has Army.
 
-    # for each iteration.
-    # for each episode in iteration
-    #   play game and produce many (s_t, policy_t, _) samples.
-    for i in tqdm(range(NUM_ITERATIONS), unit="iteration"):
-        for e in tqdm(range(NUM_EPISODES_PER_ITERATION), unit="episode"):
-            replay_memory += execute_episode(model)
+    # for each iteration
+    #   for each episode in iteration
+    #     play game and produce many (s_t, policy_t, reward) samples.
+    for i in tqdm(range(ARGS["num_iterations"]), unit="iteration"):
+        for _ in tqdm(range(ARGS["num_episodes_per_iteration"]), unit="episode"):
+            examples = execute_episode(model)
+            replay_memory += examples
+            flushable_samples += examples
+
+        print("Iteration:", i)
+        print("Replay Memory Size:", len(replay_memory))
+        print("Flushable Memory Size:", len(flushable_samples))
 
         # create new neural network from old one
         candidate_model = create_model()
         candidate_model.set_weights(model.get_weights())
 
+        # write data for offline debugging.
+        save_replay_memory(DATA_DIRECTORY, flushable_samples)
+        flushable_samples = []
+
         # train new neural network
+        print("Starting training...")
+        start = time.time()
         random.shuffle(replay_memory)
-        train(candidate_model, replay_memory)
+        train(i, candidate_model, replay_memory)
+        print("Done Training... Took", time.time() - start)
 
         # pit new vs old (with temp=0). If new wins, replace.
-        MCTS_TREES["OLD"] = AlphaMCTS(model)
-        MCTS_TREES["NEW"] = AlphaMCTS(candidate_model)
-        players = [AlphaTan(Color.ORANGE, "OLD", 0), Player(Color.WHITE, "NEW", 0)]
-        wins, vp_history = play_batch(
-            NUM_GAMES_TO_PIT, players, None, False, False, False
-        )
-        if wins[Color.WHITE] >= int(sum(wins.values()) * MODEL_ACCEPTANCE_TRESHOLD):
-            print("Accepting model")
-            model = candidate_model
-        else:
-            print("Rejected model")
+        model = pit(model, candidate_model)
+
+        # TODO: Save checkpoint
+        model.save_weights(f"data/checkpoints/{name}")
+        model.save(f"experimental/models/{name}")
+
+
+def save_replay_memory(data_directory, examples):
+    print("Writing data...")
+    states = pd.DataFrame([i for i in map(lambda x: x[0], examples)], columns=FEATURES)
+    board_tensors = pd.DataFrame(
+        [i for i in map(lambda x: np.array(x[1]).flatten(), examples)]
+    )
+    pis = pd.DataFrame(
+        [i for i in map(lambda x: x[2], examples)],
+        columns=[f"ACTION_{i}" for i in ACTIONS_ARRAY],
+    )
+    vs = pd.DataFrame([i for i in map(lambda x: x[3], examples)], columns=["V"])
+
+    is_first_training = not os.path.isfile(
+        os.path.join(data_directory, "states.csv.gzip")
+    )
+    states.to_csv(
+        os.path.join(data_directory, "states.csv.gzip"),
+        mode="a",
+        header=is_first_training,
+        index=False,
+        compression="gzip",
+    )
+    board_tensors.to_csv(
+        os.path.join(data_directory, "board_tensors.csv.gzip"),
+        mode="a",
+        header=is_first_training,
+        index=False,
+        compression="gzip",
+    )
+    pis.to_csv(
+        os.path.join(data_directory, "pis.csv.gzip"),
+        mode="a",
+        header=is_first_training,
+        index=False,
+        compression="gzip",
+    )
+    vs.to_csv(
+        os.path.join(data_directory, "vs.csv.gzip"),
+        mode="a",
+        header=is_first_training,
+        index=False,
+        compression="gzip",
+    )
+    print("Done Writing...")
+
+
+def load_replay_memory(data_directory):
+    states = pd.read_csv(
+        os.path.join(data_directory, "states.csv.gzip"), compression="gzip"
+    )
+    board_tensors = pd.read_csv(
+        os.path.join(data_directory, "board_tensors.csv.gzip"), compression="gzip"
+    )
+    pis = pd.read_csv(os.path.join(data_directory, "pis.csv.gzip"), compression="gzip")
+    vs = pd.read_csv(os.path.join(data_directory, "vs.csv.gzip"), compression="gzip")
+    return states, board_tensors, pis, vs
+
+
+def pit(model, candidate_model, num_games=ARGS["num_games_to_pit"]):
+    # Games seem to take ~16s (num_sim=10), so pitting 25 takes 6 mins.
+    print("Starting Pit")
+    players = [
+        AlphaTan(Color.ORANGE, uuid.uuid4(), model, temp=0),
+        AlphaTan(Color.WHITE, uuid.uuid4(), candidate_model, temp=0),
+    ]
+    wins, vp_history = play_batch(num_games, players, None, False, False, "DEBUG")
+    if wins[Color.WHITE] >= (sum(wins.values()) * ARGS["model_acceptance_threshold"]):
+        print("Accepting model")
+        return candidate_model
+    else:
+        print("Rejected model")
+        return model
 
 
 def execute_episode(model):
-    mcts = AlphaMCTS(model)
-    tree_uuid = str(uuid.uuid4())
-    MCTS_TREES[tree_uuid] = mcts
-    LOGS = []
-
-    game = Game(
-        players=[AlphaTan(Color.ORANGE, tree_uuid), AlphaTan(Color.WHITE, tree_uuid)]
-    )
+    # mcts = AlphaMCTS(model)  # so that its shared
+    p0 = AlphaTan(Color.ORANGE, uuid.uuid4(), model)
+    p1 = AlphaTan(Color.WHITE, uuid.uuid4(), model)
+    game = Game(players=[p0, p1])
     game.play()
 
     winning_player = game.winning_player()
-    winning_player = game.state.players[0]
     if winning_player is None:
         return []
 
     winning_color = winning_player.color
     examples = [
-        (state, pi, 1 if color == winning_color else -1) for (color, state, pi) in LOGS
+        (state, board_tensor, pi, 1 if color == winning_color else -1)
+        for (color, state, board_tensor, pi) in p0.logs + p1.logs
     ]
     return examples
 
 
-def train(model, replay_memory):
-    input_boards, target_pis, target_vs = list(zip(*replay_memory))
+dfa = pd.read_csv("data/alphatan-memory/pis-mean.csv", index_col=0)
+
+
+def train(iteration, model, replay_memory):
+    input_boards, board_tensors, target_pis, target_vs = list(zip(*replay_memory))
     input_boards = np.asarray(input_boards)
     target_pis = np.asarray(target_pis)
     target_vs = np.asarray(target_vs)
+
+    # Use sample_weight to lower the weights for END_TURN plays
+    result = tf.linalg.normalize(target_pis, axis=0)
+    class_weight = np.nan_to_num((1 / result[1]).numpy(), posinf=0)
+    sample_weight = [class_weight[0][pi.argmax()] for pi in target_pis]
+
     model.fit(
-        x=input_boards, y=[target_pis, target_vs], batch_size=BATCH_SIZE, epochs=EPOCHS
+        x=input_boards,
+        y=[target_pis, target_vs],
+        batch_size=ARGS["batch_size"],
+        epochs=ARGS["epochs"],
+        sample_weight=np.array(sample_weight),
+        callbacks=[
+            tf.keras.callbacks.TensorBoard(
+                log_dir=f"data/logs/alphatan-online/{iteration}",
+                histogram_freq=1,
+                write_graph=True,
+            ),
+        ],
     )
 
 
-MCTS_TREES = dict()
-LOGS = dict()
-
-
 class AlphaTan(Player):
-    def __init__(self, color, name, temp=None):
-        super().__init__(color, name=name)
+    def __init__(
+        self,
+        color,
+        name,
+        model,
+        mcts=None,
+        temp=None,
+        num_simulations=ARGS["num_simulations_per_turn"],
+    ):
+        super().__init__(color)
+        self.model = model
+        self.mcts = mcts or AlphaMCTS(model)
         self.temp = temp
+        self.logs = []
+
+    def reset_state(self):
+        self.mcts = AlphaMCTS(self.model)
+        self.logs = []
 
     def decide(self, game, playable_actions):
-        mcts = MCTS_TREES[self.name]
+        if len(playable_actions) == 1:
+            return playable_actions[0]
         start = time.time()
 
-        temp = self.temp or int(game.state.num_turns < TEMP_TRESHOLD)
-        for _ in range(NUM_SIMULATIONS_PER_TURN):
-            mcts.search(game)
+        for _ in range(ARGS["num_simulations_per_turn"]):
+            self.mcts.search(game, self.color)
+
+        # print("AlphaTan decision took", time.time() - start)
+        # breakpoint()
 
         sample = create_sample_vector(game, self.color)
+        board_tensor = create_board_tensor(game, self.color)
         s = tuple(sample)  # hashable s
         counts = [
-            mcts.Nsa[(s, a)] if (s, a) in mcts.Nsa else 0
+            self.mcts.Nsa[(s, a)] if (s, a) in self.mcts.Nsa else 0
             for a in range(ACTION_SPACE_SIZE)
         ]
 
-        # TODO: Include playable_actions
+        # TODO: I think playable_actions is not needed b.c. search and counts force
+        #   not-playable actions to have a 0.
+        temp = (
+            self.temp
+            if self.temp is not None
+            else int(game.state.num_turns < ARGS["temp_threshold"])
+        )
         if temp == 0:
             bestAs = np.array(np.argwhere(counts == np.max(counts))).flatten()
             bestA = np.random.choice(bestAs)
@@ -151,24 +294,37 @@ class AlphaTan(Player):
 
         action = np.random.choice(len(pi), p=pi)
         best_action = from_action_space(action, game.state.playable_actions)
-        # LOGS[self.name].append((self.color, sample, pi))
+        self.logs.append((self.color, sample, board_tensor, pi))
 
-        print("AlphaTan decision took", time.time() - start)
+        # if self.color == Color.WHITE:
+        #     breakpoint()
+        # print("AlphaTan decision took", time.time() - start)
+        # breakpoint()
+
         return best_action
+
+
+NEURONS_PER_LAYER = [32, 32, 32, 32, 32]
 
 
 def create_model():
     inputs = tf.keras.Input(shape=(NUM_FEATURES,))
+    outputs = inputs
 
-    outputs = tf.keras.layers.Dense(32, activation="relu")(inputs)
+    for neurons in NEURONS_PER_LAYER:
+        outputs = tf.keras.layers.Dense(neurons, activation="relu")(outputs)
 
-    pi_output = tf.keras.layers.Dense(ACTION_SPACE_SIZE, activation="softmax")(outputs)
+    pi_output = tf.keras.layers.Dense(
+        ACTION_SPACE_SIZE,
+        activation="softmax",
+        # kernel_regularizer="l2",
+    )(outputs)
     v_output = tf.keras.layers.Dense(1, activation="tanh")(outputs)
-    model = tf.keras.Model(inputs=inputs, outputs=[pi_output, v_output])
 
+    model = tf.keras.Model(inputs=inputs, outputs=[pi_output, v_output])
     model.compile(
         loss=["categorical_crossentropy", "mse"],
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.Adam(lr=1e-4),
         metrics=["mae"],
     )
     return model

@@ -16,6 +16,7 @@ from catanatron.models.enums import BuildingType, Resource
 from experimental.machine_learning.features import (
     build_production_features,
     reachability_features,
+    resource_hand_features,
 )
 from experimental.machine_learning.players.tree_search_utils import expand_spectrum
 
@@ -40,7 +41,7 @@ def value_production(sample, player_name="P0", include_variety=True):
     return prod_sum + (0 if not include_variety else prod_variety)
 
 
-def base_value_function(params):
+def base_fn(params):
     def fn(game, p0_color):
         production_features = build_production_features(True)
         our_production_sample = production_features(game, p0_color)
@@ -51,91 +52,121 @@ def base_value_function(params):
         key = player_key(game.state, p0_color)
         longest_road_length = get_longest_road_length(game.state, p0_color)
 
-        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
         reachability_sample = reachability_features(game, p0_color, 2)
+        features = [f"P0_0_ROAD_REACHABLE_{resource.value}" for resource in Resource]
+        reachable_production_at_zero = sum([reachability_sample[f] for f in features])
+        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
         reachable_production_at_one = sum([reachability_sample[f] for f in features])
 
-        # hand_sample = resource_hand_features(game, p0_color)
-        # features = [f"P0_{resource.value}_IN_HAND" for resource in Resource]
-        num_in_hand = player_num_resource_cards(game.state, p0_color)
-        if num_in_hand > 7:
-            hand_contribution = num_in_hand * -params[4]
-        else:
-            hand_contribution = num_in_hand * params[4]
+        hand_sample = resource_hand_features(game, p0_color)
+        features = [f"P0_{resource.value}_IN_HAND" for resource in Resource]
+        distance_to_city = (
+            max(2 - hand_sample["P0_WHEAT_IN_HAND"], 0)
+            + max(3 - hand_sample["P0_ORE_IN_HAND"], 0)
+        ) / 5.0  # 0 means good. 1 means bad.
+        distance_to_settlement = (
+            max(1 - hand_sample["P0_WHEAT_IN_HAND"], 0)
+            + max(1 - hand_sample["P0_SHEEP_IN_HAND"], 0)
+            + max(1 - hand_sample["P0_BRICK_IN_HAND"], 0)
+            + max(1 - hand_sample["P0_WOOD_IN_HAND"], 0)
+        ) / 4.0  # 0 means good. 1 means bad.
+        hand_synergy = (2 - distance_to_city - distance_to_settlement) / 2
 
+        num_in_hand = player_num_resource_cards(game.state, p0_color)
+        discard_penalty = params["discard_penalty"] if num_in_hand > 7 else 0
+
+        # blockability
+        buildings = game.state.buildings_by_color[p0_color]
+        owned_nodes = buildings[BuildingType.SETTLEMENT] + buildings[BuildingType.CITY]
+        owned_tiles = set()
+        for n in owned_nodes:
+            owned_tiles.update(game.state.board.map.adjacent_tiles[n])
+        num_tiles = len(owned_tiles)
+
+        # TODO: Simplify to linear(?)
         num_buildable_nodes = len(game.state.board.buildable_node_ids(p0_color))
-        longest_road_factor = params[5] if num_buildable_nodes == 0 else 0.1
+        longest_road_factor = (
+            params["longest_road"] if num_buildable_nodes == 0 else 0.1
+        )
+
         return float(
-            game.state.player_state[f"{key}_VICTORY_POINTS"] * params[0]
-            + production * params[1]
-            - enemy_production * params[2]
-            + reachable_production_at_one * params[3]
-            # TODO: buildable nodes. or closeness to city or settlement.
-            + hand_contribution
+            game.state.player_state[f"{key}_VICTORY_POINTS"] * params["public_vps"]
+            + production * params["production"]
+            + enemy_production * params["enemy_production"]
+            + reachable_production_at_zero * params["reachable_production_0"]
+            + reachable_production_at_one * params["reachable_production_1"]
+            + hand_synergy * params["hand_synergy"]
+            + num_buildable_nodes * params["buildable_nodes"]
+            + num_tiles * params["num_tiles"]
+            + num_in_hand * params["hand_resources"]
+            + discard_penalty
             + longest_road_length * longest_road_factor
-            + player_num_dev_cards(game.state, p0_color) * 10
-            + get_played_dev_cards(game.state, p0_color, "KNIGHT") * 10.1
+            + player_num_dev_cards(game.state, p0_color) * params["hand_devs"]
+            + get_played_dev_cards(game.state, p0_color, "KNIGHT") * params["army_size"]
         )
 
     return fn
 
 
-DEFAULT_WEIGHTS = [34385842392800.824, 1e8, 1e8, 1e4, 1e3, 10, 10, 10.1]
+# Idea: On CatanTest, try fetching AlphaBeta from master. Can you download a file, and import it
+#   as a Python file(?). Then use that ...
+DEFAULT_WEIGHTS = {
+    # Where to place. Note winning is best at all costs
+    "public_vps": 3e14,
+    "production": 1e8,
+    "enemy_production": -1e8,
+    "num_tiles": 1,
+    # Towards where to expand and when
+    "reachable_production_0": 0,
+    "reachable_production_1": 1e4,
+    "buildable_nodes": 1e3,
+    "longest_road": 10,
+    # Hand, when to hold and when to use.
+    "hand_synergy": 1e2,
+    "hand_resources": 1,
+    "discard_penalty": -5,
+    "hand_devs": 10,
+    "army_size": 10.1,
+}
 
 
-def contender_value_function(params):
-    def fn(game, p0_color):
-        production_features = build_production_features(True)
-        our_production_sample = production_features(game, p0_color)
-        enemy_production_sample = production_features(game, p0_color)
-        production = value_production(our_production_sample, "P0")
-        enemy_production = value_production(enemy_production_sample, "P1", False)
+CONTENDER_WEIGHTS = {
+    # Where to place. Note winning is best at all costs
+    "public_vps": 3e14,
+    "production": 1e8,
+    "enemy_production": -1e8,
+    "num_tiles": 1,
+    # Towards where to expand and when
+    "reachable_production_0": 0,
+    "reachable_production_1": 1e4,
+    "buildable_nodes": 1e3,
+    "longest_road": 10,
+    # Hand, when to hold and when to use.
+    "hand_synergy": 1e2,
+    "hand_resources": 1,
+    "discard_penalty": -5,
+    "hand_devs": 10,
+    "army_size": 10.1,
+}
 
-        key = player_key(game.state, p0_color)
-        longest_road_length = get_longest_road_length(game.state, p0_color)
 
-        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
-        reachability_sample = reachability_features(game, p0_color, 2)
-        reachable_production_at_one = sum([reachability_sample[f] for f in features])
-
-        # hand_sample = resource_hand_features(game, p0_color)
-        # features = [f"P0_{resource.value}_IN_HAND" for resource in Resource]
-        num_in_hand = player_num_resource_cards(game.state, p0_color)
-        if num_in_hand > 7:
-            hand_contribution = num_in_hand * -params[4]
-        else:
-            hand_contribution = num_in_hand * params[4]
-
-        num_buildable_nodes = len(game.state.board.buildable_node_ids(p0_color))
-        longest_road_factor = params[5] if num_buildable_nodes == 0 else 0.1
-        return float(
-            game.state.player_state[f"{key}_VICTORY_POINTS"] * 140386938603829.9
-            + production * 198101489092897.78
-            - enemy_production * 800744568677529.2
-            + reachable_production_at_one * params[3]
-            # TODO: buildable nodes. or closeness to city or settlement.
-            + hand_contribution
-            + longest_road_length * longest_road_factor
-            + player_num_dev_cards(game.state, p0_color) * params[6]
-            + get_played_dev_cards(game.state, p0_color, "KNIGHT") * params[7],
-        )
-
-    return fn
+def contender_fn(params):
+    return base_fn(CONTENDER_WEIGHTS)
 
 
 def get_value_fn(name, params):
     if name is None or params is None:
-        return base_value_function(DEFAULT_WEIGHTS)
+        return base_fn(DEFAULT_WEIGHTS)
     return globals()[name](params)
 
 
 class ValueFunctionPlayer(Player):
-    def __init__(self, color, name, value_fn_builder_name=None, params=DEFAULT_WEIGHTS):
-        super().__init__(color, name=name)
+    def __init__(
+        self, color, value_fn_builder_name=None, params=DEFAULT_WEIGHTS, is_bot=True
+    ):
+        super().__init__(color, is_bot)
         self.value_fn_builder_name = (
-            "contender_value_function"
-            if value_fn_builder_name == "C"
-            else "base_value_function"
+            "contender_fn" if value_fn_builder_name == "C" else "base_fn"
         )
         self.params = params
 
@@ -158,7 +189,7 @@ class ValueFunctionPlayer(Player):
         return best_action
 
     def __str__(self) -> str:
-        return super().__str__() + self.value_fn_builder_name + str(self.params)
+        return super().__str__() + f"(value_fn={self.value_fn_builder_name})"
 
 
 class VictoryPointPlayer(Player):
@@ -191,19 +222,16 @@ class AlphaBetaPlayer(Player):
     def __init__(
         self,
         color,
-        name,
         depth=ALPHABETA_DEFAULT_DEPTH,
         prunning=False,
         value_fn_builder_name=None,
         params=DEFAULT_WEIGHTS,
     ):
-        super().__init__(color, name=name)
+        super().__init__(color)
         self.depth = int(depth)
         self.prunning = str(prunning).lower() != "false"
         self.value_fn_builder_name = (
-            "contender_value_function"
-            if value_fn_builder_name == "C"
-            else "base_value_function"
+            "contender_fn" if value_fn_builder_name == "C" else "base_fn"
         )
         self.params = params
 

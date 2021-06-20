@@ -15,6 +15,7 @@ services:
       dockerfile: Dockerfile.web
     environment:
       - DATABASE_URL=postgresql://catanatron:victorypoint@db:5432/catanatron_db
+      - PYTHONUNBUFFERED=1
     ports:
       - 5000:5000
     stdin_open: true

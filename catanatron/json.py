@@ -74,6 +74,11 @@ class GameEncoder(json.JSONEncoder):
                 "actions": [self.default(a) for a in obj.state.actions],
                 "player_state": obj.state.player_state,
                 "colors": obj.state.colors,
+                "bot_colors": list(
+                    map(
+                        lambda p: p.color, filter(lambda p: p.is_bot, obj.state.players)
+                    )
+                ),
                 "is_initial_build_phase": obj.state.is_initial_build_phase,
                 "robber_coordinate": obj.state.board.robber_coordinate,
                 "current_color": obj.state.current_player().color,
@@ -84,8 +89,6 @@ class GameEncoder(json.JSONEncoder):
             }
         if isinstance(obj, Deck):
             return {resource.value: obj.array[i] for i, resource in enumerate(Resource)}
-        if isinstance(obj, Player):
-            return {k: v for k, v in obj.__dict__.items() if k != "buildings"}
         if isinstance(obj, Water):
             return {"type": "WATER"}
         if isinstance(obj, Port):

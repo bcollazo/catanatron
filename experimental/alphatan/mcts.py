@@ -1,6 +1,7 @@
 import logging
 import math
 
+import tensorflow as tf
 import numpy as np
 
 from experimental.machine_learning.players.reinforcement import ACTION_SPACE_SIZE
@@ -19,7 +20,7 @@ class AlphaMCTS:
     """
 
     def __init__(self, model):
-        self.model = model
+        self.model = tf.function(model)
 
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)
         self.Nsa = {}  # stores #times edge s,a was visited
@@ -29,7 +30,7 @@ class AlphaMCTS:
         self.Es = {}  # stores game.getGameEnded ended for board s
         self.Vs = {}  # stores game.getValidMoves for board s
 
-    def search(self, game):
+    def search(self, game, perspective_color):
         """
         This function performs one iteration of MCTS. It is recursively called
         till a leaf node is found. The action chosen at each node is one that
@@ -41,15 +42,14 @@ class AlphaMCTS:
         outcome is propagated up the search path. The values of Ns, Nsa, Qsa are
         updated.
 
-        NOTE: the return values are the negative of the value of the current
-        state. This is done since v is in [-1,1] and if v is the value of a
-        state for the current player, then its value is -v for the other player.
+        NOTE: the sign of the return values depend on the current color.
 
         Returns:
-            v: the negative of the value of the current canonicalBoard
+            v: the the value of the current state from the persepective of
+                perspective_color
         """
-        # TODO: Pass model in constructor
         current_color = game.state.current_player().color
+        sign = 1 if current_color == perspective_color else -1
         sample = create_sample_vector(game, current_color)
         s = tuple(sample)  # hashable s
 
@@ -60,8 +60,9 @@ class AlphaMCTS:
 
         if s not in self.Ps:
             # leaf node
-            result = self.model.predict([sample])
-            self.Ps[s], v = (result[0][0], result[1][0])
+            tensor_sample = tf.constant([sample], dtype=tf.float32)  # fastest found...
+            result = self.model(tensor_sample)
+            self.Ps[s], v = (result[0][0].numpy(), result[1][0][0].numpy())
 
             # TODO: Is valids correctly formulated?
             action_ints = list(map(to_action_space, game.state.playable_actions))
@@ -83,7 +84,7 @@ class AlphaMCTS:
 
             self.Vs[s] = valids
             self.Ns[s] = 0
-            return -v
+            return sign * v
 
         valids = self.Vs[s]
         cur_best = -float("inf")
@@ -104,39 +105,34 @@ class AlphaMCTS:
                     best_act = a
 
         a = best_act
-        # breakpoint()
-        try:
-            best_action = from_action_space(a, game.state.playable_actions)
-        except Exception as e:
-            breakpoint()
+        best_action = from_action_space(a, game.state.playable_actions)
 
         # Tick and give:
         game_copy = game.copy()
         game_copy.execute(best_action)
 
-        v = self.search(game_copy)
+        v = self.search(game_copy, perspective_color)
 
         if (s, a) in self.Qsa:
             self.Qsa[(s, a)] = (self.Nsa[(s, a)] * self.Qsa[(s, a)] + v) / (
                 self.Nsa[(s, a)] + 1
             )
             self.Nsa[(s, a)] += 1
-
         else:
             self.Qsa[(s, a)] = v
             self.Nsa[(s, a)] = 1
 
         self.Ns[s] += 1
-        return -v
+        return sign * v
 
 
 def game_end_value(game, current_color):
     # r: 0 if game has not ended. 1 if player won, -1 if player lost,
     #    small non-zero value for draw.
     winning_color = game.winning_color()
-    value = 0
-    if winning_color == current_color:
-        value = 1
-    elif winning_color is not None:
-        value = -1
-    return value
+    if winning_color is None:
+        return 0
+    elif winning_color == current_color:
+        return 1
+    else:
+        return -1
