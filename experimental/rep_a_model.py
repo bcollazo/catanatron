@@ -1,4 +1,3 @@
-from experimental.machine_learning.features import get_feature_ordering
 import time
 from pathlib import Path
 import random
@@ -7,6 +6,8 @@ import numpy as np
 import tensorflow as tf
 
 # import kerastuner as kt
+
+from experimental.machine_learning.features import get_feature_ordering
 
 # from experimental.machine_learning.players.reinforcement import (
 #     FEATURES,
@@ -37,6 +38,7 @@ def allow_feature(feature_name):
 
 ALL_FEATURES = get_feature_ordering(num_players=2)
 FEATURES = list(filter(allow_feature, ALL_FEATURES))
+NUM_FEATURES = len(FEATURES)
 
 # ===== Configuration
 DATA_DIRECTORY = "data/simple-return-1m"
@@ -61,7 +63,6 @@ SHUFFLE_SEED = random.randint(0, 20000)
 VALIDATION_SHUFFLE_SEED = random.randint(0, 20000)
 SHUFFLE_BUFFER_SIZE = 100000
 
-NUM_FEATURES = len(FEATURES)
 MODEL_NAME = "1v1-rep-a"
 MODEL_PATH = f"experimental/models/{MODEL_NAME}"
 LOG_DIR = f"data/logs/{MODEL_NAME}/{int(time.time())}"

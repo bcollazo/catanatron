@@ -141,12 +141,11 @@ def init_tile_coordinate_map():
 def create_board_tensor(game: Game, p0_color: Color):
     """Creates a tensor of shape (WIDTH, HEIGHT, CHANNELS).
 
-    We have one hot-encoded multiplier planes (2 and 1s for city/settlements) per
-    player (thats 4 planes in total). We have another set of planes for the roads
-    built by each player.
-    Then 5 tile resources planes, one per resource.
-    Then 1 robber plane (to note nodes blocked by robber).
-    Then 6 port planes (one for each resource and one for the 3:1 ports)
+    1 x n hot-encoded planes (2 and 1s for city/settlements).
+    1 x n planes for the roads built by each player.
+    5 tile resources planes, one per resource.
+    1 robber plane (to note nodes blocked by robber).
+    6 port planes (one for each resource and one for the 3:1 ports)
 
     Example:
         - To see WHEAT plane: tf.transpose(board_tensor[:,:,3])
