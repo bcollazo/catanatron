@@ -286,3 +286,13 @@ twine upload dist/*
 
 <!-- Contributing. If you find contributions in any part of the project. Some ideas include: better bot. ui improvements. testing.
     a terminal UI (for ease of debugging). There exists Test Suite. -->
+
+### Documentation
+
+Was written using Sphinx. Commands were:
+
+```
+sphinx-quickstart docs
+sphinx-apidoc -o docs/source catanatron
+sphinx-build -b html docs/source/ docs/build/html
+```

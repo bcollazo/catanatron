@@ -3,6 +3,7 @@ import random
 import sys
 from typing import Iterable
 
+from catanatron.models.enums import Action
 from catanatron.state import State, apply_action
 from catanatron.state_functions import player_key
 from catanatron.models.map import BaseMap
@@ -19,8 +20,20 @@ class Game:
     """
 
     def __init__(
-        self, players: Iterable[Player], seed=None, catan_map=None, initialize=True
+        self,
+        players: Iterable[Player],
+        seed=None,
+        catan_map: BaseMap = None,
+        initialize=True,
     ):
+        """Creates a game (doesn't run it).
+
+        Args:
+            players (Iterable[Player]): list of players, should be at most 4.
+            seed (int, optional): Random seed to use (for reproducing games). Defaults to None.
+            catan_map (BaseMap, optional): Map configuration to use. Defaults to None.
+            initialize (bool, optional): Whether to initialize. Defaults to True.
+        """
         if initialize:
             self.seed = seed or random.randrange(sys.maxsize)
             random.seed(self.seed)
@@ -29,7 +42,14 @@ class Game:
             self.state = State(players, catan_map or BaseMap())
 
     def play(self, action_callbacks=[], decide_fn=None):
-        """Runs the game until the end"""
+        """Executes game until a player wins or exceeded TURNS_LIMIT.
+
+        Args:
+            action_callbacks (list, optional): list of functions to run after state is changed.
+                These should expect state as a parameter. Defaults to [].
+            decide_fn (function, optional): Function to overwrite current player's decision with.
+                Defaults to None.
+        """
         while self.winning_player() is None and self.state.num_turns < TURNS_LIMIT:
             self.play_tick(action_callbacks=action_callbacks, decide_fn=decide_fn)
 
@@ -41,11 +61,16 @@ class Game:
         return None
 
     def play_tick(self, action_callbacks=[], decide_fn=None):
-        """
-        Consume from queue (player, decision) to support special building phase,
-            discarding, and other decisions out-of-turn.
-        If nothing there, fall back to (current, playable()) for current-turn.
-        Assumes self.player and self.action_prompt and self.playable_actions are ready.
+        """Advances game by one ply (player decision).
+
+        Args:
+            action_callbacks (list, optional): list of functions to run after state is changed.
+                These should expect state as a parameter. Defaults to [].
+            decide_fn (function, optional): Function to overwrite current player's decision with.
+                Defaults to None.
+
+        Returns:
+            Action: Final action (modified to be used as Log)
         """
         player = self.state.current_player()
         actions = self.state.playable_actions
@@ -57,7 +82,7 @@ class Game:
         )
         return self.execute(action, action_callbacks=action_callbacks)
 
-    def execute(self, action, action_callbacks=[], validate_action=True):
+    def execute(self, action, action_callbacks=[], validate_action=True) -> Action:
         if validate_action and action not in self.state.playable_actions:
             raise ValueError(
                 f"{action} not in playable actions: {self.state.playable_actions}"
