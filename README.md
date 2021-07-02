@@ -72,6 +72,10 @@ game.play()
 You can then inspect the game state any way you want
 (e.g. `game.state.actions`, `game.state.board`, `game.state.players[0].buildings`, etc...).
 
+### Documentation
+
+https://catanatron.readthedocs.io
+
 ### Watching Games
 
 We provide a complete `docker-compose.yml` with everything needed to
