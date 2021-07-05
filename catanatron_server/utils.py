@@ -1,10 +1,6 @@
-from catanatron_server.database import save_game_state
+import webbrowser
+
 from catanatron_server.models import database_session, upsert_game_state
-
-
-def open_game(game):
-    save_game_state(game)
-    print("http://localhost:3000/games/" + game.id)
 
 
 def ensure_link(game):
@@ -12,3 +8,8 @@ def ensure_link(game):
         game_state = upsert_game_state(game, session)
         url = f"http://localhost:3000/games/{game_state.uuid}/states/{game_state.state_index}"
     return url
+
+
+def open_link(game):
+    link = ensure_link(game)
+    webbrowser.open(link)
