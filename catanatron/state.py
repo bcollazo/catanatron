@@ -144,16 +144,27 @@ class State:
 
 
 def roll_dice():
+    """Yields two random numbers
+
+    Returns:
+        tuple[int, int]: 2-tuple of random numbers from 1 to 6 inclusive.
+    """
     return (random.randint(1, 6), random.randint(1, 6))
 
 
 def yield_resources(board, resource_deck, number):
-    """
+    """Computes resource payouts for given board and dice roll number.
+
+    Args:
+        board (Board): Board state
+        resource_deck (ResourceDeck): Bank's resource deck
+        number (int): Sum of dice roll
+
     Returns:
-        (payouts, depleted): tuple where:
-        payouts: dictionary of "resource_deck" keyed by player
-                e.g. {Color.RED: ResourceDeck({Resource.WEAT: 3})}
-            depleted: list of resources that couldn't yield
+        (dict, array): 2-tuple. First element is color => deck mapping.
+            e.g. {Color.RED: ResourceDeck({Resource.WEAT: 3})}.
+            Second is an array of resources that couldn't be yieleded
+            because they depleted.
     """
     intented_payout = defaultdict(lambda: defaultdict(int))
     resource_totals = defaultdict(int)

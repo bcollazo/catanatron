@@ -1,37 +1,13 @@
-# catanatron
+![logo](https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/logo.png)
 
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
 [![Gradient](https://assets.paperspace.io/img/gradient-badge.svg)](https://console.paperspace.com/github/bcollazo/catanatron/blob/master/experimental/notebooks/Overview.ipynb?clone=true&runtime=bcollazo/paperspace-rl)
-[![Netlify Status](https://api.netlify.com/api/v1/badges/ccd61293-6735-4eb1-a6f0-bce11d6b91fa/deploy-status)](https://app.netlify.com/sites/catanatron/deploys)
 
-Settlers of Catan Python implementation and Machine-Learning player.
+Fast Settlers of Catan Python implementation and AI research environment.
 
-<!-- Best AVG duration of 1v1 random games is 0.13755289793014527 -->
-<!-- There is a catanatron PyPi package. Core implementation -->
-<!-- There is a catanatron_server and React UI that host
-    serve catanatron.com. You can run these locally with Docker -->
-<!-- There is an experimental/ folder that has fast-paced unorganized
-    code, in search of experiments to find the best player. There
-    are some useful scripts here as well. -->
-
-<!-- catanatron (Python Package) -->
-<!-- You can use this to simulate games. It holds core game
-    logic, allows you to inspect state at each step, and you
-    can create your own players to test against the computer. -->
-
-<!-- pip install catanatron -->
-
-<!-- Play a game. Implement your own Bot -->
-
-<!-- Catanatron Web. Uses React FE and Flask BE. Can run with docker.
-    Can run independently; yarn start and flask run (pip install reqs)
-    BE uses an ephemeral sqlite database in memory (optionally overrided with DATABASE_URL).
--->
-
-<!-- Experimental. Simulate many games. Install dev-requirements.txt. Use experimental/play.py. Games can be saved for viewing. Use --save-in-db, run Catanatron.com docker image and visit http://localhost/games/123/replay -->
-
-<!-- Contributing. If you find contributions in any part of the project. Some ideas include: better bot. ui improvements. testing.
-    a terminal UI (for ease of debugging). There exists Test Suite. -->
+This project's goal is to create the strongest
+Settlers of Catan AI possible.
 
 ## Usage
 
@@ -48,6 +24,8 @@ Run games with the `play.py` script. It provides extra options you can explore w
 ```
 python experimental/play.py --num=100
 ```
+
+Currently, we can execute ~13 games per second.
 
 ### Make your own bot
 
@@ -94,6 +72,10 @@ game.play()
 You can then inspect the game state any way you want
 (e.g. `game.state.actions`, `game.state.board`, `game.state.players[0].buildings`, etc...).
 
+### Documentation
+
+https://catanatron.readthedocs.io
+
 ### Watching Games
 
 We provide a complete `docker-compose.yml` with everything needed to
@@ -103,14 +85,14 @@ watch games (watching random bots is very enteraining!). Ensure you have [Docker
 docker-compose up
 ```
 
-You can also use a handy `open_game` function to create a link for a particular game:
+You can also use a handy `ensure_link` function to create a link for a particular game:
 
 ```python
-from catanatron_server.utils import open_game
-open_game(game)  # prints a link to open in browser
+from catanatron_server.utils import ensure_link
+ensure_link(game)  # prints a link to open in browser
 ```
 
-For `open_game` to work correctly, you must run `docker-compose up` in another tab. The docker-compose contains the web-server infrastructure needed to render the game in a browser.
+For `ensure_link` to work correctly, you must run `docker-compose up` in another tab. The docker-compose contains the web-server infrastructure needed to render the game in a browser.
 
 ## Architecture
 
@@ -284,4 +266,37 @@ twine upload dist/*
   - Visualize tree with graphviz. With colors per maximizing/minimizing.
 
 - Bugs:
-  - Cant use dev card just bought
+
+  - Shouldn't be able to use dev card just bought.
+
+- Features:
+
+  - Continue implementing actions from the UI (not all implemented).
+  - A terminal UI? (for ease of debugging)
+
+<!-- NOTES ====== -->
+<!-- There is a catanatron PyPi package. Core implementation -->
+<!-- catanatron (Python Package) -->
+<!-- pip install catanatron -->
+
+<!-- Catanatron Web. Uses React FE and Flask BE. Can run with docker.
+    Can run independently; yarn start and flask run (pip install reqs)
+    BE uses an ephemeral sqlite database in memory (optionally overrided with DATABASE_URL).
+-->
+<!-- There is a catanatron_server and React UI that host
+    serve catanatron.com. You can run these locally with Docker -->
+
+<!-- Experimental. Simulate many games. Install dev-requirements.txt. Use experimental/play.py. Games can be saved for viewing. Use --save-in-db, run Catanatron.com docker image and visit http://localhost/games/123/replay -->
+
+<!-- Contributing. If you find contributions in any part of the project. Some ideas include: better bot. ui improvements. testing.
+    a terminal UI (for ease of debugging). There exists Test Suite. -->
+
+### Documentation
+
+Was written using Sphinx. Commands were:
+
+```
+sphinx-quickstart docs
+sphinx-apidoc -o docs/source catanatron
+sphinx-build -b html docs/source/ docs/build/html
+```
