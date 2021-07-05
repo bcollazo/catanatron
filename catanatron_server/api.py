@@ -81,7 +81,7 @@ def post_action_endpoint(game_id):
 #     "/games/<string:game_id>/players/<int:player_index>/features", methods=["GET"]
 # )
 # def get_game_feature_vector(game_id, player_index):
-#     game = get_last_game_state(game_id)
+#     game = get_game_state(game_id)
 #     if game is None:
 #         abort(404, description="Resource not found")
 
@@ -90,7 +90,7 @@ def post_action_endpoint(game_id):
 
 # @app.route("/games/<string:game_id>/value-function", methods=["GET"])
 # def get_game_value_function(game_id):
-#     game = get_last_game_state(game_id)
+#     game = get_game_state(game_id)
 #     if game is None:
 #         abort(404, description="Resource not found")
 
