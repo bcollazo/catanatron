@@ -205,20 +205,19 @@ def get_node_counter_production(adjacent_tiles, node_id):
     )
 
 
+def build_dice_probas():
+    probas = defaultdict(int)
+    for i in range(1, 7):
+        for j in range(1, 7):
+            probas[i + j] += 1 / 36
+    return probas
+
+
+DICE_PROBAS = build_dice_probas()
+
+
 def number_probability(number):
-    return {
-        2: 2.778,
-        3: 5.556,
-        4: 8.333,
-        5: 11.111,
-        6: 13.889,
-        7: 16.667,
-        8: 13.889,
-        9: 11.111,
-        10: 8.333,
-        11: 5.556,
-        12: 2.778,
-    }[number] / 100
+    return DICE_PROBAS[number]
 
 
 # Given a tile, the reference to the node.
