@@ -147,6 +147,16 @@ class Board:
         return previous_road_color, self.road_color, self.road_lengths
 
     def bfs_walk(self, node_id, color):
+        """Generates set of nodes that are "connected" to given node.
+
+        Args:
+            node_id (int): Where to start search/walk.
+            color (Color): Player color asking
+
+        Returns:
+            Set[int]: Nodes that are "connected" to this one
+                by roads of the color player.
+        """
         agenda = [node_id]  # assuming node_id is owned.
         visited = set()
 
