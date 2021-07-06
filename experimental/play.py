@@ -206,10 +206,11 @@ def play_batch(
             link = ensure_link(game)
             logger.info(f"Saved in db. See result at: {link}")
 
-        winner = game.winning_player()
-        if winner is None:
+        winning_color = game.winning_color()
+        if winning_color is None:
             continue
-        wins[winner.color] += 1
+
+        wins[winning_color] += 1
         turns.append(game.state.num_turns)
         ticks.append(len(game.state.actions))
         durations.append(duration)
@@ -277,7 +278,7 @@ def build_action_callback(games_directory):
         # ).numpy()
         # data[player.color]["board_tensors"].append(flattened_tensor)
 
-        if game.winning_player() is not None:
+        if game.winning_color() is not None:
             for color in game.state.colors:
                 data[color]["samples"].append(create_sample(game, color))
             flush_to_matrices(game, data, games_directory)

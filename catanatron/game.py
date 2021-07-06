@@ -50,15 +50,8 @@ class Game:
             decide_fn (function, optional): Function to overwrite current player's decision with.
                 Defaults to None.
         """
-        while self.winning_player() is None and self.state.num_turns < TURNS_LIMIT:
+        while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
             self.play_tick(action_callbacks=action_callbacks, decide_fn=decide_fn)
-
-    def winning_player(self):
-        for player in self.state.players:
-            key = player_key(self.state, player.color)
-            if self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] >= 10:
-                return player
-        return None
 
     def play_tick(self, action_callbacks=[], decide_fn=None):
         """Advances game by one ply (player decision).
@@ -99,8 +92,13 @@ class Game:
         return self.state.players[self.state.current_player_index]
 
     def winning_color(self):
-        player = self.winning_player()
-        return None if player is None else player.color
+        winning_player = None
+        for player in self.state.players:
+            key = player_key(self.state, player.color)
+            if self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] >= 10:
+                winning_player = player
+
+        return None if winning_player is None else winning_player.color
 
     def copy(self) -> "Game":
         game_copy = Game([], None, None, initialize=False)
