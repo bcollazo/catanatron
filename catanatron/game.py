@@ -1,13 +1,13 @@
 import uuid
 import random
 import sys
-from typing import Iterable
+from typing import Iterable, Union
 
 from catanatron.models.enums import Action
 from catanatron.state import State, apply_action
 from catanatron.state_functions import player_key
 from catanatron.models.map import BaseMap
-from catanatron.models.player import Player
+from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
@@ -75,7 +75,9 @@ class Game:
         )
         return self.execute(action, action_callbacks=action_callbacks)
 
-    def execute(self, action, action_callbacks=[], validate_action=True) -> Action:
+    def execute(
+        self, action: Action, action_callbacks=[], validate_action: bool = True
+    ) -> Action:
         if validate_action and action not in self.state.playable_actions:
             raise ValueError(
                 f"{action} not in playable actions: {self.state.playable_actions}"
@@ -88,10 +90,7 @@ class Game:
 
         return action
 
-    def current_player(self):
-        return self.state.players[self.state.current_player_index]
-
-    def winning_color(self):
+    def winning_color(self) -> Union[Color, None]:
         winning_player = None
         for player in self.state.players:
             key = player_key(self.state, player.color)

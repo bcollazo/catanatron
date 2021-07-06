@@ -1,6 +1,7 @@
 import random
 from enum import Enum
 from collections import Counter, defaultdict
+from typing import Dict, Set
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.coordinate_system import generate_coordinate_system, Direction
@@ -46,8 +47,16 @@ class Water:
         self.edges = edges
 
 
-def init_port_nodes(catan_map):
-    """Yields resource => node_ids[], including None for 3:1 port node-ids"""
+def init_port_nodes(catan_map) -> Dict[Resource, Set[int]]:
+    """Initializes board.port_nodes cache.
+
+    Args:
+        catan_map (BaseMap): board instance.
+
+    Returns:
+        Dict[Union[Resource, None], Set[int]]: Mapping from Resource to node_ids that
+            enable port trading. None key represents 3:1 port.
+    """
     port_nodes = defaultdict(set)
     for (coordinate, value) in catan_map.topology.items():
         if not isinstance(value, tuple):
@@ -81,7 +90,8 @@ def init_adjacent_tiles(resource_tiles):
 
 class BaseMap:
     """
-    Describes a basic 4 player map. Includes the tiles, ports, and numbers used.
+    Describes a basic 4 player map. Includes the tiles, ports, and numbers
+    all initialized in a random location.
     """
 
     def __init__(self):

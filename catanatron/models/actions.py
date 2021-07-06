@@ -1,5 +1,6 @@
 import operator as op
 from functools import reduce
+from typing import List
 
 from catanatron.models.decks import ResourceDeck
 from catanatron.models.enums import (
@@ -25,13 +26,13 @@ from catanatron.state_functions import (
 )
 
 
-def monopoly_possible_actions(color):
+def monopoly_possible_actions(color) -> List[Action]:
     return [
         Action(color, ActionType.PLAY_MONOPOLY, card_type) for card_type in Resource
     ]
 
 
-def year_of_plenty_possibilities(color, resource_deck: ResourceDeck):
+def year_of_plenty_possibilities(color, resource_deck: ResourceDeck) -> List[Action]:
     resource_list = list(Resource)
 
     options = set()
@@ -55,7 +56,7 @@ def year_of_plenty_possibilities(color, resource_deck: ResourceDeck):
     )
 
 
-def road_possible_actions(state, color):
+def road_possible_actions(state, color) -> List[Action]:
     key = player_key(state, color)
 
     has_money = player_resource_deck_contains(state, color, ResourceDeck.road_cost())
@@ -68,7 +69,9 @@ def road_possible_actions(state, color):
         return []
 
 
-def settlement_possible_actions(state, color, initial_build_phase=False):
+def settlement_possible_actions(
+    state, color, initial_build_phase=False
+) -> List[Action]:
     if initial_build_phase:
         buildable_node_ids = state.board.buildable_node_ids(
             color, initial_build_phase=True
@@ -95,7 +98,7 @@ def settlement_possible_actions(state, color, initial_build_phase=False):
             return []
 
 
-def city_possible_actions(state, color):
+def city_possible_actions(state, color) -> List[Action]:
     key = player_key(state, color)
 
     has_money = player_resource_deck_contains(state, color, ResourceDeck.city_cost())
@@ -110,7 +113,7 @@ def city_possible_actions(state, color):
         return []
 
 
-def robber_possibilities(state, color):
+def robber_possibilities(state, color) -> List[Action]:
     actions = []
     for coordinate, tile in state.board.map.resource_tiles:
         if coordinate == state.board.robber_coordinate:
@@ -144,7 +147,7 @@ def robber_possibilities(state, color):
     return actions
 
 
-def initial_road_possibilities(state, color):
+def initial_road_possibilities(state, color) -> List[Action]:
     # Must be connected to last settlement
     last_settlement_node_id = state.buildings_by_color[color][BuildingType.SETTLEMENT][
         -1
@@ -157,7 +160,7 @@ def initial_road_possibilities(state, color):
     return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
 
 
-def discard_possibilities(color):
+def discard_possibilities(color) -> List[Action]:
     return [Action(color, ActionType.DISCARD, None)]
     # TODO: Be robust to high dimensionality of DISCARD
     # hand = player.resource_deck.to_array()
@@ -185,7 +188,7 @@ def ncr(n, r):
     return numer // denom
 
 
-def maritime_trade_possibilities(state, color):
+def maritime_trade_possibilities(state, color) -> List[Action]:
     trade_offers = set()
 
     # Get lowest rate per resource
@@ -214,7 +217,7 @@ def maritime_trade_possibilities(state, color):
     )
 
 
-def road_building_possibilities(player, board):
+def road_building_possibilities(player, board) -> List[Action]:
     """
     We remove equivalent possibilities, to simplify branching factor.
     """
@@ -248,7 +251,7 @@ def road_building_possibilities(player, board):
     )
 
 
-def generate_playable_actions(state):
+def generate_playable_actions(state) -> List[Action]:
     action_prompt = state.current_prompt
     color = state.current_player().color
 
