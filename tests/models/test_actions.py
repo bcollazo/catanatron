@@ -14,7 +14,6 @@ from catanatron.models.actions import (
     city_possible_actions,
     robber_possibilities,
     maritime_trade_possibilities,
-    road_building_possibilities,
 )
 from catanatron.models.board import Board
 from catanatron.models.enums import (
@@ -206,32 +205,6 @@ def test_maritime_possibities_respect_bank_not_having_cards():
     state = State([player])
     player_deck_replenish(state, player.color, WHEAT)
     assert len(maritime_trade_possibilities(state, player.color)) == 0
-
-
-def test_road_building_possibilities():
-    board = Board()
-    player = SimplePlayer(Color.RED)
-
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-
-    result = road_building_possibilities(player, board)
-
-    # 6 length-2 paths, (3 * 2 combinations) / (2  b.c. of symmetry)
-    assert len(result) == 6 + 6 / 2
-
-
-def test_road_building_two_houses():
-    board = Board()
-    player = SimplePlayer(Color.RED)
-
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    board.build_settlement(Color.RED, 0, initial_build_phase=True)
-
-    result = road_building_possibilities(player, board)
-    # 6 length-2 paths in first house
-    # 6 length-2 paths in second house
-    # 6 * 5 combinations of length-1 paths, divided by 2 b.c. of symmetry
-    assert len(result) == 6 + 6 + (6 * 5) / 2
 
 
 def test_year_of_plenty_same_resource():

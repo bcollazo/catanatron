@@ -217,40 +217,6 @@ def maritime_trade_possibilities(state, color) -> List[Action]:
     )
 
 
-def road_building_possibilities(player, board) -> List[Action]:
-    """
-    We remove equivalent possibilities, to simplify branching factor.
-    """
-    first_edges = board.buildable_edges(player.color)
-    possibilities = set()
-    for first_edge in first_edges:
-        board_copy = board.copy()
-        board_copy.build_road(player.color, first_edge)
-
-        second_edges_copy = board_copy.buildable_edges(player.color)
-        for second_edge_copy in second_edges_copy:
-            possibilities.add((first_edge, second_edge_copy))
-
-    # Remove duplicate possibilities (when second road doesnt depend on first).
-    dedupped = set()
-    for (first, second) in possibilities:
-        if second in first_edges:  # deduppable-pair
-            dedupped.add(tuple(sorted((first, second))))
-        else:
-            dedupped.add((first, second))
-
-    return list(
-        map(
-            lambda possibility: Action(
-                player.color,
-                ActionType.PLAY_ROAD_BUILDING,
-                (possibility[0], possibility[1]),
-            ),
-            dedupped,
-        )
-    )
-
-
 def generate_playable_actions(state) -> List[Action]:
     action_prompt = state.current_prompt
     color = state.current_player().color
