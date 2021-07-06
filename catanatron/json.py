@@ -3,7 +3,7 @@ from enum import Enum
 
 from catanatron.game import Game
 from catanatron.models.map import Water, Port, Tile
-from catanatron.models.player import Color, Player
+from catanatron.models.player import Color
 from catanatron.models.decks import Deck
 from catanatron.models.enums import Resource, Action, ActionType
 from catanatron.state_functions import get_longest_road_length
