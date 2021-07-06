@@ -1,6 +1,6 @@
 import pickle
 from collections import defaultdict
-from typing import Set
+from typing import Set, Tuple
 
 import networkx as nx
 
@@ -35,16 +35,30 @@ def get_edges():
     return EDGES
 
 
+EdgeId = Tuple[int, int]
+NodeId = int
+Coordinate = Tuple[int, int, int]
+
+
 class Board:
-    """Tries to encapsulate all state information regarding the board"""
+    """Encapsulates all state information regarding the board.
+
+    Attributes:
+        buildings (Dict[NodeId, Tuple[Color, BuildingType]]): Mapping from
+            node id to building (if there is a building there).
+        roads (Dict[EdgeId, Color]): Mapping from edge
+            to Color (if there is a road there). Contains inverted
+            edges as well for ease of querying.
+        connected_components (Dict[Color, List[Set[NodeId]]]): Cache
+            datastructure to speed up mantaining longest road computation.
+            To be queried by Color. Value is a list of node sets.
+        board_buildable_ids (Set[NodeId]): Cache of buildable node ids in board.
+        road_color (Color): Color of player with longest road.
+        road_length (int): Number of roads of longest road
+        robber_coordinate (Coordinate): Coordinate where robber is.
+    """
 
     def __init__(self, catan_map=None, initialize=True):
-        """
-        Initializes a new random board, based on the catan_map description.
-        It first shuffles tiles, ports, and numbers. Then goes satisfying the
-        topology (placing tiles on coordinates); ensuring to "attach" these to
-        neighbor tiles. (no repeated nodes or edges objects).
-        """
         if initialize:
             self.map = catan_map or BaseMap()  # Static State (no need to copy)
 
