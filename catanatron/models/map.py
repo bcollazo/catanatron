@@ -90,8 +90,10 @@ def init_adjacent_tiles(resource_tiles):
 
 class BaseMap:
     """
-    Describes a basic 4 player map. Includes the tiles, ports, and numbers
-    all initialized in a random location.
+    Represents a basic 4 player map.
+
+    Holds both, template of map (self.topology) and the initialization of
+    tiles, ports, and numbers (self.tiles) at random.
     """
 
     def __init__(self):

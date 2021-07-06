@@ -21,7 +21,7 @@ from catanatron.models.enums import (
 from catanatron.models.decks import DevelopmentDeck, ResourceDeck
 from catanatron.models.actions import (
     generate_playable_actions,
-    road_possible_actions,
+    road_building_possibilities,
 )
 from catanatron.state_functions import (
     build_city,
@@ -357,7 +357,7 @@ def apply_action(state: State, action: Action):
             state.free_roads_available -= 1
             if (
                 state.free_roads_available == 0
-                or len(road_possible_actions(state, action.color)) == 0
+                or len(road_building_possibilities(state, action.color)) == 0
             ):
                 state.is_road_building = False
                 state.free_roads_available == 0

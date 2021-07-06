@@ -7,11 +7,11 @@ from catanatron.state import (
 )
 from catanatron.models.actions import (
     generate_playable_actions,
-    monopoly_possible_actions,
+    monopoly_possibilities,
     year_of_plenty_possibilities,
-    road_possible_actions,
-    settlement_possible_actions,
-    city_possible_actions,
+    road_building_possibilities,
+    settlement_possibilities,
+    city_possibilities,
     robber_possibilities,
     maritime_trade_possibilities,
 )
@@ -53,61 +53,61 @@ def test_year_of_plenty_possible_actions_not_enough_cards():
 
 
 def test_monopoly_possible_actions():
-    assert len(monopoly_possible_actions(Color.RED)) == len(Resource)
+    assert len(monopoly_possibilities(Color.RED)) == len(Resource)
 
 
 def test_road_possible_actions():
     player = SimplePlayer(Color.RED)
     state = State([player])
 
-    assert len(road_possible_actions(state, Color.RED)) == 0  # no money or place
+    assert len(road_building_possibilities(state, Color.RED)) == 0  # no money or place
 
     state.board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    assert len(road_possible_actions(state, Color.RED)) == 0  # no money
+    assert len(road_building_possibilities(state, Color.RED)) == 0  # no money
 
     player_deck_replenish(state, player.color, WOOD)
     player_deck_replenish(state, player.color, BRICK)
-    assert len(road_possible_actions(state, Color.RED)) == 3
+    assert len(road_building_possibilities(state, Color.RED)) == 3
 
     state.board.build_settlement(Color.RED, 1, initial_build_phase=True)
-    assert len(road_possible_actions(state, Color.RED)) == 6
+    assert len(road_building_possibilities(state, Color.RED)) == 6
 
 
 def test_settlement_possible_actions():
     player = SimplePlayer(Color.RED)
     state = State([player])
 
-    assert len(settlement_possible_actions(state, Color.RED)) == 0  # no money or place
+    assert len(settlement_possibilities(state, Color.RED)) == 0  # no money or place
 
     state.board.build_settlement(Color.RED, 3, initial_build_phase=True)
     state.board.build_road(Color.RED, (3, 4))
     state.board.build_road(Color.RED, (4, 5))
-    assert len(settlement_possible_actions(state, Color.RED)) == 0  # no money
+    assert len(settlement_possibilities(state, Color.RED)) == 0  # no money
 
     player_deck_add(state, player.color, ResourceDeck.settlement_cost())
-    assert len(settlement_possible_actions(state, Color.RED)) == 1
+    assert len(settlement_possibilities(state, Color.RED)) == 1
 
     state.board.build_road(Color.RED, (5, 0))
-    assert len(settlement_possible_actions(state, Color.RED)) == 2
+    assert len(settlement_possibilities(state, Color.RED)) == 2
 
 
 def test_city_playable_actions():
     player = SimplePlayer(Color.RED)
     state = State([player])
 
-    assert len(city_possible_actions(state, Color.RED)) == 0  # no money or place
+    assert len(city_possibilities(state, Color.RED)) == 0  # no money or place
 
     state.board.build_settlement(Color.RED, 3, initial_build_phase=True)
     build_settlement(state, player.color, 3, True)
-    assert len(city_possible_actions(state, Color.RED)) == 0  # no money
+    assert len(city_possibilities(state, Color.RED)) == 0  # no money
 
     player_deck_replenish(state, Color.RED, WHEAT, 2)
     player_deck_replenish(state, Color.RED, ORE, 3)
-    assert len(city_possible_actions(state, Color.RED)) == 1
+    assert len(city_possibilities(state, Color.RED)) == 1
 
     state.board.build_settlement(Color.RED, 0, initial_build_phase=True)
     build_settlement(state, player.color, 0, True)
-    assert len(city_possible_actions(state, Color.RED)) == 2
+    assert len(city_possibilities(state, Color.RED)) == 2
 
 
 def test_robber_possibilities():
@@ -173,7 +173,7 @@ def test_robber_possibilities_simple():
 def test_initial_placement_possibilities():
     red = SimplePlayer(Color.RED)
     state = State([red])
-    assert len(settlement_possible_actions(state, Color.RED, True)) == 54
+    assert len(settlement_possibilities(state, Color.RED, True)) == 54
 
 
 # TODO: Forcing random selection to ease dimensionality.

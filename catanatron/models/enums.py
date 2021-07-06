@@ -53,11 +53,10 @@ class ActionPrompt(Enum):
 
 
 class ActionType(Enum):
-    """
-    Action types are associated with a "value" that can be seen as the "params"
-    of such action. They usually hold None for to-be-defined values by the
-    execution of the action. After execution, the Actions will be hydrated
-    so that they can be used in reproducing a game.
+    """Type of action taken by a player.
+
+    See comments next to each ActionType for the shape of the corresponding
+    .value field in Actions of that type.
     """
 
     ROLL = "ROLL"  # value is None. Log instead sets it to (int, int) rolled.
@@ -93,3 +92,20 @@ def action_repr(self):
 # TODO: Distinguish between Action and ActionLog?
 Action = namedtuple("Action", ["color", "action_type", "value"])
 Action.__repr__ = action_repr
+Action.__doc__ = """
+Main class to represent action. Should be immutable.
+
+The "value" is a polymorphic field that acts as the "parameters"
+for the "action_type". e.g. where to ActionType.BUILD_SETTLEMENT
+or who to steal from in a ActionType.MOVE_ROBBER action.
+
+We use this class to represent both the _intent_ of say "moving a
+robber to Tile (0,0,0) and stealing from Blue" as well as
+the final result of such a move. In moves like these where the intent
+is not enough to be used to reproduce the game identically,
+we use `None`s in the "value" container as placeholders 
+for that information needed for fully reproducing a game.
+(e.g. card stolen, dev card bought, etc...)
+
+See more on ActionType.
+"""
