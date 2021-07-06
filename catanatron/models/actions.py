@@ -1,5 +1,10 @@
+"""
+Move-generation functions (these return a list of actions that can be taken 
+by current player). Main function is generate_playable_actions.
+"""
 import operator as op
 from functools import reduce
+from typing import List
 
 from catanatron.models.decks import ResourceDeck
 from catanatron.models.enums import (
@@ -25,13 +30,65 @@ from catanatron.state_functions import (
 )
 
 
-def monopoly_possible_actions(color):
+def generate_playable_actions(state) -> List[Action]:
+    action_prompt = state.current_prompt
+    color = state.current_player().color
+
+    if action_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT:
+        return settlement_possibilities(state, color, True)
+    elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
+        return initial_road_possibilities(state, color)
+    elif action_prompt == ActionPrompt.MOVE_ROBBER:
+        return robber_possibilities(state, color)
+    elif action_prompt == ActionPrompt.PLAY_TURN:
+        if state.is_road_building:
+            actions = road_building_possibilities(state, color)
+        elif not player_has_rolled(state, color):
+            actions = [Action(color, ActionType.ROLL, None)]
+            if player_can_play_dev(state, color, "KNIGHT"):
+                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
+        else:
+            actions = [Action(color, ActionType.END_TURN, None)]
+            actions.extend(road_building_possibilities(state, color))
+            actions.extend(settlement_possibilities(state, color))
+            actions.extend(city_possibilities(state, color))
+
+            can_buy_dev_card = (
+                player_can_afford_dev_card(state, color)
+                and state.development_deck.num_cards() > 0
+            )
+            if can_buy_dev_card:
+                actions.append(Action(color, ActionType.BUY_DEVELOPMENT_CARD, None))
+
+            # Play Dev Cards
+            if player_can_play_dev(state, color, "YEAR_OF_PLENTY"):
+                actions.extend(year_of_plenty_possibilities(color, state.resource_deck))
+            if player_can_play_dev(state, color, "MONOPOLY"):
+                actions.extend(monopoly_possibilities(color))
+            if player_can_play_dev(state, color, "KNIGHT"):
+                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
+            if (
+                player_can_play_dev(state, color, "ROAD_BUILDING")
+                and len(road_building_possibilities(state, color)) > 0
+            ):
+                actions.append(Action(color, ActionType.PLAY_ROAD_BUILDING, None))
+
+            # Trade
+            actions.extend(maritime_trade_possibilities(state, color))
+        return actions
+    elif action_prompt == ActionPrompt.DISCARD:
+        return discard_possibilities(color)
+    else:
+        raise RuntimeError("Unknown ActionPrompt")
+
+
+def monopoly_possibilities(color) -> List[Action]:
     return [
         Action(color, ActionType.PLAY_MONOPOLY, card_type) for card_type in Resource
     ]
 
 
-def year_of_plenty_possibilities(color, resource_deck: ResourceDeck):
+def year_of_plenty_possibilities(color, resource_deck: ResourceDeck) -> List[Action]:
     resource_list = list(Resource)
 
     options = set()
@@ -55,7 +112,7 @@ def year_of_plenty_possibilities(color, resource_deck: ResourceDeck):
     )
 
 
-def road_possible_actions(state, color):
+def road_building_possibilities(state, color) -> List[Action]:
     key = player_key(state, color)
 
     has_money = player_resource_deck_contains(state, color, ResourceDeck.road_cost())
@@ -68,7 +125,7 @@ def road_possible_actions(state, color):
         return []
 
 
-def settlement_possible_actions(state, color, initial_build_phase=False):
+def settlement_possibilities(state, color, initial_build_phase=False) -> List[Action]:
     if initial_build_phase:
         buildable_node_ids = state.board.buildable_node_ids(
             color, initial_build_phase=True
@@ -95,7 +152,7 @@ def settlement_possible_actions(state, color, initial_build_phase=False):
             return []
 
 
-def city_possible_actions(state, color):
+def city_possibilities(state, color) -> List[Action]:
     key = player_key(state, color)
 
     has_money = player_resource_deck_contains(state, color, ResourceDeck.city_cost())
@@ -110,7 +167,7 @@ def city_possible_actions(state, color):
         return []
 
 
-def robber_possibilities(state, color):
+def robber_possibilities(state, color) -> List[Action]:
     actions = []
     for coordinate, tile in state.board.map.resource_tiles:
         if coordinate == state.board.robber_coordinate:
@@ -144,7 +201,7 @@ def robber_possibilities(state, color):
     return actions
 
 
-def initial_road_possibilities(state, color):
+def initial_road_possibilities(state, color) -> List[Action]:
     # Must be connected to last settlement
     last_settlement_node_id = state.buildings_by_color[color][BuildingType.SETTLEMENT][
         -1
@@ -157,7 +214,7 @@ def initial_road_possibilities(state, color):
     return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
 
 
-def discard_possibilities(color):
+def discard_possibilities(color) -> List[Action]:
     return [Action(color, ActionType.DISCARD, None)]
     # TODO: Be robust to high dimensionality of DISCARD
     # hand = player.resource_deck.to_array()
@@ -185,7 +242,7 @@ def ncr(n, r):
     return numer // denom
 
 
-def maritime_trade_possibilities(state, color):
+def maritime_trade_possibilities(state, color) -> List[Action]:
     trade_offers = set()
 
     # Get lowest rate per resource
@@ -212,89 +269,3 @@ def maritime_trade_possibilities(state, color):
     return list(
         map(lambda t: Action(color, ActionType.MARITIME_TRADE, t), trade_offers)
     )
-
-
-def road_building_possibilities(player, board):
-    """
-    We remove equivalent possibilities, to simplify branching factor.
-    """
-    first_edges = board.buildable_edges(player.color)
-    possibilities = set()
-    for first_edge in first_edges:
-        board_copy = board.copy()
-        board_copy.build_road(player.color, first_edge)
-
-        second_edges_copy = board_copy.buildable_edges(player.color)
-        for second_edge_copy in second_edges_copy:
-            possibilities.add((first_edge, second_edge_copy))
-
-    # Remove duplicate possibilities (when second road doesnt depend on first).
-    dedupped = set()
-    for (first, second) in possibilities:
-        if second in first_edges:  # deduppable-pair
-            dedupped.add(tuple(sorted((first, second))))
-        else:
-            dedupped.add((first, second))
-
-    return list(
-        map(
-            lambda possibility: Action(
-                player.color,
-                ActionType.PLAY_ROAD_BUILDING,
-                (possibility[0], possibility[1]),
-            ),
-            dedupped,
-        )
-    )
-
-
-def generate_playable_actions(state):
-    action_prompt = state.current_prompt
-    color = state.current_player().color
-
-    if action_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT:
-        return settlement_possible_actions(state, color, True)
-    elif action_prompt == ActionPrompt.BUILD_INITIAL_ROAD:
-        return initial_road_possibilities(state, color)
-    elif action_prompt == ActionPrompt.MOVE_ROBBER:
-        return robber_possibilities(state, color)
-    elif action_prompt == ActionPrompt.PLAY_TURN:
-        if state.is_road_building:
-            actions = road_possible_actions(state, color)
-        elif not player_has_rolled(state, color):
-            actions = [Action(color, ActionType.ROLL, None)]
-            if player_can_play_dev(state, color, "KNIGHT"):
-                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
-        else:
-            actions = [Action(color, ActionType.END_TURN, None)]
-            actions.extend(road_possible_actions(state, color))
-            actions.extend(settlement_possible_actions(state, color))
-            actions.extend(city_possible_actions(state, color))
-
-            can_buy_dev_card = (
-                player_can_afford_dev_card(state, color)
-                and state.development_deck.num_cards() > 0
-            )
-            if can_buy_dev_card:
-                actions.append(Action(color, ActionType.BUY_DEVELOPMENT_CARD, None))
-
-            # Play Dev Cards
-            if player_can_play_dev(state, color, "YEAR_OF_PLENTY"):
-                actions.extend(year_of_plenty_possibilities(color, state.resource_deck))
-            if player_can_play_dev(state, color, "MONOPOLY"):
-                actions.extend(monopoly_possible_actions(color))
-            if player_can_play_dev(state, color, "KNIGHT"):
-                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
-            if (
-                player_can_play_dev(state, color, "ROAD_BUILDING")
-                and len(road_possible_actions(state, color)) > 0
-            ):
-                actions.append(Action(color, ActionType.PLAY_ROAD_BUILDING, None))
-
-            # Trade
-            actions.extend(maritime_trade_possibilities(state, color))
-        return actions
-    elif action_prompt == ActionPrompt.DISCARD:
-        return discard_possibilities(color)
-    else:
-        raise RuntimeError("Unknown ActionPrompt")

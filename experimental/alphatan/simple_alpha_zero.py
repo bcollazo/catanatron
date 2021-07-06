@@ -194,11 +194,10 @@ def execute_episode(model):
     game = Game(players=[p0, p1])
     game.play()
 
-    winning_player = game.winning_player()
-    if winning_player is None:
+    winning_color = game.winning_color()
+    if winning_color is None:
         return []
 
-    winning_color = winning_player.color
     examples = [
         (state, board_tensor, pi, 1 if color == winning_color else -1)
         for (color, state, board_tensor, pi) in p0.logs + p1.logs

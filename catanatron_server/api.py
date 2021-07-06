@@ -55,7 +55,7 @@ def post_action_endpoint(game_id):
     if game is None:
         abort(404, description="Resource not found")
 
-    if game.winning_player() is not None:
+    if game.winning_color() is not None:
         return Response(
             response=json.dumps(game, cls=GameEncoder),
             status=200,

@@ -1,3 +1,7 @@
+"""
+Module with main State class and main apply_action call (game controller).
+"""
+
 import random
 import pickle
 from collections import defaultdict
@@ -17,7 +21,7 @@ from catanatron.models.enums import (
 from catanatron.models.decks import DevelopmentDeck, ResourceDeck
 from catanatron.models.actions import (
     generate_playable_actions,
-    road_possible_actions,
+    road_building_possibilities,
 )
 from catanatron.state_functions import (
     build_city,
@@ -64,7 +68,44 @@ for dev_card in DEVELOPMENT_CARDS:
 
 
 class State:
-    """Small container object to group dynamic variables in state"""
+    """Collection of variables representing state
+
+    Attributes:
+        players (List[Player]): DEPRECATED. Reference to list of players.
+            Use .colors instead, and move this reference to the Game class.
+            Deprecated because we want this class to only contain state
+            information that can be easily copiable.
+        board (Board): Holds board state. Settlement locations, cities,
+            roads, ect...
+        player_state (Dict[str, Any]): See PLAYER_INITIAL_STATE. It will
+            contain one of each key in PLAYER_INITIAL_STATE but prefixed
+            with "P<index_of_player>".
+            Example: { P0_HAS_ROAD: False, P1_SETTLEMENTS_AVAILABLE: 18, ... }
+        color_to_index (Dict[Color, int]): Color to seating location cache
+        colors (Tuple[Color]): Represents seating order.
+        resource_deck (ResourceDeck): Represents resource cards in the bank.
+            TODO: Change to less abstracted (faster) representation.
+        development_deck (DevelopmentDeck): Represents development cards in
+            the bank. TODO: Change to less abstracted (faster) representation.
+        buildings_by_color (Dict[Color, Dict[BuildingType, List]]): Cache of
+            buildings. Can be used like: `buildings_by_color[Color.RED][BuildingType.SETTLEMENT]`
+            to get a list of all node ids where RED has settlements.
+        actions (List[Action]): Log of all actions taken. Fully-specified actions.
+        num_turns (int): number of turns thus far
+        current_player_index (int): index per colors array of player that should be
+            making a decision now. Not necesarilly the same as current_turn_index
+            because there are out-of-turn decisions like discarding.
+        current_turn_index (int): index per colors array of player whose turn is it.
+        current_prompt (ActionPrompt): DEPRECATED. Not needed; use is_initial_build_phase,
+            is_moving_knight, etc... instead.
+        is_discarding (bool): If current player needs to discard.
+        is_moving_knight (bool): If current player needs to move robber.
+        is_road_building (bool): If current player needs to build free roads per Road
+            Building dev card.
+        free_roads_available (int): Number of roads available left in Road Building
+            phase.
+        playable_actions (List[Action]): List of playable actions by current player.
+    """
 
     def __init__(self, players, catan_map=None, initialize=True):
         if initialize:
@@ -105,9 +146,16 @@ class State:
             self.playable_actions = generate_playable_actions(self)
 
     def current_player(self):
+        """Helper for accessing Player instance who should decide next"""
         return self.players[self.current_player_index]
 
     def copy(self):
+        """Creates a copy of this State class that can be modified without
+        repercusions to this one.
+
+        Returns:
+            State: State copy.
+        """
         state_copy = State(None, None, initialize=False)
         state_copy.players = self.players
 
@@ -215,12 +263,26 @@ def next_player_index(state, direction=1):
 
 
 def apply_action(state: State, action: Action):
-    """Action router function. Reducer-like function.
+    """Main controller call. Follows redux-like pattern and
+    routes the given action to the appropiate state-changing calls.
 
-    Each branch is responsible of mantaining:
+    Responsible for mantaining:
         .current_player_index, .current_turn_index,
-        .current_prompt (and similars), .playable_actions
+        .current_prompt (and similars), .playable_actions.
+
+    Appends given action to the list of actions, as fully-specified action.
+
+    Args:
+        state (State): State to mutate
+        action (Action): Action to carry out
+
+    Raises:
+        ValueError: If invalid action given
+
+    Returns:
+        Action: Fully-specified action
     """
+
     if action.action_type == ActionType.END_TURN:
         player_clean_turn(state, action.color)
         advance_turn(state)
@@ -295,7 +357,7 @@ def apply_action(state: State, action: Action):
             state.free_roads_available -= 1
             if (
                 state.free_roads_available == 0
-                or len(road_possible_actions(state, action.color)) == 0
+                or len(road_building_possibilities(state, action.color)) == 0
             ):
                 state.is_road_building = False
                 state.free_roads_available == 0
@@ -492,7 +554,7 @@ def apply_action(state: State, action: Action):
         state.current_prompt = ActionPrompt.PLAY_TURN
         state.playable_actions = generate_playable_actions(state)
     else:
-        raise RuntimeError("Unknown ActionType " + str(action.action_type))
+        raise ValueError("Unknown ActionType " + str(action.action_type))
 
     # TODO: Think about possible-action/idea vs finalized-action design
     state.actions.append(action)

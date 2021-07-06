@@ -45,7 +45,7 @@ class StateNode:
             # playout
             result = tmp.playout()
         else:
-            result = self.game.winning_player()
+            result = self.game.winning_color()
 
         # backpropagate
         tmp.backpropagate(result == self.color)
@@ -54,7 +54,7 @@ class StateNode:
         return len(self.children) == 0
 
     def is_terminal(self):
-        return self.game.winning_player() is not None
+        return self.game.winning_color() is not None
 
     def expand(self):
         children = defaultdict(list)

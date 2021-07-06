@@ -1,6 +1,7 @@
 import random
 from enum import Enum
 from collections import Counter, defaultdict
+from typing import Dict, Set
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.coordinate_system import generate_coordinate_system, Direction
@@ -46,8 +47,16 @@ class Water:
         self.edges = edges
 
 
-def init_port_nodes(catan_map):
-    """Yields resource => node_ids[], including None for 3:1 port node-ids"""
+def init_port_nodes(catan_map) -> Dict[Resource, Set[int]]:
+    """Initializes board.port_nodes cache.
+
+    Args:
+        catan_map (BaseMap): board instance.
+
+    Returns:
+        Dict[Union[Resource, None], Set[int]]: Mapping from Resource to node_ids that
+            enable port trading. None key represents 3:1 port.
+    """
     port_nodes = defaultdict(set)
     for (coordinate, value) in catan_map.topology.items():
         if not isinstance(value, tuple):
@@ -81,7 +90,10 @@ def init_adjacent_tiles(resource_tiles):
 
 class BaseMap:
     """
-    Describes a basic 4 player map. Includes the tiles, ports, and numbers used.
+    Represents a basic 4 player map.
+
+    Holds both, template of map (self.topology) and the initialization of
+    tiles, ports, and numbers (self.tiles) at random.
     """
 
     def __init__(self):
@@ -205,20 +217,19 @@ def get_node_counter_production(adjacent_tiles, node_id):
     )
 
 
+def build_dice_probas():
+    probas = defaultdict(int)
+    for i in range(1, 7):
+        for j in range(1, 7):
+            probas[i + j] += 1 / 36
+    return probas
+
+
+DICE_PROBAS = build_dice_probas()
+
+
 def number_probability(number):
-    return {
-        2: 2.778,
-        3: 5.556,
-        4: 8.333,
-        5: 11.111,
-        6: 13.889,
-        7: 16.667,
-        8: 13.889,
-        9: 11.111,
-        10: 8.333,
-        11: 5.556,
-        12: 2.778,
-    }[number] / 100
+    return DICE_PROBAS[number]
 
 
 # Given a tile, the reference to the node.

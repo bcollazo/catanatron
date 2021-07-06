@@ -136,9 +136,20 @@ To achieve this, we separated the code into three components:
 
 The experimental folder contains unorganized code with many failed attempts at finding the best possible bot.
 
-### AI Bots
+### AI Bots Leaderboard
 
-The best bot is `AlphaBetaPlayer` with n = 2.
+The best bot is `AlphaBetaPlayer` with n = 2. Here a list of bots strength. Experiments
+done by running 1000 (when possible) 1v1 games against previous in list.
+
+| Player               | % of wins in 1v1 games      | num games used for result |
+| -------------------- | --------------------------- | ------------------------- |
+| AlphaBeta(n=2)       | 80% vs ValueFunction        | 25                        |
+| ValueFunction        | 90% vs GreedyPlayouts(n=25) | 25                        |
+| GreedyPlayouts(n=25) | 100% vs MCTS(n=100)         | 25                        |
+| MCTS(n=100)          |                             | 25                        |
+| WeightedRandom       | 53% vs WeightedRandom       | 1000                      |
+| VictoryPoint         | 60% vs Random               | 1000                      |
+| Random               | -                           | 1000                      |
 
 ## Developing for Catanatron
 
