@@ -23,11 +23,10 @@ import tensorflow as tf
 from tqdm import tqdm
 import selenium
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 
-from catanatron.state import player_key
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
+from catanatron.players.search import VictoryPointPlayer
 from experimental.machine_learning.features import (
     create_sample_vector,
     get_feature_ordering,
@@ -38,10 +37,6 @@ from experimental.machine_learning.players.reinforcement import (
     ACTIONS_ARRAY,
     ACTION_SPACE_SIZE,
     normalize_action,
-)
-from experimental.machine_learning.players.minimax import (
-    ValueFunctionPlayer,
-    VictoryPointPlayer,
 )
 
 
