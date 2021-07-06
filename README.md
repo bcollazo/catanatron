@@ -25,7 +25,7 @@ Make your own bot by implementing the following API (see examples in `catanatron
 ```python
 from catanatron.game import Game
 from catanatron.models.actions import Action
-from catanatron.models.players import Player
+from catanatron.models.player import Player
 
 class MyPlayer(Player):
     def decide(self, game: Game, playable_actions: Iterable[Action]):
