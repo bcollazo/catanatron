@@ -22,9 +22,9 @@ class Game:
     def __init__(
         self,
         players: Iterable[Player],
-        seed=None,
+        seed: int = None,
         catan_map: BaseMap = None,
-        initialize=True,
+        initialize: bool = True,
     ):
         """Creates a game (doesn't run it).
 
