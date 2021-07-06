@@ -85,7 +85,7 @@ PLAYER_CLASSES = {
     "AB": AlphaBetaPlayer,
     # Used like: --players=V:path/to/model.model,T:path/to.model
     "C": ForcePlayer,
-    "V": VRLPlayer,
+    "VRL": VRLPlayer,
     "Q": QRLPlayer,
     "P": PRLPlayer,
     "T": TensorRLPlayer,
