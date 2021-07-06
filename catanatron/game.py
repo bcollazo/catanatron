@@ -1,3 +1,7 @@
+"""
+Contains Game class which is a thin-wrapper around the State class.
+"""
+
 import uuid
 import random
 import sys
@@ -15,8 +19,9 @@ TURNS_LIMIT = 1000
 
 class Game:
     """
-    This contains the complete state of the game (board + players) and the
-    core turn-by-turn controlling logic.
+    Initializes a map, decides player seating order, and exposes two main
+    methods for executing the game (play and play_tick; to advance until
+    completion or just by one decision by a player respectively).
     """
 
     def __init__(
@@ -78,6 +83,7 @@ class Game:
     def execute(
         self, action: Action, action_callbacks=[], validate_action: bool = True
     ) -> Action:
+        """Internal call that carries out decided action by player"""
         if validate_action and action not in self.state.playable_actions:
             raise ValueError(
                 f"{action} not in playable actions: {self.state.playable_actions}"
@@ -91,6 +97,11 @@ class Game:
         return action
 
     def winning_color(self) -> Union[Color, None]:
+        """Gets winning color
+
+        Returns:
+            Union[Color, None]: Might be None if game truncated by TURNS_LIMIT
+        """
         winning_player = None
         for player in self.state.players:
             key = player_key(self.state, player.color)
@@ -100,6 +111,12 @@ class Game:
         return None if winning_player is None else winning_player.color
 
     def copy(self) -> "Game":
+        """Creates a copy of this Game, that can be modified without
+        repercusions on this one (useful for simulations).
+
+        Returns:
+            Game: Game copy.
+        """
         game_copy = Game([], None, None, initialize=False)
         game_copy.seed = self.seed
         game_copy.id = self.id

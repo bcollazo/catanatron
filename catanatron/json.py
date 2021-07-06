@@ -1,3 +1,7 @@
+"""
+Classes to encode/decode catanatron classes to JSON format.
+"""
+
 import json
 from enum import Enum
 

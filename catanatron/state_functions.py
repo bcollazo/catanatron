@@ -1,3 +1,8 @@
+"""
+Functions that mutate the given state accordingly. Core of game logic.
+Some are helpers to _read_ information from state and keep the rest
+of the code decoupled from state representation.
+"""
 import random
 
 from catanatron.models.decks import ResourceDeck
