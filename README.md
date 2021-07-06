@@ -20,7 +20,7 @@ Install with pip:
 pip install catanatron
 ```
 
-Make your own bot by implementing the following API (see examples in `players.py`):
+Make your own bot by implementing the following API (see examples in `catanatron/players` and `experimental/machine_learning/players`):
 
 ```python
 from catanatron.game import Game
