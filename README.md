@@ -149,7 +149,7 @@ done by running 1000 (when possible) 1v1 games against previous in list.
 | MCTS(n=100)          | 60% vs WeightedRandom       | 15                        |
 | WeightedRandom       | 53% vs WeightedRandom       | 1000                      |
 | VictoryPoint         | 60% vs Random               | 1000                      |
-| Random               | -                           | 1000                      |
+| Random               | -                           | -                         |
 
 ## Developing for Catanatron
 
@@ -286,8 +286,7 @@ sphinx-build -b html docs/source/ docs/build/html
 
 # Contributing
 
-I am new to Open Source Development, so open to suggestions on this section. The best contributions would be to make the core bot stronger by tinkering with the weights of each of the hand-crafted features in `experimental/machine_learning/players/minimax.py`, or coming up with
-new hand-crafted features!
+I am new to Open Source Development, so open to suggestions on this section. The best contributions would be to make the core bot stronger by tinkering with the weights of each of the hand-crafted features in `experimental/machine_learning/players/minimax.py`, or coming up with new hand-crafted features! In particular, you can edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `python experimental/play.py --players=AB:2:False:C,AB:2 --num=100` to see if your changes improve the main bot.
 
 Here is also a list of ideas:
 
