@@ -26,6 +26,8 @@ from experimental.tensorforce_player import ForcePlayer
 from experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
     ValueFunctionPlayer,
+)
+from catanatron.players.search import (
     VictoryPointPlayer,
 )
 from experimental.machine_learning.players.mcts import MCTSPlayer
