@@ -1,4 +1,3 @@
-import random
 import time
 
 from catanatron.state_functions import (
