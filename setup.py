@@ -23,5 +23,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8",
-    install_requires=["networkx"],
+    install_requires=["networkx", "gym"],
 )
