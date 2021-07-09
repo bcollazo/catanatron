@@ -9,6 +9,9 @@ pip install catanatron
 Make your training loop, ensuring to respect `env.get_valid_actions()`.
 
 ```python
+import random
+import gym
+
 env = gym.make("catanatron_gym:catanatron-v0")
 observation = env.reset()
 for _ in range(1000):
