@@ -115,7 +115,7 @@ State is currently represented by a simple data container class and is mutated b
 
 ## Catanatron OpenAI's Gym API
 
-See [catanatron_gym]('catanatron_gym/README.md').
+See [catanatron_gym](catanatron_gym/README.md).
 
 ## Architecture
 
