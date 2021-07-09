@@ -1,7 +1,7 @@
 import random
 from enum import Enum
 from collections import Counter, defaultdict
-from typing import Dict, Set
+from typing import Dict, Set, Tuple
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.coordinate_system import generate_coordinate_system, Direction
@@ -252,8 +252,22 @@ class EdgeRef(Enum):
     NORTHEAST = "NORTHEAST"
 
 
-# TODO: Add typing information
-def initialize_board(catan_map):
+def initialize_board(catan_map) -> Dict[Tuple[int, int, int], Tile]:
+    """Initializes a new random board, based on the catan_map template.
+
+    It first shuffles tiles, ports, and numbers. Then goes satisfying the
+    topology (i.e. placing tiles on coordinates); ensuring to "attach" these to
+    neighbor tiles (so as to not repeat nodes or edges objects).
+
+    Args:
+        catan_map (BaseMap): Instance to mutate.
+
+    Raises:
+        ValueError: Invalid tile in topology
+
+    Returns:
+        Dict[tuple[int, int, int], Tile]: Coordinate to initialized Tile mapping.
+    """
     shuffled_port_resources = random.sample(
         catan_map.port_resources, len(catan_map.port_resources)
     )
@@ -293,7 +307,7 @@ def initialize_board(catan_map):
             water_tile = Water(nodes, edges)
             all_tiles[coordinate] = water_tile
         else:
-            raise Exception("Something went wrong")
+            raise ValueError("Invalid tile")
 
     return all_tiles
 

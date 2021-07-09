@@ -25,7 +25,7 @@ Make your own bot by implementing the following API (see examples in `catanatron
 ```python
 from catanatron.game import Game
 from catanatron.models.actions import Action
-from catanatron.models.players import Player
+from catanatron.models.player import Player
 
 class MyPlayer(Player):
     def decide(self, game: Game, playable_actions: Iterable[Action]):
@@ -108,7 +108,7 @@ open_link(game)  # opens game in browser
 
 ## Documentation
 
-See https://catanatron.readthedocs.io for more details on how we represent the state and actions.
+See https://catanatron.readthedocs.io for more details on how we represent the [state](https://catanatron.readthedocs.io/en/latest/catanatron.html#catanatron.state.State) and [actions](https://catanatron.readthedocs.io/en/latest/catanatron.models.html#catanatron.models.enums.Action).
 
 In summary, Actions are tuples of enums like: `(ActionType.PLAY_MONOPOLY, Resource.WHEAT)` or `(ActionType.BUILD_SETTLEMENT, 3)` (i.e. build settlement on node 3).
 

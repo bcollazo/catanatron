@@ -75,8 +75,8 @@ class State:
             Use .colors instead, and move this reference to the Game class.
             Deprecated because we want this class to only contain state
             information that can be easily copiable.
-        board (Board): Holds board state. Settlement locations, cities,
-            roads, ect...
+        board (Board): Board state. Settlement locations, cities,
+            roads, ect... See Board class.
         player_state (Dict[str, Any]): See PLAYER_INITIAL_STATE. It will
             contain one of each key in PLAYER_INITIAL_STATE but prefixed
             with "P<index_of_player>".
