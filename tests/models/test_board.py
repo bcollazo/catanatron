@@ -1,5 +1,4 @@
 import pytest
-import networkx as nx
 
 from catanatron.models.enums import Resource
 from catanatron.models.board import Board, get_node_distances
