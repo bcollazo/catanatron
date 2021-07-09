@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="catanatron",
-    version="1.0.2",
+    version="1.0.3",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Fast Settlers of Catan Python Implementation",
@@ -15,6 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(
         exclude=[
             "catanatron_gym",
+            "catanatron_gym.envs",
             "catanatron_server",
         ]
     ),
