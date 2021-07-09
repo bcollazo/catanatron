@@ -1,11 +1,11 @@
 import setuptools
 
-with open("README.md", "r") as fh:
+with open("catanatron_gym/README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="catanatron_gym",
-    version="0.0.1",
+    version="0.0.2",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Catan OpenAI Gym",
