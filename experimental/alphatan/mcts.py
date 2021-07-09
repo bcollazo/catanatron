@@ -6,7 +6,7 @@ import numpy as np
 
 from experimental.machine_learning.players.reinforcement import ACTION_SPACE_SIZE
 from experimental.dqn_player import to_action_space, from_action_space
-from experimental.machine_learning.features import create_sample_vector
+from catanatron_gym.features import create_sample_vector
 
 EPS = 1e-8
 CPUCT = 1

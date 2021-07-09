@@ -2,6 +2,7 @@ import math
 import random
 from tests.utils import advance_to_play_turn, build_initial_placements
 import tensorflow as tf
+import gym
 
 from catanatron.state import player_deck_replenish
 from catanatron.models.enums import ORE, Action, ActionType, WHEAT
@@ -10,7 +11,7 @@ from catanatron.models.map import BaseMap, NUM_EDGES, NUM_NODES, NodeRef
 from catanatron.game import Game
 from catanatron.models.map import number_probability
 from catanatron.models.player import SimplePlayer, Color
-from experimental.machine_learning.features import (
+from catanatron_gym.features import (
     create_sample,
     expansion_features,
     reachability_features,
@@ -26,6 +27,17 @@ from experimental.machine_learning.board_tensor_features import (
     init_board_tensor_map,
     init_tile_coordinate_map,
 )
+
+
+def test_gym_api_works():
+    env = gym.make("catanatron_gym:catanatron-v0")
+    observation = env.reset()
+    for _ in range(1000):
+        action = random.choice(env.get_valid_actions())
+        observation, reward, done, info = env.step(action)
+        if done:
+            observation = env.reset()
+    env.close()
 
 
 def test_create_sample():

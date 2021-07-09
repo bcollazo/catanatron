@@ -1,21 +1,17 @@
-import time
 import os
-import copy
 
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from catanatron.game import Game
 from catanatron.models.player import Player
-from catanatron.models.map import BaseMap, NUM_NODES, Tile
-from catanatron.models.board import get_edges
-from catanatron.models.enums import Resource, Action, ActionType
-from experimental.machine_learning.features import (
+from catanatron.models.enums import Action, ActionType
+from catanatron_gym.features import (
     create_sample,
     create_sample_vector,
     get_feature_ordering,
 )
+from catanatron_gym.envs.catanatron_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
 from experimental.machine_learning.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
@@ -74,52 +70,6 @@ FEATURES = list(filter(allow_feature, ALL_FEATURES))
 FEATURES = get_feature_ordering(2)
 FEATURE_INDICES = [ALL_FEATURES.index(f) for f in FEATURES]
 
-BASE_TOPOLOGY = BaseMap().topology
-TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == Tile]
-RESOURCE_LIST = list(Resource)
-ACTIONS_ARRAY = [
-    (ActionType.ROLL, None),
-    # TODO: One for each tile (and abuse 1v1 setting).
-    *[(ActionType.MOVE_ROBBER, tile) for tile in TILE_COORDINATES],
-    (ActionType.DISCARD, None),
-    *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
-    *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
-    *[(ActionType.BUILD_CITY, node_id) for node_id in range(NUM_NODES)],
-    (ActionType.BUY_DEVELOPMENT_CARD, None),
-    (ActionType.PLAY_KNIGHT_CARD, None),
-    *[
-        (ActionType.PLAY_YEAR_OF_PLENTY, (first_card, RESOURCE_LIST[j]))
-        for i, first_card in enumerate(RESOURCE_LIST)
-        for j in range(i, len(RESOURCE_LIST))
-    ],
-    *[(ActionType.PLAY_YEAR_OF_PLENTY, (first_card,)) for first_card in RESOURCE_LIST],
-    (ActionType.PLAY_ROAD_BUILDING, None),
-    *[(ActionType.PLAY_MONOPOLY, r) for r in Resource],
-    # 4:1 with bank
-    *[
-        (ActionType.MARITIME_TRADE, tuple(4 * [i] + [j]))
-        for i in Resource
-        for j in Resource
-        if i != j
-    ],
-    # 3:1 with port
-    *[
-        (ActionType.MARITIME_TRADE, tuple(3 * [i] + [None, j]))
-        for i in Resource
-        for j in Resource
-        if i != j
-    ],
-    # 2:1 with port
-    *[
-        (ActionType.MARITIME_TRADE, tuple(2 * [i] + [None, None, j]))
-        for i in Resource
-        for j in Resource
-        if i != j
-    ],
-    (ActionType.END_TURN, None),
-]
-
-ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
 EPSILON = 0.20  # for epsilon-greedy action selection
 # singleton for model. lazy-initialize to easy dependency graph and stored
 #   here instead of class attribute to skip saving model in CatanatronDB.

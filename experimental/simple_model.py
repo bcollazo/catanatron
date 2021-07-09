@@ -10,7 +10,7 @@ from sklearn.linear_model import SGDRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 
-from experimental.machine_learning.features import get_feature_ordering
+from catanatron_gym.features import get_feature_ordering
 from experimental.datasets import read_dataset, preprocess_samples
 
 

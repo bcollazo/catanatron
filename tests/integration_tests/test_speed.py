@@ -3,7 +3,7 @@ import json
 from catanatron.json import GameEncoder
 from catanatron.game import Game
 from catanatron.models.player import SimplePlayer, Color
-from experimental.machine_learning.features import create_sample
+from catanatron_gym.features import create_sample
 
 
 # Things to benchmark. create_sample(), game.play() (random game), .to_json(), .copy()

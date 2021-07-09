@@ -6,7 +6,7 @@ from catanatron.models.player import Player
 from catanatron.models.actions import Action
 from catanatron.models.enums import Resource, BuildingType
 
-from experimental.machine_learning.features import create_sample, create_sample_vector
+from catanatron_gym.features import create_sample, create_sample_vector
 
 
 from experimental.simple_model import FEATURES

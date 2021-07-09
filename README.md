@@ -59,8 +59,7 @@ game.play()  # returns winning color
 You can then inspect the game state any way you want
 (e.g. `game.state.player_state`, `game.state.actions`, `game.state.board.buildings`, etc...). See [documentation](#documentation) for more.
 
-For watching these games in a UI see
-[watching games](#watching-games).
+For watching these games in a UI see [watching games](#watching-games).
 
 ## Advanced Usage
 
@@ -113,6 +112,30 @@ See https://catanatron.readthedocs.io for more details on how we represent the [
 In summary, Actions are tuples of enums like: `(ActionType.PLAY_MONOPOLY, Resource.WHEAT)` or `(ActionType.BUILD_SETTLEMENT, 3)` (i.e. build settlement on node 3).
 
 State is currently represented by a simple data container class and is mutated by the functions in the `state_functions` module. This functional style allows us to create state copies (for bots that search through state space) faster. The closer we make this State class to an array of immutable primitives, the faster it will be to copy.
+
+## Catanatron OpenAI's Gym API
+
+For reinforcement learning purposes, we provide an Open AI Gym to play 1v1 Catan against a random bot environment. To use:
+
+```
+pip install catanatron_gym
+```
+
+Make your training loop, ensuring to respect `env.get_valid_actions()`.
+
+```python
+env = gym.make("catanatron_gym:catanatron-v0")
+observation = env.reset()
+for _ in range(1000):
+  action = random.choice(env.get_valid_actions()) # your agent here (this takes random actions)
+
+  observation, reward, done, info = env.step(action)
+  if done:
+      observation = env.reset()
+env.close()
+```
+
+You can access `env.game.state` and build your own "observation" (features) vector as well.
 
 ## Architecture
 
@@ -268,9 +291,25 @@ In [3]: x.get_chunk(10)
 
 ### Publishing to PyPi
 
+catanatron Package
+
 ```
 pip install twine
-python setup.py sdist bdist_wheel
+rm -rf build
+rm -rf dist
+python catanatron.setup.py sdist bdist_wheel
+twine check dist/*
+twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+twine upload dist/*
+```
+
+catanatron_gym Package
+
+```
+pip install twine
+rm -rf build
+rm -rf dist
+python catanatron_gym.setup.py sdist bdist_wheel
 twine check dist/*
 twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 twine upload dist/*
