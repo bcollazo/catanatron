@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import tensorflow as tf
 
-from experimental.machine_learning.features import (
+from catanatron_gym.features import (
     create_sample_vector,
     get_feature_ordering,
 )

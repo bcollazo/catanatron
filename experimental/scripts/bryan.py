@@ -7,7 +7,7 @@ import json
 from copy import deepcopy
 import functools
 
-from experimental.machine_learning.features import create_sample
+from catanatron_gym.features import create_sample
 from catanatron.game import Game
 from catanatron.models.player import SimplePlayer, Color
 from catanatron.json import GameEncoder

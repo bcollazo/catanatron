@@ -34,7 +34,7 @@ from experimental.machine_learning.players.mcts import MCTSPlayer
 from experimental.machine_learning.players.scikit import ScikitPlayer
 from experimental.machine_learning.players.playouts import GreedyPlayoutsPlayer
 from experimental.machine_learning.players.online_mcts_dqn import OnlineMCTSDQNPlayer
-from experimental.machine_learning.features import (
+from catanatron_gym.features import (
     create_sample,
     create_sample_vector,
     get_feature_ordering,

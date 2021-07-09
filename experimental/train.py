@@ -8,7 +8,7 @@ import datetime
 import click
 import tensorflow as tf
 
-from experimental.machine_learning.features import get_feature_ordering
+from catanatron_gym.features import get_feature_ordering
 from experimental.machine_learning.utils import (
     estimate_num_samples,
     generate_arrays_from_file,

@@ -59,8 +59,7 @@ game.play()  # returns winning color
 You can then inspect the game state any way you want
 (e.g. `game.state.player_state`, `game.state.actions`, `game.state.board.buildings`, etc...). See [documentation](#documentation) for more.
 
-For watching these games in a UI see
-[watching games](#watching-games).
+For watching these games in a UI see [watching games](#watching-games).
 
 ## Advanced Usage
 
@@ -113,6 +112,10 @@ See https://catanatron.readthedocs.io for more details on how we represent the [
 In summary, Actions are tuples of enums like: `(ActionType.PLAY_MONOPOLY, Resource.WHEAT)` or `(ActionType.BUILD_SETTLEMENT, 3)` (i.e. build settlement on node 3).
 
 State is currently represented by a simple data container class and is mutated by the functions in the `state_functions` module. This functional style allows us to create state copies (for bots that search through state space) faster. The closer we make this State class to an array of immutable primitives, the faster it will be to copy.
+
+## Catanatron OpenAI's Gym API
+
+See [catanatron_gym]('catanatron_gym/README.md').
 
 ## Architecture
 
@@ -268,9 +271,25 @@ In [3]: x.get_chunk(10)
 
 ### Publishing to PyPi
 
+catanatron Package
+
 ```
 pip install twine
-python setup.py sdist bdist_wheel
+rm -rf build
+rm -rf dist
+python catanatron.setup.py sdist bdist_wheel
+twine check dist/*
+twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+twine upload dist/*
+```
+
+catanatron_gym Package
+
+```
+pip install twine
+rm -rf build
+rm -rf dist
+python catanatron_gym.setup.py sdist bdist_wheel
 twine check dist/*
 twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 twine upload dist/*
