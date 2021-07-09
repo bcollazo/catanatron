@@ -1,8 +1,6 @@
 import gym
 from gym import spaces
 
-import numpy as np
-
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BaseMap, NUM_NODES, Tile
@@ -109,9 +107,7 @@ class CatanatronEnv(gym.Env):
 
     action_space = spaces.Discrete(ACTION_SPACE_SIZE)
     # TODO: This could be smaller (there are many binary features).
-    observation_space = spaces.Box(
-        low=-0, high=HIGH, shape=(NUM_FEATURES,), dtype=np.int32
-    )
+    observation_space = spaces.Box(low=-0, high=HIGH, shape=(NUM_FEATURES,), dtype=int)
     reward_range = (-1, 1)
 
     def __init__(self):

@@ -3,7 +3,7 @@
 For reinforcement learning purposes, we provide an Open AI Gym to play 1v1 Catan against a random bot environment. To use:
 
 ```
-pip install catanatron_gym
+pip install catanatron
 ```
 
 Make your training loop, ensuring to respect `env.get_valid_actions()`.
