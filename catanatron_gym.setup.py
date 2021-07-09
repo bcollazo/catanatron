@@ -4,13 +4,8 @@ with open("catanatron_gym/README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-<<<<<<< HEAD:catanatron_gym.setup.py
-    name="catanatron_gym",
-    version="0.0.2",
-=======
     name="catanatron",
     version="1.0.1",
->>>>>>> master:setup.py
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Catan OpenAI Gym",

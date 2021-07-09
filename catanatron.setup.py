@@ -5,11 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="catanatron",
-<<<<<<< HEAD:catanatron.setup.py
     version="1.0.3",
-=======
-    version="1.0.1",
->>>>>>> master:setup.py
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Fast Settlers of Catan Python Implementation",
