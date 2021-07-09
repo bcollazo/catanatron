@@ -5,7 +5,7 @@ import sklearn
 from sklearn.ensemble import RandomForestRegressor
 
 from experimental.simple_model import create_datasets_iters, read_data_tf
-from experimental.machine_learning.features import get_feature_ordering
+from catanatron_gym.features import get_feature_ordering
 
 # Taken from correlation analysis
 FEATURES = [

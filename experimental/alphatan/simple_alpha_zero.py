@@ -17,22 +17,20 @@ from experimental.alphatan.mcts import AlphaMCTS, game_end_value
 from experimental.machine_learning.utils import ensure_dir
 from catanatron.models.player import Color, Player, RandomPlayer
 from experimental.play import play_batch
-from experimental.machine_learning.players.reinforcement import (
+from catanatron_gym.envs.catanatron_env import (
     ACTIONS_ARRAY,
     ACTION_SPACE_SIZE,
-)
-from experimental.dqn_player import (
-    epsilon_greedy_policy,
     from_action_space,
     to_action_space,
 )
+from experimental.dqn_player import epsilon_greedy_policy
 from experimental.machine_learning.board_tensor_features import (
     CHANNELS,
     HEIGHT,
     WIDTH,
     create_board_tensor,
 )
-from experimental.machine_learning.features import (
+from catanatron_gym.features import (
     create_sample_vector,
     get_feature_ordering,
 )

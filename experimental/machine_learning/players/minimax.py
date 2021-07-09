@@ -12,7 +12,7 @@ from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
 from catanatron.models.enums import BuildingType, Resource
-from experimental.machine_learning.features import (
+from catanatron_gym.features import (
     build_production_features,
     reachability_features,
     resource_hand_features,

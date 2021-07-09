@@ -15,7 +15,7 @@ from experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
     get_channels,
 )
-from experimental.machine_learning.features import get_feature_ordering
+from catanatron_gym.features import get_feature_ordering
 
 
 def allow_feature(feature_name):

@@ -9,7 +9,7 @@ from catanatron.models.coordinate_system import offset_to_cube
 from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.map import number_probability
 from catanatron.models.enums import DevelopmentCard, Resource
-from experimental.machine_learning.features import iter_players
+from catanatron_gym.features import iter_players
 
 # These assume 4 players
 WIDTH = 21

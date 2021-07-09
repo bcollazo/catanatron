@@ -9,11 +9,11 @@ import click
 from catanatron.state import player_key
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
-from experimental.machine_learning.features import (
+from catanatron_gym.features import (
     create_sample_vector,
     get_feature_ordering,
 )
-from experimental.machine_learning.players.reinforcement import (
+from catanatron_gym.envs.catanatron_env import (
     ACTIONS_ARRAY,
     ACTION_SPACE_SIZE,
     normalize_action,

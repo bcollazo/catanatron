@@ -27,16 +27,14 @@ from selenium import webdriver
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.players.search import VictoryPointPlayer
-from experimental.machine_learning.features import (
-    create_sample_vector,
-    get_feature_ordering,
-)
+from catanatron_gym.features import create_sample_vector, get_feature_ordering
 from catanatron_server.utils import ensure_link
 from experimental.machine_learning.board_tensor_features import create_board_tensor
-from experimental.machine_learning.players.reinforcement import (
+from catanatron_gym.envs.catanatron_env import (
+    from_action_space,
+    to_action_space,
     ACTIONS_ARRAY,
     ACTION_SPACE_SIZE,
-    normalize_action,
 )
 
 
@@ -294,28 +292,6 @@ class DQNAgent:
         (sample, board_tensor) = state
         sample = tf.reshape(tf.convert_to_tensor(sample), (-1, NUM_FEATURES))
         return self.model.call(sample)[0]
-
-
-# encode action to action_space
-def to_action_space(action):
-    """maps action to space_action equivalent integer"""
-    normalized = normalize_action(action)
-    return ACTIONS_ARRAY.index((normalized.action_type, normalized.value))
-
-
-# decode action_space to action
-def from_action_space(action_int, playable_actions):
-    # Get "catan_action" based on space action.
-    # i.e. Take first action in playable that matches ACTIONS_ARRAY blueprint
-    (action_type, value) = ACTIONS_ARRAY[action_int]
-    catan_action = None
-    for action in playable_actions:
-        normalized = normalize_action(action)
-        if normalized.action_type == action_type and normalized.value == value:
-            catan_action = action
-            break  # return the first one
-    assert catan_action is not None
-    return catan_action
 
 
 def epsilon_greedy_policy(playable_actions, qs, epsilon):

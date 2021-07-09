@@ -7,7 +7,7 @@ import tensorflow as tf
 
 # import kerastuner as kt
 
-from experimental.machine_learning.features import get_feature_ordering
+from catanatron_gym.features import get_feature_ordering
 
 # from experimental.machine_learning.players.reinforcement import (
 #     FEATURES,

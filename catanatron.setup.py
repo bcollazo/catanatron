@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="catanatron",
-    version="1.0.1",
+    version="1.0.3",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Fast Settlers of Catan Python Implementation",
@@ -14,6 +14,8 @@ setuptools.setup(
     url="https://github.com/bcollazo/catanatron",
     packages=setuptools.find_packages(
         exclude=[
+            "catanatron_gym",
+            "catanatron_gym.envs",
             "catanatron_server",
         ]
     ),
@@ -23,7 +25,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8",
-    install_requires=[
-        "networkx",
-    ],
+    install_requires=["networkx"],
 )
