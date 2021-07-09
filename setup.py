@@ -1,14 +1,14 @@
 import setuptools
 
-with open("catanatron_gym/README.md", "r") as fh:
+with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="catanatron_gym",
-    version="1.0.1",
+    name="catanatron",
+    version="2.0.0",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
-    description="Catan OpenAI Gym",
+    description="Fast Settlers of Catan Python Implementation",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bcollazo/catanatron",
@@ -23,5 +23,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8",
-    install_requires=["networkx", "gym", "numpy"],
+    install_requires=["networkx"],
 )
