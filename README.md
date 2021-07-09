@@ -277,19 +277,7 @@ catanatron Package
 pip install twine
 rm -rf build
 rm -rf dist
-python catanatron.setup.py sdist bdist_wheel
-twine check dist/*
-twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-twine upload dist/*
-```
-
-catanatron_gym Package
-
-```
-pip install twine
-rm -rf build
-rm -rf dist
-python catanatron_gym.setup.py sdist bdist_wheel
+python setup.py sdist bdist_wheel
 twine check dist/*
 twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 twine upload dist/*
