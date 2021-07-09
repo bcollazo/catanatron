@@ -4,7 +4,7 @@ with open("catanatron_gym/README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="catanatron",
+    name="catanatron_gym",
     version="1.0.1",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
