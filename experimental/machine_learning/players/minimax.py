@@ -224,14 +224,15 @@ class AlphaBetaPlayer(Player):
 
         start = time.time()
         state_id = str(len(game.state.actions))
-        node = DebugStateNode(state_id)  # i think it comes from outside
+        node = DebugStateNode(state_id, self.color)  # i think it comes from outside
         deadline = start + MAX_SEARCH_TIME_SECS
         result = self.alphabeta(
             game.copy(), self.depth, float("-inf"), float("inf"), deadline, node
         )
         # print("Decision Results:", self.depth, len(actions), time.time() - start)
-        # render_debug_tree(node)
-        # breakpoint()
+        # if game.state.num_turns > 10:
+        #     render_debug_tree(node)
+        #     breakpoint()
         return result[0]
 
     def __repr__(self) -> str:
@@ -268,7 +269,9 @@ class AlphaBetaPlayer(Player):
 
                 expected_value = 0
                 for j, (out, proba) in enumerate(outprobas):
-                    out_node = DebugStateNode(f"{node.label} {i} {j}")
+                    out_node = DebugStateNode(
+                        f"{node.label} {i} {j}", out.state.current_player().color
+                    )
 
                     result = self.alphabeta(
                         out, depth - 1, alpha, beta, deadline, out_node
@@ -299,7 +302,9 @@ class AlphaBetaPlayer(Player):
 
                 expected_value = 0
                 for j, (out, proba) in enumerate(outprobas):
-                    out_node = DebugStateNode(f"{node.label} {i} {j}")
+                    out_node = DebugStateNode(
+                        f"{node.label} {i} {j}", out.state.current_player().color
+                    )
 
                     result = self.alphabeta(
                         out, depth - 1, alpha, beta, deadline, out_node
@@ -325,10 +330,11 @@ class AlphaBetaPlayer(Player):
 
 
 class DebugStateNode:
-    def __init__(self, label):
+    def __init__(self, label, color):
         self.label = label
         self.children = []  # DebugActionNode[]
         self.expected_value = None
+        self.color = color
 
 
 class DebugActionNode:
@@ -351,6 +357,8 @@ def render_debug_tree(node):
         dot.node(
             tmp.label,
             label=f"<{tmp.label}<br /><font point-size='10'>{tmp.expected_value}</font>>",
+            style="filled",
+            fillcolor=tmp.color.value,
         )
         for child in tmp.children:
             action_label = (
