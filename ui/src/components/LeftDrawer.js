@@ -1,6 +1,8 @@
 import React, { useCallback, useContext } from "react";
 import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
 import Divider from "@material-ui/core/Divider";
+import Drawer from "@material-ui/core/Drawer";
+import { Hidden } from "@material-ui/core";
 
 import PlayerStateBox from "../components/PlayerStateBox";
 import { humanizeAction } from "../components/Prompt";
@@ -72,17 +74,33 @@ export default function LeftDrawer() {
   );
 
   return (
-    <SwipeableDrawer
-      className="left-drawer"
-      anchor={"left"}
-      open={state.isLeftDrawerOpen}
-      onClose={closeLeftDrawer}
-      onOpen={openLeftDrawer}
-      disableBackdropTransition={!iOS}
-      disableDiscovery={iOS}
-      onKeyDown={closeLeftDrawer}
-    >
-      <DrawerContent gameState={state.gameState} />
-    </SwipeableDrawer>
+    <>
+      <Hidden mdUp implementation="js">
+        <SwipeableDrawer
+          className="left-drawer"
+          anchor="left"
+          open={state.isLeftDrawerOpen}
+          onClose={closeLeftDrawer}
+          onOpen={openLeftDrawer}
+          disableBackdropTransition={!iOS}
+          disableDiscovery={iOS}
+          onKeyDown={closeLeftDrawer}
+        >
+          <DrawerContent gameState={state.gameState} />
+        </SwipeableDrawer>
+      </Hidden>
+      <Hidden smDown implementation="css">
+        <Drawer
+          className="left-drawer"
+          anchor="left"
+          variant="permanent"
+          open
+          disableBackdropTransition={!iOS}
+          disableDiscovery={iOS}
+        >
+          <DrawerContent gameState={state.gameState} />
+        </Drawer>
+      </Hidden>
+    </>
   );
 }

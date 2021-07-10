@@ -87,3 +87,9 @@ main {
     opacity: 1;
   }
 }
+
+@media (min-width: $md-breakpoint) {
+  main {
+    padding-left: 250px;
+  }
+}

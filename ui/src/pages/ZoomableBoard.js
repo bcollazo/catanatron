@@ -2,6 +2,7 @@ import React, { useCallback, useContext, useEffect, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import classnames from "classnames";
 import memoize from "fast-memoize";
+import { useMediaQuery, useTheme } from "@material-ui/core";
 
 import useWindowSize from "../utils/useWindowSize";
 import { SQRT3 } from "../utils/coordinates";
@@ -104,6 +105,8 @@ export default function ZoomableBoard({ replayMode }) {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
   const { width, height } = useWindowSize();
+  const theme = useTheme();
+  const matches = useMediaQuery(theme.breakpoints.up("md"));
   const [show, setShow] = useState(false);
 
   // TODO: Move these up to GameScreen and let Zoomable be presentational component
@@ -131,8 +134,9 @@ export default function ZoomableBoard({ replayMode }) {
 
   // TODO: Keep in sync with CSS
   const containerHeight = height - 144 - 38 - 40;
-  const center = [width / 2, containerHeight / 2];
-  const size = computeDefaultSize(width, containerHeight);
+  const containerWidth = matches ? width - 250 : width;
+  const center = [containerWidth / 2, containerHeight / 2];
+  const size = computeDefaultSize(containerWidth, containerHeight);
 
   const nodeActions = replayMode ? {} : buildNodeActions(state);
   const edgeActions = replayMode ? {} : buildEdgeActions(state);
