@@ -114,7 +114,7 @@ class CatanatronEnv(gym.Env):
     def get_valid_actions(self):
         """
         Returns:
-            list[int]: valid actions
+            List[int]: valid actions
         """
         return list(map(to_action_space, self.game.state.playable_actions))
 
