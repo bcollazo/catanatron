@@ -179,7 +179,6 @@ Attributes:
 for i, v in enumerate(ACTIONS_ARRAY):
     CatanatronEnv.__doc__ += f"   * - {i}\n     - {v}\n"
 
-#
 CatanatronEnv.__doc__ += """
 
 .. list-table:: Observation Space (Raw)
