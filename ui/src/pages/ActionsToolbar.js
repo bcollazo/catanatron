@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import memoize from "fast-memoize";
-import { Button } from "@material-ui/core";
+import { Button, Hidden } from "@material-ui/core";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountBalanceIcon from "@material-ui/icons/AccountBalance";
 import BuildIcon from "@material-ui/icons/Build";
@@ -207,9 +207,11 @@ export default function ActionsToolbar({
   return (
     <>
       <div className="state-summary">
-        <Button className="open-drawer-btn" onClick={openLeftDrawer}>
-          <ChevronLeftIcon />
-        </Button>
+        <Hidden mdUp>
+          <Button className="open-drawer-btn" onClick={openLeftDrawer}>
+            <ChevronLeftIcon />
+          </Button>
+        </Hidden>
         {humanColor && (
           <ResourceCards
             playerState={state.gameState.player_state}

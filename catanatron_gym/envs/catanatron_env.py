@@ -101,8 +101,6 @@ HIGH = 19 * 5
 
 
 class CatanatronEnv(gym.Env):
-    """1v1 environment against a random player"""
-
     metadata = {"render.modes": ["human"]}
 
     action_space = spaces.Discrete(ACTION_SPACE_SIZE)
@@ -158,3 +156,21 @@ class CatanatronEnv(gym.Env):
             and self.game.state.current_player().color != self.p0.color
         ):
             self.game.play_tick()  # will play bot
+
+
+CatanatronEnv.__doc__ = f"""
+1v1 environment against a random player
+
+Attributes:
+    action_space: Space of integers from 0-289 enconding 
+        the following table:
+
+.. list-table:: Action Space
+   :widths: 25 100
+   :header-rows: 1
+
+   * - Integer Representation
+     - Catanatron Action
+"""
+for i, v in enumerate(ACTIONS_ARRAY):
+    CatanatronEnv.__doc__ += f"   * - {i}\n     - {v}\n"

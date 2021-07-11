@@ -85,6 +85,13 @@ class ActionType(Enum):
     END_TURN = "END_TURN"  # value is None
 
 
+def action_type_repr(self):
+    return f"ActionType.{self.value}"
+
+
+ActionType.__repr__ = action_type_repr
+
+
 def action_repr(self):
     return f"Action({self.color.value} {self.action_type.value} {self.value})"
 

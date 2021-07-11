@@ -14,6 +14,7 @@ This site is to document Catanatron's API Reference.
    :maxdepth: 4
 
    catanatron
+   catanatron_gym
 
 
 Indices and tables
