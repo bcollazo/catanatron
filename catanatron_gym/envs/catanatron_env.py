@@ -162,6 +162,7 @@ CatanatronEnv.__doc__ = f"""
 1v1 environment against a random player
 
 Attributes:
+    reward_range: -1 if player lost, 1 if player won, 0 otherwise.
     action_space: Space of integers from 0-289 enconding. 
         See Action Space table below.
     observation_space: Numeric Feature Vector. See Observation Space table 
