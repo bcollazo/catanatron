@@ -101,7 +101,7 @@ HIGH = 19 * 5
 
 
 class CatanatronEnv(gym.Env):
-    metadata = {"render.modes": ["human"]}
+    metadata = {"render.modes": []}
 
     action_space = spaces.Discrete(ACTION_SPACE_SIZE)
     # TODO: This could be smaller (there are many binary features).
