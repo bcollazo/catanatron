@@ -163,12 +163,24 @@ CatanatronEnv.__doc__ = f"""
 
 Attributes:
     reward_range: -1 if player lost, 1 if player won, 0 otherwise.
-    action_space: Space of integers from 0-289 enconding. 
+    action_space: Integers from the [0, 289] interval. 
         See Action Space table below.
     observation_space: Numeric Feature Vector. See Observation Space table 
         below for quantities. They appear in vector in alphabetical order,
         from the perspective of "current" player (hiding/showing information
         accordingly). P0 is "current" player. P1 is next in line.
+        
+        We use the following nomenclature for Tile ids and Node ids.
+        Edge ids are self-describing (node-id, node-id) tuples. We also
+        use Cube coordinates for tiles (see 
+        https://www.redblobgames.com/grids/hexagons/#coordinates)
+
+.. image:: _static/tile-ids.png
+  :width: 300
+  :alt: Tile Ids
+.. image:: _static/node-ids.png
+  :width: 300
+  :alt: Node Ids
 
 .. list-table:: Action Space
    :widths: 10 100
