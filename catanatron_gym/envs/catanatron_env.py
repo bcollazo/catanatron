@@ -162,15 +162,151 @@ CatanatronEnv.__doc__ = f"""
 1v1 environment against a random player
 
 Attributes:
-    action_space: Space of integers from 0-289 enconding 
-        the following table:
+    action_space: Space of integers from 0-289 enconding. 
+        See Action Space table below.
+    observation_space: Numeric Feature Vector. See Observation Space table 
+        below for quantities. They appear in vector in alphabetical order,
+        from the perspective of "current" player (hiding/showing information
+        accordingly). P0 is "current" player. P1 is next in line.
 
 .. list-table:: Action Space
-   :widths: 25 100
+   :widths: 10 100
    :header-rows: 1
 
-   * - Integer Representation
+   * - Integer
      - Catanatron Action
 """
 for i, v in enumerate(ACTIONS_ARRAY):
     CatanatronEnv.__doc__ += f"   * - {i}\n     - {v}\n"
+
+#
+CatanatronEnv.__doc__ += """
+
+.. list-table:: Observation Space (Raw)
+   :widths: 10 50 10 10
+   :header-rows: 1
+
+   * - Feature Name
+     - Description
+     - Number of Features (N=number of players)
+     - Type
+
+   * - BANK_<resource>
+     - Number of cards of that `resource` in bank
+     - 5
+     - Integer
+   * - BANK_DEV_CARDS
+     - Number of development cards in bank
+     - 1
+     - Integer
+    
+   * - EDGE<i>_P<j>_ROAD
+     - Whether edge `i` is owned by player `j`
+     - 72 * N
+     - Boolean
+   * - NODE<i>_P<j>_SETTLEMENT
+     - Whether player `j` has a city in node `i`
+     - 54 * N
+     - Boolean
+   * - NODE<i>_P<j>_CITY
+     - Whether player `j` has a city in node `i`
+     - 54 * N
+     - Boolean
+   * - PORT<i>_IS_<resource>
+     - Whether node `i` is port of `resource` (or THREE_TO_ONE).
+     - 9 * 6
+     - Boolean
+   * - TILE<i>_HAS_ROBBER
+     - Whether robber is on tile `i`.
+     - 19
+     - Boolean
+   * - TILE<i>_IS_<resource>
+     - Whether tile `i` yields `resource` (or DESERT).
+     - 19 * 6
+     - Boolean
+   * - TILE<i>_PROBA
+     - Tile `i`'s probability of being rolled.
+     - 19
+     - Float
+
+   * - IS_DISCARDING
+     - Whether current player must discard. For now, there is only 1 
+       discarding action (at random), since otherwise action space
+       would explode in size.
+     - 1
+     - Boolean
+   * - IS_MOVING_ROBBER
+     - Whether current player must move robber (because played knight
+       or because rolled a 7).
+     - 1
+     - Boolean
+   * - P<i>_HAS_ROLLED
+     - Whether player `i` already rolled dice.
+     - N
+     - Boolean
+   * - P0_HAS_PLAYED _DEVELOPMENT_CARD _IN_TURN
+     - Whether current player already played a development card
+     - 1
+     - Boolean
+
+   * - P0_ACTUAL_VPS
+     - Total Victory Points (including Victory Point Development Cards)
+     - 1
+     - Integer
+   * - P0_<resource>_IN_HAND
+     - Number of `resource` cards in hand
+     - 5
+     - Integer
+   * - P0_<dev-card>_IN_HAND
+     - Number of `dev-card` cards in hand
+     - 5
+     - Integer
+   * - P<i>_NUM_DEVS_IN_HAND
+     - Number of hidden development cards player `i` has
+     - N
+     - Integer
+   * - P<i>_NUM_RESOURCES _IN_HAND
+     - Number of hidden resource cards player `i` has
+     - N
+     - Integer
+
+   * - P<i>_HAS_ARMY
+     - Whether player <i> has Largest Army
+     - N
+     - Boolean
+   * - P<i>_HAS_ROAD
+     - Whether player <i> has Longest Road
+     - N
+     - Boolean
+   * - P<i>_ROADS_LEFT
+     - Number of roads pieces player `i` has outside of board (left to build)
+     - N
+     - Integer
+   * - P<i>_SETTLEMENTS_LEFT
+     - Number of settlements player `i` has outside of board (left to build)
+     - N
+     - Integer
+   * - P<i>_CITIES_LEFT
+     - Number of cities player `i` has outside of board (left to build)
+     - N
+     - Integer
+   * - P<i>_LONGEST_ROAD _LENGTH
+     - Length of longest road by player `i`
+     - N
+     - Integer
+   * - P<i>_PUBLIC_VPS
+     - Amount of visible victory points for player `i` (i.e.
+       doesn't include hidden victory point cards; only army,
+       road and settlements/cities).
+     - N
+     - Integer
+   * - P<i>_<dev-card>_PLAYED
+     - Amount of `dev-card` cards player `i` has played in game
+       (VICTORY_POINT not included).
+     - 4 * N
+     - Integer
+   * - 
+     - 
+     - 194 * N + 226
+     - 
+"""
