@@ -27,7 +27,7 @@ tf.random.set_seed(1)
 
 FEATURES = get_feature_ordering(2)
 NUM_FEATURES = len(FEATURES)
-EPISODES = 25000
+EPISODES = 10_000  # 25_000 is like 8 hours
 
 
 @click.command()
@@ -51,21 +51,21 @@ def main(experiment_name):
         agent = Agent.create(
             agent="tensorforce",
             environment=environment,  # alternatively: states, actions, (max_episode_timesteps)
-            memory=50000,  # alphazero is 500,000
+            memory=50_000,  # alphazero is 500,000
             update=dict(unit="episodes", batch_size=32),
             optimizer=dict(type="adam", learning_rate=1e-3),
             policy=dict(network="auto"),
-            exploration=0.05,
-            # exploration=dict(
-            #     type="linear",
-            #     unit="episodes",
-            #     num_steps=EPISODES,
-            #     initial_value=1.0,
-            #     final_value=0.05,
-            # ),
+            # exploration=0.05,
+            exploration=dict(
+                type="linear",
+                unit="episodes",
+                num_steps=EPISODES,
+                initial_value=1.0,
+                final_value=0.05,
+            ),
             # policy=dict(network=dict(type='layered', layers=[dict(type='dense', size=32)])),
             objective="policy_gradient",
-            reward_estimation=dict(horizon=20),
+            reward_estimation=dict(horizon=20, discount=0.999),
             l2_regularization=1e-4,
             summarizer=dict(
                 directory=str(logs_directory),
