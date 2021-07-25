@@ -27,7 +27,7 @@ from catanatron.models.actions import Action
 from catanatron.models.player import Player
 
 class MyPlayer(Player):
-    def decide(self, game: Game, playable_actions: Iterable[Action]):
+    def decide(self, game: Game, playable_actions: list[Action]):
         """Should return one of the playable_actions.
 
         Args:
