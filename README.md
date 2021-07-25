@@ -19,7 +19,7 @@ Install with pip:
 pip install catanatron
 ```
 
-Make your own bot by implementing the following API (see examples in `catanatron/players` and `experimental/machine_learning/players`):
+Make your own bot by implementing the following API (see examples in [catanatron/players](catanatron/players) and [experimental/machine_learning/players](experimental/machine_learning/players)):
 
 ```python
 from catanatron.game import Game
@@ -27,7 +27,7 @@ from catanatron.models.actions import Action
 from catanatron.models.player import Player
 
 class MyPlayer(Player):
-    def decide(self, game: Game, playable_actions: Iterable[Action]):
+    def decide(self, game: Game, playable_actions: list[Action]):
         """Should return one of the playable_actions.
 
         Args:

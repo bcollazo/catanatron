@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 
 from tqdm import tqdm
@@ -6,9 +7,9 @@ import tensorflow as tf
 from tensorforce import Agent, Environment
 import click
 
-from catanatron.state import player_key
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
+from catanatron.players.search import VictoryPointPlayer
 from catanatron_gym.features import (
     create_sample_vector,
     get_feature_ordering,
@@ -19,10 +20,14 @@ from catanatron_gym.envs.catanatron_env import (
     normalize_action,
 )
 
+# For repetitive results
+random.seed(1)
+np.random.seed(1)
+tf.random.set_seed(1)
 
 FEATURES = get_feature_ordering(2)
 NUM_FEATURES = len(FEATURES)
-EPISODES = 25000
+EPISODES = 10_000  # 25_000 is like 8 hours
 
 
 @click.command()
@@ -37,6 +42,7 @@ def main(experiment_name):
     )
 
     checkpoint_directory = Path("data/checkpoints/", experiment_name)
+    logs_directory = Path("data/logs", experiment_name)
     if checkpoint_directory.exists():
         print("Loading model...")
         agent = Agent.load(directory=str(checkpoint_directory))
@@ -45,18 +51,25 @@ def main(experiment_name):
         agent = Agent.create(
             agent="tensorforce",
             environment=environment,  # alternatively: states, actions, (max_episode_timesteps)
-            memory=50000,  # alphazero is 500,000
+            memory=50_000,  # alphazero is 500,000
             update=dict(unit="episodes", batch_size=32),
             optimizer=dict(type="adam", learning_rate=1e-3),
             policy=dict(network="auto"),
-            exploration=0.10,
+            # exploration=0.05,
+            exploration=dict(
+                type="linear",
+                unit="episodes",
+                num_steps=EPISODES,
+                initial_value=1.0,
+                final_value=0.05,
+            ),
             # policy=dict(network=dict(type='layered', layers=[dict(type='dense', size=32)])),
             objective="policy_gradient",
-            reward_estimation=dict(horizon=20),
+            reward_estimation=dict(horizon=20, discount=0.999),
             l2_regularization=1e-4,
             summarizer=dict(
-                directory="data/logs",
-                summaries=["reward", "action-value"],
+                directory=str(logs_directory),
+                summaries=["reward", "action-value", "parameters"],
             ),
             saver=dict(
                 directory=str(checkpoint_directory),
@@ -93,6 +106,7 @@ class CustomEnvironment(Environment):
         players = [
             p0,
             RandomPlayer(Color.RED),
+            # VictoryPointPlayer(Color.RED),
         ]
         game = Game(players=players)
         self.game = game
@@ -148,6 +162,8 @@ class ForcePlayer(Player):
         super(ForcePlayer, self).__init__(color)
         global MODEL
         MODEL = Agent.load(directory="data/checkpoints/" + model_name)
+        MODEL.spec["summarizer"] = None
+        MODEL.spec["saver"] = None
 
     def decide(self, game, playable_actions):
         if len(playable_actions) == 1:
@@ -157,16 +173,6 @@ class ForcePlayer(Player):
         action_int = MODEL.act(states, independent=True)
         best_action = from_action_space(action_int, playable_actions)
         return best_action
-
-
-def create_model():
-    inputs = tf.keras.Input(shape=(NUM_FEATURES,))
-    outputs = tf.keras.layers.Dense(32, activation="relu")(inputs)
-    outputs = tf.keras.layers.Dense(ACTION_SPACE_SIZE, kernel_regularizer="l2")(outputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs)
-
-    model.compile(loss="mse", optimizer=tf.keras.optimizers.Adam(), metrics=["mae"])
-    return model
 
 
 def to_action_space(action):
