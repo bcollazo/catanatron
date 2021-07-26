@@ -54,9 +54,12 @@ class Game:
                 These should expect state as a parameter. Defaults to [].
             decide_fn (function, optional): Function to overwrite current player's decision with.
                 Defaults to None.
+        Returns:
+            Color: winning color or None if game exceeded TURNS_LIMIT
         """
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
             self.play_tick(action_callbacks=action_callbacks, decide_fn=decide_fn)
+        return self.winning_color()
 
     def play_tick(self, action_callbacks=[], decide_fn=None):
         """Advances game by one ply (player decision).
