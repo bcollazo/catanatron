@@ -21,7 +21,7 @@ from catanatron_gym.features import (
     tile_features,
     graph_features,
 )
-from experimental.machine_learning.board_tensor_features import (
+from catanatron_experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
     get_node_and_edge_maps,
     init_board_tensor_map,
