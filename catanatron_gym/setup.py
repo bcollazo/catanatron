@@ -1,7 +1,7 @@
 import setuptools
-import os 
+import os
 
-readme_path = os.path.abspath(os.path.join(__file__, '..', 'README.md'))
+readme_path = os.path.abspath(os.path.join(__file__, "..", "README.md"))
 
 with open(readme_path, "r") as fh:
     long_description = fh.read()
@@ -15,7 +15,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bcollazo/catanatron",
-    packages=setuptools.find_packages(exclude=['catanatron_server']),
+    packages=setuptools.find_packages(exclude=["catanatron_server"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

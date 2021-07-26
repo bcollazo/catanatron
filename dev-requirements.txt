@@ -12,9 +12,12 @@ click==8.0.1
 cloudpickle==1.6.0
 colorama==0.4.4
 coloredlogs==15.0.1
+coverage==5.5
+coveralls==3.2.0
 cryptography==3.4.7
 cycler==0.10.0
 decorator==4.4.2
+docopt==0.6.2
 docutils==0.17.1
 Flask==2.0.1
 Flask-Cors==3.0.10
@@ -84,6 +87,7 @@ SecretStorage==3.3.1
 selenium==3.141.0
 six==1.15.0
 sklearn==0.0
+snakeviz==2.1.0
 SQLAlchemy==1.4.22
 tensorboard==2.5.0
 tensorboard-data-server==0.6.1
@@ -96,6 +100,7 @@ termplotlib==0.3.8
 threadpoolctl==2.2.0
 toml==0.10.2
 tomli==1.1.0
+tornado==6.1
 tqdm==4.61.2
 twine==3.4.2
 typing-extensions==3.7.4.3
