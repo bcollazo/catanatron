@@ -320,7 +320,7 @@ Here is also a list of ideas:
   - Try Tensorforce with simple action space.
   - Try simple flat CSV approach but with AlphaBeta-generated games.
   - Visualize tree with graphviz. With colors per maximizing/minimizing.
-  - Create simple entry-point notebook for this project. Runnable via Paperspace.
+  - Create simple entry-point notebook for this project. Runnable via Paperspace. (might be hard because catanatron requires Python 3.8 and I haven't seen a GPU-enabled tensorflow+jupyter+pyhon3.8 Docker Image out there).
 
 - Bugs:
 
