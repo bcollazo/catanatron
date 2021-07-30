@@ -1,3 +1,5 @@
+.PHONY: docs
+
 clean: clean-build clean-pyc clean-test
 
 clean-build: check-package
@@ -34,3 +36,8 @@ check-package:
 ifndef PACKAGE
 	$(error PACKAGE is undefined)
 endif
+
+
+docs:
+	sphinx-apidoc -o docs/source catanatron_core/catanatron
+	sphinx-build -b html docs/source/ docs/build/html
