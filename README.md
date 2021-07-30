@@ -22,12 +22,14 @@ pip install catanatron
 Make your own bot by implementing the following API (see examples in [catanatron_core/catanatron/players](catanatron_core/catanatron/players) and [catanatron_experimental/catanatron_experimental/machine_learning/players](catanatron_experimental/catanatron_experimental/machine_learning/players)):
 
 ```python
+from typing import Iterable
+
 from catanatron.game import Game
 from catanatron.models.actions import Action
 from catanatron.models.player import Player
 
 class MyPlayer(Player):
-    def decide(self, game: Game, playable_actions: list[Action]):
+    def decide(self, game: Game, playable_actions: Iterable[Action]):
         """Should return one of the playable_actions.
 
         Args:
@@ -270,9 +272,17 @@ In [3]: x.get_chunk(10)
 catanatron Package
 
 ```
-make build-catanatron
-make upload
-make upload-production
+make build PACKAGE=catanatron_core
+make upload PACKAGE=catanatron_core
+make upload-production PACKAGE=catanatron_core
+```
+
+catanatron_gym Package
+
+```
+make build PACKAGE=catanatron_gym
+make upload PACKAGE=catanatron_gym
+make upload-production PACKAGE=catanatron_gym
 ```
 
 ### Building Docs

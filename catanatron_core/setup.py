@@ -8,7 +8,7 @@ with open(readme_path, "r") as fh:
 
 setuptools.setup(
     name="catanatron",
-    version="3.0.0",
+    version="3.1.2",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Fast Settlers of Catan Python Implementation",

@@ -1,9 +1,9 @@
 clean: clean-build clean-pyc clean-test
 
-clean-build:
-	rm -fr build/
-	rm -fr dist/
-	rm -fr .eggs/
+clean-build: check-package
+	rm -fr $(PACKAGE)/build/
+	rm -fr $(PACKAGE)/dist/
+	rm -fr $(PACKAGE)/.eggs/
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
 
@@ -18,19 +18,19 @@ clean-test:
 	rm -f .coverage
 	rm -fr htmlcov/
 
-build-catanatron: clean
-	python catanatron_core/setup.py sdist bdist_wheel
-	ls -l dist
-	twine check dist/*
-
-
-build-catanatron-gym: clean
-	python catanatron_gym/setup.py sdist bdist_wheel
-	ls -l dist
-	twine check dist/*
+build: clean check-package
+	cd $(PACKAGE) && python setup.py sdist bdist_wheel
+	ls -l $(PACKAGE)/dist
+	twine check $(PACKAGE)/dist/*
 
 upload:
-	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+	twine upload --repository-url https://test.pypi.org/legacy/ $(PACKAGE)/dist/*
 
 upload-production:
-	twine upload dist/*
+	twine upload $(PACKAGE)/dist/*
+
+
+check-package:
+ifndef PACKAGE
+	$(error PACKAGE is undefined)
+endif
