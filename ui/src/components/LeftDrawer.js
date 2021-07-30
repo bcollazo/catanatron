@@ -90,14 +90,7 @@ export default function LeftDrawer() {
         </SwipeableDrawer>
       </Hidden>
       <Hidden smDown implementation="css">
-        <Drawer
-          className="left-drawer"
-          anchor="left"
-          variant="permanent"
-          open
-          disableBackdropTransition={!iOS}
-          disableDiscovery={iOS}
-        >
+        <Drawer className="left-drawer" anchor="left" variant="permanent" open>
           <DrawerContent gameState={state.gameState} />
         </Drawer>
       </Hidden>
