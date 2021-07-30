@@ -12,6 +12,10 @@ WEIGHTS_BY_ACTION_TYPE = {
 
 
 class WeightedRandomPlayer(Player):
+    """
+    Player that decides at random, but skews distribution
+    to actions that are likely better (cities > settlements > dev cards).
+    """
     def decide(self, game, playable_actions):
         bloated_actions = []
         for action in playable_actions:
