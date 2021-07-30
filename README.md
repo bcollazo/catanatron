@@ -19,7 +19,7 @@ Install with pip:
 pip install catanatron
 ```
 
-Make your own bot by implementing the following API (see examples in [catanatron/players](catanatron/players) and [experimental/machine_learning/players](experimental/machine_learning/players)):
+Make your own bot by implementing the following API (see examples in [catanatron_core/catanatron/players](catanatron_core/catanatron/players) and [catanatron_experimental/catanatron_experimental/machine_learning/players](catanatron_experimental/catanatron_experimental/machine_learning/players)):
 
 ```python
 from catanatron.game import Game
@@ -62,7 +62,7 @@ For watching these games in a UI see [watching games](#watching-games).
 
 ## Advanced Usage
 
-Cloning the repo and using directly will allow you to access additional tools not included in the core package. In particular, a web UI for watching games and a `experimental/play.py` script that provides a blueprint to run many games, collect summary statistics (avg vps, avg game length, etc...),
+Cloning the repo and using directly will allow you to access additional tools not included in the core package. In particular, a web UI for watching games and a `catanatron-play` CLI script that provides a blueprint to run many games, collect summary statistics (avg vps, avg game length, etc...),
 save game for viewing in browser, and/or generate machine learning datasets.
 
 Create a virtualenv with Python 3.8 and install requirements:
@@ -71,12 +71,16 @@ Create a virtualenv with Python 3.8 and install requirements:
 python3.8 -m venv venv
 source ./venv/bin/activate
 pip install -r dev-requirements.txt
+pip install -e catanatron_core
+pip install -e catanatron_server
+pip install -e catanatron_gym
+pip install -e catanatron_experimental
 ```
 
 Run games with the `play.py` script. It provides extra options you can explore with `--help`:
 
 ```
-python experimental/play.py --num=100
+catanatron-play --num=100
 ```
 
 Currently, we can execute one game in ~76 milliseconds.
@@ -172,13 +176,13 @@ ptw --ignore=tests/integration_tests/ --nobeep
 Generate data (GZIP CSVs of features and PGSQL rows) by running:
 
 ```
-python experimental/play.py --num=100 --outpath=my-data-path/
+catanatron-play --num=100 --outpath=my-data-path/
 ```
 
 You can then use this data to build a machine learning model, and then
 implement a `Player` subclass that implements the corresponding "predict"
 step of your model. There are some examples of these type of
-players in `experimental/machine_learning/players/reinforcement.py`.
+players in [reinforcement.py](catanatron_experimental/catanatron_experimental/machine_learning/players/reinforcement.py).
 
 # Appendix
 
@@ -252,7 +256,7 @@ docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensor
 ### Testing Performance
 
 ```
-python -m cProfile -o profile.pstats experimental/play.py --num=5
+python -m cProfile -o profile.pstats catanatron_experimental/catanatron_experimental/play.py --num=5
 snakeviz profile.pstats
 ```
 
@@ -273,13 +277,9 @@ In [3]: x.get_chunk(10)
 catanatron Package
 
 ```
-pip install twine
-rm -rf build
-rm -rf dist
-python setup.py sdist bdist_wheel
-twine check dist/*
-twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-twine upload dist/*
+make build-catanatron
+make upload
+make upload-production
 ```
 
 ### Building Docs
@@ -292,7 +292,7 @@ sphinx-build -b html docs/source/ docs/build/html
 
 # Contributing
 
-I am new to Open Source Development, so open to suggestions on this section. The best contributions would be to make the core bot stronger by tinkering with the weights of each of the hand-crafted features in `experimental/machine_learning/players/minimax.py`, or coming up with new hand-crafted features! In particular, you can edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `python experimental/play.py --players=AB:2:False:C,AB:2 --num=100` to see if your changes improve the main bot.
+I am new to Open Source Development, so open to suggestions on this section. The best contributions would be to make the core bot stronger by tinkering with the weights of each of the hand-crafted features in [minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py), or coming up with new hand-crafted features! In particular, you can edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `catanatron-play --players=AB:2:False:C,AB:2 --num=100` to see if your changes improve the main bot.
 
 Here is also a list of ideas:
 
