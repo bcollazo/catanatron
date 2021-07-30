@@ -122,25 +122,18 @@ See [catanatron_gym](catanatron_gym/README.md).
 
 ## Architecture
 
-For debugging and entertainment purposes, we wanted to provide a
-UI with which to inspect games.
-
-We decided to use the browser as a rendering engine (as opposed to
-the terminal or a desktop GUI) because of HTML/CSS's ubiquitousness
-and the ability to use modern animation libraries in the future (https://www.framer.com/motion/ or https://www.react-spring.io/).
-
-To achieve this, we separated the code into three components:
+The code is divided in the following 5 components (folders):
 
 - **catanatron**: A pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see `setup.py`) and can be used as a Python package.
 
 - **catanatron_server**: Contains a Flask web server in order to serve
-  game states from a database to a Web UI. The idea of using a database, is to ease watching games from different processes (you can play a game in a standalone Python script and save it for viewing). It defaults to using an ephemeral in-memory sqlite database.
+  game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. It defaults to using an ephemeral in-memory sqlite database. Also pip-installable (not publised in PyPi however).
 
-- **React Web UI**: A web UI to render games. The `ui` folder.
+- **catanatron_gym**: OpenAI Gym interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. Pip-installable. For more see [catanatron_gym/README.md](catanatron_gym/README.md).
 
-### Experimental Folder
+- **catantron_experimental**: A collection of unorganized scripts with contain many failed attempts at finding the best possible bot. Its ok to break these scripts. Its pip-installable. Exposes a `catanatron-play` command-line script that can be used to play games in bulk, create machine learning datasets of games, and more!
 
-The experimental folder contains unorganized code with many failed attempts at finding the best possible bot.
+- **ui**: A React web UI to render games. This is helpful for debugging the core implementation. We decided to use the browser as a randering engine (as opposed to the terminal or a desktop GUI) because of HTML/CSS's ubiquitousness and the ability to use modern animation libraries in the future (https://www.framer.com/motion/ or https://www.react-spring.io/).
 
 ### AI Bots Leaderboard
 
@@ -317,6 +310,7 @@ Here is also a list of ideas:
   - Try Tensorforce with simple action space.
   - Try simple flat CSV approach but with AlphaBeta-generated games.
   - Visualize tree with graphviz. With colors per maximizing/minimizing.
+  - Create simple entry-point notebook for this project. Runnable via Paperspace.
 
 - Bugs:
 
