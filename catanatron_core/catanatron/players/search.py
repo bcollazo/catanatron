@@ -13,6 +13,7 @@ class VictoryPointPlayer(Player):
     If multiple actions lead to the same max-points-achievable
     in this turn, selects from them at random.
     """
+
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
