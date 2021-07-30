@@ -1,8 +1,6 @@
 data
 ui
 logs
-experimental/logs
-experimental/models
 assets
 venv
 .git
