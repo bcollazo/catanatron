@@ -8,6 +8,12 @@ from catanatron.game import Game
 
 
 class VictoryPointPlayer(Player):
+    """
+    Player that chooses actions by maximizing Victory Points greedily.
+    If multiple actions lead to the same max-points-achievable
+    in this turn, selects from them at random.
+    """
+
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
