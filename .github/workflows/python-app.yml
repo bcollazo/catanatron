@@ -5,7 +5,7 @@ name: Lint and Tests
 
 on:
   push:
-    branches: [master, staging]
+    branches: [master]
   pull_request:
     branches: [master, staging]
 
