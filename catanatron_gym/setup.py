@@ -8,14 +8,14 @@ with open(readme_path, "r") as fh:
 
 setuptools.setup(
     name="catanatron_gym",
-    version="2.0.0",
+    version="3.0.1",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Open AI Gym to play 1v1 Catan against a random bot",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bcollazo/catanatron",
-    packages=setuptools.find_packages(exclude=["catanatron_server"]),
+    packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

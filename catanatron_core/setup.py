@@ -8,14 +8,14 @@ with open(readme_path, "r") as fh:
 
 setuptools.setup(
     name="catanatron",
-    version="3.0.0",
+    version="3.1.2",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Fast Settlers of Catan Python Implementation",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/bcollazo/catanatron",
-    packages=setuptools.find_packages(exclude=["catanatron_server"]),
+    packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
