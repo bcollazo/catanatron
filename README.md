@@ -272,7 +272,6 @@ In [3]: x.get_chunk(10)
 catanatron Package
 
 ```
-<<<<<<< HEAD
 make build PACKAGE=catanatron_core
 make upload PACKAGE=catanatron_core
 make upload-production PACKAGE=catanatron_core
@@ -284,11 +283,6 @@ catanatron_gym Package
 make build PACKAGE=catanatron_gym
 make upload PACKAGE=catanatron_gym
 make upload-production PACKAGE=catanatron_gym
-=======
-make build-catanatron
-make upload
-make upload-production
->>>>>>> master
 ```
 
 ### Building Docs
