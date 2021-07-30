@@ -19,7 +19,7 @@ Install with pip:
 pip install catanatron
 ```
 
-Make your own bot by implementing the following API (see examples in [catanatron_core/catanatron/players](catanatron_core/catanatron/players) and [catanatron_experimental/catanatron_experimental/machine_learning/players](catanatron_experimental/catanatron_experimental/machine_learning/players)):
+Make your own bot by implementing the `Player` class (see examples in [catanatron_core/catanatron/players](catanatron_core/catanatron/players) and [minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)):
 
 ```python
 from typing import Iterable
@@ -57,7 +57,7 @@ game = Game(players)
 game.play()  # returns winning color
 ```
 
-You can then inspect the game state any way you want
+You can then inspect the resulting game state any way you want
 (e.g. `game.state.player_state`, `game.state.actions`, `game.state.board.buildings`, etc...). See [documentation](#documentation) for more.
 
 For watching these games in a UI see [watching games](#watching-games).
@@ -67,7 +67,7 @@ For watching these games in a UI see [watching games](#watching-games).
 Cloning the repo and using directly will allow you to access additional tools not included in the core package. In particular, a web UI for watching games and a `catanatron-play` CLI script that provides a blueprint to run many games, collect summary statistics (avg vps, avg game length, etc...),
 save game for viewing in browser, and/or generate machine learning datasets.
 
-Create a virtualenv with Python 3.8 and install requirements:
+Clone the repo, create a virtualenv with Python 3.8, and install requirements:
 
 ```
 python3.8 -m venv venv
@@ -79,10 +79,10 @@ pip install -e catanatron_gym
 pip install -e catanatron_experimental
 ```
 
-Run games with the `play.py` script. It provides extra options you can explore with `--help`:
+Run games with the `catanatron-play` CLI tool. Use `--help` for more information:
 
 ```
-catanatron-play --num=100
+catanatron-play --players=R,R,W,VP --num=100
 ```
 
 Currently, we can execute one game in ~76 milliseconds.
@@ -168,7 +168,7 @@ ptw --ignore=tests/integration_tests/ --nobeep
 
 ## Machine Learning
 
-Generate data (GZIP CSVs of features and PGSQL rows) by running:
+Generate data (several GZIP CSVs of features) by running:
 
 ```
 catanatron-play --num=100 --outpath=my-data-path/
@@ -176,7 +176,7 @@ catanatron-play --num=100 --outpath=my-data-path/
 
 You can then use this data to build a machine learning model, and then
 implement a `Player` subclass that implements the corresponding "predict"
-step of your model. There are some examples of these type of
+step of your model. There are some attempts of these type of
 players in [reinforcement.py](catanatron_experimental/catanatron_experimental/machine_learning/players/reinforcement.py).
 
 # Appendix
