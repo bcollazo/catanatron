@@ -60,7 +60,7 @@ game.play()  # returns winning color
 You can then inspect the resulting game state any way you want
 (e.g. `game.state.player_state`, `game.state.actions`, `game.state.board.buildings`, etc...). See [documentation](#documentation) for more.
 
-For watching these games in a UI see [watching games](#watching-games).
+For watching these games in a UI see [Advanced Usage](#advanced-usage) and [Watching Games](#watching-games).
 
 ## Advanced Usage
 
@@ -79,36 +79,32 @@ pip install -e catanatron_gym
 pip install -e catanatron_experimental
 ```
 
-Run games with the `catanatron-play` CLI tool. Use `--help` for more information:
+Now, you should have access to a `catanatron-play` CLI tool. Use it to run many games like so:
 
 ```
 catanatron-play --players=R,R,W,VP --num=100
 ```
 
-Currently, we can execute one game in ~76 milliseconds.
+Currently, we can execute one game in ~76 milliseconds. See `catanatron-play --help` for more information.
 
-## Watching Games
+## Watching Games (Browser UI)
 
-We provide a `docker-compose.yml` with everything needed to watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
+We provide a [docker-compose.yml](docker-compose.yml) with everything needed to watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
 
-Ensure you have [Docker Compose](https://docs.docker.com/compose/install/) installed, and run:
+To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install/) installed, and run (from repo root):
 
 ```
 docker-compose up
 ```
 
-To open a game from another command line process in the browser, set the following environment variable:
-
-```
-export DATABASE_URL=postgresql://catanatron:victorypoint@localhost:5432/catanatron_db
-```
-
-and use the `open_link` helper function:
+Then alongside it, use the `open_link` helper function to open up any finished game you have:
 
 ```python
 from catanatron_server.utils import open_link
 open_link(game)  # opens game in browser
 ```
+
+NOTE: A great contribution would be to make this infrastructure allow to watch the game while its played.
 
 ## Documentation
 
@@ -118,7 +114,7 @@ In summary, Actions are tuples of enums like: `(ActionType.PLAY_MONOPOLY, Resour
 
 State is currently represented by a simple data container class and is mutated by the functions in the `state_functions` module. This functional style allows us to create state copies (for bots that search through state space) faster. The closer we make this State class to an array of immutable primitives, the faster it will be to copy.
 
-## Catanatron OpenAI's Gym API
+### Catanatron OpenAI's Gym API
 
 See [catanatron_gym](catanatron_gym/README.md).
 
