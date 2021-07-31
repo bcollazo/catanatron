@@ -82,5 +82,6 @@ def get_game_state(game_id, state_index=None):
             .filter_by(uuid=game_id, state_index=state_index)
             .first_or_404()
         )
+    db.session.commit()
     game = pickle.loads(result.pickle_data)
     return game
