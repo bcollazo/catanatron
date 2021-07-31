@@ -22,24 +22,46 @@ from catanatron_experimental.machine_learning.players.tree_search_utils import (
 )
 
 
-TRANSLATE_VARIETY = 4  # i.e. each new resource is like 4 production points
-production_features = build_production_features(True)
+class ValueFunctionPlayer(Player):
+    """
+    Player that selects the move that maximizes a heuristic value function.
+
+    For now, the base value function only considers 1 enemy player.
+    """
+
+    def __init__(self, color, value_fn_builder_name=None, params=None, is_bot=True):
+        super().__init__(color, is_bot)
+        self.value_fn_builder_name = (
+            "contender_fn" if value_fn_builder_name == "C" else "base_fn"
+        )
+        self.params = params or DEFAULT_WEIGHTS
+
+    def decide(self, game, playable_actions):
+        if len(playable_actions) == 1:
+            return playable_actions[0]
+
+        best_value = float("-inf")
+        best_action = None
+        for action in playable_actions:
+            game_copy = game.copy()
+            game_copy.execute(action)
+
+            value_fn = get_value_fn(self.value_fn_builder_name, self.params)
+            value = value_fn(game_copy, self.color)
+            if value > best_value:
+                best_value = value
+                best_action = action
+
+        return best_action
+
+    def __str__(self):
+        return super().__str__() + f"(value_fn={self.value_fn_builder_name})"
 
 
-def value_production(sample, player_name="P0", include_variety=True):
-    proba_point = 2.778 / 100
-    features = [
-        f"EFFECTIVE_{player_name}_WHEAT_PRODUCTION",
-        f"EFFECTIVE_{player_name}_ORE_PRODUCTION",
-        f"EFFECTIVE_{player_name}_SHEEP_PRODUCTION",
-        f"EFFECTIVE_{player_name}_WOOD_PRODUCTION",
-        f"EFFECTIVE_{player_name}_BRICK_PRODUCTION",
-    ]
-    prod_sum = sum([sample[f] for f in features])
-    prod_variety = (
-        sum([sample[f] != 0 for f in features]) * TRANSLATE_VARIETY * proba_point
-    )
-    return prod_sum + (0 if not include_variety else prod_variety)
+def get_value_fn(name, params):
+    if name is None or params is None:
+        return base_fn(DEFAULT_WEIGHTS)
+    return globals()[name](params)
 
 
 def base_fn(params):
@@ -109,29 +131,27 @@ def base_fn(params):
     return fn
 
 
+def value_production(sample, player_name="P0", include_variety=True):
+    proba_point = 2.778 / 100
+    features = [
+        f"EFFECTIVE_{player_name}_WHEAT_PRODUCTION",
+        f"EFFECTIVE_{player_name}_ORE_PRODUCTION",
+        f"EFFECTIVE_{player_name}_SHEEP_PRODUCTION",
+        f"EFFECTIVE_{player_name}_WOOD_PRODUCTION",
+        f"EFFECTIVE_{player_name}_BRICK_PRODUCTION",
+    ]
+    prod_sum = sum([sample[f] for f in features])
+    prod_variety = (
+        sum([sample[f] != 0 for f in features]) * TRANSLATE_VARIETY * proba_point
+    )
+    return prod_sum + (0 if not include_variety else prod_variety)
+
+
+TRANSLATE_VARIETY = 4  # i.e. each new resource is like 4 production points
+
 # Idea: On CatanTest, try fetching AlphaBeta from master. Can you download a file, and import it
 #   as a Python file(?). Then use that ...
 DEFAULT_WEIGHTS = {
-    # Where to place. Note winning is best at all costs
-    "public_vps": 3e14,
-    "production": 1e8,
-    "enemy_production": -1e8,
-    "num_tiles": 1,
-    # Towards where to expand and when
-    "reachable_production_0": 0,
-    "reachable_production_1": 1e4,
-    "buildable_nodes": 1e3,
-    "longest_road": 10,
-    # Hand, when to hold and when to use.
-    "hand_synergy": 1e2,
-    "hand_resources": 1,
-    "discard_penalty": -5,
-    "hand_devs": 10,
-    "army_size": 10.1,
-}
-
-
-CONTENDER_WEIGHTS = {
     # Where to place. Note winning is best at all costs
     "public_vps": 3e14,
     "production": 1e8,
@@ -155,42 +175,24 @@ def contender_fn(params):
     return base_fn(CONTENDER_WEIGHTS)
 
 
-def get_value_fn(name, params):
-    if name is None or params is None:
-        return base_fn(DEFAULT_WEIGHTS)
-    return globals()[name](params)
-
-
-class ValueFunctionPlayer(Player):
-    def __init__(
-        self, color, value_fn_builder_name=None, params=DEFAULT_WEIGHTS, is_bot=True
-    ):
-        super().__init__(color, is_bot)
-        self.value_fn_builder_name = (
-            "contender_fn" if value_fn_builder_name == "C" else "base_fn"
-        )
-        self.params = params
-
-    def decide(self, game: Game, playable_actions):
-        if len(playable_actions) == 1:
-            return playable_actions[0]
-
-        best_value = float("-inf")
-        best_action = None
-        for action in playable_actions:
-            game_copy = game.copy()
-            game_copy.execute(action)
-
-            value_fn = get_value_fn(self.value_fn_builder_name, self.params)
-            value = value_fn(game_copy, self.color)
-            if value > best_value:
-                best_value = value
-                best_action = action
-
-        return best_action
-
-    def __str__(self) -> str:
-        return super().__str__() + f"(value_fn={self.value_fn_builder_name})"
+CONTENDER_WEIGHTS = {
+    # Where to place. Note winning is best at all costs
+    "public_vps": 3e14,
+    "production": 1e8,
+    "enemy_production": -1e8,
+    "num_tiles": 1,
+    # Towards where to expand and when
+    "reachable_production_0": 0,
+    "reachable_production_1": 1e4,
+    "buildable_nodes": 1e3,
+    "longest_road": 10,
+    # Hand, when to hold and when to use.
+    "hand_synergy": 1e2,
+    "hand_resources": 1,
+    "discard_penalty": -5,
+    "hand_devs": 10,
+    "army_size": 10.1,
+}
 
 
 ALPHABETA_DEFAULT_DEPTH = 2
@@ -198,6 +200,15 @@ MAX_SEARCH_TIME_SECS = 20
 
 
 class AlphaBetaPlayer(Player):
+    """
+    Player that executes an AlphaBeta Search where the value of each node
+    is taken to be the expected value (using the probability of rolls, etc...)
+    of its children. At leafs we simply use the heuristic function given.
+
+    NOTE: More than 3 levels seems to take much longer, it would be
+    interesting to see this with prunning.
+    """
+
     def __init__(
         self,
         color,
