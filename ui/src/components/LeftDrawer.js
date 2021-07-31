@@ -1,4 +1,5 @@
 import React, { useCallback, useContext } from "react";
+import cn from "classnames";
 import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
 import Divider from "@material-ui/core/Divider";
 import Drawer from "@material-ui/core/Drawer";
@@ -16,10 +17,14 @@ function DrawerContent({ gameState }) {
   const playerSections = gameState.colors.map((color) => {
     const key = playerKey(gameState, color);
     return (
-      <>
-        <PlayerStateBox playerState={gameState.player_state} playerKey={key} />
+      <React.Fragment key={color}>
+        <PlayerStateBox
+          playerState={gameState.player_state}
+          playerKey={key}
+          color={color}
+        />
         <Divider />
-      </>
+      </React.Fragment>
     );
   });
 
@@ -31,7 +36,7 @@ function DrawerContent({ gameState }) {
           .slice()
           .reverse()
           .map((action, i) => (
-            <div key={i} className="action">
+            <div key={i} className={cn("action foreground", action)}>
               {humanizeAction(action, gameState.bot_colors)}
             </div>
           ))}
@@ -90,14 +95,7 @@ export default function LeftDrawer() {
         </SwipeableDrawer>
       </Hidden>
       <Hidden smDown implementation="css">
-        <Drawer
-          className="left-drawer"
-          anchor="left"
-          variant="permanent"
-          open
-          disableBackdropTransition={!iOS}
-          disableDiscovery={iOS}
-        >
+        <Drawer className="left-drawer" anchor="left" variant="permanent" open>
           <DrawerContent gameState={state.gameState} />
         </Drawer>
       </Hidden>
