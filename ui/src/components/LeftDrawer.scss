@@ -1,8 +1,19 @@
 @import "../variables.scss";
 
+$dark-divider: rgb(0 0 0 / 80%);
+
 .left-drawer {
   .MuiDrawer-paper {
     width: 250px;
+    background: $dark-gray;
+  }
+
+  .MuiDivider-root {
+    background: $dark-divider;
+  }
+
+  .MuiDrawer-paperAnchorDockedLeft {
+    border-color: $dark-divider;
   }
 
   .log {

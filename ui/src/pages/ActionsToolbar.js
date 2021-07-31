@@ -21,7 +21,7 @@ import SimCardIcon from "@material-ui/icons/SimCard";
 import { useParams } from "react-router";
 
 import { ResourceCards } from "../components/PlayerStateBox";
-import Prompt from "../components/Prompt";
+import Prompt, { humanizeTradeAction } from "../components/Prompt";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { getHumanColor, playerKey } from "../utils/stateUtils";
@@ -129,9 +129,9 @@ function PlayButtons() {
     (action) => action[1] === "MARITIME_TRADE"
   );
   const tradeItems = tradeActions.map((action) => {
-    const out = action[2].slice(0, 4).filter((resource) => resource !== null);
+    const label = humanizeTradeAction(action);
     return {
-      label: `${out.length} ${out[0]} => ${action[2][4]}`,
+      label: label,
       disabled: false,
       onClick: carryOutAction(action),
     };

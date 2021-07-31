@@ -9,7 +9,7 @@ export function humanizeAction(action, botColors) {
     case "ROLL":
       return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
     case "DISCARD":
-      return `${player} DISCARDED ${action[2]}`;
+      return `${player} DISCARDED`;
     case "BUY_DEVELOPMENT_CARD":
       return `${player} BOUGHT DEVELOPMENT CARD`;
     case "BUILD_SETTLEMENT":
@@ -26,15 +26,27 @@ export function humanizeAction(action, botColors) {
     case "PLAY_KNIGHT_CARD": {
       return `${player} PLAYED KNIGHT CARD`;
     }
+    case "PLAY_YEAR_OF_PLENTY": {
+      return `${player} YEAR OF PLENTY ${action[2]}`;
+    }
     case "MOVE_ROBBER": {
       const tile = action[2];
       return `${player} ROBBED ${tile}`;
+    }
+    case "MARITIME_TRADE": {
+      const label = humanizeTradeAction(action);
+      return `${player} TRADED ${label}`;
     }
     case "END_TURN":
       return `${player} ENDED TURN`;
     default:
       return `${player} ${action.slice(1)}`;
   }
+}
+
+export function humanizeTradeAction(action) {
+  const out = action[2].slice(0, 4).filter((resource) => resource !== null);
+  return `${out.length} ${out[0]} => ${action[2][4]}`;
 }
 
 function humanizePrompt(current_prompt) {

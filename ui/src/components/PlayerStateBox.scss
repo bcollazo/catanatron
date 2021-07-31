@@ -6,6 +6,24 @@
   gap: 6px;
 
   margin-bottom: $sm-gutter;
+
+  .card {
+    border-radius: 4px;
+    div {
+      background: #151313;
+      color: white;
+
+      width: 21px;
+      height: 36px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+      position: relative;
+    }
+  }
   .wood-cards {
     background: $wood;
   }
