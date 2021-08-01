@@ -15,4 +15,6 @@ class MyPlayer(Player):
         Return:
             action (Action): Chosen element of playable_actions
         """
+        # returns first action, probably can be smarter about this
+        # edit this code and implement your bot here!
         return playable_actions[0]
