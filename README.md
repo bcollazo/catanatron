@@ -57,8 +57,9 @@ game = Game(players)
 game.play()  # returns winning color
 ```
 
-You can then inspect the resulting game state any way you want
-(e.g. `game.state.player_state`, `game.state.actions`, `game.state.board.buildings`, etc...). See [documentation](#documentation) for more.
+You can then inspect the resulting game state any way you want (e.g. `game.state.player_state`, `game.state.actions`, `game.state.board.buildings`, etc...).
+
+See [sample.py](catanatron_experimental/catanatron_experimental/sample.py) for an example script. See [documentation](#documentation) for more information on how we represent state.
 
 For watching these games in a UI see [Advanced Usage](#advanced-usage) and [Watching Games](#watching-games).
 
@@ -104,6 +105,8 @@ from catanatron_server.utils import open_link
 open_link(game)  # opens game in browser
 ```
 
+See [sample.py](catanatron_experimental/catanatron_experimental/sample.py) for an example of this (run `python catanatron_experimental/catanatron_experimental/sample.py`).
+
 NOTE: A great contribution would be to make this infrastructure allow to watch the game while its played.
 
 ## Documentation
@@ -135,7 +138,9 @@ The code is divided in the following 5 components (folders):
 
 ### AI Bots Leaderboard
 
-The best bot is `AlphaBetaPlayer` with n = 2. Here a list of bots strength. Experiments
+Catanatron will always be the best bot in this leaderboard.
+
+The best bot right now is `AlphaBetaPlayer` with n = 2. Here a list of bots strength. Experiments
 done by running 1000 (when possible) 1v1 games against previous in list.
 
 | Player               | % of wins in 1v1 games      | num games used for result |
@@ -147,6 +152,16 @@ done by running 1000 (when possible) 1v1 games against previous in list.
 | WeightedRandom       | 53% vs WeightedRandom       | 1000                      |
 | VictoryPoint         | 60% vs Random               | 1000                      |
 | Random               | -                           | -                         |
+
+## How to make Catanatron stronger?
+
+There are two main ways of testing a potentially stronger bot.
+
+- Use Contender Bot in `catanatron-play`. There is already some infrastructure in which you can tinker with the weights of the hand-crafted features in the current evaluation function right now ([minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)). You could also come up with new hand-crafted features! To do this, edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `catanatron-play --players=AB:2:False:C,AB:2 --num=100` to see if your changes improve the main bot (wins more games).
+
+- Create a new Player class and integrate it to `catanatron-play`. If your bot idea is wildly different than the AlphaBetaSearch + Evaluation Function structure, just define a Player class in the catanatron_experimental package and integrate it to `PLAYER_CLASSES` in [play.py](catanatron_experimental/catanatron_experimental/play.py). Then use `catanatron-play` with your new player letter.
+
+If you find a bot that consistently beats the best bot right now (i.e. AlphaBetaSearch(n=2) with the current value function), please submit a Pull Request! :)
 
 ## Developing for Catanatron
 
@@ -291,9 +306,9 @@ sphinx-build -b html docs/source/ docs/build/html
 
 # Contributing
 
-I am new to Open Source Development, so open to suggestions on this section. The best contributions would be to make the core bot stronger by tinkering with the weights of each of the hand-crafted features in [minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py), or coming up with new hand-crafted features! In particular, you can edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `catanatron-play --players=AB:2:False:C,AB:2 --num=100` to see if your changes improve the main bot.
+I am new to Open Source Development, so open to suggestions on this section. The best contributions would be to make the core bot stronger.
 
-Here is also a list of ideas:
+Other than that here is also a list of ideas:
 
 - Improve `catanatron` package running time performance.
 

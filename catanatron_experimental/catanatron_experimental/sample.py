@@ -1,8 +1,9 @@
 from catanatron.game import Game
 from catanatron.models.player import RandomPlayer, Color
 from catanatron_experimental.my_player import MyPlayer
+from catanatron_server.utils import open_link
 
-
+# Play a simple 4v4 game. Edit MyPlayer with your logic!
 players = [
     MyPlayer(Color.RED),
     RandomPlayer(Color.BLUE),
@@ -12,6 +13,6 @@ players = [
 game = Game(players)
 print(game.play())  # returns winning color
 
-from catanatron_server.utils import open_link
-
-open_link(game)
+# Ensure you have `docker-compose up` running
+#   in another terminal tab:
+open_link(game)  # opens game result in browser
