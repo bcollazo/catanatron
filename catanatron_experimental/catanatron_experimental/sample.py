@@ -13,6 +13,6 @@ players = [
 game = Game(players)
 print(game.play())  # returns winning color
 
-# Ensure you have `docker-compose up` running 
+# Ensure you have `docker-compose up` running
 #   in another terminal tab:
 open_link(game)  # opens game result in browser
