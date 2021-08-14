@@ -139,7 +139,7 @@ def init_tile_coordinate_map():
 
 
 def create_board_tensor(game: Game, p0_color: Color):
-    """Creates a tensor of shape (WIDTH, HEIGHT, CHANNELS).
+    """Creates a tensor of shape (WIDTH=21, HEIGHT=11, CHANNELS).
 
     1 x n hot-encoded planes (2 and 1s for city/settlements).
     1 x n planes for the roads built by each player.

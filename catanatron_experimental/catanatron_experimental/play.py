@@ -38,16 +38,9 @@ from catanatron_experimental.machine_learning.players.playouts import (
 from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
     OnlineMCTSDQNPlayer,
 )
-from catanatron_gym.features import (
-    create_sample,
-    create_sample_vector,
-    get_feature_ordering,
-)
+from catanatron_gym.features import create_sample
 from catanatron_experimental.dqn_player import DQNPlayer
 from catanatron_experimental.machine_learning.board_tensor_features import (
-    CHANNELS,
-    HEIGHT,
-    WIDTH,
     create_board_tensor,
 )
 from catanatron_experimental.machine_learning.utils import (
@@ -255,38 +248,28 @@ def play_batch(
 
 
 def build_action_callback(games_directory):
-    data = defaultdict(
-        lambda: {
-            "samples": [],
-            "actions": [],
-            "board_tensors": [],
-            # These are for practicing ML with simpler problems
-            "OWS_ONLY_LABEL": [],
-            "OWS_LABEL": [],
-            "settlements": [],
-            "cities": [],
-            "prod_vps": [],
-        }
-    )
+    import tensorflow as tf
+
+    data = defaultdict(lambda: {"samples": [], "actions": [], "board_tensors": []})
 
     def action_callback(game: Game):
         if len(game.state.actions) == 0:
             return
 
-        # action = game.state.actions[-1]  # the action that just happened
-        # data[action.color]["samples"].append(create_sample(game, action.color))
-        # data[action.color]["actions"].append(hot_one_encode_action(action))
+        action = game.state.actions[-1]  # the action that just happened
+        data[action.color]["samples"].append(create_sample(game, action.color))
+        data[action.color]["actions"].append(hot_one_encode_action(action))
 
-        # board_tensor = create_board_tensor(game, player.color)
-        # shape = board_tensor.shape
-        # flattened_tensor = tf.reshape(
-        #     board_tensor, (shape[0] * shape[1] * shape[2],)
-        # ).numpy()
-        # data[player.color]["board_tensors"].append(flattened_tensor)
+        board_tensor = create_board_tensor(game, action.color)
+        shape = board_tensor.shape
+        flattened_tensor = tf.reshape(
+            board_tensor, (shape[0] * shape[1] * shape[2],)
+        ).numpy()
+        data[action.color]["board_tensors"].append(flattened_tensor)
 
         if game.winning_color() is not None:
-            for color in game.state.colors:
-                data[color]["samples"].append(create_sample(game, color))
+            # for color in game.state.colors:
+            #     data[color]["samples"].append(create_sample(game, color))
             flush_to_matrices(game, data, games_directory)
 
     return action_callback
@@ -302,8 +285,8 @@ def flush_to_matrices(game, data, games_directory):
     for color in game.state.colors:
         player_data = data[color]
         samples.extend(player_data["samples"])
-        # actions.extend(player_data["actions"])
-        # board_tensors.extend(player_data["board_tensors"])
+        actions.extend(player_data["actions"])
+        board_tensors.extend(player_data["board_tensors"])
 
         # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
         episode_return = get_discounted_return(game, color, 1)
@@ -325,21 +308,6 @@ def flush_to_matrices(game, data, games_directory):
             ],
             (len(player_data["samples"]), 1),
         )
-        # return_matrix = np.concatenate(
-        #     (return_matrix, np.transpose([player_data["OWS_ONLY_LABEL"]])), axis=1
-        # )
-        # return_matrix = np.concatenate(
-        #     (return_matrix, np.transpose([player_data["OWS_LABEL"]])), axis=1
-        # )
-        # return_matrix = np.concatenate(
-        #     (return_matrix, np.transpose([player_data["settlements"]])), axis=1
-        # )
-        # return_matrix = np.concatenate(
-        #     (return_matrix, np.transpose([player_data["cities"]])), axis=1
-        # )
-        # return_matrix = np.concatenate(
-        #     (return_matrix, np.transpose([player_data["prod_vps"]])), axis=1
-        # )
         labels.extend(return_matrix)
 
     # Build Q-learning Design Matrix
@@ -356,11 +324,6 @@ def flush_to_matrices(game, data, games_directory):
             "TOURNAMENT_RETURN",
             "DISCOUNTED_TOURNAMENT_RETURN",
             "VICTORY_POINTS_RETURN",
-            # "OWS_ONLY_LABEL",
-            # "OWS_LABEL",
-            # "settlements",
-            # "cities",
-            # "prod_vps",
         ],
     ).astype("float64")
     print(rewards_df.describe())
