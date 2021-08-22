@@ -1,6 +1,6 @@
 # 5 Ways NOT to Build a Catan AI
 
-During the pandemic, I started playing online Settlers of Catan. I quickly realized there is more skill involved than one may think (i.e. there are players that consistently make it to the US National Championship); and this made the game beautiful for me.
+During the pandemic, I started playing online Settlers of Catan (shoutout to https://colonist.io!). I quickly realized there is more skill involved than one may think (i.e. there are players that consistently make it to the US National Championship); and this made the game beautiful for me.
 
 At the same time, I was amazed at the recent success of the AlphaGo team, at making a superhuman player in the games of Chess, Shogi, and Go, with a seemingly simple algorithm.
 
@@ -189,12 +189,16 @@ AlphaBetaPlayer:BLUE(depth=2)   [53]  ██████████████
 
 Curiously increasing the search to 3-layers deep made the bot play worse than when searching 2-layers deep. I think its either a bug in the implementation or maybe looking too much ahead makes the bot go towards high-risk-high-reward plays that don’t pan out.
 
-## TODO: Conclusion
+This bot plays pretty well, but is definitely not superhuman and seems to suffer a lack of long-term planning (e.g. it plays monopolies promptly).
 
-### Future Work
+## Conclusion
 
-I am interested in getting either https://github.com/suragnair/alpha-zero-general or https://github.com/werner-duvaud/muzero-general working with Catanatron. I have implemented a Gym-like interface [here](https://github.com/bcollazo/catanatron/tree/master/catanatron_gym), but it is not clear to me how to adapt those repositories.
+Although we didn't see superhuman play, this last approach showed strong play and its ripe to be incrementally improved. Its also particularly promising because this is how at a high-level the classical version of the [Stockfish Chess Engine](https://stockfishchess.org/) played, and it was superhuman (after many open-source contributions).
 
-If you have an idea on how to improve the bot, feel free to clone repo, install dependencies, implement the stub at MyPlayer (or tweak the weights and features of the current `ValueFunctionPlayer`) and submit a Pull Request!
+That is why I've made all this code open-source here: https://github.com/bcollazo/catanatron. Because I am sure there are some brilliant minds out there that can improve on it, and just like Stockfish is for Chess, Catanatron can be the strongest open-source engine for Catan.
 
-The goal of the repo now would be to become the “Stockfish” of Catan, and together I am sure we can find the best possible AI implementation in Catan!
+You can clone the repo, install dependencies, and test your own ideas for improving on the best bot. If you find a change that beats the current best bot with statistical significance, please submit a Pull Request!
+
+## PS: Future Work
+
+I also still see possibility in the Reinforcement Learning approaches with a self-play component. For example, it could be very interesting to get either https://github.com/suragnair/alpha-zero-general or https://github.com/werner-duvaud/muzero-general working with Catanatron. I have implemented a Gym-like interface [here](https://github.com/bcollazo/catanatron/tree/master/catanatron_gym), but it is not clear to me how to adapt those repositories.
