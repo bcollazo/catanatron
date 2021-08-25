@@ -5,6 +5,8 @@
 
 The goal of this project is to build the strongest Settlers of Catan bot possible.
 
+See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https://medium.com/@bcollazo2010/5-ways-not-to-build-a-catan-ai-e01bc491af17).
+
 <p align="left">
  <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/sample-board.png" height="300">
 </p>

@@ -1,5 +1,7 @@
 -e catanatron_core
 -e catanatron_server
+-e catanatron_gym
+-e catanatron_experimental
 click==8.0.1
 decorator==4.4.2
 Flask==2.0.1
