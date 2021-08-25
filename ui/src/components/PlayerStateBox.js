@@ -33,11 +33,62 @@ export function ResourceCards({ playerState, playerKey }) {
           <Paper>{amount("ORE")}</Paper>
         </div>
       )}
-      {/* {numDevCards !== 0 && (
-        <div className="dev-cards center-text" title="Development Cards">
-          {numDevCards}
+      <div className="separator"></div>
+      {amount("VICTORY_POINT") !== 0 && (
+        <div
+          className="dev-cards center-text card"
+          title={amount("VICTORY_POINT") + " Victory Point Card(s)"}
+        >
+          <Paper>
+            <span>{amount("VICTORY_POINT")}</span>
+            <span>VP</span>
+          </Paper>
         </div>
-      )} */}
+      )}
+      {amount("KNIGHT") !== 0 && (
+        <div
+          className="dev-cards center-text card"
+          title={amount("KNIGHT") + " Knight Card(s)"}
+        >
+          <Paper>
+            <span>{amount("KNIGHT")}</span>
+            <span>KN</span>
+          </Paper>
+        </div>
+      )}
+      {amount("MONOPOLY") !== 0 && (
+        <div
+          className="dev-cards center-text card"
+          title={amount("MONOPOLY") + " Monopoly Card(s)"}
+        >
+          <Paper>
+            <span>{amount("MONOPOLY")}</span>
+            <span>MO</span>
+          </Paper>
+        </div>
+      )}
+      {amount("YEAR_OF_PLENTY") !== 0 && (
+        <div
+          className="dev-cards center-text card"
+          title={amount("YEAR_OF_PLENTY") + " Year of Plenty Card(s)"}
+        >
+          <Paper>
+            <span>{amount("YEAR_OF_PLENTY")}</span>
+            <span>YP</span>
+          </Paper>
+        </div>
+      )}
+      {amount("ROAD_BUILDING") !== 0 && (
+        <div
+          className="dev-cards center-text card"
+          title={amount("ROAD_BUILDING") + " Road Building Card(s)"}
+        >
+          <Paper>
+            <span>{amount("ROAD_BUILDING")}</span>
+            <span>RB</span>
+          </Paper>
+        </div>
+      )}
     </div>
   );
 }

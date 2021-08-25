@@ -158,20 +158,20 @@ def populate_matrices(
         index=False,
         compression="gzip",
     )
-    # board_tensors_df.to_csv(
-    #     board_tensors_path,
-    #     mode="a",
-    #     header=is_first_training,
-    #     index=False,
-    #     compression="gzip",
-    # )
-    # actions_df.to_csv(
-    #     actions_path,
-    #     mode="a",
-    #     header=is_first_training,
-    #     index=False,
-    #     compression="gzip",
-    # )
+    board_tensors_df.to_csv(
+        board_tensors_path,
+        mode="a",
+        header=is_first_training,
+        index=False,
+        compression="gzip",
+    )
+    actions_df.to_csv(
+        actions_path,
+        mode="a",
+        header=is_first_training,
+        index=False,
+        compression="gzip",
+    )
     rewards_df.to_csv(
         rewards_path,
         mode="a",

@@ -17,6 +17,7 @@
       height: 36px;
 
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-size: 0.8rem;
@@ -41,7 +42,9 @@
   }
   .dev-cards {
     background: purple;
-    margin-left: $sm-gutter;
+    div {
+      font-size: 0.7rem;
+    }
   }
 }
 
