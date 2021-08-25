@@ -15,6 +15,7 @@ from catanatron_server.models import database_session, upsert_game_state
 from catanatron.game import Game
 from catanatron.models.player import HumanPlayer, RandomPlayer, Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
+from catanatron_experimental.my_player import MyPlayer
 from catanatron_experimental.machine_learning.players.reinforcement import (
     QRLPlayer,
     TensorRLPlayer,
@@ -78,6 +79,7 @@ PLAYER_CLASSES = {
     "S": ScikitPlayer,
     "VP": VictoryPointPlayer,
     "F": ValueFunctionPlayer,
+    "Y": MyPlayer,
     # Tree Search Players
     "G": GreedyPlayoutsPlayer,
     "M": MCTSPlayer,
