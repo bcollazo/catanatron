@@ -3,76 +3,27 @@
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
 
-Fast Settlers of Catan Python implementation and strong AI player.
-
-The goal of this project is to find the strongest Settlers of Catan bot possible.
+The goal of this project is to build the strongest Settlers of Catan bot possible.
 
 <p align="left">
  <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/sample-board.png" height="300">
 </p>
 
-## Usage
+## Getting Started
 
-Install with pip:
+The main usage is to clone this repo, install dependencies, and run simulations/experiments
+so as to find stronger bot implementations and strategies.
 
-```
-pip install catanatron
-```
-
-Make your own bot by implementing the `Player` class (see examples in [catanatron_core/catanatron/players](catanatron_core/catanatron/players) and [minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)):
-
-```python
-from typing import Iterable
-
-from catanatron.game import Game
-from catanatron.models.actions import Action
-from catanatron.models.player import Player
-
-class MyPlayer(Player):
-    def decide(self, game: Game, playable_actions: Iterable[Action]):
-        """Should return one of the playable_actions.
-
-        Args:
-            game (Game): complete game state. read-only.
-            playable_actions (Iterable[Action]): options to choose from
-        Return:
-            action (Action): Chosen element of playable_actions
-        """
-        raise NotImplementedError
-```
-
-Then run a game (or many) like:
-
-```python
-from catanatron.game import Game
-from catanatron.models.player import RandomPlayer, Color
-
-players = [
-    MyPlayer(Color.RED),
-    RandomPlayer(Color.BLUE),
-    RandomPlayer(Color.WHITE),
-    RandomPlayer(Color.ORANGE),
-]
-game = Game(players)
-game.play()  # returns winning color
-```
-
-You can then inspect the resulting game state any way you want (e.g. `game.state.player_state`, `game.state.actions`, `game.state.board.buildings`, etc...).
-
-See [sample.py](catanatron_experimental/catanatron_experimental/sample.py) for an example script. See [documentation](#documentation) for more information on how we represent state.
-
-For watching these games in a UI see [Advanced Usage](#advanced-usage) and [Watching Games](#watching-games).
-
-## Advanced Usage
-
-Cloning the repo and using directly will allow you to access additional tools not included in the core package. In particular, a web UI for watching games and a `catanatron-play` CLI script that provides a blueprint to run many games, collect summary statistics (avg vps, avg game length, etc...),
-save game for viewing in browser, and/or generate machine learning datasets.
-
-Clone the repo, create a virtualenv with Python 3.8, and install requirements:
+1. Clone the repository
 
 ```
-python3.8 -m venv venv
-source ./venv/bin/activate
+git clone https://github.com/bcollazo/catanatron
+cd catanatron/
+```
+
+2. Install dependencies (needs Python3.8)
+
+```
 pip install -r dev-requirements.txt
 pip install -e catanatron_core
 pip install -e catanatron_server
@@ -80,13 +31,25 @@ pip install -e catanatron_gym
 pip install -e catanatron_experimental
 ```
 
-Now, you should have access to a `catanatron-play` CLI tool. Use it to run many games like so:
+3. Use `catanatron-play` to run simulations and generate datasets!
 
 ```
-catanatron-play --players=R,R,W,VP --num=100
+catanatron-play --players=R,W,F,AB:2 --num=1000
 ```
 
-Currently, we can execute one game in ~76 milliseconds. See `catanatron-play --help` for more information.
+Currently, we can execute one game in ~76 milliseconds and the best bot is `AB:2` (basically an Alpha Beta Prunning algorithm with a hand-crafted value function).
+
+See more information with `catanatron-play --help`.
+
+## How to make Catanatron stronger?
+
+There are two main ways of testing a potentially stronger bot.
+
+- Use Contender Bot in `catanatron-play`. There is already some infrastructure in which you can change the weights of the hand-crafted features in the current evaluation function right now ([minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)). You could also come up with new hand-crafted features! To do this, edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `catanatron-play --players=AB:2,AB:2:False:C --num=100` to see if your changes improve the main bot (it should consistently win more games).
+
+- If your bot idea is considerably different than the tree-search structure `AlphaBetaPlayer` follows, implement your idea in the provided `MyPlayer` stub ([my_player.py](catanatron_experimental/catanatron_experimental/my_player.py)), and test it against the best bot: `catanatron-play --players=AB:2,M --num=100`. See other example player implementations in [catanatron_core/catanatron/players](catanatron_core/catanatron/players) and [minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)
+
+If you find a bot that consistently beats the best bot right now, please submit a Pull Request! :)
 
 ## Watching Games (Browser UI)
 
@@ -105,38 +68,26 @@ from catanatron_server.utils import open_link
 open_link(game)  # opens game in browser
 ```
 
-See [sample.py](catanatron_experimental/catanatron_experimental/sample.py) for an example of this (run `python catanatron_experimental/catanatron_experimental/sample.py`).
+See [sample.py](sample.py) for an example of this (run `python sample.py`).
 
-NOTE: A great contribution would be to make this infrastructure allow to watch the game while its played.
-
-## Documentation
-
-See https://catanatron.readthedocs.io for more details on how we represent the [state](https://catanatron.readthedocs.io/en/latest/catanatron.html#catanatron.state.State) and [actions](https://catanatron.readthedocs.io/en/latest/catanatron.models.html#catanatron.models.enums.Action).
-
-In summary, Actions are tuples of enums like: `(ActionType.PLAY_MONOPOLY, Resource.WHEAT)` or `(ActionType.BUILD_SETTLEMENT, 3)` (i.e. build settlement on node 3).
-
-State is currently represented by a simple data container class and is mutated by the functions in the `state_functions` module. This functional style allows us to create state copies (for bots that search through state space) faster. The closer we make this State class to an array of immutable primitives, the faster it will be to copy.
-
-### Catanatron OpenAI's Gym API
-
-See [catanatron_gym](catanatron_gym/README.md).
+NOTE: A great contribution would be to make the Web UI allow to step forwards and backwards in a game to inspect it (ala chess.com).
 
 ## Architecture
 
 The code is divided in the following 5 components (folders):
 
-- **catanatron**: A pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see `setup.py`) and can be used as a Python package.
+- **catanatron**: A pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see `setup.py`) and can be used as a Python package. See the documentation for the package here: https://catanatron.readthedocs.io/.
 
 - **catanatron_server**: Contains a Flask web server in order to serve
   game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. It defaults to using an ephemeral in-memory sqlite database. Also pip-installable (not publised in PyPi however).
 
-- **catanatron_gym**: OpenAI Gym interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. Pip-installable. For more see [catanatron_gym/README.md](catanatron_gym/README.md).
+- **catanatron_gym**: OpenAI Gym interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. This can be pip-installed independently with `pip install catanatron_gym`, for more information see [catanatron_gym/README.md](catanatron_gym/README.md).
 
 - **catantron_experimental**: A collection of unorganized scripts with contain many failed attempts at finding the best possible bot. Its ok to break these scripts. Its pip-installable. Exposes a `catanatron-play` command-line script that can be used to play games in bulk, create machine learning datasets of games, and more!
 
 - **ui**: A React web UI to render games. This is helpful for debugging the core implementation. We decided to use the browser as a randering engine (as opposed to the terminal or a desktop GUI) because of HTML/CSS's ubiquitousness and the ability to use modern animation libraries in the future (https://www.framer.com/motion/ or https://www.react-spring.io/).
 
-### AI Bots Leaderboard
+## AI Bots Leaderboard
 
 Catanatron will always be the best bot in this leaderboard.
 
@@ -152,16 +103,6 @@ done by running 1000 (when possible) 1v1 games against previous in list.
 | WeightedRandom       | 53% vs WeightedRandom       | 1000                      |
 | VictoryPoint         | 60% vs Random               | 1000                      |
 | Random               | -                           | -                         |
-
-## How to make Catanatron stronger?
-
-There are two main ways of testing a potentially stronger bot.
-
-- Use Contender Bot in `catanatron-play`. There is already some infrastructure in which you can tinker with the weights of the hand-crafted features in the current evaluation function right now ([minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)). You could also come up with new hand-crafted features! To do this, edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `catanatron-play --players=AB:2:False:C,AB:2 --num=100` to see if your changes improve the main bot (wins more games).
-
-- Create a new Player class and integrate it to `catanatron-play`. If your bot idea is wildly different than the AlphaBetaSearch + Evaluation Function structure, just define a Player class in the catanatron_experimental package and integrate it to `PLAYER_CLASSES` in [play.py](catanatron_experimental/catanatron_experimental/play.py). Then use `catanatron-play` with your new player letter.
-
-If you find a bot that consistently beats the best bot right now (i.e. AlphaBetaSearch(n=2) with the current value function), please submit a Pull Request! :)
 
 ## Developing for Catanatron
 
