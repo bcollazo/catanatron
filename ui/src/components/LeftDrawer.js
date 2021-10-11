@@ -37,7 +37,7 @@ function DrawerContent({ gameState }) {
           .reverse()
           .map((action, i) => (
             <div key={i} className={cn("action foreground", action)}>
-              {humanizeAction(action, gameState.bot_colors)}
+              {humanizeAction(gameState, action)}
             </div>
           ))}
       </div>

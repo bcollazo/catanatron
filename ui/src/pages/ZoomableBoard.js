@@ -134,7 +134,7 @@ export default function ZoomableBoard({ replayMode }) {
 
   // TODO: Keep in sync with CSS
   const containerHeight = height - 144 - 38 - 40;
-  const containerWidth = matches ? width - 250 : width;
+  const containerWidth = matches ? width - 280 : width;
   const center = [containerWidth / 2, containerHeight / 2];
   const size = computeDefaultSize(containerWidth, containerHeight);
 
