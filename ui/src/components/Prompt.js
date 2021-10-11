@@ -5,7 +5,7 @@ import "./Prompt.scss";
 
 function findTileByCoordinate(gameState, coordinate) {
   for (const tile of Object.values(gameState.tiles)) {
-    if (JSON.stringify(tile.coordinate) == JSON.stringify(coordinate)) {
+    if (JSON.stringify(tile.coordinate) === JSON.stringify(coordinate)) {
       return tile;
     }
   }
