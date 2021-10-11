@@ -48,4 +48,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: npm ci
+        working-directory: ./ui
       - run: npm run build
+        working-directory: ./ui
