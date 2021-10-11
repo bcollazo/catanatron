@@ -3,7 +3,28 @@ import { isPlayersTurn } from "../utils/stateUtils";
 
 import "./Prompt.scss";
 
-export function humanizeAction(action, botColors) {
+function findTileByCoordinate(gameState, coordinate) {
+  for (const tile of Object.values(gameState.tiles)) {
+    if (JSON.stringify(tile.coordinate) == JSON.stringify(coordinate)) {
+      return tile;
+    }
+  }
+}
+
+function findTileById(gameState, tileId) {
+  return gameState.tiles[tileId];
+}
+
+function getTileString(tile) {
+  return `${tile.tile.number} ${tile.tile.resource}`;
+}
+
+function getShortTileString(tileTile) {
+  return tileTile.number || tileTile.type;
+}
+
+export function humanizeAction(gameState, action) {
+  const botColors = gameState.bot_colors;
   const player = botColors.includes(action[0]) ? "BOT" : "YOU";
   switch (action[1]) {
     case "ROLL":
@@ -16,12 +37,21 @@ export function humanizeAction(action, botColors) {
     case "BUILD_CITY": {
       const parts = action[1].split("_");
       const building = parts[parts.length - 1];
-      const tile = action[2];
-      return `${player} BUILT ${building} ON ${tile}`;
+      const tileId = action[2];
+      const tiles = gameState.adjacent_tiles[tileId];
+      const tileString = tiles.map(getShortTileString).join("-");
+      return `${player} BUILT ${building} ON ${tileString}`;
     }
     case "BUILD_ROAD": {
       const edge = action[2];
-      return `${player} BUILT ROAD ON ${edge}`;
+      const a = gameState.adjacent_tiles[edge[0]].map((t) => t.id);
+      const b = gameState.adjacent_tiles[edge[1]].map((t) => t.id);
+      const intersection = a.filter((t) => b.includes(t));
+      const tiles = intersection.map(
+        (tileId) => findTileById(gameState, tileId).tile
+      );
+      const edgeString = tiles.map(getShortTileString).join("-");
+      return `${player} BUILT ROAD ON ${edgeString}`;
     }
     case "PLAY_KNIGHT_CARD": {
       return `${player} PLAYED KNIGHT CARD`;
@@ -30,8 +60,9 @@ export function humanizeAction(action, botColors) {
       return `${player} YEAR OF PLENTY ${action[2]}`;
     }
     case "MOVE_ROBBER": {
-      const tile = action[2];
-      return `${player} ROBBED ${tile}`;
+      const tile = findTileByCoordinate(gameState, action[2][0]);
+      const tileString = getTileString(tile);
+      return `${player} ROBBED ${tileString} (STOLE ${action[2][2]})`;
     }
     case "MARITIME_TRADE": {
       const label = humanizeTradeAction(action);
