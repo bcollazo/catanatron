@@ -8,6 +8,12 @@ h6.MuiTypography-h6 {
   font-family: "Bungee Inline", sans-serif;
 }
 
+@media (min-width: 600px) {
+  #root .snackbar-container {
+    display: none;
+  }
+}
+
 // For Snackbar
 #root .snackbar-container {
   z-index: 1200;
@@ -90,6 +96,6 @@ main {
 
 @media (min-width: $md-breakpoint) {
   main {
-    padding-left: 250px;
+    padding-left: 280px;
   }
 }
