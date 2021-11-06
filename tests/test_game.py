@@ -116,7 +116,6 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     assert player_num_resource_cards(game.state, players[1].color) == 7
     game.play_tick()  # should be player 0 rolling.
 
-    print(game.state.playable_actions)
     assert not any(
         a.action_type == ActionType.DISCARD for a in game.state.playable_actions
     )
