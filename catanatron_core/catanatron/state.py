@@ -44,6 +44,10 @@ from catanatron.state_functions import (
     player_resource_deck_contains,
 )
 
+# For now have some Game-Configuration aspects hard-coded here
+#   eventually it might become part of an immutable (not copied)
+#   property for game-config in state.
+DISCARD_LIMIT = 7
 
 # These will be prefixed by P0_, P1_, ...
 # Create Player State blueprint
@@ -409,7 +413,7 @@ def apply_action(state: State, action: Action):
         number = dices[0] + dices[1]
         action = Action(action.color, action.action_type, dices)
 
-        if number == 7:
+        if number >= DISCARD_LIMIT:
             discarders = [
                 player_num_resource_cards(state, color) > 7 for color in state.colors
             ]
