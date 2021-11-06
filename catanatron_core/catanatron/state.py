@@ -413,9 +413,10 @@ def apply_action(state: State, action: Action):
         number = dices[0] + dices[1]
         action = Action(action.color, action.action_type, dices)
 
-        if number >= DISCARD_LIMIT:
+        if number == 7:
             discarders = [
-                player_num_resource_cards(state, color) > 7 for color in state.colors
+                player_num_resource_cards(state, color) > DISCARD_LIMIT
+                for color in state.colors
             ]
             is_discarding = any(discarders)
 
