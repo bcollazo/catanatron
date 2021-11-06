@@ -75,12 +75,24 @@ export default function Tile({ center, coordinate, tile, size }) {
         </div>
       );
     } else {
+      const portBackground = {
+        BRICK: brickTile,
+        SHEEP: woolTile,
+        ORE: oreTile,
+        WOOD: lumberTile,
+        WHEAT: grainTile,
+      }[tile.resource];
       contents = (
         <div
           className="port"
           style={{
             left: x,
             top: y,
+            backgroundImage: `url('${portBackground}')`,
+            height: 60,
+            backgroundSize: "contain",
+            width: 52,
+            backgroundRepeat: "no-repeat",
           }}
         >
           2:1
