@@ -1,9 +1,16 @@
-# Implements https://www.chessprogramming.org/SPSA
+"""
+Implements https://www.chessprogramming.org/SPSA
+
+This seems to work!  - November 7, 2021
+"""
 import random
 import numpy as np
 
 from catanatron.models.player import Color
-from catanatron_experimental.machine_learning.players.minimax import ValueFunctionPlayer
+from catanatron_experimental.machine_learning.players.minimax import (
+    DEFAULT_WEIGHTS,
+    ValueFunctionPlayer,
+)
 from catanatron_experimental.play import play_batch
 
 # for (k=0; k < N; k++) {
@@ -21,7 +28,7 @@ a = 1
 c = 1
 A = 100
 
-p = 8
+p = len(DEFAULT_WEIGHTS.copy())
 r = 10.0
 
 alpha = 0.602
@@ -31,6 +38,7 @@ gamma = 0.101
 def main():
     theta = np.array([1.0 for i in range(p)])
     for k in range(N):
+        print("Iteration", k)
         ak = a / ((k + 1 + A) ** alpha)
         ck = c / ((k + 1) ** gamma)
 
@@ -45,13 +53,23 @@ def main():
 
 def match(theta_plus, theta_minus):
     print(theta_plus, "vs", theta_minus)
-    games_played = 10
+    games_played = 200
+
+    weights_plus = {
+        k: v + theta_plus[i] for i, (k, v) in enumerate(DEFAULT_WEIGHTS.items())
+    }
+    weights_minus = {
+        k: v + theta_minus[i] for i, (k, v) in enumerate(DEFAULT_WEIGHTS.items())
+    }
     players = [
-        ValueFunctionPlayer(Color.RED, "C", params=theta_plus),
-        ValueFunctionPlayer(Color.BLUE, "C", params=theta_minus),
+        ValueFunctionPlayer(Color.RED, "C", params=weights_plus),
+        ValueFunctionPlayer(Color.BLUE, "C", params=weights_minus),
     ]
-    wins, _ = play_batch(games_played, players, None, False, False, verbose="DEBUG")
-    return (wins[str(players[0])] / games_played - 0.5) * 4
+    wins, _ = play_batch(games_played, players, None, False, False, loglevel="ERROR")
+
+    result = (wins[Color.RED] / games_played - 0.5) * 4  # normalized to [-2,+2] range
+    print(result, wins)
+    return result
 
 
 if __name__ == "__main__":
