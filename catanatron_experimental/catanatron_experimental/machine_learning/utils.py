@@ -24,12 +24,17 @@ def get_rewards_path(games_directory):
     return os.path.join(games_directory, "rewards.csv.gzip")
 
 
+def get_main_path(games_directory):
+    return os.path.join(games_directory, "main.csv.gzip")
+
+
 def get_matrices_path(games_directory):
     samples_path = get_samples_path(games_directory)
     board_tensors_path = get_board_tensors_path(games_directory)
     actions_path = get_actions_path(games_directory)
     rewards_path = get_rewards_path(games_directory)
-    return samples_path, board_tensors_path, actions_path, rewards_path
+    main_path = get_main_path(games_directory)
+    return samples_path, board_tensors_path, actions_path, rewards_path, main_path
 
 
 def get_games_directory(key=None, version=None):
@@ -64,9 +69,13 @@ def generate_arrays_from_file(
     targets = []
     batchcount = 0
 
-    samples_path, board_tensors_path, actions_path, rewards_path = get_matrices_path(
-        games_directory
-    )
+    (
+        samples_path,
+        board_tensors_path,
+        actions_path,
+        rewards_path,
+        main_path,
+    ) = get_matrices_path(games_directory)
     while True:
         with open(samples_path) as s, open(actions_path) as a, open(rewards_path) as r:
             next(s)  # skip header
@@ -142,11 +151,15 @@ def get_victory_points_return(game, p0_color):
 
 
 def populate_matrices(
-    samples_df, board_tensors_df, actions_df, rewards_df, games_directory
+    samples_df, board_tensors_df, actions_df, rewards_df, main_df, games_directory
 ):
-    samples_path, board_tensors_path, actions_path, rewards_path = get_matrices_path(
-        games_directory
-    )
+    (
+        samples_path,
+        board_tensors_path,
+        actions_path,
+        rewards_path,
+        main_path,
+    ) = get_matrices_path(games_directory)
 
     ensure_dir(games_directory)
 
@@ -174,6 +187,13 @@ def populate_matrices(
     )
     rewards_df.to_csv(
         rewards_path,
+        mode="a",
+        header=is_first_training,
+        index=False,
+        compression="gzip",
+    )
+    main_df.to_csv(
+        main_path,
         mode="a",
         header=is_first_training,
         index=False,

@@ -220,10 +220,10 @@ export default function ActionsToolbar({
         )}
       </div>
       <div className="actions-toolbar">
-        {!botsTurn && !replayMode && (
+        {!(botsTurn || state.gameState.winning_color) && !replayMode && (
           <PlayButtons gameState={state.gameState} />
         )}
-        {botsTurn && (
+        {(botsTurn || state.gameState.winning_color) && (
           <Prompt gameState={state.gameState} isBotThinking={isBotThinking} />
         )}
         {/* <Button

@@ -1,4 +1,3 @@
-import traceback
 import time
 from collections import defaultdict
 import logging
@@ -16,13 +15,17 @@ from catanatron.game import Game
 from catanatron.models.player import HumanPlayer, RandomPlayer, Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron_experimental.my_player import MyPlayer
+from catanatron_experimental.mcts_score_collector import (
+    MCTSScoreCollector,
+    MCTSPredictor,
+)
 from catanatron_experimental.machine_learning.players.reinforcement import (
     QRLPlayer,
     TensorRLPlayer,
     VRLPlayer,
     PRLPlayer,
-    hot_one_encode_action,
 )
+from catanatron_gym.envs.catanatron_env import to_action_space
 from catanatron_experimental.tensorforce_player import ForcePlayer
 from catanatron_experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
@@ -91,6 +94,8 @@ PLAYER_CLASSES = {
     "P": PRLPlayer,
     "T": TensorRLPlayer,
     "D": DQNPlayer,
+    "CO": MCTSScoreCollector,
+    "COP": MCTSPredictor,
 }
 
 
@@ -138,10 +143,13 @@ def simulate(num, players, outpath, save_in_db, watch, loglevel):
     initialized_players = []
     colors = [c for c in Color]
     for i, key in enumerate(player_keys):
-        for player_key, player_class in PLAYER_CLASSES.items():
+        player_keys = sorted(PLAYER_CLASSES.keys(), key=lambda x: -len(x))
+        for player_key in player_keys:
+            player_class = PLAYER_CLASSES[player_key]
             if key.startswith(player_key):
                 params = [colors[i]] + key.split(":")[1:]
                 initialized_players.append(player_class(*params))
+                break
 
     play_batch(num, initialized_players, outpath, save_in_db, watch, loglevel)
 
@@ -186,12 +194,8 @@ def play_batch(
             )
 
         start = time.time()
-        try:
-            game.play(action_callbacks)
-        except Exception as e:
-            traceback.print_exc()
-        finally:
-            duration = time.time() - start
+        game.play(action_callbacks)
+        duration = time.time() - start
         logger.debug(
             str(
                 {
@@ -246,6 +250,9 @@ def play_batch(
     for row in fig.get_string().split("\n"):
         logger.info(row)
 
+    if games_directory:
+        logger.info(f"GZIP CSVs saved at: {games_directory}")
+
     return wins, results_by_player
 
 
@@ -259,9 +266,9 @@ def build_action_callback(games_directory):
             return
 
         action = game.state.actions[-1]  # the action that just happened
-        data[action.color]["samples"].append(create_sample(game, action.color))
-        data[action.color]["actions"].append(hot_one_encode_action(action))
 
+        data[action.color]["samples"].append(create_sample(game, action.color))
+        data[action.color]["actions"].append(to_action_space(action))
         board_tensor = create_board_tensor(game, action.color)
         shape = board_tensor.shape
         flattened_tensor = tf.reshape(
@@ -286,9 +293,6 @@ def flush_to_matrices(game, data, games_directory):
     labels = []
     for color in game.state.colors:
         player_data = data[color]
-        samples.extend(player_data["samples"])
-        actions.extend(player_data["actions"])
-        board_tensors.extend(player_data["board_tensors"])
 
         # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
         episode_return = get_discounted_return(game, color, 1)
@@ -298,6 +302,10 @@ def flush_to_matrices(game, data, games_directory):
         discounted_tournament_return = get_tournament_return(
             game, color, DISCOUNT_FACTOR
         )
+
+        samples.extend(player_data["samples"])
+        actions.extend(player_data["actions"])
+        board_tensors.extend(player_data["board_tensors"])
         return_matrix = np.tile(
             [
                 [
@@ -313,11 +321,13 @@ def flush_to_matrices(game, data, games_directory):
         labels.extend(return_matrix)
 
     # Build Q-learning Design Matrix
-    samples_df = pd.DataFrame.from_records(
-        samples, columns=sorted(samples[0].keys())
-    ).astype("float64")
-    board_tensors_df = pd.DataFrame(board_tensors).astype("float64")
-    actions_df = pd.DataFrame(actions).astype("float64").add_prefix("ACTION_")
+    samples_df = (
+        pd.DataFrame.from_records(samples, columns=sorted(samples[0].keys()))
+        .astype("float64")
+        .add_prefix("F_")
+    )
+    board_tensors_df = pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
+    actions_df = pd.DataFrame(actions, columns=["ACTION"]).astype("int")
     rewards_df = pd.DataFrame(
         labels,
         columns=[
@@ -328,7 +338,7 @@ def flush_to_matrices(game, data, games_directory):
             "VICTORY_POINTS_RETURN",
         ],
     ).astype("float64")
-    print(rewards_df.describe())
+    main_df = pd.concat([samples_df, board_tensors_df, actions_df, rewards_df], axis=1)
 
     print(
         "Collected DataFrames. Data size:",
@@ -342,7 +352,12 @@ def flush_to_matrices(game, data, games_directory):
         rewards_df.shape,
     )
     populate_matrices(
-        samples_df, board_tensors_df, actions_df, rewards_df, games_directory
+        samples_df,
+        board_tensors_df,
+        actions_df,
+        rewards_df,
+        main_df,
+        games_directory,
     )
     print("Saved to matrices at:", games_directory, ". Took", time.time() - t1)
     return samples_df, board_tensors_df, actions_df, rewards_df
