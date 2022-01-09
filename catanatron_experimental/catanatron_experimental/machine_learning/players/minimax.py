@@ -21,6 +21,44 @@ from catanatron_experimental.machine_learning.players.tree_search_utils import (
     expand_spectrum,
 )
 
+TRANSLATE_VARIETY = 4  # i.e. each new resource is like 4 production points
+
+DEFAULT_WEIGHTS = {
+    # Where to place. Note winning is best at all costs
+    "public_vps": 3e14,
+    "production": 1e8,
+    "enemy_production": -1e8,
+    "num_tiles": 1,
+    # Towards where to expand and when
+    "reachable_production_0": 0,
+    "reachable_production_1": 1e4,
+    "buildable_nodes": 1e3,
+    "longest_road": 10,
+    # Hand, when to hold and when to use.
+    "hand_synergy": 1e2,
+    "hand_resources": 1,
+    "discard_penalty": -5,
+    "hand_devs": 10,
+    "army_size": 10.1,
+}
+
+# Change these to play around with new values
+CONTENDER_WEIGHTS = {
+    "public_vps": 300000000000001.94,
+    "production": 100000002.04188395,
+    "enemy_production": -99999998.03389844,
+    "num_tiles": 2.91440418,
+    "reachable_production_0": 2.03820085,
+    "reachable_production_1": 10002.018773150001,
+    "buildable_nodes": 1001.86278466,
+    "longest_road": 12.127388499999999,
+    "hand_synergy": 102.40606877,
+    "hand_resources": 2.43644327,
+    "discard_penalty": -3.00141993,
+    "hand_devs": 10.721669799999999,
+    "army_size": 12.93844622,
+}
+
 
 class ValueFunctionPlayer(Player):
     """
@@ -34,7 +72,7 @@ class ValueFunctionPlayer(Player):
         self.value_fn_builder_name = (
             "contender_fn" if value_fn_builder_name == "C" else "base_fn"
         )
-        self.params = params or DEFAULT_WEIGHTS
+        self.params = params
 
     def decide(self, game, playable_actions):
         if len(playable_actions) == 1:
@@ -58,13 +96,18 @@ class ValueFunctionPlayer(Player):
         return super().__str__() + f"(value_fn={self.value_fn_builder_name})"
 
 
-def get_value_fn(name, params):
-    if name is None or params is None:
+def get_value_fn(name, params, value_function=None):
+    if value_function is not None:
+        return value_function
+    elif name == "base_fn":
         return base_fn(DEFAULT_WEIGHTS)
-    return globals()[name](params)
+    elif name == "contender_fn":
+        return contender_fn(params)
+    else:
+        raise ValueError
 
 
-def base_fn(params):
+def base_fn(params=DEFAULT_WEIGHTS):
     def fn(game, p0_color):
         production_features = build_production_features(True)
         our_production_sample = production_features(game, p0_color)
@@ -147,52 +190,8 @@ def value_production(sample, player_name="P0", include_variety=True):
     return prod_sum + (0 if not include_variety else prod_variety)
 
 
-TRANSLATE_VARIETY = 4  # i.e. each new resource is like 4 production points
-
-# Idea: On CatanTest, try fetching AlphaBeta from master. Can you download a file, and import it
-#   as a Python file(?). Then use that ...
-DEFAULT_WEIGHTS = {
-    # Where to place. Note winning is best at all costs
-    "public_vps": 3e14,
-    "production": 1e8,
-    "enemy_production": -1e8,
-    "num_tiles": 1,
-    # Towards where to expand and when
-    "reachable_production_0": 0,
-    "reachable_production_1": 1e4,
-    "buildable_nodes": 1e3,
-    "longest_road": 10,
-    # Hand, when to hold and when to use.
-    "hand_synergy": 1e2,
-    "hand_resources": 1,
-    "discard_penalty": -5,
-    "hand_devs": 10,
-    "army_size": 10.1,
-}
-
-
 def contender_fn(params):
-    return base_fn(CONTENDER_WEIGHTS)
-
-
-CONTENDER_WEIGHTS = {
-    # Where to place. Note winning is best at all costs
-    "public_vps": 3e14,
-    "production": 1e8,
-    "enemy_production": -1e8,
-    "num_tiles": 1,
-    # Towards where to expand and when
-    "reachable_production_0": 0,
-    "reachable_production_1": 1e4,
-    "buildable_nodes": 1e3,
-    "longest_road": 10,
-    # Hand, when to hold and when to use.
-    "hand_synergy": 1e2,
-    "hand_resources": 1,
-    "discard_penalty": -5,
-    "hand_devs": 10,
-    "army_size": 10.1,
-}
+    return base_fn(params or CONTENDER_WEIGHTS)
 
 
 ALPHABETA_DEFAULT_DEPTH = 2
@@ -224,6 +223,10 @@ class AlphaBetaPlayer(Player):
             "contender_fn" if value_fn_builder_name == "C" else "base_fn"
         )
         self.params = params
+        self.use_value_function = None
+
+    def value_function(self, game, p0_color):
+        raise NotImplementedError
 
     def get_actions(self, game):
         if self.prunning:
@@ -264,7 +267,11 @@ class AlphaBetaPlayer(Player):
         {'value', 'action'|None if leaf, 'node' }
         """
         if depth == 0 or game.winning_color() is not None or time.time() >= deadline:
-            value_fn = get_value_fn(self.value_fn_builder_name, self.params)
+            value_fn = get_value_fn(
+                self.value_fn_builder_name,
+                self.params,
+                self.value_function if self.use_value_function else None,
+            )
             value = value_fn(game, self.color)
 
             node.expected_value = value
