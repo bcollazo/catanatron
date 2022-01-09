@@ -14,6 +14,10 @@ from catanatron_server.models import database_session, upsert_game_state
 from catanatron.game import Game
 from catanatron.models.player import HumanPlayer, RandomPlayer, Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
+
+from catanatron_gym.features import create_sample
+from catanatron_gym.envs.catanatron_env import to_action_space
+
 from catanatron_experimental.my_player import MyPlayer
 from catanatron_experimental.mcts_score_collector import (
     MCTSScoreCollector,
@@ -25,7 +29,7 @@ from catanatron_experimental.machine_learning.players.reinforcement import (
     VRLPlayer,
     PRLPlayer,
 )
-from catanatron_gym.envs.catanatron_env import to_action_space
+from catanatron_experimental.utils import formatSecs
 from catanatron_experimental.tensorforce_player import ForcePlayer
 from catanatron_experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
@@ -42,7 +46,6 @@ from catanatron_experimental.machine_learning.players.playouts import (
 from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
     OnlineMCTSDQNPlayer,
 )
-from catanatron_gym.features import create_sample
 from catanatron_experimental.dqn_player import DQNPlayer
 from catanatron_experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
@@ -155,7 +158,12 @@ def simulate(num, players, outpath, save_in_db, watch, loglevel):
 
 
 def play_batch(
-    num_games, players, games_directory, save_in_db, watch, loglevel="DEBUG"
+    num_games,
+    players,
+    games_directory=None,
+    save_in_db=False,
+    watch=False,
+    loglevel="DEBUG",
 ):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
     logger.setLevel(loglevel)
@@ -238,7 +246,7 @@ def play_batch(
 
     logger.info(f"AVG Ticks: {sum(ticks) / len(ticks)}")
     logger.info(f"AVG Turns: {sum(turns) / len(turns)}")
-    logger.info(f"AVG Duration: {sum(durations) / len(durations)}")
+    logger.info(f"AVG Duration: {formatSecs(sum(durations) / len(durations))}")
 
     for player in players:
         vps = results_by_player[player.color]
@@ -253,7 +261,7 @@ def play_batch(
     if games_directory:
         logger.info(f"GZIP CSVs saved at: {games_directory}")
 
-    return wins, results_by_player
+    return dict(wins), dict(results_by_player), games
 
 
 def build_action_callback(games_directory):
@@ -342,6 +350,8 @@ def flush_to_matrices(game, data, games_directory):
 
     print(
         "Collected DataFrames. Data size:",
+        "Main:",
+        main_df.shape,
         "Samples:",
         samples_df.shape,
         "Board Tensors:",
@@ -359,7 +369,9 @@ def flush_to_matrices(game, data, games_directory):
         main_df,
         games_directory,
     )
-    print("Saved to matrices at:", games_directory, ". Took", time.time() - t1)
+    print(
+        "Saved to matrices at:", games_directory, ". Took", formatSecs(time.time() - t1)
+    )
     return samples_df, board_tensors_df, actions_df, rewards_df
 
 
