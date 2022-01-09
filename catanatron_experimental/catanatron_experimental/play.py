@@ -236,9 +236,10 @@ def play_batch(
                         )
                 writer.flush()
 
+    avg_duration = sum(durations) / len(durations)
     logger.info(f"AVG Ticks: {sum(ticks) / len(ticks)}")
     logger.info(f"AVG Turns: {sum(turns) / len(turns)}")
-    logger.info(f"AVG Duration: {sum(durations) / len(durations)}")
+    logger.info(f"AVG Duration: {'{0:.3f}'.format(avg_duration)} secs")
 
     for player in players:
         vps = results_by_player[player.color]
