@@ -158,7 +158,12 @@ def simulate(num, players, outpath, save_in_db, watch, loglevel):
 
 
 def play_batch(
-    num_games, players, games_directory, save_in_db, watch, loglevel="DEBUG"
+    num_games,
+    players,
+    games_directory=None,
+    save_in_db=False,
+    watch=False,
+    loglevel="DEBUG",
 ):
     """Plays num_games, saves final game in database, and populates data/ matrices"""
     logger.setLevel(loglevel)
@@ -256,7 +261,7 @@ def play_batch(
     if games_directory:
         logger.info(f"GZIP CSVs saved at: {games_directory}")
 
-    return wins, results_by_player
+    return dict(wins), dict(results_by_player), games
 
 
 def build_action_callback(games_directory):
