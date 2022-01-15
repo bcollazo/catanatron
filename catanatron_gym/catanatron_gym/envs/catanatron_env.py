@@ -108,7 +108,7 @@ class CatanatronEnv(gym.Env):
     observation_space = spaces.Box(low=-0, high=HIGH, shape=(NUM_FEATURES,), dtype=int)
     reward_range = (-1, 1)
 
-    def __init__(self):
+    def __init__(self, config=None):
         pass
 
     def get_valid_actions(self):
@@ -119,7 +119,14 @@ class CatanatronEnv(gym.Env):
         return list(map(to_action_space, self.game.state.playable_actions))
 
     def step(self, action):
-        catan_action = from_action_space(action, self.game.state.playable_actions)
+        try:
+            catan_action = from_action_space(action, self.game.state.playable_actions)
+        except Exception as e:
+            observation = create_sample_vector(self.game, self.p0.color)
+            winning_color = self.game.winning_color()
+            done = winning_color is not None
+            info = dict(valid_actions=self.get_valid_actions())
+            return observation, -100, True, info
         self.game.execute(catan_action)
         self._advance_until_p0_decision()
 
