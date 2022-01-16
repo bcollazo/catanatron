@@ -11,7 +11,7 @@ import pandas as pd
 from catanatron.state import player_key
 from catanatron_server.utils import ensure_link
 from catanatron_server.models import database_session, upsert_game_state
-from catanatron.game import Game
+from catanatron.game import Accumulator, Game
 from catanatron.models.player import HumanPlayer, RandomPlayer, Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
 
@@ -184,25 +184,17 @@ def play_batch(
         logger.debug(
             f"Playing game {i + 1} / {num_games}. Seating: {game.state.players}"
         )
-        action_callbacks = []
+        accumulators = []
         if games_directory:
-            action_callbacks.append(build_action_callback(games_directory))
+            accumulators.append(CsvDataAccumulator(games_directory))
         if watch:
-            with database_session() as session:
-                upsert_game_state(game, session)
-
-            def callback(game):
-                with database_session() as session:
-                    upsert_game_state(game, session)
-                time.sleep(0.25)
-
-            action_callbacks.append(callback)
+            accumulators.append(DatabaseAccumulator())
             logger.debug(
                 f"Watch game by refreshing http://localhost:3000/games/{game.id}/states/latest"
             )
 
         start = time.time()
-        game.play(action_callbacks)
+        game.play(accumulators)
         duration = time.time() - start
         logger.debug(
             str(
@@ -264,115 +256,129 @@ def play_batch(
     return dict(wins), dict(results_by_player), games
 
 
-def build_action_callback(games_directory):
-    import tensorflow as tf
+class DatabaseAccumulator(Accumulator):
+    def initialize(self, game):
+        with database_session() as session:
+            upsert_game_state(game, session)
 
-    data = defaultdict(lambda: {"samples": [], "actions": [], "board_tensors": []})
+    def step(game):
+        with database_session() as session:
+            upsert_game_state(game, session)
 
-    def action_callback(game: Game):
-        if len(game.state.actions) == 0:
-            return
 
-        action = game.state.actions[-1]  # the action that just happened
+class CsvDataAccumulator(Accumulator):
+    def __init__(self, games_directory):
+        self.data = defaultdict(
+            lambda: {"samples": [], "actions": [], "board_tensors": []}
+        )
+        self.games_directory = games_directory
 
-        data[action.color]["samples"].append(create_sample(game, action.color))
-        data[action.color]["actions"].append(to_action_space(action))
+    def consume(self, game, action):
+        import tensorflow as tf  # lazy load
+
+        self.data[action.color]["samples"].append(create_sample(game, action.color))
+        self.data[action.color]["actions"].append(to_action_space(action))
         board_tensor = create_board_tensor(game, action.color)
         shape = board_tensor.shape
         flattened_tensor = tf.reshape(
             board_tensor, (shape[0] * shape[1] * shape[2],)
         ).numpy()
-        data[action.color]["board_tensors"].append(flattened_tensor)
+        self.data[action.color]["board_tensors"].append(flattened_tensor)
 
-        if game.winning_color() is not None:
-            # for color in game.state.colors:
-            #     data[color]["samples"].append(create_sample(game, color))
-            flush_to_matrices(game, data, games_directory)
+    def finalize(self, game):
+        if game.winning_color() is None:
+            return  # drop game
 
-    return action_callback
+        # for color in game.state.colors:
+        #     data[color]["samples"].append(create_sample(game, color))
 
+        print("Flushing to matrices...")
+        t1 = time.time()
+        samples = []
+        actions = []
+        board_tensors = []
+        labels = []
+        for color in game.state.colors:
+            player_data = self.data[color]
 
-def flush_to_matrices(game, data, games_directory):
-    print("Flushing to matrices...")
-    t1 = time.time()
-    samples = []
-    actions = []
-    board_tensors = []
-    labels = []
-    for color in game.state.colors:
-        player_data = data[color]
+            # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
+            episode_return = get_discounted_return(game, color, 1)
+            discounted_return = get_discounted_return(game, color, DISCOUNT_FACTOR)
+            tournament_return = get_tournament_return(game, color, 1)
+            vp_return = get_victory_points_return(game, color)
+            discounted_tournament_return = get_tournament_return(
+                game, color, DISCOUNT_FACTOR
+            )
 
-        # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
-        episode_return = get_discounted_return(game, color, 1)
-        discounted_return = get_discounted_return(game, color, DISCOUNT_FACTOR)
-        tournament_return = get_tournament_return(game, color, 1)
-        vp_return = get_victory_points_return(game, color)
-        discounted_tournament_return = get_tournament_return(
-            game, color, DISCOUNT_FACTOR
-        )
-
-        samples.extend(player_data["samples"])
-        actions.extend(player_data["actions"])
-        board_tensors.extend(player_data["board_tensors"])
-        return_matrix = np.tile(
-            [
+            samples.extend(player_data["samples"])
+            actions.extend(player_data["actions"])
+            board_tensors.extend(player_data["board_tensors"])
+            return_matrix = np.tile(
                 [
-                    episode_return,
-                    discounted_return,
-                    tournament_return,
-                    discounted_tournament_return,
-                    vp_return,
-                ]
-            ],
-            (len(player_data["samples"]), 1),
+                    [
+                        episode_return,
+                        discounted_return,
+                        tournament_return,
+                        discounted_tournament_return,
+                        vp_return,
+                    ]
+                ],
+                (len(player_data["samples"]), 1),
+            )
+            labels.extend(return_matrix)
+
+        # Build Q-learning Design Matrix
+        samples_df = (
+            pd.DataFrame.from_records(samples, columns=sorted(samples[0].keys()))
+            .astype("float64")
+            .add_prefix("F_")
         )
-        labels.extend(return_matrix)
+        board_tensors_df = (
+            pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
+        )
+        actions_df = pd.DataFrame(actions, columns=["ACTION"]).astype("int")
+        rewards_df = pd.DataFrame(
+            labels,
+            columns=[
+                "RETURN",
+                "DISCOUNTED_RETURN",
+                "TOURNAMENT_RETURN",
+                "DISCOUNTED_TOURNAMENT_RETURN",
+                "VICTORY_POINTS_RETURN",
+            ],
+        ).astype("float64")
+        main_df = pd.concat(
+            [samples_df, board_tensors_df, actions_df, rewards_df], axis=1
+        )
 
-    # Build Q-learning Design Matrix
-    samples_df = (
-        pd.DataFrame.from_records(samples, columns=sorted(samples[0].keys()))
-        .astype("float64")
-        .add_prefix("F_")
-    )
-    board_tensors_df = pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
-    actions_df = pd.DataFrame(actions, columns=["ACTION"]).astype("int")
-    rewards_df = pd.DataFrame(
-        labels,
-        columns=[
-            "RETURN",
-            "DISCOUNTED_RETURN",
-            "TOURNAMENT_RETURN",
-            "DISCOUNTED_TOURNAMENT_RETURN",
-            "VICTORY_POINTS_RETURN",
-        ],
-    ).astype("float64")
-    main_df = pd.concat([samples_df, board_tensors_df, actions_df, rewards_df], axis=1)
-
-    print(
-        "Collected DataFrames. Data size:",
-        "Main:",
-        main_df.shape,
-        "Samples:",
-        samples_df.shape,
-        "Board Tensors:",
-        board_tensors_df.shape,
-        "Actions:",
-        actions_df.shape,
-        "Rewards:",
-        rewards_df.shape,
-    )
-    populate_matrices(
-        samples_df,
-        board_tensors_df,
-        actions_df,
-        rewards_df,
-        main_df,
-        games_directory,
-    )
-    print(
-        "Saved to matrices at:", games_directory, ". Took", formatSecs(time.time() - t1)
-    )
-    return samples_df, board_tensors_df, actions_df, rewards_df
+        print(
+            "Collected DataFrames. Data size:",
+            "Main:",
+            main_df.shape,
+            "Samples:",
+            samples_df.shape,
+            "Board Tensors:",
+            board_tensors_df.shape,
+            "Actions:",
+            actions_df.shape,
+            "Rewards:",
+            rewards_df.shape,
+        )
+        populate_matrices(
+            samples_df,
+            board_tensors_df,
+            actions_df,
+            rewards_df,
+            main_df,
+            self.games_directory,
+        )
+        print(
+            "Saved to matrices at:",
+            self.games_directory,
+            ". Took",
+            formatSecs(time.time() - t1),
+        )
+        return samples_df, board_tensors_df, actions_df, rewards_df
 
 
 if __name__ == "__main__":
