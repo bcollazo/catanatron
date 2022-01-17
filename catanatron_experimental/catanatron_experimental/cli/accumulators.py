@@ -2,13 +2,13 @@ import time
 import os
 import json
 from collections import defaultdict
-from catanatron.json import GameEncoder
 
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 
 from catanatron.game import Accumulator
+from catanatron.json import GameEncoder
 from catanatron.state_functions import get_actual_victory_points
 from catanatron_server.models import database_session, upsert_game_state
 from catanatron_server.utils import ensure_link
@@ -92,13 +92,9 @@ class JsonDataAccumulator(Accumulator):
         self.output = output
 
     def finalize(self, game):
-        # game_json = GameEncoder().default(game)
         filepath = os.path.join(self.output, f"{game.id}.json")
         with open(filepath, "w") as f:
             f.write(json.dumps(game, cls=GameEncoder))
-
-        # wiet
-        # pprint(game_json)  # inspect a game state representation
 
 
 class CsvDataAccumulator(Accumulator):
