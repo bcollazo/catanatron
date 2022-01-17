@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 from catanatron.state import player_key
+from catanatron_experimental.utils import ensure_dir
 
 DISCOUNT_FACTOR = 0.99
 DATA_DIRECTORY = "data"
@@ -199,8 +200,3 @@ def populate_matrices(
         index=False,
         compression="gzip",
     )
-
-
-def ensure_dir(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)

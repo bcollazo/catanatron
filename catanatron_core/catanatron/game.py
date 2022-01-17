@@ -17,6 +17,31 @@ from catanatron.models.player import Color, Player
 TURNS_LIMIT = 1000
 
 
+class Accumulator:
+    """Interface to hook into different game lifecycle events.
+
+    Useful to compute aggregate statistics, log information, etc...
+    """
+
+    def initialize(self, game):
+        """Called when the game is created, no actions have
+        been taken by players yet, but the board is decided.
+        """
+        pass
+
+    def step(self, game, action):
+        """Called after each action taken by a player"""
+        pass
+
+    def finalize(self, game):
+        """Called when the game is finished.
+
+        Check game.winning_color() to see if the game
+        actually finished or exceeded turn limit (is None).
+        """
+        pass
+
+
 class Game:
     """
     Initializes a map, decides player seating order, and exposes two main
@@ -46,27 +71,33 @@ class Game:
             self.id = str(uuid.uuid4())
             self.state = State(players, catan_map or BaseMap())
 
-    def play(self, action_callbacks=[], decide_fn=None):
+    def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
 
         Args:
-            action_callbacks (list, optional): list of functions to run after state is changed.
-                These should expect state as a parameter. Defaults to [].
+            accumulators (list[Accumulator], optional): list of Accumulator classes to use.
+                Their .consume method will be called with every action, and
+                their .finalize method will be called when the game ends (if it ends)
+                Defaults to [].
             decide_fn (function, optional): Function to overwrite current player's decision with.
                 Defaults to None.
         Returns:
             Color: winning color or None if game exceeded TURNS_LIMIT
         """
+        for accumulator in accumulators:
+            accumulator.initialize(self)
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
-            self.play_tick(action_callbacks=action_callbacks, decide_fn=decide_fn)
+            action = self.play_tick(decide_fn=decide_fn)
+            for accumulator in accumulators:
+                accumulator.step(self, action)
+        for accumulator in accumulators:
+            accumulator.finalize(self)
         return self.winning_color()
 
-    def play_tick(self, action_callbacks=[], decide_fn=None):
+    def play_tick(self, decide_fn=None):
         """Advances game by one ply (player decision).
 
         Args:
-            action_callbacks (list, optional): list of functions to run after state is changed.
-                These should expect state as a parameter. Defaults to [].
             decide_fn (function, optional): Function to overwrite current player's decision with.
                 Defaults to None.
 
@@ -81,23 +112,16 @@ class Game:
             if decide_fn is not None
             else player.decide(self, actions)
         )
-        return self.execute(action, action_callbacks=action_callbacks)
+        return self.execute(action)
 
-    def execute(
-        self, action: Action, action_callbacks=[], validate_action: bool = True
-    ) -> Action:
+    def execute(self, action: Action, validate_action: bool = True) -> Action:
         """Internal call that carries out decided action by player"""
         if validate_action and action not in self.state.playable_actions:
             raise ValueError(
                 f"{action} not in playable actions: {self.state.playable_actions}"
             )
 
-        action = apply_action(self.state, action)
-
-        for callback in action_callbacks:
-            callback(self)
-
-        return action
+        return apply_action(self.state, action)
 
     def winning_color(self) -> Union[Color, None]:
         """Gets winning color
