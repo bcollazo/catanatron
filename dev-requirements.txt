@@ -1,3 +1,4 @@
+-r requirements.txt
 absl-py==0.13.0
 appdirs==1.4.4
 astunparse==1.6.3
