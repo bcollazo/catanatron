@@ -64,10 +64,12 @@ def post_action_endpoint(game_id):
 
     # TODO: or request.json is None until fully implement actions in FE
     if game.state.current_player().is_bot or request.json is None:
-        game.play_tick([lambda g: upsert_game_state(g)])
+        game.play_tick()
+        upsert_game_state(game)
     else:
         action = action_from_json(request.json)
-        game.execute(action, action_callbacks=[lambda g: upsert_game_state(g)])
+        game.execute(action)
+        upsert_game_state(game)
 
     return Response(
         response=json.dumps(game, cls=GameEncoder),

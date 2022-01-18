@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from catanatron.state_functions import player_has_rolled
 from catanatron.models.actions import maritime_trade_possibilities
-from catanatron.game import Game
+from catanatron.game import Accumulator, Game
 from catanatron.state import (
     State,
     player_deck_replenish,
@@ -337,3 +337,35 @@ def test_second_placement_takes_cards_from_bank():
         game.play_tick()
 
     assert len(game.state.resource_deck.to_array()) < 19 * 5
+
+
+def test_accumulators():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+
+    class MyAccumulator(Accumulator):
+        def __init__(self):
+            self.actions = []
+            self.initialized = False
+            self.finalized = False
+
+        def initialize(self, game):
+            self.initialized = True
+
+        def step(self, game, action):
+            self.actions.append(action)
+
+        def finalize(self, game):
+            self.finalized = True
+
+    accumulator = MyAccumulator()
+    game.play(accumulators=[accumulator])
+
+    assert accumulator.initialized
+    assert len(accumulator.actions) == len(game.state.actions)
+    assert accumulator.finalized

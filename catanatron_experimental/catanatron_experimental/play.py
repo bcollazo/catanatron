@@ -1,378 +1,286 @@
-import time
-from collections import defaultdict
-import logging
+import os
 
-import coloredlogs
 import click
-import termplotlib as tpl
-import numpy as np
-import pandas as pd
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+from rich.progress import Progress, BarColumn, TimeRemainingColumn
+from rich import box
+from rich.console import Console
+from rich.theme import Theme
+from rich.text import Text
 
-from catanatron.state import player_key
-from catanatron_server.utils import ensure_link
-from catanatron_server.models import database_session, upsert_game_state
 from catanatron.game import Game
-from catanatron.models.player import HumanPlayer, RandomPlayer, Color
-from catanatron.players.weighted_random import WeightedRandomPlayer
+from catanatron.models.player import Color
+from catanatron.state_functions import get_actual_victory_points
 
-from catanatron_gym.features import create_sample
-from catanatron_gym.envs.catanatron_env import to_action_space
-
-from catanatron_experimental.my_player import MyPlayer
-from catanatron_experimental.mcts_score_collector import (
-    MCTSScoreCollector,
-    MCTSPredictor,
-)
-from catanatron_experimental.machine_learning.players.reinforcement import (
-    QRLPlayer,
-    TensorRLPlayer,
-    VRLPlayer,
-    PRLPlayer,
-)
-from catanatron_experimental.utils import formatSecs
-from catanatron_experimental.tensorforce_player import ForcePlayer
-from catanatron_experimental.machine_learning.players.minimax import (
-    AlphaBetaPlayer,
-    ValueFunctionPlayer,
-)
-from catanatron.players.search import (
-    VictoryPointPlayer,
-)
-from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
-from catanatron_experimental.machine_learning.players.scikit import ScikitPlayer
-from catanatron_experimental.machine_learning.players.playouts import (
-    GreedyPlayoutsPlayer,
-)
-from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
-    OnlineMCTSDQNPlayer,
-)
-from catanatron_experimental.dqn_player import DQNPlayer
-from catanatron_experimental.machine_learning.board_tensor_features import (
-    create_board_tensor,
-)
-from catanatron_experimental.machine_learning.utils import (
-    get_discounted_return,
-    get_tournament_return,
-    get_victory_points_return,
-    populate_matrices,
-    DISCOUNT_FACTOR,
+# try to suppress TF output before any potentially tf-importing modules
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+from catanatron_experimental.utils import ensure_dir, formatSecs
+from catanatron_experimental.cli.cli_players import player_help_table, CLI_PLAYERS
+from catanatron_experimental.cli.accumulators import (
+    JsonDataAccumulator,
+    CsvDataAccumulator,
+    DatabaseAccumulator,
+    StatisticsAccumulator,
 )
 
-# Create a logger object.
-logger = logging.getLogger(__name__)
 
-# If you don't want to see log messages from libraries, you can pass a
-# specific logger object to the install() function. In this case only log
-# messages originating from that logger will show up on the terminal.
-coloredlogs.install(
-    level="DEBUG",
-    logger=logger,
-    fmt="%(asctime)s,%(msecs)03d %(levelname)s %(message)s",
+custom_theme = Theme(
+    {
+        "progress.remaining": "",
+        "progress.percentage": "",
+        "bar.complete": "green",
+        "bar.finished": "green",
+    }
 )
-
-LOG_IN_TF = False
-RUNNING_AVG_LENGTH = 1
-
-if LOG_IN_TF:
-    import tensorflow as tf
+console = Console(theme=custom_theme)
 
 
-PLAYER_CLASSES = {
-    "R": RandomPlayer,
-    "H": HumanPlayer,
-    "W": WeightedRandomPlayer,
-    "O": OnlineMCTSDQNPlayer,
-    "S": ScikitPlayer,
-    "VP": VictoryPointPlayer,
-    "F": ValueFunctionPlayer,
-    "Y": MyPlayer,
-    # Tree Search Players
-    "G": GreedyPlayoutsPlayer,
-    "M": MCTSPlayer,
-    "AB": AlphaBetaPlayer,
-    # Used like: --players=V:path/to/model.model,T:path/to.model
-    "C": ForcePlayer,
-    "VRL": VRLPlayer,
-    "Q": QRLPlayer,
-    "P": PRLPlayer,
-    "T": TensorRLPlayer,
-    "D": DQNPlayer,
-    "CO": MCTSScoreCollector,
-    "COP": MCTSPredictor,
-}
+class CustomTimeRemainingColumn(TimeRemainingColumn):
+    """Renders estimated time remaining according to show_time field."""
+
+    def render(self, task):
+        """Show time remaining."""
+        show = task.fields.get("show_time", True)
+        if not show:
+            return Text("")
+        return super().render(task)
 
 
 @click.command()
 @click.option("-n", "--num", default=5, help="Number of games to play.")
 @click.option(
+    "-p",
     "--players",
     default="R,R,R,R",
-    help=f"""
-        Comma-separated players to use. Use : to specify additional params.\n
-        (e.g. --players=R,G:25,AB:2:C,W).\n
-        {", ".join(map(lambda e: f"{e[0]}={e[1].__name__}", PLAYER_CLASSES.items()))}
-        """,
+    help="""
+    Comma-separated players to use. Use ':' to set player-specific params.
+    (e.g. --players=R,G:25,AB:2:C,W).\n
+    See player legend with '--help-players'.
+    """,
 )
 @click.option(
     "-o",
-    "--outpath",
+    "--output",
     default=None,
-    help="Path where to save ML csvs.",
+    help="Directory where to save game data.",
 )
 @click.option(
-    "--save-in-db/--no-save-in-db",
+    "--json",
+    default=None,
+    is_flag=True,
+    help="Save game data in JSON format.",
+)
+@click.option(
+    "--csv", default=False, is_flag=True, help="Save game data in CSV format."
+)
+@click.option(
+    "--db",
     default=False,
+    is_flag=True,
     help="""
-        Whether to save final state to database to allow for viewing.
+        Save game in PGSQL database.
+        Expects docker-compose provided database to be up and running.
+        This allows games to be watched.
         """,
 )
 @click.option(
-    "--watch/--no-watch",
+    "--quiet/--no-quiet",
     default=False,
-    help="""
-        Whether to save intermediate states to database to allow for viewing.
-        This will artificially slow down the game by 1s per move.
-        """,
+    help="Whether to print results to the console",
 )
 @click.option(
-    "--loglevel",
-    default="DEBUG",
-    help="Controls verbosity. Values: DEBUG, INFO, ERROR",
+    "--help-players",
+    default=False,
+    type=bool,
+    help="Show player codes and exits.",
+    is_flag=True,
 )
-def simulate(num, players, outpath, save_in_db, watch, loglevel):
-    """Simple program simulates NUM Catan games."""
-    player_keys = players.split(",")
+def simulate(num, players, output, json, csv, db, quiet, help_players):
+    """
+    Catan Bot Simulator.
+    Catanatron allows you to simulate millions of games at scale
+    and test bot strategies against each other.
 
-    initialized_players = []
+    Examples:\n\n
+        catanatron-play --players=R,R,R,R --num=1000\n
+        catanatron-play --players=W,W,R,R --num=50000 --output=data/ --csv\n
+        catanatron-play --players=VP,F --num=10 --output=data/ --json\n
+        catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
+    """
+    if help_players:
+        return Console().print(player_help_table)
+    if output and not (json or csv):
+        return print("--output requires either --json or --csv to be set")
+
+    player_keys = players.split(",")
+    players = []
     colors = [c for c in Color]
     for i, key in enumerate(player_keys):
-        player_keys = sorted(PLAYER_CLASSES.keys(), key=lambda x: -len(x))
-        for player_key in player_keys:
-            player_class = PLAYER_CLASSES[player_key]
-            if key.startswith(player_key):
-                params = [colors[i]] + key.split(":")[1:]
-                initialized_players.append(player_class(*params))
+        parts = key.split(":")
+        code = parts[0]
+        for cli_player in CLI_PLAYERS:
+            if cli_player.code == code:
+                params = [colors[i]] + parts[1:]
+                player = cli_player.import_fn(*params)
+                players.append(player)
                 break
 
-    play_batch(num, initialized_players, outpath, save_in_db, watch, loglevel)
+    play_batch(num, players, output, json, csv, db, quiet)
+
+
+COLOR_TO_RICH_STYLE = {
+    Color.RED: "red",
+    Color.BLUE: "blue",
+    Color.ORANGE: "yellow",
+    Color.WHITE: "white",
+}
+
+
+def rich_player_name(player):
+    style = COLOR_TO_RICH_STYLE[player.color]
+    return f"[{style}]{player}[/{style}]"
+
+
+def rich_color(color):
+    if color is None:
+        return ""
+    style = COLOR_TO_RICH_STYLE[color]
+    return f"[{style}]{color.value}[/{style}]"
+
+
+def play_batch_core(num_games, players, accumulators=[]):
+    for _ in range(num_games):
+        for player in players:
+            player.reset_state()
+        game = Game(players)
+        game.play(accumulators)
+        yield game
 
 
 def play_batch(
     num_games,
     players,
-    games_directory=None,
-    save_in_db=False,
-    watch=False,
-    loglevel="DEBUG",
+    output=None,
+    json=False,
+    csv=False,
+    db=False,
+    quiet=False,
 ):
-    """Plays num_games, saves final game in database, and populates data/ matrices"""
-    logger.setLevel(loglevel)
+    statistics_accumulator = StatisticsAccumulator()
+    accumulators = [statistics_accumulator]
+    if output:
+        ensure_dir(output)
+    if output and csv:
+        accumulators.append(CsvDataAccumulator(output))
+    if output and json:
+        accumulators.append(JsonDataAccumulator(output))
+    if db:
+        accumulators.append(DatabaseAccumulator())
 
-    wins = defaultdict(int)
-    turns = []
-    ticks = []
-    durations = []
-    games = []
-    results_by_player = defaultdict(list)
-    if LOG_IN_TF:
-        writer = tf.summary.create_file_writer(f"logs/play/{int(time.time())}")
-    for i in range(num_games):
-        for player in players:
-            player.reset_state()
-        game = Game(players)
+    if quiet:
+        for _ in play_batch_core(num_games, players, accumulators):
+            pass
+        return
 
-        logger.debug(
-            f"Playing game {i + 1} / {num_games}. Seating: {game.state.players}"
-        )
-        action_callbacks = []
-        if games_directory:
-            action_callbacks.append(build_action_callback(games_directory))
-        if watch:
-            with database_session() as session:
-                upsert_game_state(game, session)
-
-            def callback(game):
-                with database_session() as session:
-                    upsert_game_state(game, session)
-                time.sleep(0.25)
-
-            action_callbacks.append(callback)
-            logger.debug(
-                f"Watch game by refreshing http://localhost:3000/games/{game.id}/states/latest"
-            )
-
-        start = time.time()
-        game.play(action_callbacks)
-        duration = time.time() - start
-        logger.debug(
-            str(
-                {
-                    str(p): game.state.player_state[
-                        f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
-                    ]
-                    for p in players
-                }
-            )
-            + f" ({duration:.3g} secs) [{game.winning_color()}:{game.state.num_turns}({len(game.state.actions)})]"
-        )
-        if save_in_db and not watch:
-            link = ensure_link(game)
-            logger.info(f"Saved in db. See result at: {link}")
-
-        winning_color = game.winning_color()
-        if winning_color is None:
-            continue
-
-        wins[winning_color] += 1
-        turns.append(game.state.num_turns)
-        ticks.append(len(game.state.actions))
-        durations.append(duration)
-        games.append(game)
-        for player in players:
-            key = player_key(game.state, player.color)
-            points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-            results_by_player[player.color].append(points)
-        if LOG_IN_TF:
-            with writer.as_default():
-                for player in players:
-                    results = results_by_player[player.color]
-                    last_results = results[len(results) - RUNNING_AVG_LENGTH :]
-                    if len(last_results) >= RUNNING_AVG_LENGTH:
-                        running_avg = sum(last_results) / len(last_results)
-                        tf.summary.scalar(
-                            f"{player.color}-vp-running-avg", running_avg, step=i
-                        )
-                writer.flush()
-
-    logger.info(f"AVG Ticks: {sum(ticks) / len(ticks)}")
-    logger.info(f"AVG Turns: {sum(turns) / len(turns)}")
-    logger.info(f"AVG Duration: {formatSecs(sum(durations) / len(durations))}")
-
+    # ===== Game Details
+    last_n = 10
+    actual_last_n = min(last_n, num_games)
+    table = Table(title=f"Last {actual_last_n} Games", box=box.MINIMAL)
+    table.add_column("#", justify="right", no_wrap=True)
+    table.add_column("SEATING")
+    table.add_column("TURNS", justify="right")
     for player in players:
-        vps = results_by_player[player.color]
-        logger.info(f"AVG VPS: {player} {sum(vps) / len(vps)}")
+        table.add_column(f"{player.color.value} VP", justify="right")
+    table.add_column("WINNER")
+    if db:
+        table.add_column("LINK", overflow="fold")
 
-    # Print Winners graph in command line:
-    fig = tpl.figure()
-    fig.barh([wins[p.color] for p in players], players, force_ascii=False)
-    for row in fig.get_string().split("\n"):
-        logger.info(row)
+    with Progress(
+        "[progress.description]{task.description}",
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        CustomTimeRemainingColumn(),
+        console=console,
+    ) as progress:
+        main_task = progress.add_task(f"Playing {num_games} games...", total=num_games)
+        player_tasks = [
+            progress.add_task(
+                rich_player_name(player), total=num_games, show_time=False
+            )
+            for player in players
+        ]
 
-    if games_directory:
-        logger.info(f"GZIP CSVs saved at: {games_directory}")
+        for i, game in enumerate(play_batch_core(num_games, players, accumulators)):
+            winning_color = game.winning_color()
 
-    return dict(wins), dict(results_by_player), games
-
-
-def build_action_callback(games_directory):
-    import tensorflow as tf
-
-    data = defaultdict(lambda: {"samples": [], "actions": [], "board_tensors": []})
-
-    def action_callback(game: Game):
-        if len(game.state.actions) == 0:
-            return
-
-        action = game.state.actions[-1]  # the action that just happened
-
-        data[action.color]["samples"].append(create_sample(game, action.color))
-        data[action.color]["actions"].append(to_action_space(action))
-        board_tensor = create_board_tensor(game, action.color)
-        shape = board_tensor.shape
-        flattened_tensor = tf.reshape(
-            board_tensor, (shape[0] * shape[1] * shape[2],)
-        ).numpy()
-        data[action.color]["board_tensors"].append(flattened_tensor)
-
-        if game.winning_color() is not None:
-            # for color in game.state.colors:
-            #     data[color]["samples"].append(create_sample(game, color))
-            flush_to_matrices(game, data, games_directory)
-
-    return action_callback
-
-
-def flush_to_matrices(game, data, games_directory):
-    print("Flushing to matrices...")
-    t1 = time.time()
-    samples = []
-    actions = []
-    board_tensors = []
-    labels = []
-    for color in game.state.colors:
-        player_data = data[color]
-
-        # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
-        episode_return = get_discounted_return(game, color, 1)
-        discounted_return = get_discounted_return(game, color, DISCOUNT_FACTOR)
-        tournament_return = get_tournament_return(game, color, 1)
-        vp_return = get_victory_points_return(game, color)
-        discounted_tournament_return = get_tournament_return(
-            game, color, DISCOUNT_FACTOR
-        )
-
-        samples.extend(player_data["samples"])
-        actions.extend(player_data["actions"])
-        board_tensors.extend(player_data["board_tensors"])
-        return_matrix = np.tile(
-            [
-                [
-                    episode_return,
-                    discounted_return,
-                    tournament_return,
-                    discounted_tournament_return,
-                    vp_return,
+            if (num_games - last_n) < (i + 1):
+                seating = ",".join([rich_color(c) for c in game.state.colors])
+                row = [
+                    str(i + 1),
+                    seating,
+                    str(game.state.num_turns),
                 ]
-            ],
-            (len(player_data["samples"]), 1),
+                for player in players:  # should be in column order
+                    points = get_actual_victory_points(game.state, player.color)
+                    row.append(str(points))
+                row.append(rich_color(winning_color))
+                if db:
+                    row.append(accumulators[-1].link)
+
+                table.add_row(*row)
+
+            progress.update(main_task, advance=1)
+            if winning_color is not None:
+                winning_index = list(map(lambda p: p.color, players)).index(
+                    winning_color
+                )
+                winner_task = player_tasks[winning_index]
+                progress.update(winner_task, advance=1)
+        progress.refresh()
+    console.print(table)
+
+    # ===== PLAYER SUMMARY
+    table = Table(title="Player Summary", box=box.MINIMAL)
+    table.add_column("", no_wrap=True)
+    table.add_column("WINS", justify="right")
+    table.add_column("AVG VPs", justify="right")
+    # TODO: Compute more stats!
+    # table.add_column("AVG SETTLEMENTS", justify="right")
+    # table.add_column("AVG CITIES", justify="right")
+    # table.add_column("AVG ARMY", justify="right")
+    # table.add_column("AVG ROAD", justify="right")
+    # table.add_column("AVG DEV VP", justify="right")
+    for player in players:
+        vps = statistics_accumulator.results_by_player[player.color]
+        avg_vps = f"{(sum(vps) / len(vps)):.2f}"
+        table.add_row(
+            rich_player_name(player),
+            str(statistics_accumulator.wins[player.color]),
+            str(avg_vps),
         )
-        labels.extend(return_matrix)
+    console.print(table)
 
-    # Build Q-learning Design Matrix
-    samples_df = (
-        pd.DataFrame.from_records(samples, columns=sorted(samples[0].keys()))
-        .astype("float64")
-        .add_prefix("F_")
-    )
-    board_tensors_df = pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
-    actions_df = pd.DataFrame(actions, columns=["ACTION"]).astype("int")
-    rewards_df = pd.DataFrame(
-        labels,
-        columns=[
-            "RETURN",
-            "DISCOUNTED_RETURN",
-            "TOURNAMENT_RETURN",
-            "DISCOUNTED_TOURNAMENT_RETURN",
-            "VICTORY_POINTS_RETURN",
-        ],
-    ).astype("float64")
-    main_df = pd.concat([samples_df, board_tensors_df, actions_df, rewards_df], axis=1)
+    # ===== GAME SUMMARY
+    avg_ticks = f"{statistics_accumulator.get_avg_ticks():.2f}"
+    avg_turns = f"{statistics_accumulator.get_avg_turns():.2f}"
+    avg_duration = formatSecs(statistics_accumulator.get_avg_duration())
+    table = Table(box=box.MINIMAL, title="Game Summary")
+    table.add_column("AVG TICKS", justify="right")
+    table.add_column("AVG TURNS", justify="right")
+    table.add_column("AVG DURATION", justify="right")
+    table.add_row(avg_ticks, avg_turns, avg_duration)
+    console.print(table)
 
-    print(
-        "Collected DataFrames. Data size:",
-        "Main:",
-        main_df.shape,
-        "Samples:",
-        samples_df.shape,
-        "Board Tensors:",
-        board_tensors_df.shape,
-        "Actions:",
-        actions_df.shape,
-        "Rewards:",
-        rewards_df.shape,
+    if output and csv:
+        console.print(f"GZIP CSVs saved at: [green]{output}[/green]")
+
+    return (
+        dict(statistics_accumulator.wins),
+        dict(statistics_accumulator.results_by_player),
+        statistics_accumulator.games,
     )
-    populate_matrices(
-        samples_df,
-        board_tensors_df,
-        actions_df,
-        rewards_df,
-        main_df,
-        games_directory,
-    )
-    print(
-        "Saved to matrices at:", games_directory, ". Took", formatSecs(time.time() - t1)
-    )
-    return samples_df, board_tensors_df, actions_df, rewards_df
 
 
 if __name__ == "__main__":
