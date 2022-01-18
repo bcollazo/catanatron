@@ -8,7 +8,7 @@ Settlers of Catan Bot Simulator. Test out bot strategies at scale (thousands of 
 See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https://medium.com/@bcollazo2010/5-ways-not-to-build-a-catan-ai-e01bc491af17).
 
 <p align="left">
- <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/cli.gif" height="500">
+ <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/cli.gif">
 </p>
 
 ## Getting Started
@@ -56,7 +56,7 @@ If you find a bot that consistently beats the best bot right now, please submit 
 ## Watching Games (Browser UI)
 
 <p align="left">
- <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/CatanatronUI.png" height="500">
+ <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/CatanatronUI.png">
 </p>
 
 We provide a [docker-compose.yml](docker-compose.yml) with everything needed to watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
