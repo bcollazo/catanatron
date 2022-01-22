@@ -23,6 +23,7 @@ from catanatron_experimental.cli.accumulators import (
     CsvDataAccumulator,
     DatabaseAccumulator,
     StatisticsAccumulator,
+    VpDistributionAccumulator,
 )
 
 
@@ -169,7 +170,8 @@ def play_batch(
     quiet=False,
 ):
     statistics_accumulator = StatisticsAccumulator()
-    accumulators = [statistics_accumulator]
+    vp_accumulator = VpDistributionAccumulator()
+    accumulators = [statistics_accumulator, vp_accumulator]
     if output:
         ensure_dir(output)
     if output and csv:
@@ -245,20 +247,29 @@ def play_batch(
     table = Table(title="Player Summary", box=box.MINIMAL)
     table.add_column("", no_wrap=True)
     table.add_column("WINS", justify="right")
-    table.add_column("AVG VPs", justify="right")
-    # TODO: Compute more stats!
-    # table.add_column("AVG SETTLEMENTS", justify="right")
-    # table.add_column("AVG CITIES", justify="right")
-    # table.add_column("AVG ARMY", justify="right")
-    # table.add_column("AVG ROAD", justify="right")
-    # table.add_column("AVG DEV VP", justify="right")
+    table.add_column("AVG VP", justify="right")
+    table.add_column("AVG SETTLES", justify="right")
+    table.add_column("AVG CITIES", justify="right")
+    table.add_column("AVG ROAD", justify="right")
+    table.add_column("AVG ARMY", justify="right")
+    table.add_column("AVG DEV VP", justify="right")
     for player in players:
         vps = statistics_accumulator.results_by_player[player.color]
-        avg_vps = f"{(sum(vps) / len(vps)):.2f}"
+        avg_vps = sum(vps) / len(vps)
+        avg_settlements = vp_accumulator.get_avg_settlements(player.color)
+        avg_cities = vp_accumulator.get_avg_cities(player.color)
+        avg_largest = vp_accumulator.get_avg_largest(player.color)
+        avg_longest = vp_accumulator.get_avg_longest(player.color)
+        avg_devvps = vp_accumulator.get_avg_devvps(player.color)
         table.add_row(
             rich_player_name(player),
             str(statistics_accumulator.wins[player.color]),
-            str(avg_vps),
+            f"{avg_vps:.2f}",
+            f"{avg_settlements:.2f}",
+            f"{avg_cities:.2f}",
+            f"{avg_longest:.2f}",
+            f"{avg_largest:.2f}",
+            f"{avg_devvps:.2f}",
         )
     console.print(table)
 
