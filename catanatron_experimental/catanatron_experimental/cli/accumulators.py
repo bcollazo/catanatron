@@ -7,9 +7,16 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
-from catanatron.game import Accumulator
+from catanatron.game import Accumulator, Game
 from catanatron.json import GameEncoder
-from catanatron.state_functions import get_actual_victory_points
+from catanatron.state_functions import (
+    get_actual_victory_points,
+    get_dev_cards_in_hand,
+    get_largest_army,
+    get_longest_road_color,
+    get_player_buildings,
+)
+from catanatron.models.enums import VICTORY_POINT, BuildingType
 from catanatron_server.models import database_session, upsert_game_state
 from catanatron_server.utils import ensure_link
 from catanatron_experimental.utils import formatSecs
@@ -25,6 +32,75 @@ from catanatron_gym.envs.catanatron_env import to_action_space
 from catanatron_experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
 )
+
+
+class VpDistributionAccumulator(Accumulator):
+    """
+    Accumulates CITIES,SETTLEMENTS,DEVVPS,LONGEST,LARGEST
+    in each game per player.
+    """
+
+    def __init__(self):
+        # These are all per-player. e.g. self.cities['RED']
+        self.cities = defaultdict(int)
+        self.settlements = defaultdict(int)
+        self.devvps = defaultdict(int)
+        self.longest = defaultdict(int)
+        self.largest = defaultdict(int)
+
+        self.num_games = 0
+
+    def finalize(self, game: Game):
+        winner = game.winning_color()
+        if winner is None:
+            return  # throw away data
+
+        for color in game.state.colors:
+            cities = len(get_player_buildings(game.state, color, BuildingType.CITY))
+            settlements = len(
+                get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
+            )
+            longest = get_longest_road_color(game.state) == color
+            largest = get_largest_army(game.state)[0] == color
+            devvps = get_dev_cards_in_hand(game.state, color, VICTORY_POINT)
+
+            self.cities[color] += cities
+            self.settlements[color] += settlements
+            self.longest[color] += longest
+            self.largest[color] += largest
+            self.devvps[color] += devvps
+
+        self.num_games += 1
+
+    def get_avg_cities(self, color=None):
+        if color is None:
+            return sum(self.cities.values()) / self.num_games
+        else:
+            return self.cities[color] / self.num_games
+
+    def get_avg_settlements(self, color=None):
+        if color is None:
+            return sum(self.settlements.values()) / self.num_games
+        else:
+            return self.settlements[color] / self.num_games
+
+    def get_avg_longest(self, color=None):
+        if color is None:
+            return sum(self.longest.values()) / self.num_games
+        else:
+            return self.longest[color] / self.num_games
+
+    def get_avg_largest(self, color=None):
+        if color is None:
+            return sum(self.largest.values()) / self.num_games
+        else:
+            return self.largest[color] / self.num_games
+
+    def get_avg_devvps(self, color=None):
+        if color is None:
+            return sum(self.devvps.values()) / self.num_games
+        else:
+            return self.devvps[color] / self.num_games
 
 
 class StatisticsAccumulator(Accumulator):

@@ -6,7 +6,7 @@ of the code decoupled from state representation.
 import random
 
 from catanatron.models.decks import ResourceDeck
-from catanatron.models.enums import BuildingType, Resource
+from catanatron.models.enums import VICTORY_POINT, BuildingType, Resource
 
 
 def mantain_longest_road(state, previous_road_color, road_color, road_lengths):
@@ -36,7 +36,7 @@ def mantain_largets_army(state, color, previous_army_color, previous_army_size):
             state.player_state[f"{winner_key}_HAS_ARMY"] = True
             state.player_state[f"{winner_key}_VICTORY_POINTS"] += 2
             state.player_state[f"{winner_key}_ACTUAL_VICTORY_POINTS"] += 2
-        elif previous_army_size < candidate_size:
+        elif previous_army_size < candidate_size and previous_army_color != color:
             # switch, remove previous points and award to new king
             winner_key = player_key(state, color)
             state.player_state[f"{winner_key}_HAS_ARMY"] = True
@@ -67,7 +67,7 @@ def get_longest_road_color(state):
     return None
 
 
-def get_larget_army_color(state):
+def get_largest_army(state):
     for index in range(len(state.players)):
         if state.player_state[f"P{index}_HAS_ARMY"]:
             return (
@@ -207,6 +207,9 @@ def buy_dev_card(state, color, dev_card):
     assert state.player_state[f"{key}_ORE_IN_HAND"] >= 1
 
     state.player_state[f"{key}_{dev_card}_IN_HAND"] += 1
+    if dev_card == VICTORY_POINT:
+        state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] += 1
+
     state.player_state[f"{key}_SHEEP_IN_HAND"] -= 1
     state.player_state[f"{key}_WHEAT_IN_HAND"] -= 1
     state.player_state[f"{key}_ORE_IN_HAND"] -= 1
@@ -277,7 +280,7 @@ def player_deck_random_draw(state, color):
 
 def play_dev_card(state, color, dev_card):
     if dev_card == "KNIGHT":
-        previous_army_color, previous_army_size = get_larget_army_color(state)
+        previous_army_color, previous_army_size = get_largest_army(state)
     key = player_key(state, color)
     player_deck_draw(state, color, dev_card)
     state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = True

@@ -1,4 +1,3 @@
-import gc
 import os
 import uuid
 import random
@@ -6,11 +5,18 @@ from pprint import pprint
 import time
 from collections import deque
 
+# try to suppress TF output before any potentially tf-importing modules
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 import pandas as pd
 import numpy as np
-from tensorflow.python.keras import regularizers
-from tqdm import tqdm
 import tensorflow as tf
+from rich.console import Console
+from rich.progress import Progress
+from rich.progress import Progress
+from rich.console import Console
+from rich.theme import Theme
+
 
 from catanatron.game import Game
 from catanatron_experimental.alphatan.mcts import AlphaMCTS, game_end_value
@@ -42,7 +48,7 @@ tf.random.set_seed(2)
 
 FEATURES = get_feature_ordering(2)
 NUM_FEATURES = len(FEATURES)
-DATA_DIRECTORY = "data/alphatan-memory-validation"
+DATA_DIRECTORY = "data/simple-alphatan"
 LOAD_MODEL = False
 
 # 50 games per iteration, 10 iterations, 15 game pits takes ~8 hours.
@@ -57,6 +63,16 @@ ARGS = {
     "epochs": 10,
     "batch_size": 32,
 }
+
+custom_theme = Theme(
+    {
+        "progress.remaining": "",
+        "progress.percentage": "",
+        "bar.complete": "green",
+        "bar.finished": "green",
+    }
+)
+console = Console(theme=custom_theme)
 
 
 def main():
@@ -78,37 +94,49 @@ def main():
     # for each iteration
     #   for each episode in iteration
     #     play game and produce many (s_t, policy_t, reward) samples.
-    for i in tqdm(range(ARGS["num_iterations"]), unit="iteration"):
-        for _ in tqdm(range(ARGS["num_episodes_per_iteration"]), unit="episode"):
-            examples = execute_episode(model)
-            replay_memory += examples
-            flushable_samples += examples
+    with Progress(console=console) as progress:
+        main_task = progress.add_task(
+            f'{ARGS["num_iterations"]} Iterations:', total=ARGS["num_iterations"]
+        )
+        for i in range(ARGS["num_iterations"]):
+            episode_task = progress.add_task(
+                f'{ARGS["num_episodes_per_iteration"]} Episodes:',
+                total=ARGS["num_episodes_per_iteration"],
+            )
+            for _ in range(ARGS["num_episodes_per_iteration"]):
+                examples = execute_episode(model)
+                replay_memory += examples
+                flushable_samples += examples
 
-        print("Iteration:", i)
-        print("Replay Memory Size:", len(replay_memory))
-        print("Flushable Memory Size:", len(flushable_samples))
+                progress.update(episode_task, advance=1)
+            progress.update(main_task, advance=1)
+            progress.remove_task(episode_task)
 
-        # create new neural network from old one
-        candidate_model = create_model()
-        candidate_model.set_weights(model.get_weights())
+            print("Iteration:", i)
+            print("Replay Memory Size:", len(replay_memory))
+            print("Flushable Memory Size:", len(flushable_samples))
 
-        # write data for offline debugging.
-        save_replay_memory(DATA_DIRECTORY, flushable_samples)
-        flushable_samples = []
+            # create new neural network from old one
+            candidate_model = create_model()
+            candidate_model.set_weights(model.get_weights())
 
-        # train new neural network
-        print("Starting training...")
-        start = time.time()
-        random.shuffle(replay_memory)
-        train(i, candidate_model, replay_memory)
-        print("Done Training... Took", time.time() - start)
+            # write data for offline debugging.
+            save_replay_memory(DATA_DIRECTORY, flushable_samples)
+            flushable_samples = []
 
-        # pit new vs old (with temp=0). If new wins, replace.
-        model = pit(model, candidate_model)
+            # train new neural network
+            print("Starting training...")
+            start = time.time()
+            random.shuffle(replay_memory)
+            train(i, candidate_model, replay_memory)
+            print("Done Training... Took", time.time() - start)
 
-        # TODO: Save checkpoint
-        model.save_weights(f"data/checkpoints/{name}")
-        model.save(f"data/models/{name}")
+            # pit new vs old (with temp=0). If new wins, replace.
+            model = pit(model, candidate_model)
+
+            # TODO: Save checkpoint
+            model.save_weights(f"data/checkpoints/{name}")
+            model.save(f"data/models/{name}")
 
 
 def save_replay_memory(data_directory, examples):
@@ -176,7 +204,7 @@ def pit(model, candidate_model, num_games=ARGS["num_games_to_pit"]):
         AlphaTan(Color.ORANGE, uuid.uuid4(), model, temp=0),
         AlphaTan(Color.WHITE, uuid.uuid4(), candidate_model, temp=0),
     ]
-    wins, vp_history = play_batch(num_games, players, None, False, False, "DEBUG")
+    wins, vp_history = play_batch(num_games, players)
     if wins[Color.WHITE] >= (sum(wins.values()) * ARGS["model_acceptance_threshold"]):
         print("Accepting model")
         return candidate_model
