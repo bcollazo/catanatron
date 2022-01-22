@@ -1,21 +1,41 @@
 import json
 
-from catanatron.models.player import Color, SimplePlayer
+from catanatron.models.player import Color, RandomPlayer, SimplePlayer
 from catanatron.json import GameEncoder
 from catanatron.game import Game
-from catanatron.models.enums import Action, ActionType
+from catanatron.models.enums import VICTORY_POINT, Action, ActionType, BuildingType
+from catanatron.state_functions import (
+    get_actual_victory_points,
+    get_dev_cards_in_hand,
+    get_largest_army,
+    get_longest_road_color,
+    get_player_buildings,
+)
 
 
 def test_play_many_games():
     for _ in range(10):  # play 10 games
         players = [
-            SimplePlayer(Color.RED),
-            SimplePlayer(Color.BLUE),
-            SimplePlayer(Color.WHITE),
-            SimplePlayer(Color.ORANGE),
+            RandomPlayer(Color.RED),
+            RandomPlayer(Color.BLUE),
+            RandomPlayer(Color.WHITE),
+            RandomPlayer(Color.ORANGE),
         ]
         game = Game(players)
         game.play()
+
+        # Assert everything looks good
+        for color in game.state.colors:
+            cities = len(get_player_buildings(game.state, color, BuildingType.CITY))
+            settlements = len(
+                get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
+            )
+            longest = get_longest_road_color(game.state) == color
+            largest = get_largest_army(game.state)[0] == color
+            devvps = get_dev_cards_in_hand(game.state, color, VICTORY_POINT)
+            assert (
+                settlements + 2 * cities + 2 * longest + 2 * largest + devvps
+            ) == get_actual_victory_points(game.state, color)
 
 
 def test_copy():

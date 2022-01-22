@@ -4,7 +4,7 @@ from catanatron.state import (
 )
 from catanatron.state_functions import (
     buy_dev_card,
-    get_larget_army_color,
+    get_largest_army,
     play_dev_card,
     player_deck_replenish,
 )
@@ -153,7 +153,7 @@ def test_largest_army_calculation_when_no_one_has_three():
 
     play_dev_card(state, Color.RED, KNIGHT)
 
-    color, count = get_larget_army_color(state)
+    color, count = get_largest_army(state)
     assert color is None and count is None
 
 
@@ -172,12 +172,12 @@ def test_largest_army_calculation_on_tie():
     play_dev_card(state, Color.BLUE, KNIGHT)
     play_dev_card(state, Color.BLUE, KNIGHT)
 
-    color, count = get_larget_army_color(state)
+    color, count = get_largest_army(state)
     assert color is Color.RED and count == 3
 
     play_dev_card(state, Color.BLUE, KNIGHT)
 
-    color, count = get_larget_army_color(state)
+    color, count = get_largest_army(state)
     assert color is Color.BLUE and count == 4
 
 
