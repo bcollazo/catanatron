@@ -65,7 +65,7 @@ def match(theta_plus, theta_minus):
         ValueFunctionPlayer(Color.RED, "C", params=weights_plus),
         ValueFunctionPlayer(Color.BLUE, "C", params=weights_minus),
     ]
-    wins, _ = play_batch(games_played, players, None, False, False, loglevel="ERROR")
+    wins, _ = play_batch(games_played, players)
 
     result = (wins[Color.RED] / games_played - 0.5) * 4  # normalized to [-2,+2] range
     print(result, wins)

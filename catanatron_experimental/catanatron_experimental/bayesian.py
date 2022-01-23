@@ -43,9 +43,7 @@ def black_box_function(a, b, c, d, e, f, g, h, i, j, k, l):
         ValueFunctionPlayer(Color.RED, "C", params=DEFAULT_WEIGHTS),
         ValueFunctionPlayer(Color.BLUE, "C", params=weights),
     ]
-    wins, results_by_player = play_batch(
-        100, players, None, False, False, verbose="ERROR"
-    )
+    wins, results_by_player = play_batch(100, players)
     vps = results_by_player[players[1].color]
     avg_vps = sum(vps) / len(vps)
     return 100 * wins[players[1].color] + avg_vps

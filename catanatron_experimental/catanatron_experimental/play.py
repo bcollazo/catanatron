@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 
 import click
 from rich.console import Console
@@ -92,6 +93,11 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Sets Discard Limit to use in games.",
 )
 @click.option(
+    "--config-vps-to-win",
+    default=10,
+    help="Sets Victory Points needed to win games.",
+)
+@click.option(
     "--quiet",
     default=False,
     is_flag=True,
@@ -105,7 +111,16 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     is_flag=True,
 )
 def simulate(
-    num, players, output, json, csv, db, config_discard_limit, quiet, help_players
+    num,
+    players,
+    output,
+    json,
+    csv,
+    db,
+    config_discard_limit,
+    config_vps_to_win,
+    quiet,
+    help_players,
 ):
     """
     Catan Bot Simulator.
@@ -136,7 +151,31 @@ def simulate(
                 players.append(player)
                 break
 
-    play_batch(num, players, output, json, csv, db, config_discard_limit, quiet)
+    output_options = OutputOptions(output, csv, json, db)
+    game_config = GameConfigOptions(config_discard_limit, config_vps_to_win)
+    play_batch(
+        num,
+        players,
+        output_options,
+        game_config,
+        quiet,
+    )
+
+
+@dataclass(frozen=True)
+class OutputOptions:
+    """Class to keep track of output CLI flags"""
+
+    output: str  # path to store files
+    csv: bool = False
+    json: bool = False
+    db: bool = False
+
+
+@dataclass(frozen=True)
+class GameConfigOptions:
+    discard_limit: int = 7
+    vps_to_win: int = 10
 
 
 COLOR_TO_RICH_STYLE = {
@@ -159,11 +198,15 @@ def rich_color(color):
     return f"[{style}]{color.value}[/{style}]"
 
 
-def play_batch_core(num_games, players, config_discard_limit=7, accumulators=[]):
+def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        game = Game(players, discard_limit=config_discard_limit)
+        game = Game(
+            players,
+            discard_limit=game_config.discard_limit,
+            vps_to_win=game_config.vps_to_win,
+        )
         game.play(accumulators)
         yield game
 
@@ -171,29 +214,27 @@ def play_batch_core(num_games, players, config_discard_limit=7, accumulators=[])
 def play_batch(
     num_games,
     players,
-    output=None,
-    json=False,
-    csv=False,
-    db=False,
-    config_discard_limit=7,
+    output_options=None,
+    game_config=None,
     quiet=False,
 ):
+    output_options = output_options or OutputOptions()
+    game_config = game_config or GameConfigOptions()
+
     statistics_accumulator = StatisticsAccumulator()
     vp_accumulator = VpDistributionAccumulator()
     accumulators = [statistics_accumulator, vp_accumulator]
-    if output:
-        ensure_dir(output)
-    if output and csv:
-        accumulators.append(CsvDataAccumulator(output))
-    if output and json:
-        accumulators.append(JsonDataAccumulator(output))
-    if db:
+    if output_options.output:
+        ensure_dir(output_options.output)
+    if output_options.output and output_options.csv:
+        accumulators.append(CsvDataAccumulator(output_options.output))
+    if output_options.output and output_options.json:
+        accumulators.append(JsonDataAccumulator(output_options.output))
+    if output_options.db:
         accumulators.append(DatabaseAccumulator())
 
     if quiet:
-        for _ in play_batch_core(
-            num_games, players, config_discard_limit, accumulators
-        ):
+        for _ in play_batch_core(num_games, players, game_config, accumulators):
             pass
         return
 
@@ -207,7 +248,7 @@ def play_batch(
     for player in players:
         table.add_column(f"{player.color.value} VP", justify="right")
     table.add_column("WINNER")
-    if db:
+    if output_options.db:
         table.add_column("LINK", overflow="fold")
 
     with Progress(
@@ -226,7 +267,7 @@ def play_batch(
         ]
 
         for i, game in enumerate(
-            play_batch_core(num_games, players, config_discard_limit, accumulators)
+            play_batch_core(num_games, players, game_config, accumulators)
         ):
             winning_color = game.winning_color()
 
@@ -241,7 +282,7 @@ def play_batch(
                     points = get_actual_victory_points(game.state, player.color)
                     row.append(str(points))
                 row.append(rich_color(winning_color))
-                if db:
+                if output_options.db:
                     row.append(accumulators[-1].link)
 
                 table.add_row(*row)
@@ -297,8 +338,8 @@ def play_batch(
     table.add_row(avg_ticks, avg_turns, avg_duration)
     console.print(table)
 
-    if output and csv:
-        console.print(f"GZIP CSVs saved at: [green]{output}[/green]")
+    if output_options.output and output_options.csv:
+        console.print(f"GZIP CSVs saved at: [green]{output_options.output}[/green]")
 
     return (
         dict(statistics_accumulator.wins),
