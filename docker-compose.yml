@@ -21,6 +21,8 @@ services:
     stdin_open: true
     volumes:
       - .:/app
+    depends_on:
+      - "db"
   react-ui:
     image: bcollazo/catanatron-react-ui:latest
     build: ./ui
