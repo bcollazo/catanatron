@@ -44,11 +44,6 @@ from catanatron.state_functions import (
     player_resource_deck_contains,
 )
 
-# For now have some Game-Configuration aspects hard-coded here
-#   eventually it might become part of an immutable (not copied)
-#   property for game-config in state.
-DISCARD_LIMIT = 7
-
 # These will be prefixed by P0_, P1_, ...
 # Create Player State blueprint
 PLAYER_INITIAL_STATE = {
@@ -111,10 +106,11 @@ class State:
         playable_actions (List[Action]): List of playable actions by current player.
     """
 
-    def __init__(self, players, catan_map=None, initialize=True):
+    def __init__(self, players, catan_map=None, discard_limit=7, initialize=True):
         if initialize:
             self.players = random.sample(players, len(players))
             self.board = Board(catan_map or BaseMap())
+            self.discard_limit = discard_limit
 
             # feature-ready dictionary
             self.player_state = dict()
@@ -155,19 +151,20 @@ class State:
 
     def copy(self):
         """Creates a copy of this State class that can be modified without
-        repercusions to this one.
+        repercusions to this one. Immutable values are just copied over.
 
         Returns:
             State: State copy.
         """
         state_copy = State(None, None, initialize=False)
         state_copy.players = self.players
+        state_copy.discard_limit = self.discard_limit  # immutable
 
         state_copy.board = self.board.copy()
 
         state_copy.player_state = self.player_state.copy()
         state_copy.color_to_index = self.color_to_index
-        state_copy.colors = self.colors  # immutable, so no need to copy
+        state_copy.colors = self.colors  # immutable
 
         # TODO: Move Deck to functional code, so as to quick-copy arrays.
         state_copy.resource_deck = pickle.loads(pickle.dumps(self.resource_deck))
@@ -415,7 +412,7 @@ def apply_action(state: State, action: Action):
 
         if number == 7:
             discarders = [
-                player_num_resource_cards(state, color) > DISCARD_LIMIT
+                player_num_resource_cards(state, color) > state.discard_limit
                 for color in state.colors
             ]
             is_discarding = any(discarders)

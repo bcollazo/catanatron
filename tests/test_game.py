@@ -122,7 +122,7 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
 
 
 @patch("catanatron.state.roll_dice")
-def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
+def test_rolling_a_seven_triggers_default_discard_limit(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
@@ -143,6 +143,26 @@ def test_rolling_a_seven_triggers_discard_mechanism(fake_roll_dice):
 
     game.play_tick()
     assert player_num_resource_cards(game.state, players[1].color) == 5
+
+
+@patch("catanatron.state.roll_dice")
+def test_discard_config(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 6)
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players, discard_limit=10)
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        game.play_tick()
+
+    until_nine = 9 - player_num_resource_cards(game.state, players[1].color)
+    player_deck_replenish(game.state, players[1].color, WHEAT, until_nine)
+    assert player_num_resource_cards(game.state, players[1].color) == 9
+    game.play_tick()  # should be p0 rolling.
+
+    assert game.state.playable_actions != [
+        Action(players[1].color, ActionType.DISCARD, None)
+    ]
 
 
 @patch("catanatron.state.roll_dice")

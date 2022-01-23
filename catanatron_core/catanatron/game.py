@@ -53,6 +53,7 @@ class Game:
         self,
         players: Iterable[Player],
         seed: int = None,
+        discard_limit: int = 7,
         catan_map: BaseMap = None,
         initialize: bool = True,
     ):
@@ -61,6 +62,7 @@ class Game:
         Args:
             players (Iterable[Player]): list of players, should be at most 4.
             seed (int, optional): Random seed to use (for reproducing games). Defaults to None.
+            discard_limit (int, optional): Discard limit to use. Defaults to 7.
             catan_map (BaseMap, optional): Map configuration to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
@@ -69,7 +71,9 @@ class Game:
             random.seed(self.seed)
 
             self.id = str(uuid.uuid4())
-            self.state = State(players, catan_map or BaseMap())
+            self.state = State(
+                players, catan_map or BaseMap(), discard_limit=discard_limit
+            )
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
