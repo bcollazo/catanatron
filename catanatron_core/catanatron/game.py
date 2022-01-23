@@ -54,6 +54,7 @@ class Game:
         players: Iterable[Player],
         seed: int = None,
         discard_limit: int = 7,
+        vps_to_win: int = 10,
         catan_map: BaseMap = None,
         initialize: bool = True,
     ):
@@ -63,6 +64,7 @@ class Game:
             players (Iterable[Player]): list of players, should be at most 4.
             seed (int, optional): Random seed to use (for reproducing games). Defaults to None.
             discard_limit (int, optional): Discard limit to use. Defaults to 7.
+            vps_to_win (int, optional): Victory Points needed to win. Defaults to 10.
             catan_map (BaseMap, optional): Map configuration to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
@@ -71,6 +73,7 @@ class Game:
             random.seed(self.seed)
 
             self.id = str(uuid.uuid4())
+            self.vps_to_win = vps_to_win
             self.state = State(
                 players, catan_map or BaseMap(), discard_limit=discard_limit
             )
@@ -136,7 +139,10 @@ class Game:
         winning_player = None
         for player in self.state.players:
             key = player_key(self.state, player.color)
-            if self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] >= 10:
+            if (
+                self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+                >= self.vps_to_win
+            ):
                 winning_player = player
 
         return None if winning_player is None else winning_player.color
@@ -151,5 +157,6 @@ class Game:
         game_copy = Game([], None, None, initialize=False)
         game_copy.seed = self.seed
         game_copy.id = self.id
+        game_copy.vps_to_win = self.vps_to_win
         game_copy.state = self.state.copy()
         return game_copy

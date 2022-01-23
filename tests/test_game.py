@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
 
-from catanatron.state_functions import player_has_rolled
+from catanatron.state_functions import get_actual_victory_points, player_has_rolled
 from catanatron.models.actions import maritime_trade_possibilities
 from catanatron.game import Accumulator, Game
 from catanatron.state import (
@@ -20,7 +20,7 @@ from catanatron.models.enums import (
     WHEAT,
     YEAR_OF_PLENTY,
 )
-from catanatron.models.player import Color, SimplePlayer
+from catanatron.models.player import Color, RandomPlayer, SimplePlayer
 from catanatron.models.decks import ResourceDeck
 
 
@@ -389,3 +389,16 @@ def test_accumulators():
     assert accumulator.initialized
     assert len(accumulator.actions) == len(game.state.actions)
     assert accumulator.finalized
+
+
+def test_vps_to_win_config():
+    players = [
+        RandomPlayer(Color.RED),
+        RandomPlayer(Color.BLUE),
+    ]
+    game = Game(players, vps_to_win=4)
+    game.play()
+
+    winning_color = game.winning_color()
+    vps = get_actual_victory_points(game.state, winning_color)
+    assert vps >= 4 and vps < 6
