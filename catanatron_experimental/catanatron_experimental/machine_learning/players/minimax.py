@@ -1,4 +1,5 @@
 import time
+import random
 
 from catanatron.state_functions import (
     get_longest_road_length,
@@ -67,16 +68,22 @@ class ValueFunctionPlayer(Player):
     For now, the base value function only considers 1 enemy player.
     """
 
-    def __init__(self, color, value_fn_builder_name=None, params=None, is_bot=True):
+    def __init__(
+        self, color, value_fn_builder_name=None, params=None, is_bot=True, epsilon=None
+    ):
         super().__init__(color, is_bot)
         self.value_fn_builder_name = (
             "contender_fn" if value_fn_builder_name == "C" else "base_fn"
         )
         self.params = params
+        self.epsilon = epsilon
 
     def decide(self, game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
+
+        if self.epsilon is not None and random.random() < self.epsilon:
+            return random.choice(playable_actions)
 
         best_value = float("-inf")
         best_action = None
@@ -215,6 +222,7 @@ class AlphaBetaPlayer(Player):
         prunning=False,
         value_fn_builder_name=None,
         params=DEFAULT_WEIGHTS,
+        epsilon=None,
     ):
         super().__init__(color)
         self.depth = int(depth)
@@ -224,6 +232,7 @@ class AlphaBetaPlayer(Player):
         )
         self.params = params
         self.use_value_function = None
+        self.epsilon = epsilon
 
     def value_function(self, game, p0_color):
         raise NotImplementedError
@@ -237,6 +246,9 @@ class AlphaBetaPlayer(Player):
         actions = self.get_actions(game)
         if len(actions) == 1:
             return actions[0]
+
+        if self.epsilon is not None and random.random() < self.epsilon:
+            return random.choice(playable_actions)
 
         start = time.time()
         state_id = str(len(game.state.actions))
