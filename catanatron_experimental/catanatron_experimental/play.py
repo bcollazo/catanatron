@@ -87,9 +87,15 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
         """,
 )
 @click.option(
-    "--quiet/--no-quiet",
+    "--config-discard-limit",
+    default=7,
+    help="Sets Discard Limit to use in games.",
+)
+@click.option(
+    "--quiet",
     default=False,
-    help="Whether to print results to the console",
+    is_flag=True,
+    help="Silence console output. Useful for debugging.",
 )
 @click.option(
     "--help-players",
@@ -98,7 +104,9 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Show player codes and exits.",
     is_flag=True,
 )
-def simulate(num, players, output, json, csv, db, quiet, help_players):
+def simulate(
+    num, players, output, json, csv, db, config_discard_limit, quiet, help_players
+):
     """
     Catan Bot Simulator.
     Catanatron allows you to simulate millions of games at scale
@@ -128,7 +136,7 @@ def simulate(num, players, output, json, csv, db, quiet, help_players):
                 players.append(player)
                 break
 
-    play_batch(num, players, output, json, csv, db, quiet)
+    play_batch(num, players, output, json, csv, db, config_discard_limit, quiet)
 
 
 COLOR_TO_RICH_STYLE = {
@@ -151,11 +159,11 @@ def rich_color(color):
     return f"[{style}]{color.value}[/{style}]"
 
 
-def play_batch_core(num_games, players, accumulators=[]):
+def play_batch_core(num_games, players, config_discard_limit=7, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        game = Game(players)
+        game = Game(players, discard_limit=config_discard_limit)
         game.play(accumulators)
         yield game
 
@@ -167,6 +175,7 @@ def play_batch(
     json=False,
     csv=False,
     db=False,
+    config_discard_limit=7,
     quiet=False,
 ):
     statistics_accumulator = StatisticsAccumulator()
@@ -182,7 +191,9 @@ def play_batch(
         accumulators.append(DatabaseAccumulator())
 
     if quiet:
-        for _ in play_batch_core(num_games, players, accumulators):
+        for _ in play_batch_core(
+            num_games, players, config_discard_limit, accumulators
+        ):
             pass
         return
 
@@ -214,7 +225,9 @@ def play_batch(
             for player in players
         ]
 
-        for i, game in enumerate(play_batch_core(num_games, players, accumulators)):
+        for i, game in enumerate(
+            play_batch_core(num_games, players, config_discard_limit, accumulators)
+        ):
             winning_color = game.winning_color()
 
             if (num_games - last_n) < (i + 1):
