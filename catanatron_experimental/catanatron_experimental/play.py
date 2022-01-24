@@ -14,6 +14,7 @@ from rich.text import Text
 from catanatron.game import Game
 from catanatron.models.player import Color
 from catanatron.state_functions import get_actual_victory_points
+from catanatron.models.map import BASE_MAP_TEMPLATE, MINI_MAP_TEMPLATE, CatanMap
 
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -98,6 +99,12 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Sets Victory Points needed to win games.",
 )
 @click.option(
+    "--config-map",
+    default="BASE",
+    type=click.Choice(["BASE", "MINI"], case_sensitive=False),
+    help="Sets Map to use. MINI is a 7-tile smaller version.",
+)
+@click.option(
     "--quiet",
     default=False,
     is_flag=True,
@@ -119,6 +126,7 @@ def simulate(
     db,
     config_discard_limit,
     config_vps_to_win,
+    config_map,
     quiet,
     help_players,
 ):
@@ -152,7 +160,7 @@ def simulate(
                 break
 
     output_options = OutputOptions(output, csv, json, db)
-    game_config = GameConfigOptions(config_discard_limit, config_vps_to_win)
+    game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
         num,
         players,
@@ -176,6 +184,7 @@ class OutputOptions:
 class GameConfigOptions:
     discard_limit: int = 7
     vps_to_win: int = 10
+    catan_map: str = "BASE"
 
 
 COLOR_TO_RICH_STYLE = {
@@ -202,10 +211,16 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
+        catan_map = (
+            CatanMap(MINI_MAP_TEMPLATE)
+            if game_config.catan_map == "MINI"
+            else CatanMap(BASE_MAP_TEMPLATE)
+        )
         game = Game(
             players,
             discard_limit=game_config.discard_limit,
             vps_to_win=game_config.vps_to_win,
+            catan_map=catan_map,
         )
         game.play(accumulators)
         yield game
