@@ -3,14 +3,14 @@ from gym import spaces
 
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.map import BaseMap, NUM_NODES, Tile
+from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile
 from catanatron.models.enums import Action, Resource, ActionType
 from catanatron.models.board import get_edges
 from catanatron_gym.features import create_sample_vector, get_feature_ordering
 
 
-BASE_TOPOLOGY = BaseMap().topology
-TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == Tile]
+BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
+TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == LandTile]
 RESOURCE_LIST = list(Resource)
 ACTIONS_ARRAY = [
     (ActionType.ROLL, None),

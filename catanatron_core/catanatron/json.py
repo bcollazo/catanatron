@@ -6,7 +6,7 @@ import json
 from enum import Enum
 
 from catanatron.game import Game
-from catanatron.models.map import Water, Port, Tile
+from catanatron.models.map import Water, Port, LandTile
 from catanatron.models.player import Color
 from catanatron.models.decks import Deck
 from catanatron.models.enums import Resource, Action, ActionType
@@ -103,7 +103,7 @@ class GameEncoder(json.JSONEncoder):
                 "direction": self.default(obj.direction),
                 "resource": self.default(obj.resource),
             }
-        if isinstance(obj, Tile):
+        if isinstance(obj, LandTile):
             if obj.resource is None:
                 return {"id": obj.id, "type": "DESERT"}
             return {

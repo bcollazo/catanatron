@@ -169,7 +169,7 @@ def city_possibilities(state, color) -> List[Action]:
 
 def robber_possibilities(state, color) -> List[Action]:
     actions = []
-    for coordinate, tile in state.board.map.resource_tiles:
+    for (coordinate, tile) in state.board.map.land_tiles.items():
         if coordinate == state.board.robber_coordinate:
             continue  # ignore. must move robber.
 

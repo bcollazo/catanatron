@@ -8,7 +8,6 @@ from catanatron.state_functions import (
     player_num_dev_cards,
     player_num_resource_cards,
 )
-from catanatron.models.map import BaseMap
 from catanatron.models.enums import (
     ActionPrompt,
     BRICK,
@@ -29,7 +28,7 @@ from catanatron.models.decks import ResourceDeck
 
 def test_buying_road_is_payed_for():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    state = State(players, BaseMap())
+    state = State(players)
 
     state.is_initial_build_phase = False
     state.board.build_settlement(players[0].color, 3, True)
@@ -47,7 +46,7 @@ def test_buying_road_is_payed_for():
 
 def test_moving_robber_steals_correctly():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    state = State(players, BaseMap())
+    state = State(players)
 
     player_deck_replenish(state, players[1].color, WHEAT, 1)
     state.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
@@ -74,7 +73,7 @@ def test_trade_execution():
         SimplePlayer(Color.WHITE),
         SimplePlayer(Color.ORANGE),
     ]
-    state = State(players, BaseMap())
+    state = State(players)
 
     player_deck_replenish(state, players[0].color, BRICK, 4)
     trade_offer = tuple([Resource.BRICK] * 4 + [Resource.ORE])
@@ -88,7 +87,7 @@ def test_trade_execution():
 # ===== Development Cards
 def test_cant_buy_more_than_max_card():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    state = State(players, BaseMap())
+    state = State(players)
 
     with pytest.raises(ValueError):  # not enough money
         apply_action(
@@ -152,7 +151,7 @@ def test_play_monopoly_player_steals_cards():
     player_to_steal_from_1 = SimplePlayer(Color.BLUE)
     player_to_steal_from_2 = SimplePlayer(Color.ORANGE)
     players = [player_to_act, player_to_steal_from_1, player_to_steal_from_2]
-    state = State(players, BaseMap())
+    state = State(players)
 
     player_deck_replenish(state, player_to_act.color, MONOPOLY)
     player_deck_replenish(state, player_to_steal_from_1.color, ORE, 3)

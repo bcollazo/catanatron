@@ -10,7 +10,7 @@ from typing import Iterable, Union
 from catanatron.models.enums import Action
 from catanatron.state import State, apply_action
 from catanatron.state_functions import player_key
-from catanatron.models.map import BaseMap
+from catanatron.models.map import CatanMap
 from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...
@@ -58,7 +58,7 @@ class Game:
         seed: int = None,
         discard_limit: int = 7,
         vps_to_win: int = 10,
-        catan_map: BaseMap = None,
+        catan_map: CatanMap = None,
         initialize: bool = True,
     ):
         """Creates a game (doesn't run it).
@@ -68,7 +68,7 @@ class Game:
             seed (int, optional): Random seed to use (for reproducing games). Defaults to None.
             discard_limit (int, optional): Discard limit to use. Defaults to 7.
             vps_to_win (int, optional): Victory Points needed to win. Defaults to 10.
-            catan_map (BaseMap, optional): Map configuration to use. Defaults to None.
+            catan_map (CatanMap, optional): Map to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
         if initialize:
@@ -77,9 +77,7 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
-            self.state = State(
-                players, catan_map or BaseMap(), discard_limit=discard_limit
-            )
+            self.state = State(players, catan_map, discard_limit=discard_limit)
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.

@@ -1,4 +1,28 @@
-from catanatron.models.map import Tile, Resource, get_nodes_and_edges
+from catanatron.models.map import (
+    BASE_MAP_TEMPLATE,
+    MINI_MAP_TEMPLATE,
+    CatanMap,
+    LandTile,
+    Resource,
+    get_nodes_and_edges,
+)
+
+
+def test_mini_map_can_be_created():
+    mini = CatanMap(MINI_MAP_TEMPLATE)
+    assert len(mini.land_tiles) == 7
+    assert len(mini.land_nodes) == 24
+    assert len(mini.tiles_by_id) == 7
+    assert len(mini.ports_by_id) == 0
+    assert len(mini.port_nodes) == 0
+    assert len(mini.adjacent_tiles) == 24
+    assert len(mini.node_production) == 24
+
+
+def test_base_map_can_be_created():
+    catan_map = CatanMap(BASE_MAP_TEMPLATE)
+    assert len(catan_map.land_tiles) == 19
+    assert len(catan_map.node_production) == 54
 
 
 def test_get_nodes_and_edges_on_empty_board():
@@ -9,7 +33,7 @@ def test_get_nodes_and_edges_on_empty_board():
 def test_get_nodes_and_edges_for_east_attachment():
     nodes1, edges1, node_autoinc = get_nodes_and_edges({}, (0, 0, 0), 0)
     nodes2, edges2, node_autoinc = get_nodes_and_edges(
-        {(0, 0, 0): Tile(0, Resource.WOOD, 3, nodes1, edges1)},
+        {(0, 0, 0): LandTile(0, Resource.WOOD, 3, nodes1, edges1)},
         (1, -1, 0),
         node_autoinc,
     )
@@ -20,14 +44,14 @@ def test_get_nodes_and_edges_for_east_attachment():
 def test_get_nodes_and_edges_for_east_and_southeast_attachment():
     nodes1, edges1, node_autoinc = get_nodes_and_edges({}, (0, 0, 0), 0)
     nodes2, edges2, node_autoinc = get_nodes_and_edges(
-        {(0, 0, 0): Tile(0, Resource.WOOD, 3, nodes1, edges1)},
+        {(0, 0, 0): LandTile(0, Resource.WOOD, 3, nodes1, edges1)},
         (1, -1, 0),
         node_autoinc,
     )
     nodes3, edges3, node_autoinc = get_nodes_and_edges(
         {
-            (0, 0, 0): Tile(1, Resource.WOOD, 3, nodes1, edges1),
-            (1, -1, 0): Tile(2, Resource.BRICK, 6, nodes2, edges2),
+            (0, 0, 0): LandTile(1, Resource.WOOD, 3, nodes1, edges1),
+            (1, -1, 0): LandTile(2, Resource.BRICK, 6, nodes2, edges2),
         },
         (0, -1, 1),
         node_autoinc,

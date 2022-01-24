@@ -1,38 +1,39 @@
 import pickle
 from collections import defaultdict
 from typing import Set, Tuple
+import functools
 
 import networkx as nx
 
 from catanatron.models.player import Color
-from catanatron.models.map import BaseMap, NUM_NODES
+from catanatron.models.map import (
+    BASE_MAP_TEMPLATE,
+    MINI_MAP_TEMPLATE,
+    NUM_NODES,
+    CatanMap,
+)
 from catanatron.models.enums import BuildingType
 
 
-NODE_DISTANCES = None
-EDGES = None
-
 # Used to find relationships between nodes and edges
-sample_map = BaseMap()
+base_map = CatanMap(BASE_MAP_TEMPLATE)
+mini_map = CatanMap(MINI_MAP_TEMPLATE)
 STATIC_GRAPH = nx.Graph()
-for tile in sample_map.tiles.values():
+for tile in base_map.tiles.values():
     STATIC_GRAPH.add_nodes_from(tile.nodes.values())
     STATIC_GRAPH.add_edges_from(tile.edges.values())
 
 
+@functools.lru_cache(1)
 def get_node_distances():
-    global NODE_DISTANCES, STATIC_GRAPH
-    if NODE_DISTANCES is None:
-        NODE_DISTANCES = nx.floyd_warshall(STATIC_GRAPH)
-
-    return NODE_DISTANCES
+    global STATIC_GRAPH
+    return nx.floyd_warshall(STATIC_GRAPH)
 
 
-def get_edges():
-    global EDGES, STATIC_GRAPH
-    if EDGES is None:
-        EDGES = list(STATIC_GRAPH.subgraph(range(NUM_NODES)).edges())
-    return EDGES
+@functools.lru_cache(3)  # None, range(54), range(24)
+def get_edges(land_nodes=None):
+    global STATIC_GRAPH, NUM_NODES
+    return list(STATIC_GRAPH.subgraph(land_nodes or range(NUM_NODES)).edges())
 
 
 EdgeId = Tuple[int, int]
@@ -60,7 +61,9 @@ class Board:
 
     def __init__(self, catan_map=None, initialize=True):
         if initialize:
-            self.map = catan_map or BaseMap()  # Static State (no need to copy)
+            self.map = catan_map or CatanMap(
+                BASE_MAP_TEMPLATE
+            )  # Static State (no need to copy)
 
             self.buildings = dict()  # node_id => (color, building_type)
             self.roads = dict()  # (node_id, node_id) => color
@@ -68,7 +71,7 @@ class Board:
             # color => int{}[] (list of node_id sets) one per component
             #   nodes in sets are incidental (might not be owned by player)
             self.connected_components = defaultdict(list)
-            self.board_buildable_ids = set(range(NUM_NODES))
+            self.board_buildable_ids = set(self.map.land_nodes)
             self.road_lengths = defaultdict(int)
             self.road_color = None
             self.road_length = 0
@@ -244,7 +247,7 @@ class Board:
     def buildable_edges(self, color: Color):
         """List of (n1,n2) tuples. Edges are in n1 < n2 order."""
         global STATIC_GRAPH
-        buildable_subgraph = STATIC_GRAPH.subgraph(range(NUM_NODES))
+        buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
         expandable = set()
 
         # non-enemy-nodes in your connected components

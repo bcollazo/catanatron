@@ -11,7 +11,7 @@ from catanatron.state_functions import (
     player_num_resource_cards,
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
-from catanatron.models.map import NUM_NODES, NUM_TILES
+from catanatron.models.map import NUM_TILES, CatanMap
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -165,13 +165,13 @@ def port_features(game, p0_color):
 
 
 @functools.lru_cache(4)
-def initialize_graph_features_template(num_players):
+def initialize_graph_features_template(num_players, catan_map: CatanMap):
     features = {}
     for i in range(num_players):
-        for node_id in range(NUM_NODES):
+        for node_id in range(len(catan_map.land_nodes)):
             for building in [BuildingType.SETTLEMENT, BuildingType.CITY]:
                 features[f"NODE{node_id}_P{i}_{building.value}"] = False
-        for edge in get_edges():
+        for edge in get_edges(catan_map.land_nodes):
             features[f"EDGE{edge}_P{i}_ROAD"] = False
     return features
 
@@ -191,7 +191,9 @@ def get_node_hot_encoded(player_index, colors, settlements, cities, roads):
 
 
 def graph_features(game, p0_color):
-    features = initialize_graph_features_template(len(game.state.colors)).copy()
+    features = initialize_graph_features_template(
+        len(game.state.colors), game.state.board.map
+    ).copy()
 
     for i, color in iter_players(game.state.colors, p0_color):
         settlements = tuple(
@@ -338,7 +340,7 @@ def expansion_features(game, p0_color):
     features = {}
 
     # For each connected component node, bfs_edges (skipping enemy edges and nodes nodes)
-    empty_edges = set(get_edges())
+    empty_edges = set(get_edges(game.state.board.map.land_nodes))
     for i, color in iter_players(game.state.colors, p0_color):
         empty_edges.difference_update(
             get_player_buildings(game.state, color, BuildingType.ROAD)

@@ -1,4 +1,3 @@
-from catanatron.models.map import BaseMap
 from catanatron.state import (
     State,
     player_clean_turn,
@@ -11,7 +10,7 @@ from catanatron.models.player import Color, SimplePlayer
 def test_playable_cards():
     player = SimplePlayer(Color.RED)
 
-    state = State([player], BaseMap())
+    state = State([player])
     player_deck_replenish(state, Color.RED, "KNIGHT")
     player_clean_turn(state, Color.RED)
 

@@ -6,7 +6,7 @@ import random
 import pickle
 from collections import defaultdict
 
-from catanatron.models.map import BaseMap
+from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -109,7 +109,7 @@ class State:
     def __init__(self, players, catan_map=None, discard_limit=7, initialize=True):
         if initialize:
             self.players = random.sample(players, len(players))
-            self.board = Board(catan_map or BaseMap())
+            self.board = Board(catan_map or CatanMap(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit
 
             # feature-ready dictionary
@@ -217,7 +217,7 @@ def yield_resources(board, resource_deck, number):
     """
     intented_payout = defaultdict(lambda: defaultdict(int))
     resource_totals = defaultdict(int)
-    for coordinate, tile in board.map.resource_tiles:
+    for (coordinate, tile) in board.map.land_tiles.items():
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield
 

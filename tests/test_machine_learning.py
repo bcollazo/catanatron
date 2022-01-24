@@ -1,13 +1,21 @@
 import math
 import random
-from tests.utils import advance_to_play_turn, build_initial_placements
+
 import tensorflow as tf
 import gym
 
+from tests.utils import advance_to_play_turn, build_initial_placements
 from catanatron.state import player_deck_replenish
 from catanatron.models.enums import ORE, Action, ActionType, WHEAT
 from catanatron.models.board import Board, get_edges
-from catanatron.models.map import BaseMap, NUM_EDGES, NUM_NODES, NodeRef
+from catanatron.models.map import (
+    BASE_MAP_TEMPLATE,
+    MINI_MAP_TEMPLATE,
+    NUM_EDGES,
+    NUM_NODES,
+    CatanMap,
+    NodeRef,
+)
 from catanatron.game import Game
 from catanatron.models.map import number_probability
 from catanatron.models.player import SimplePlayer, Color
@@ -130,7 +138,7 @@ def test_reachability_features():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = BaseMap()
+    catan_map = CatanMap(BASE_MAP_TEMPLATE)
     game = Game(players, seed=123, catan_map=catan_map)
     p0_color = game.state.players[0].color
 
@@ -213,13 +221,39 @@ def test_graph_features():
     assert features[f"EDGE(2, 3)_P0_ROAD"]
     assert not features[f"NODE3_P1_SETTLEMENT"]
     assert not features[f"NODE0_P1_SETTLEMENT"]
-    assert len(features) == NUM_NODES * len(players) * 2 + NUM_EDGES * len(players)
+    assert len(features) == 54 * len(players) * 2 + NUM_EDGES * len(players)
     assert sum(features.values()) == 2
 
     haystack = "".join(features.keys())
     for edge in get_edges():
         assert str(edge) in haystack
     for node in range(NUM_NODES):
+        assert ("NODE" + str(node)) in haystack
+
+
+def test_graph_features_in_mini():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+    ]
+    game = Game(players, catan_map=CatanMap(MINI_MAP_TEMPLATE))
+    p0_color = game.state.players[0].color
+    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
+    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
+
+    features = graph_features(game, p0_color)
+    assert features[f"NODE3_P0_SETTLEMENT"]
+    assert features[f"EDGE(2, 3)_P0_ROAD"]
+    assert not features[f"NODE3_P1_SETTLEMENT"]
+    assert not features[f"NODE0_P1_SETTLEMENT"]
+    # todo: CHANGE NUM_EDGES
+    assert len(features) == 24 * len(players) * 2 + 30 * len(players)
+    assert sum(features.values()) == 2
+
+    haystack = "".join(features.keys())
+    for edge in get_edges(game.state.board.map.land_nodes):
+        assert str(edge) in haystack
+    for node in range(24):
         assert ("NODE" + str(node)) in haystack
 
 
@@ -264,7 +298,7 @@ def test_init_tile_map():
 
     assert tile_map[(0, -2, 2)] == (8, 12)  # southeast
 
-    for (coordinate, _) in Board().map.resource_tiles:
+    for coordinate in Board().map.land_tiles.keys():
         assert coordinate in tile_map
 
 
@@ -324,7 +358,7 @@ def test_resource_proba_planes():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = BaseMap()
+    catan_map = CatanMap(BASE_MAP_TEMPLATE)
     game = Game(players, seed=123, catan_map=catan_map)
 
     tensor = create_board_tensor(game, players[0].color)
