@@ -236,7 +236,11 @@ def play_batch(
     if quiet:
         for _ in play_batch_core(num_games, players, game_config, accumulators):
             pass
-        return
+        return (
+            dict(statistics_accumulator.wins),
+            dict(statistics_accumulator.results_by_player),
+            statistics_accumulator.games,
+        )
 
     # ===== Game Details
     last_n = 10
