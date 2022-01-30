@@ -123,14 +123,13 @@ def resource_hand_features(game, p0_color):
     return features
 
 
-@functools.lru_cache(NUM_TILES)  # one for each robber
+@functools.lru_cache(NUM_TILES * 2)  # one for each robber, and acount for Minimap
 def map_tile_features(catan_map, robber_coordinate):
     # Returns list of functions that take a game and output a feature.
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
     features = {}
 
-    for tile_id in range(NUM_TILES):
-        tile = catan_map.tiles_by_id[tile_id]
+    for tile_id, tile in catan_map.tiles_by_id.items():
         for resource in Resource:
             features[f"TILE{tile_id}_IS_{resource.value}"] = tile.resource == resource
         features[f"TILE{tile_id}_IS_DESERT"] = tile.resource == None

@@ -22,6 +22,7 @@ from catanatron.models.player import SimplePlayer, Color
 from catanatron_gym.features import (
     create_sample,
     expansion_features,
+    port_features,
     reachability_features,
     iter_players,
     port_distance_features,
@@ -202,6 +203,29 @@ def test_tile_features():
     proba = number_probability(tile.number) if resource is not None else 0
     assert features[f"TILE0_IS_{value}"]
     assert features[f"TILE0_PROBA"] == proba
+
+
+def test_tile_features_in_mini():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+    ]
+    game = Game(players, catan_map=CatanMap(MINI_MAP_TEMPLATE))
+
+    features = tile_features(game, players[0].color)
+    haystack = "".join(features.keys())
+    assert "TILE7" not in haystack
+
+
+def test_port_features_in_mini():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+    ]
+    game = Game(players, catan_map=CatanMap(MINI_MAP_TEMPLATE))
+
+    features = port_features(game, players[0].color)
+    assert len(features) == 0
 
 
 def test_graph_features():
