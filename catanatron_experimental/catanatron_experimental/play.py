@@ -166,7 +166,7 @@ def simulate(
 class OutputOptions:
     """Class to keep track of output CLI flags"""
 
-    output: str  # path to store files
+    output: str = None  # path to store files
     csv: bool = False
     json: bool = False
     db: bool = False
