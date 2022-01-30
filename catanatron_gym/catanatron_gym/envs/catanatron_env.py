@@ -53,8 +53,12 @@ ACTIONS_ARRAY = [
     ],
     (ActionType.END_TURN, None),
 ]
-
 ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
+ACTION_TYPES = [i for i in ActionType]
+
+
+def to_action_type_space(action):
+    return ACTION_TYPES.index(action.action_type)
 
 
 def normalize_action(action):

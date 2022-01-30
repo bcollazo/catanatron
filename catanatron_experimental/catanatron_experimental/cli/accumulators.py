@@ -28,7 +28,7 @@ from catanatron_experimental.machine_learning.utils import (
     DISCOUNT_FACTOR,
 )
 from catanatron_gym.features import create_sample
-from catanatron_gym.envs.catanatron_env import to_action_space
+from catanatron_gym.envs.catanatron_env import to_action_space, to_action_type_space
 from catanatron_experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
 )
@@ -179,12 +179,15 @@ class CsvDataAccumulator(Accumulator):
 
     def initialize(self, game):
         self.data = defaultdict(
-            lambda: {"samples": [], "actions": [], "board_tensors": []}
+            lambda: {"samples": [], "actions": [], "board_tensors": [], "games": []}
         )
 
     def step(self, game, action):
         self.data[action.color]["samples"].append(create_sample(game, action.color))
-        self.data[action.color]["actions"].append(to_action_space(action))
+        self.data[action.color]["actions"].append(
+            [to_action_space(action), to_action_type_space(action)]
+        )
+        self.data[action.color]["games"].append(game.copy())
         board_tensor = create_board_tensor(game, action.color)
         shape = board_tensor.shape
         flattened_tensor = tf.reshape(
@@ -204,6 +207,7 @@ class CsvDataAccumulator(Accumulator):
         labels = []
         for color in game.state.colors:
             player_data = self.data[color]
+            # TODO: return label, 2-ply search label, 1-play value function.
 
             # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
             episode_return = get_discounted_return(game, color, 1)
@@ -240,7 +244,9 @@ class CsvDataAccumulator(Accumulator):
         board_tensors_df = (
             pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
         )
-        actions_df = pd.DataFrame(actions, columns=["ACTION"]).astype("int")
+        actions_df = pd.DataFrame(actions, columns=["ACTION", "ACTION_TYPE"]).astype(
+            "int"
+        )
         rewards_df = pd.DataFrame(
             labels,
             columns=[
