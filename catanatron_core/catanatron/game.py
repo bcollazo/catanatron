@@ -29,8 +29,11 @@ class Accumulator:
         """
         pass
 
-    def step(self, game, action):
-        """Called after each action taken by a player"""
+    def step(self, game_before_action, action):
+        """Called after each action taken by a player.
+
+        Game should be right before action is taken.
+        """
         pass
 
     def finalize(self, game):
@@ -91,17 +94,17 @@ class Game:
         Returns:
             Color: winning color or None if game exceeded TURNS_LIMIT
         """
+        initial_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.initialize(self)
+            accumulator.initialize(initial_game_state)
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
-            action = self.play_tick(decide_fn=decide_fn)
-            for accumulator in accumulators:
-                accumulator.step(self, action)
+            self.play_tick(decide_fn=decide_fn, accumulators=accumulators)
+        final_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.finalize(self)
+            accumulator.finalize(final_game_state)
         return self.winning_color()
 
-    def play_tick(self, decide_fn=None):
+    def play_tick(self, decide_fn=None, accumulators=[]):
         """Advances game by one ply (player decision).
 
         Args:
@@ -119,6 +122,11 @@ class Game:
             if decide_fn is not None
             else player.decide(self, actions)
         )
+        # Call accumulator.step here, because we want game_before_action, action
+        if len(accumulators) > 0:
+            game_snapshot = self.copy()
+            for accumulator in accumulators:
+                accumulator.step(game_snapshot, action)
         return self.execute(action)
 
     def execute(self, action: Action, validate_action: bool = True) -> Action:
