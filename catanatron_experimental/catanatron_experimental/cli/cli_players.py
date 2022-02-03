@@ -15,7 +15,6 @@ from catanatron_experimental.machine_learning.players.reinforcement import (
     VRLPlayer,
     PRLPlayer,
 )
-from catanatron_experimental.tensorforce_player import ForcePlayer
 from catanatron_experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
     ValueFunctionPlayer,
@@ -24,14 +23,12 @@ from catanatron.players.search import (
     VictoryPointPlayer,
 )
 from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
-from catanatron_experimental.machine_learning.players.scikit import ScikitPlayer
 from catanatron_experimental.machine_learning.players.playouts import (
     GreedyPlayoutsPlayer,
 )
 from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
     OnlineMCTSDQNPlayer,
 )
-from catanatron_experimental.dqn_player import DQNPlayer
 
 # PLAYER_CLASSES = {
 #     "O": OnlineMCTSDQNPlayer,
