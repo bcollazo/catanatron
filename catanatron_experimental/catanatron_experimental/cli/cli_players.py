@@ -4,7 +4,6 @@ from rich.table import Table
 
 from catanatron.models.player import RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
-from catanatron_experimental.my_player import MyPlayer
 from catanatron_experimental.mcts_score_collector import (
     MCTSScoreCollector,
     MCTSPredictor,
@@ -89,19 +88,35 @@ CLI_PLAYERS = [
         + "Params are DEPTH, PRUNNING",
         AlphaBetaPlayer,
     ),
-    CliPlayer(
-        "Y",
-        "MyPlayer",
-        "Uses catanatron_experimental/catanatron_experimental/my_player.py. "
-        + "Edit this file with your own strategy and test it out here!",
-        MyPlayer,
-    ),
 ]
 
 
-player_help_table = Table(title="Player Legend")
-player_help_table.add_column("CODE", justify="center", style="cyan", no_wrap=True)
-player_help_table.add_column("PLAYER")
-player_help_table.add_column("DESCRIPTION")
-for player in CLI_PLAYERS:
-    player_help_table.add_row(player.code, player.name, player.description)
+def register_player(code):
+    def decorator(player_class):
+        CLI_PLAYERS.append(
+            CliPlayer(
+                code,
+                player_class.__name__,
+                player_class.__doc__,
+                player_class,
+            ),
+        )
+
+    return decorator
+
+
+CUSTOM_ACCUMULATORS = []
+
+
+def register_accumulator(accumulator_class):
+    CUSTOM_ACCUMULATORS.append(accumulator_class())
+
+
+def player_help_table():
+    table = Table(title="Player Legend")
+    table.add_column("CODE", justify="center", style="cyan", no_wrap=True)
+    table.add_column("PLAYER")
+    table.add_column("DESCRIPTION")
+    for player in CLI_PLAYERS:
+        table.add_row(player.code, player.name, player.description)
+    return table

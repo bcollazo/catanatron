@@ -1,4 +1,5 @@
 import os
+import importlib.util
 from dataclasses import dataclass
 
 import click
@@ -19,7 +20,11 @@ from catanatron.models.map import BASE_MAP_TEMPLATE, MINI_MAP_TEMPLATE, CatanMap
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from catanatron_experimental.utils import ensure_dir, formatSecs
-from catanatron_experimental.cli.cli_players import player_help_table, CLI_PLAYERS
+from catanatron_experimental.cli.cli_players import (
+    CUSTOM_ACCUMULATORS,
+    player_help_table,
+    CLI_PLAYERS,
+)
 from catanatron_experimental.cli.accumulators import (
     JsonDataAccumulator,
     CsvDataAccumulator,
@@ -62,6 +67,11 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     (e.g. --players=R,G:25,AB:2:C,W).\n
     See player legend with '--help-players'.
     """,
+)
+@click.option(
+    "--codepath",
+    default=None,
+    help="Path to file with custom Players and Accumulators to import and use.",
 )
 @click.option(
     "-o",
@@ -120,6 +130,7 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
 def simulate(
     num,
     players,
+    codepath,
     output,
     json,
     csv,
@@ -141,8 +152,14 @@ def simulate(
         catanatron-play --players=VP,F --num=10 --output=data/ --json\n
         catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
     """
+    if codepath:
+        abspath = os.path.abspath(codepath)
+        spec = importlib.util.spec_from_file_location("module.name", abspath)
+        user_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(user_module)
+
     if help_players:
-        return Console().print(player_help_table)
+        return Console().print(player_help_table())
     if output and not (json or csv):
         return print("--output requires either --json or --csv to be set")
 
@@ -247,6 +264,8 @@ def play_batch(
         accumulators.append(JsonDataAccumulator(output_options.output))
     if output_options.db:
         accumulators.append(DatabaseAccumulator())
+    if len(CUSTOM_ACCUMULATORS) > 0:
+        accumulators.extend(CUSTOM_ACCUMULATORS)
 
     if quiet:
         for _ in play_batch_core(num_games, players, game_config, accumulators):
