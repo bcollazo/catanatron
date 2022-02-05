@@ -69,7 +69,7 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     """,
 )
 @click.option(
-    "--codepath",
+    "--code",
     default=None,
     help="Path to file with custom Players and Accumulators to import and use.",
 )
@@ -130,7 +130,7 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
 def simulate(
     num,
     players,
-    codepath,
+    code,
     output,
     json,
     csv,
@@ -152,8 +152,8 @@ def simulate(
         catanatron-play --players=VP,F --num=10 --output=data/ --json\n
         catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
     """
-    if codepath:
-        abspath = os.path.abspath(codepath)
+    if code:
+        abspath = os.path.abspath(code)
         spec = importlib.util.spec_from_file_location("module.name", abspath)
         user_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(user_module)
