@@ -10,6 +10,7 @@ cloudpickle==2.0.0
 colorama==0.4.4
 commonmark==0.9.1
 coverage==6.3.1
+coveralls==3.3.1
 docopt==0.6.2
 Flask==2.0.2
 Flask-Cors==3.0.10
