@@ -5,3 +5,4 @@ from catanatron import Game, Player, Color, Accumulator
 """
 from catanatron.game import Game, Accumulator
 from catanatron.models.player import Player, Color, RandomPlayer
+from catanatron.models.enums import Action, ActionType, WOOD, BRICK, SHEEP, WHEAT, ORE
