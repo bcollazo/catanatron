@@ -264,8 +264,8 @@ def play_batch(
         accumulators.append(JsonDataAccumulator(output_options.output))
     if output_options.db:
         accumulators.append(DatabaseAccumulator())
-    if len(CUSTOM_ACCUMULATORS) > 0:
-        accumulators.extend(CUSTOM_ACCUMULATORS)
+    for accumulator_class in CUSTOM_ACCUMULATORS:
+        accumulators.append(accumulator_class(players=players, game_config=game_config))
 
     if quiet:
         for _ in play_batch_core(num_games, players, game_config, accumulators):

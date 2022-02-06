@@ -23,6 +23,9 @@ class Accumulator:
     Useful to compute aggregate statistics, log information, etc...
     """
 
+    def __init__(*args, **kwargs):
+        pass
+
     def initialize(self, game):
         """Called when the game is created, no actions have
         been taken by players yet, but the board is decided.

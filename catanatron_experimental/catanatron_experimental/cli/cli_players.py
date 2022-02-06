@@ -4,16 +4,16 @@ from rich.table import Table
 
 from catanatron.models.player import RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
-from catanatron_experimental.mcts_score_collector import (
-    MCTSScoreCollector,
-    MCTSPredictor,
-)
-from catanatron_experimental.machine_learning.players.reinforcement import (
-    QRLPlayer,
-    TensorRLPlayer,
-    VRLPlayer,
-    PRLPlayer,
-)
+# from catanatron_experimental.mcts_score_collector import (
+#     MCTSScoreCollector,
+#     MCTSPredictor,
+# )
+# from catanatron_experimental.machine_learning.players.reinforcement import (
+#     QRLPlayer,
+#     TensorRLPlayer,
+#     VRLPlayer,
+#     PRLPlayer,
+# )
 from catanatron_experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
     ValueFunctionPlayer,
@@ -25,9 +25,9 @@ from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
 from catanatron_experimental.machine_learning.players.playouts import (
     GreedyPlayoutsPlayer,
 )
-from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
-    OnlineMCTSDQNPlayer,
-)
+# from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
+#     OnlineMCTSDQNPlayer,
+# )
 
 # PLAYER_CLASSES = {
 #     "O": OnlineMCTSDQNPlayer,
@@ -109,7 +109,7 @@ CUSTOM_ACCUMULATORS = []
 
 
 def register_accumulator(accumulator_class):
-    CUSTOM_ACCUMULATORS.append(accumulator_class())
+    CUSTOM_ACCUMULATORS.append(accumulator_class)
 
 
 def player_help_table():
