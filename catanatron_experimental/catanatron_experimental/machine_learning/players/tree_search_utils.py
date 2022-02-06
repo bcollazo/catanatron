@@ -2,8 +2,15 @@ import math
 from collections import defaultdict
 
 from catanatron.models.map import number_probability
-from catanatron.models.decks import DevelopmentDeck
-from catanatron.models.enums import DevelopmentCard, Resource, Action, ActionType
+from catanatron.models.decks import (
+    starting_devcard_proba,
+)
+from catanatron.models.enums import (
+    DEVELOPMENT_CARDS,
+    RESOURCES,
+    Action,
+    ActionType,
+)
 
 
 def execute_spectrum(game, action):
@@ -29,7 +36,7 @@ def execute_spectrum(game, action):
         return [(copy, 1)]
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
         results = []
-        for card in DevelopmentCard:
+        for card in DEVELOPMENT_CARDS:
             option_action = Action(action.color, action.action_type, card)
             option_game = game.copy()
             try:
@@ -39,7 +46,7 @@ def execute_spectrum(game, action):
                 # ignoring means the value function of this node will be flattened,
                 # to the one before.
                 pass
-            results.append((option_game, DevelopmentDeck.starting_card_proba(card)))
+            results.append((option_game, starting_devcard_proba(card)))
         return results
     elif action.action_type == ActionType.ROLL:
         results = []
@@ -59,7 +66,7 @@ def execute_spectrum(game, action):
             return [(copy, 1)]
         else:
             results = []
-            for card in Resource:
+            for card in RESOURCES:
                 option_action = Action(
                     action.color,
                     action.action_type,

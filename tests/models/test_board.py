@@ -1,7 +1,7 @@
 import pytest
 
 from catanatron.models.map import MINI_MAP_TEMPLATE, CatanMap
-from catanatron.models.enums import Resource
+from catanatron.models.enums import RESOURCES
 from catanatron.models.board import Board, get_node_distances
 from catanatron.models.player import Color
 
@@ -68,7 +68,7 @@ def test_calling_the_edge_differently_is_not_a_problem():
 def test_get_ports():
     board = Board()
     ports = board.map.port_nodes
-    for resource in Resource:
+    for resource in RESOURCES:
         assert len(ports[resource]) == 2
     assert len(ports[None]) == 8
 

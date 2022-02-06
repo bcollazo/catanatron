@@ -4,16 +4,25 @@ by current player). Main function is generate_playable_actions.
 """
 import operator as op
 from functools import reduce
-from typing import List
+from typing import Any, Dict, List
 
-from catanatron.models.decks import ResourceDeck
+from catanatron.models.decks import (
+    CITY_COST_FREQDECK,
+    ROAD_COST_FREQDECK,
+    SETTLEMENT_COST_FREQDECK,
+    freqdeck_can_draw,
+    freqdeck_contains,
+    freqdeck_count,
+    freqdeck_from_listdeck,
+)
 from catanatron.models.enums import (
+    RESOURCES,
     Action,
     ActionPrompt,
     ActionType,
     BRICK,
     ORE,
-    Resource,
+    FastResource,
     BuildingType,
     SHEEP,
     WHEAT,
@@ -26,7 +35,7 @@ from catanatron.state_functions import (
     player_has_rolled,
     player_key,
     player_num_resource_cards,
-    player_resource_deck_contains,
+    player_resource_freqdeck_contains,
 )
 
 
@@ -55,14 +64,16 @@ def generate_playable_actions(state) -> List[Action]:
 
             can_buy_dev_card = (
                 player_can_afford_dev_card(state, color)
-                and state.development_deck.num_cards() > 0
+                and len(state.development_listdeck) > 0
             )
             if can_buy_dev_card:
                 actions.append(Action(color, ActionType.BUY_DEVELOPMENT_CARD, None))
 
             # Play Dev Cards
             if player_can_play_dev(state, color, "YEAR_OF_PLENTY"):
-                actions.extend(year_of_plenty_possibilities(color, state.resource_deck))
+                actions.extend(
+                    year_of_plenty_possibilities(color, state.resource_freqdeck)
+                )
             if player_can_play_dev(state, color, "MONOPOLY"):
                 actions.extend(monopoly_possibilities(color))
             if player_can_play_dev(state, color, "KNIGHT"):
@@ -83,25 +94,22 @@ def generate_playable_actions(state) -> List[Action]:
 
 
 def monopoly_possibilities(color) -> List[Action]:
-    return [
-        Action(color, ActionType.PLAY_MONOPOLY, card_type) for card_type in Resource
-    ]
+    return [Action(color, ActionType.PLAY_MONOPOLY, card) for card in RESOURCES]
 
 
-def year_of_plenty_possibilities(color, resource_deck: ResourceDeck) -> List[Action]:
-    resource_list = list(Resource)
-
+def year_of_plenty_possibilities(color, freqdeck: List[int]) -> List[Action]:
     options = set()
-    for i, first_card in enumerate(resource_list):
-        for j in range(i, len(resource_list)):
-            second_card = resource_list[j]  # doing it this way to not repeat
-            to_draw = ResourceDeck.from_array([first_card, second_card])
-            if resource_deck.includes(to_draw):
+    for i, first_card in enumerate(RESOURCES):
+        for j in range(i, len(RESOURCES)):
+            second_card = RESOURCES[j]  # doing it this way to not repeat
+
+            to_draw = freqdeck_from_listdeck([first_card, second_card])
+            if freqdeck_contains(freqdeck, to_draw):
                 options.add((first_card, second_card))
             else:  # try allowing player select 1 card only.
-                if resource_deck.can_draw(1, first_card):
+                if freqdeck_can_draw(freqdeck, 1, first_card):
                     options.add((first_card,))
-                if resource_deck.can_draw(1, second_card):
+                if freqdeck_can_draw(freqdeck, 1, second_card):
                     options.add((second_card,))
 
     return list(
@@ -115,7 +123,7 @@ def year_of_plenty_possibilities(color, resource_deck: ResourceDeck) -> List[Act
 def road_building_possibilities(state, color) -> List[Action]:
     key = player_key(state, color)
 
-    has_money = player_resource_deck_contains(state, color, ResourceDeck.road_cost())
+    has_money = player_resource_freqdeck_contains(state, color, ROAD_COST_FREQDECK)
     has_roads_available = state.player_state[f"{key}_ROADS_AVAILABLE"] > 0
 
     if has_money and has_roads_available:
@@ -136,8 +144,8 @@ def settlement_possibilities(state, color, initial_build_phase=False) -> List[Ac
         ]
     else:
         key = player_key(state, color)
-        has_money = player_resource_deck_contains(
-            state, color, ResourceDeck.settlement_cost()
+        has_money = player_resource_freqdeck_contains(
+            state, color, SETTLEMENT_COST_FREQDECK
         )
         has_settlements_available = (
             state.player_state[f"{key}_SETTLEMENTS_AVAILABLE"] > 0
@@ -155,7 +163,7 @@ def settlement_possibilities(state, color, initial_build_phase=False) -> List[Ac
 def city_possibilities(state, color) -> List[Action]:
     key = player_key(state, color)
 
-    has_money = player_resource_deck_contains(state, color, ResourceDeck.city_cost())
+    has_money = player_resource_freqdeck_contains(state, color, CITY_COST_FREQDECK)
     has_cities_available = state.player_state[f"{key}_CITIES_AVAILABLE"] > 0
 
     if has_money and has_cities_available:
@@ -247,22 +255,24 @@ def maritime_trade_possibilities(state, color) -> List[Action]:
 
     # Get lowest rate per resource
     port_resources = set(state.board.get_player_port_resources(color))
-    rates = {WOOD: 4, BRICK: 4, SHEEP: 4, WHEAT: 4, ORE: 4}
+    rates: Dict[FastResource, int] = {WOOD: 4, BRICK: 4, SHEEP: 4, WHEAT: 4, ORE: 4}
     if None in port_resources:
         rates = {WOOD: 3, BRICK: 3, SHEEP: 3, WHEAT: 3, ORE: 3}
     for resource in port_resources:
         if resource != None:
-            rates[resource.value] = 2
+            rates[resource] = 2
 
     # For resource in hand
-    for resource in Resource:
-        amount = player_num_resource_cards(state, color, resource.value)
-        if amount >= rates[resource.value]:
-            resource_out = [resource] * rates[resource.value] + [None] * (
-                4 - rates[resource.value]
-            )
-            for j_resource in Resource:
-                if resource != j_resource and state.resource_deck.count(j_resource) > 0:
+    for resource in RESOURCES:
+        amount = player_num_resource_cards(state, color, resource)
+        if amount >= rates[resource]:
+            resource_out: List[Any] = [resource] * rates[resource]
+            resource_out += [None] * (4 - rates[resource])
+            for j_resource in RESOURCES:
+                if (
+                    resource != j_resource
+                    and freqdeck_count(state.resource_freqdeck, j_resource) > 0
+                ):
                     trade_offer = tuple(resource_out + [j_resource])
                     trade_offers.add(trade_offer)
 

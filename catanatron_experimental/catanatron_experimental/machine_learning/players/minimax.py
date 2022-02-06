@@ -1,5 +1,6 @@
 import time
 import random
+from typing import Any
 
 from catanatron.state_functions import (
     get_longest_road_length,
@@ -12,7 +13,7 @@ from catanatron.state_functions import (
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
-from catanatron.models.enums import BuildingType, Resource
+from catanatron.models.enums import RESOURCES, BuildingType
 from catanatron_gym.features import (
     build_production_features,
     reachability_features,
@@ -126,13 +127,13 @@ def base_fn(params=DEFAULT_WEIGHTS):
         longest_road_length = get_longest_road_length(game.state, p0_color)
 
         reachability_sample = reachability_features(game, p0_color, 2)
-        features = [f"P0_0_ROAD_REACHABLE_{resource.value}" for resource in Resource]
+        features = [f"P0_0_ROAD_REACHABLE_{resource}" for resource in RESOURCES]
         reachable_production_at_zero = sum([reachability_sample[f] for f in features])
-        features = [f"P0_1_ROAD_REACHABLE_{resource.value}" for resource in Resource]
+        features = [f"P0_1_ROAD_REACHABLE_{resource}" for resource in RESOURCES]
         reachable_production_at_one = sum([reachability_sample[f] for f in features])
 
         hand_sample = resource_hand_features(game, p0_color)
-        features = [f"P0_{resource.value}_IN_HAND" for resource in Resource]
+        features = [f"P0_{resource}_IN_HAND" for resource in RESOURCES]
         distance_to_city = (
             max(2 - hand_sample["P0_WHEAT_IN_HAND"], 0)
             + max(3 - hand_sample["P0_ORE_IN_HAND"], 0)
@@ -372,7 +373,7 @@ class DebugStateNode:
 class DebugActionNode:
     def __init__(self, action):
         self.action = action
-        self.expected_value = None
+        self.expected_value: Any = None
         self.children = []  # DebugStateNode[]
         self.probas = []
 

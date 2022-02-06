@@ -1,11 +1,19 @@
+import typing
 from dataclasses import dataclass
 import random
 from enum import Enum
 from collections import Counter, defaultdict
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List, Mapping, Set, Tuple, Type, Union
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
-from catanatron.models.enums import Resource
+from catanatron.models.enums import (
+    FastResource,
+    WOOD,
+    BRICK,
+    SHEEP,
+    WHEAT,
+    ORE,
+)
 
 NUM_NODES = 54
 NUM_EDGES = 72
@@ -33,15 +41,23 @@ class EdgeRef(Enum):
 
 
 EdgeId = Tuple[int, int]
+NodeId = int
 Coordinate = Tuple[int, int, int]
 
 
 class LandTile:
-    def __init__(self, tile_id, resource, number, nodes, edges):
+    def __init__(
+        self,
+        tile_id: int,
+        resource: Union[FastResource, None],
+        number: Union[int, None],
+        nodes: Dict[NodeRef, NodeId],
+        edges: Dict[EdgeRef, EdgeId],
+    ):
         self.id = tile_id
 
         self.resource = resource  # None means desert tile
-        self.number = number
+        self.number = number  # None if desert
 
         self.nodes = nodes  # node_ref => node_id
         self.edges = edges  # edge_ref => edge
@@ -49,11 +65,13 @@ class LandTile:
     def __repr__(self):
         if self.resource is None:
             return "Tile:Desert"
-        return f"Tile:{self.number}{self.resource.value}"
+        return f"Tile:{self.number}{self.resource}"
 
 
 class Port:
-    def __init__(self, port_id, resource, direction, nodes, edges):
+    def __init__(
+        self, port_id, resource: Union[FastResource, None], direction, nodes, edges
+    ):
         self.id = port_id
         self.resource = resource  # None means its a 3:1 port.
         self.direction = direction
@@ -76,24 +94,18 @@ Tile = Union[LandTile, Port, Water]
 @dataclass(frozen=True)
 class MapTemplate:
     numbers: List[int]
-    port_resources: List[Union[Resource, None]]
-    tile_resources: List[Resource]
-    topology: Dict[Coordinate, Union[LandTile, Water, Tuple[Port, Direction]]]
+    port_resources: List[Union[FastResource, None]]
+    tile_resources: List[Union[FastResource, None]]
+    topology: Mapping[
+        Coordinate, Union[Type[LandTile], Type[Water], Tuple[Type[Port], Direction]]
+    ]
 
 
 # Small 7-tile map, no ports.
 MINI_MAP_TEMPLATE = MapTemplate(
     [3, 4, 5, 6, 8, 9, 10],
     [],
-    [
-        Resource.WOOD,
-        None,
-        Resource.BRICK,
-        Resource.SHEEP,
-        Resource.WHEAT,
-        Resource.WHEAT,
-        Resource.ORE,
-    ],
+    [WOOD, None, BRICK, SHEEP, WHEAT, WHEAT, ORE],
     {
         # center
         (0, 0, 0): LandTile,
@@ -125,11 +137,11 @@ BASE_MAP_TEMPLATE = MapTemplate(
     [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12],
     [
         # These are 2:1 ports
-        Resource.WOOD,
-        Resource.BRICK,
-        Resource.SHEEP,
-        Resource.WHEAT,
-        Resource.ORE,
+        WOOD,
+        BRICK,
+        SHEEP,
+        WHEAT,
+        ORE,
         # These represet 3:1 ports
         None,
         None,
@@ -138,28 +150,28 @@ BASE_MAP_TEMPLATE = MapTemplate(
     ],
     [
         # Four wood tiles
-        Resource.WOOD,
-        Resource.WOOD,
-        Resource.WOOD,
-        Resource.WOOD,
+        WOOD,
+        WOOD,
+        WOOD,
+        WOOD,
         # Three brick tiles
-        Resource.BRICK,
-        Resource.BRICK,
-        Resource.BRICK,
+        BRICK,
+        BRICK,
+        BRICK,
         # Four sheep tiles
-        Resource.SHEEP,
-        Resource.SHEEP,
-        Resource.SHEEP,
-        Resource.SHEEP,
+        SHEEP,
+        SHEEP,
+        SHEEP,
+        SHEEP,
         # Four wheat tiles
-        Resource.WHEAT,
-        Resource.WHEAT,
-        Resource.WHEAT,
-        Resource.WHEAT,
+        WHEAT,
+        WHEAT,
+        WHEAT,
+        WHEAT,
         # Three ore tiles
-        Resource.ORE,
-        Resource.ORE,
-        Resource.ORE,
+        ORE,
+        ORE,
+        ORE,
         # One desert
         None,
     ],
@@ -234,14 +246,16 @@ class CatanMap:
         self.ports_by_id = {p.id: p for p in self.tiles.values() if isinstance(p, Port)}
 
 
-def init_port_nodes_cache(tiles: Dict[Coordinate, Tile]) -> Dict[Resource, Set[int]]:
+def init_port_nodes_cache(
+    tiles: Dict[Coordinate, Tile]
+) -> Dict[Union[FastResource, None], Set[int]]:
     """Initializes board.port_nodes cache.
 
     Args:
         tiles (Dict[Coordinate, Tile]): initialized tiles datastructure
 
     Returns:
-        Dict[Union[Resource, None], Set[int]]: Mapping from Resource to node_ids that
+        Dict[Union[FastResource, None], Set[int]]: Mapping from FastResource to node_ids that
             enable port trading. None key represents 3:1 port.
     """
     port_nodes = defaultdict(set)
@@ -285,7 +299,7 @@ def get_node_counter_production(adjacent_tiles, node_id):
 
 
 def build_dice_probas():
-    probas = defaultdict(int)
+    probas = defaultdict(float)
     for i in range(1, 7):
         for j in range(1, 7):
             probas[i + j] += 1 / 36
@@ -421,9 +435,13 @@ def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):
         if value is None:
             a_noderef, b_noderef = get_edge_nodes(edgeref)
             edge_nodes = (nodes[a_noderef], nodes[b_noderef])
-            edges[edgeref] = edge_nodes
+            edges[edgeref] = edge_nodes  # type: ignore
 
-    return nodes, edges, node_autoinc
+    return (
+        typing.cast(Dict[NodeRef, NodeId], nodes),
+        typing.cast(Dict[EdgeRef, EdgeId], edges),
+        node_autoinc,
+    )
 
 
 def get_edge_nodes(edge_ref):

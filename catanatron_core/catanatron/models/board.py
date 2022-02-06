@@ -1,6 +1,6 @@
 import pickle
 from collections import defaultdict
-from typing import Set, Tuple
+from typing import Any, Set
 import functools
 
 import networkx as nx
@@ -36,11 +36,6 @@ def get_edges(land_nodes=None):
     return list(STATIC_GRAPH.subgraph(land_nodes or range(NUM_NODES)).edges())
 
 
-EdgeId = Tuple[int, int]
-NodeId = int
-Coordinate = Tuple[int, int, int]
-
-
 class Board:
     """Encapsulates all state information regarding the board.
 
@@ -61,7 +56,7 @@ class Board:
 
     def __init__(self, catan_map=None, initialize=True):
         if initialize:
-            self.map = catan_map or CatanMap(
+            self.map: CatanMap = catan_map or CatanMap(
                 BASE_MAP_TEMPLATE
             )  # Static State (no need to copy)
 
@@ -70,7 +65,7 @@ class Board:
 
             # color => int{}[] (list of node_id sets) one per component
             #   nodes in sets are incidental (might not be owned by player)
-            self.connected_components = defaultdict(list)
+            self.connected_components: Any = defaultdict(list)
             self.board_buildable_ids = set(self.map.land_nodes)
             self.road_lengths = defaultdict(int)
             self.road_color = None
@@ -78,8 +73,8 @@ class Board:
 
             # assumes there is at least one desert:
             self.robber_coordinate = filter(
-                lambda coordinate: self.map.tiles[coordinate].resource is None,
-                self.map.tiles.keys(),
+                lambda coordinate: self.map.land_tiles[coordinate].resource is None,
+                self.map.land_tiles.keys(),
             ).__next__()
 
     def build_settlement(self, color, node_id, initial_build_phase=False):

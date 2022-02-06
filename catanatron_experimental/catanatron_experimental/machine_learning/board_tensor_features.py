@@ -4,11 +4,15 @@ import tensorflow as tf
 from catanatron.state_functions import get_player_buildings
 from catanatron.models.player import Color
 from catanatron.game import Game
-from catanatron.models.enums import BuildingType, Resource
+from catanatron.models.enums import (
+    DEVELOPMENT_CARDS,
+    RESOURCES,
+    VICTORY_POINT,
+    BuildingType,
+)
 from catanatron.models.coordinate_system import offset_to_cube
 from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.map import number_probability
-from catanatron.models.enums import DevelopmentCard, Resource
 from catanatron_gym.features import iter_players
 
 # These assume 4 players
@@ -43,23 +47,23 @@ def get_numeric_features(num_players):
             + [f"P{i}_HAS_ROLLED" for i in range(num_players)]
             # Player Hand Features
             + [
-                f"P{i}_{card.value}_PLAYED"
+                f"P{i}_{card}_PLAYED"
                 for i in range(num_players)
-                for card in DevelopmentCard
-                if card != DevelopmentCard.VICTORY_POINT
+                for card in DEVELOPMENT_CARDS
+                if card != VICTORY_POINT
             ]
             + [f"P{i}_NUM_RESOURCES_IN_HAND" for i in range(num_players)]
             + [f"P{i}_NUM_DEVS_IN_HAND" for i in range(num_players)]
-            + [f"P0_{card.value}_IN_HAND" for card in DevelopmentCard]
+            + [f"P0_{card}_IN_HAND" for card in DEVELOPMENT_CARDS]
             + [
-                f"P0_{card.value}_PLAYABLE"
-                for card in DevelopmentCard
-                if card != DevelopmentCard.VICTORY_POINT
+                f"P0_{card}_PLAYABLE"
+                for card in DEVELOPMENT_CARDS
+                if card != VICTORY_POINT
             ]
-            + [f"P0_{resource.value}_IN_HAND" for resource in Resource]
+            + [f"P0_{resource}_IN_HAND" for resource in RESOURCES]
             # Game Features
             + ["BANK_DEV_CARDS"]
-            + [f"BANK_{resource.value}" for resource in Resource]
+            + [f"BANK_{resource}" for resource in RESOURCES]
         )
     )
 
@@ -183,7 +187,7 @@ def create_board_tensor(game: Game, p0_color: Color):
 
     # add 5 node-resource probas, add color edges
     resource_proba_planes = tf.zeros((WIDTH, HEIGHT, 5))
-    resources = [i for i in Resource]
+    resources = [i for i in RESOURCES]
     tile_map = get_tile_coordinate_map()
     for (coordinate, tile) in game.state.board.map.land_tiles.items():
         if tile.resource is None:

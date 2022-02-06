@@ -1,9 +1,9 @@
+from catanatron import WOOD, BRICK
 from catanatron.models.map import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
     CatanMap,
     LandTile,
-    Resource,
     get_nodes_and_edges,
 )
 
@@ -17,6 +17,10 @@ def test_mini_map_can_be_created():
     assert len(mini.port_nodes) == 0
     assert len(mini.adjacent_tiles) == 24
     assert len(mini.node_production) == 24
+
+    resources = [i.resource for i in mini.land_tiles.values()]
+    assert any(isinstance(i, str) for i in resources)
+    assert any(i is None for i in resources)  # theres one desert
 
 
 def test_base_map_can_be_created():
@@ -33,7 +37,7 @@ def test_get_nodes_and_edges_on_empty_board():
 def test_get_nodes_and_edges_for_east_attachment():
     nodes1, edges1, node_autoinc = get_nodes_and_edges({}, (0, 0, 0), 0)
     nodes2, edges2, node_autoinc = get_nodes_and_edges(
-        {(0, 0, 0): LandTile(0, Resource.WOOD, 3, nodes1, edges1)},
+        {(0, 0, 0): LandTile(0, WOOD, 3, nodes1, edges1)},
         (1, -1, 0),
         node_autoinc,
     )
@@ -44,14 +48,14 @@ def test_get_nodes_and_edges_for_east_attachment():
 def test_get_nodes_and_edges_for_east_and_southeast_attachment():
     nodes1, edges1, node_autoinc = get_nodes_and_edges({}, (0, 0, 0), 0)
     nodes2, edges2, node_autoinc = get_nodes_and_edges(
-        {(0, 0, 0): LandTile(0, Resource.WOOD, 3, nodes1, edges1)},
+        {(0, 0, 0): LandTile(0, WOOD, 3, nodes1, edges1)},
         (1, -1, 0),
         node_autoinc,
     )
     nodes3, edges3, node_autoinc = get_nodes_and_edges(
         {
-            (0, 0, 0): LandTile(1, Resource.WOOD, 3, nodes1, edges1),
-            (1, -1, 0): LandTile(2, Resource.BRICK, 6, nodes2, edges2),
+            (0, 0, 0): LandTile(1, WOOD, 3, nodes1, edges1),
+            (1, -1, 0): LandTile(2, BRICK, 6, nodes2, edges2),
         },
         (0, -1, 1),
         node_autoinc,
