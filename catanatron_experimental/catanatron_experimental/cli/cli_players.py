@@ -4,6 +4,7 @@ from rich.table import Table
 
 from catanatron.models.player import RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
+
 # from catanatron_experimental.mcts_score_collector import (
 #     MCTSScoreCollector,
 #     MCTSPredictor,
@@ -25,6 +26,7 @@ from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
 from catanatron_experimental.machine_learning.players.playouts import (
     GreedyPlayoutsPlayer,
 )
+
 # from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
 #     OnlineMCTSDQNPlayer,
 # )
