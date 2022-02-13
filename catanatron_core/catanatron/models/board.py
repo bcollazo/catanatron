@@ -308,10 +308,7 @@ class Board:
             return None
 
     def get_edge_color(self, edge):
-        try:
-            return self.roads[edge]
-        except KeyError:
-            return None
+        return self.roads.get(edge)
 
     def is_enemy_node(self, node_id, color):
         node_color = self.get_node_color(node_id)
