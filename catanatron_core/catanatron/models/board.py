@@ -104,7 +104,7 @@ class Board:
 
         previous_road_color = self.road_color
         if initial_build_phase:
-            self.connected_components[color].append(set([node_id]))
+            self.connected_components[color].append({node_id})
         else:
             # Maybe cut connected components.
             edges_by_color = defaultdict(list)
