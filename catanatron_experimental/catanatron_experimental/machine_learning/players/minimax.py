@@ -292,22 +292,22 @@ class AlphaBetaPlayer(Player):
 
         maximizingPlayer = game.state.current_player().color == self.color
         actions = self.get_actions(game)  # list of actions.
-        children = expand_spectrum(game, actions)  # action => (game, proba)[]
+        action_outcomes = expand_spectrum(game, actions)  # action => (game, proba)[]
 
         if maximizingPlayer:
             best_action = None
             best_value = float("-inf")
-            for i, (action, outprobas) in enumerate(children.items()):
+            for i, (action, outcomes) in enumerate(action_outcomes.items()):
                 action_node = DebugActionNode(action)
 
                 expected_value = 0
-                for j, (out, proba) in enumerate(outprobas):
+                for j, (outcome, proba) in enumerate(outcomes):
                     out_node = DebugStateNode(
-                        f"{node.label} {i} {j}", out.state.current_player().color
+                        f"{node.label} {i} {j}", outcome.state.current_player().color
                     )
 
                     result = self.alphabeta(
-                        out, depth - 1, alpha, beta, deadline, out_node
+                        outcome, depth - 1, alpha, beta, deadline, out_node
                     )
                     value = result[1]
                     expected_value += proba * value
@@ -330,17 +330,17 @@ class AlphaBetaPlayer(Player):
         else:
             best_action = None
             best_value = float("inf")
-            for i, (action, outprobas) in enumerate(children.items()):
+            for i, (action, outcomes) in enumerate(action_outcomes.items()):
                 action_node = DebugActionNode(action)
 
                 expected_value = 0
-                for j, (out, proba) in enumerate(outprobas):
+                for j, (outcome, proba) in enumerate(outcomes):
                     out_node = DebugStateNode(
-                        f"{node.label} {i} {j}", out.state.current_player().color
+                        f"{node.label} {i} {j}", outcome.state.current_player().color
                     )
 
                     result = self.alphabeta(
-                        out, depth - 1, alpha, beta, deadline, out_node
+                        outcome, depth - 1, alpha, beta, deadline, out_node
                     )
                     value = result[1]
                     expected_value += proba * value
