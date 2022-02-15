@@ -17,7 +17,7 @@ from catanatron.models.player import Color, Player
 TURNS_LIMIT = 1000
 
 
-class Accumulator:
+class GameAccumulator:
     """Interface to hook into different game lifecycle events.
 
     Useful to compute aggregate statistics, log information, etc...
@@ -26,21 +26,23 @@ class Accumulator:
     def __init__(*args, **kwargs):
         pass
 
-    def initialize(self, game):
-        """Called when the game is created, no actions have
+    def before(self, game):
+        """
+        Called when the game is created, no actions have
         been taken by players yet, but the board is decided.
         """
         pass
 
     def step(self, game_before_action, action):
-        """Called after each action taken by a player.
-
+        """
+        Called after each action taken by a player.
         Game should be right before action is taken.
         """
         pass
 
-    def finalize(self, game):
-        """Called when the game is finished.
+    def after(self, game):
+        """
+        Called when the game is finished.
 
         Check game.winning_color() to see if the game
         actually finished or exceeded turn limit (is None).
@@ -97,12 +99,12 @@ class Game:
         """
         initial_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.initialize(initial_game_state)
+            accumulator.before(initial_game_state)
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
             self.play_tick(decide_fn=decide_fn, accumulators=accumulators)
         final_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.finalize(final_game_state)
+            accumulator.after(final_game_state)
         return self.winning_color()
 
     def play_tick(self, decide_fn=None, accumulators=[]):

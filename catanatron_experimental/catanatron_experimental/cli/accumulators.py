@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
-from catanatron.game import Accumulator, Game
+from catanatron.game import GameAccumulator, Game
 from catanatron.json import GameEncoder
 from catanatron.state_functions import (
     get_actual_victory_points,
@@ -34,7 +34,7 @@ from catanatron_experimental.machine_learning.board_tensor_features import (
 )
 
 
-class VpDistributionAccumulator(Accumulator):
+class VpDistributionAccumulator(GameAccumulator):
     """
     Accumulates CITIES,SETTLEMENTS,DEVVPS,LONGEST,LARGEST
     in each game per player.
@@ -50,7 +50,7 @@ class VpDistributionAccumulator(Accumulator):
 
         self.num_games = 0
 
-    def finalize(self, game: Game):
+    def after(self, game: Game):
         winner = game.winning_color()
         if winner is None:
             return  # throw away data
@@ -103,7 +103,7 @@ class VpDistributionAccumulator(Accumulator):
             return self.devvps[color] / self.num_games
 
 
-class StatisticsAccumulator(Accumulator):
+class StatisticsAccumulator(GameAccumulator):
     def __init__(self):
         self.wins = defaultdict(int)
         self.turns = []
@@ -112,10 +112,10 @@ class StatisticsAccumulator(Accumulator):
         self.games = []
         self.results_by_player = defaultdict(list)
 
-    def initialize(self, game):
+    def before(self, game):
         self.start = time.time()
 
-    def finalize(self, game):
+    def after(self, game):
         duration = time.time() - self.start
         winning_color = game.winning_color()
         if winning_color is None:
@@ -141,43 +141,43 @@ class StatisticsAccumulator(Accumulator):
         return sum(self.durations) / len(self.durations)
 
 
-class StepDatabaseAccumulator(Accumulator):
+class StepDatabaseAccumulator(GameAccumulator):
     """
     Saves a game state to database for each tick.
     Slows game ~1s per tick.
     """
 
-    def initialize(self, game):
+    def before(self, game):
         with database_session() as session:
             upsert_game_state(game, session)
 
-    def step(game):
+    def step(self, game):
         with database_session() as session:
             upsert_game_state(game, session)
 
 
-class DatabaseAccumulator(Accumulator):
+class DatabaseAccumulator(GameAccumulator):
     """Saves last game state to database"""
 
-    def finalize(self, game):
+    def after(self, game):
         self.link = ensure_link(game)
 
 
-class JsonDataAccumulator(Accumulator):
+class JsonDataAccumulator(GameAccumulator):
     def __init__(self, output):
         self.output = output
 
-    def finalize(self, game):
+    def after(self, game):
         filepath = os.path.join(self.output, f"{game.id}.json")
         with open(filepath, "w") as f:
             f.write(json.dumps(game, cls=GameEncoder))
 
 
-class CsvDataAccumulator(Accumulator):
+class CsvDataAccumulator(GameAccumulator):
     def __init__(self, output):
         self.output = output
 
-    def initialize(self, game):
+    def before(self, game):
         self.data = defaultdict(
             lambda: {"samples": [], "actions": [], "board_tensors": [], "games": []}
         )
@@ -195,7 +195,7 @@ class CsvDataAccumulator(Accumulator):
         ).numpy()
         self.data[action.color]["board_tensors"].append(flattened_tensor)
 
-    def finalize(self, game):
+    def after(self, game):
         if game.winning_color() is None:
             return  # drop game
 
