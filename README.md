@@ -109,6 +109,31 @@ catanatron-play --players=W,W,W,W --db --num=1
 
 NOTE: A great contribution would be to make the Web UI allow to step forwards and backwards in a game to inspect it (ala chess.com).
 
+### Accumulators
+
+The `Accumulator` class allows you to hook into important events during simulations.
+
+For example, write a file like `mycode.py` and have:
+
+```python
+from catanatron import ActionType
+from catanatron_experimental import SimulationAccumulator, register_accumulator
+
+@register_accumulator
+class PortTradeCounter(SimulationAccumulator):
+  def before_all(self):
+    self.num_trades = 0
+
+  def step(self, game_before_action, action):
+    if action.action_type == ActionType.MARITIME_TRADE:
+      self.num_trades += 1
+
+  def after_all(self):
+    print(f'There were {self.num_trades} port trades!')
+```
+
+Then `catanatron-play --code=mycode.py` will count the number of trades in all simulations.
+
 ### As a Package / Library
 
 You can also use `catanatron` package directly which provides a core

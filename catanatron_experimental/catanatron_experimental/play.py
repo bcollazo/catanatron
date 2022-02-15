@@ -32,6 +32,7 @@ from catanatron_experimental.cli.accumulators import (
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
+from catanatron_experimental.cli.simulation_accumulator import SimulationAccumulator
 
 
 custom_theme = Theme(
@@ -225,6 +226,10 @@ def rich_color(color):
 
 
 def play_batch_core(num_games, players, game_config, accumulators=[]):
+    for accumulator in accumulators:
+        if isinstance(accumulator, SimulationAccumulator):
+            accumulator.before_all()
+
     for _ in range(num_games):
         for player in players:
             player.reset_state()
@@ -241,6 +246,10 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
         )
         game.play(accumulators)
         yield game
+
+    for accumulator in accumulators:
+        if isinstance(accumulator, SimulationAccumulator):
+            accumulator.after_all()
 
 
 def play_batch(

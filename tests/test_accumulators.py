@@ -1,6 +1,8 @@
 from catanatron import ActionType, Color, RandomPlayer, Game, GameAccumulator
 from catanatron.state_functions import get_actual_victory_points
 from catanatron.game import TURNS_LIMIT
+from catanatron_experimental import SimulationAccumulator
+from catanatron_experimental.play import GameConfigOptions, play_batch_core
 
 
 def test_accumulators():
@@ -58,3 +60,27 @@ def test_accumulators():
         any([p >= 10 for p in points])
         or accumulator.final_game.state.num_turns >= TURNS_LIMIT
     )
+
+
+def test_simulation_accumulator():
+    class MySimAccumulator(SimulationAccumulator):
+        def before_all(self):
+            self.num_games = 0
+
+        def after(self, game):
+            self.num_games += 1
+
+        def after_all(self):
+            MySimAccumulator.after_all_num_games = self.num_games
+
+    [
+        i
+        for i in play_batch_core(
+            2,
+            [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)],
+            GameConfigOptions(),
+            [MySimAccumulator()],
+        )
+    ]
+
+    assert MySimAccumulator.after_all_num_games == 2
