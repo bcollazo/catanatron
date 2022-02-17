@@ -282,7 +282,7 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
             + board_buildable
         )
 
-        # Construct base layer nodes
+        # Do layer 0
         base_layer_nodes = set()
         for component in game.state.board.connected_components[color]:
             for node_id in component:
@@ -295,9 +295,10 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
             features[f"P{i}_0_ROAD_REACHABLE_{resource.value}"] = production[resource]
 
         # for layers deep:
-        layer_nodes = base_layer_nodes
+        last_layer_nodes = base_layer_nodes
         for level in range(1, levels):
-            for node_id in layer_nodes:
+            level_nodes = set(last_layer_nodes)
+            for node_id in last_layer_nodes:
                 if game.state.board.is_enemy_node(node_id, color):
                     continue  # not expandable.
 
@@ -306,16 +307,18 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
                     return not game.state.board.is_enemy_road(edge, color)
 
                 expandable = filter(can_follow_edge, STATIC_GRAPH.neighbors(node_id))
-                layer_nodes.update(expandable)
+                level_nodes.update(expandable)
 
             production = count_production(
-                frozenset(owned_or_buildable.intersection(layer_nodes)),
+                frozenset(owned_or_buildable.intersection(level_nodes)),
                 game.state.board,
             )
             for resource in Resource:
                 features[f"P{i}_{level}_ROAD_REACHABLE_{resource.value}"] = production[
                     resource
                 ]
+
+            last_layer_nodes = level_nodes
 
     return features
 
