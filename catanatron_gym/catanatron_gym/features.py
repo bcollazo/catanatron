@@ -289,7 +289,8 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
                 base_layer_nodes.add(node_id)
 
         production = count_production(
-            frozenset(owned_or_buildable.intersection(base_layer_nodes)), game.state.board
+            frozenset(owned_or_buildable.intersection(base_layer_nodes)),
+            game.state.board,
         )
         for resource in Resource:
             features[f"P{i}_0_ROAD_REACHABLE_{resource.value}"] = production[resource]
