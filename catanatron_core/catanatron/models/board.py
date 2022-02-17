@@ -104,7 +104,7 @@ class Board:
 
         previous_road_color = self.road_color
         if initial_build_phase:
-            self.connected_components[color].append(set([node_id]))
+            self.connected_components[color].append({node_id})
         else:
             # Maybe cut connected components.
             edges_by_color = defaultdict(list)
@@ -308,10 +308,7 @@ class Board:
             return None
 
     def get_edge_color(self, edge):
-        try:
-            return self.roads[edge]
-        except KeyError:
-            return None
+        return self.roads.get(edge)
 
     def is_enemy_node(self, node_id, color):
         node_color = self.get_node_color(node_id)
