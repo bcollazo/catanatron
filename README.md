@@ -227,12 +227,10 @@ As an alternative to running the project with Docker, you can run the following 
 
 ### React UI
 
-Make sure you have `yarn` installed (https://classic.yarnpkg.com/en/docs/install/).
-
 ```
 cd ui/
-yarn install
-yarn start
+npm install
+npm start
 ```
 
 This can also be run via Docker independetly like (after building):
