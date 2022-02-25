@@ -257,7 +257,7 @@ flask run
 This can also be run via Docker independetly like (after building):
 
 ```
-docker build -t bcollazo/catanatron-server:latest .
+docker build -t bcollazo/catanatron-server:latest . -f Dockerfile.web
 docker run -it -p 5000:5000 bcollazo/catanatron-server
 ```
 
