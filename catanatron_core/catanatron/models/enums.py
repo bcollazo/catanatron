@@ -1,17 +1,12 @@
 from enum import Enum
 from collections import namedtuple
+from typing import List, Literal
 
 
-class Resource(Enum):
-    WOOD = "WOOD"
-    BRICK = "BRICK"
-    SHEEP = "SHEEP"
-    WHEAT = "WHEAT"
-    ORE = "ORE"
-
-    def __repr__(self) -> str:
-        return self.value
-
+FastResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE"]
+FastDevCard = Literal[
+    "KNIGHT", "YEAR_OF_PLENTY", "MONOPOLY", "ROAD_BUILDING", "VICTORY_POINT"
+]
 
 # Strings are considerably faster than Python Enum's (e.g. at being hashed).
 # TODO: Move to ints
@@ -20,22 +15,20 @@ BRICK = "BRICK"
 SHEEP = "SHEEP"
 WHEAT = "WHEAT"
 ORE = "ORE"
-RESOURCES = [WOOD, BRICK, SHEEP, WHEAT, ORE]
+RESOURCES: List[FastResource] = [WOOD, BRICK, SHEEP, WHEAT, ORE]
 
 KNIGHT = "KNIGHT"
 YEAR_OF_PLENTY = "YEAR_OF_PLENTY"
 MONOPOLY = "MONOPOLY"
 ROAD_BUILDING = "ROAD_BUILDING"
 VICTORY_POINT = "VICTORY_POINT"
-DEVELOPMENT_CARDS = [KNIGHT, YEAR_OF_PLENTY, MONOPOLY, ROAD_BUILDING, VICTORY_POINT]
-
-
-class DevelopmentCard(Enum):
-    KNIGHT = "KNIGHT"
-    YEAR_OF_PLENTY = "YEAR_OF_PLENTY"
-    MONOPOLY = "MONOPOLY"
-    ROAD_BUILDING = "ROAD_BUILDING"
-    VICTORY_POINT = "VICTORY_POINT"
+DEVELOPMENT_CARDS: List[FastDevCard] = [
+    KNIGHT,
+    YEAR_OF_PLENTY,
+    MONOPOLY,
+    ROAD_BUILDING,
+    VICTORY_POINT,
+]
 
 
 class BuildingType(Enum):

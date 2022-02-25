@@ -1,108 +1,101 @@
-import pytest
+from catanatron.models.enums import (
+    KNIGHT,
+    ORE,
+    SHEEP,
+    VICTORY_POINT,
+    BRICK,
+    WHEAT,
+    WOOD,
+)
+from catanatron.models.decks import (
+    draw_from_listdeck,
+    freqdeck_add,
+    freqdeck_from_listdeck,
+    freqdeck_replenish,
+    freqdeck_can_draw,
+    freqdeck_count,
+    freqdeck_draw,
+    freqdeck_replenish,
+    freqdeck_subtract,
+    starting_devcard_bank,
+    starting_devcard_proba,
+    starting_resource_bank,
+)
 
-from catanatron.models.enums import DevelopmentCard, Resource
-from catanatron.models.decks import ResourceDeck, DevelopmentDeck
+
+def test_resource_freqdeck_init():
+    deck = starting_resource_bank()
+    assert deck[0] == 19
 
 
-def test_resource_deck_init():
-    deck = ResourceDeck.starting_bank()
-    assert deck.count(Resource.WOOD) == 19
+def test_resource_freqdeck_can_draw():
+    deck = starting_resource_bank()
+    assert freqdeck_can_draw(deck, 10, BRICK)
+    assert not freqdeck_can_draw(deck, 20, BRICK)
 
 
-def test_resource_deck_can_draw():
-    deck = ResourceDeck.starting_bank()
-    assert deck.can_draw(10, Resource.BRICK)
-    assert not deck.can_draw(20, Resource.BRICK)
+def test_resource_freqdeck_integration():
+    deck = starting_resource_bank()
+    assert freqdeck_count(deck, WHEAT) == 19
+    assert sum(deck) == 19 * 5
 
+    assert freqdeck_can_draw(deck, 10, WHEAT)
+    freqdeck_draw(deck, 10, WHEAT)
+    assert freqdeck_count(deck, WHEAT) == 9
 
-def test_resource_deck_integration():
-    deck = ResourceDeck.starting_bank()
-    assert deck.count(Resource.WHEAT) == 19
-    assert deck.num_cards() == 19 * 5
+    freqdeck_draw(deck, 9, WHEAT)
+    assert freqdeck_count(deck, WHEAT) == 0
 
-    assert deck.can_draw(10, Resource.WHEAT)
-    deck.draw(10, Resource.WHEAT)
-    assert deck.count(Resource.WHEAT) == 9
+    freqdeck_replenish(deck, 2, WHEAT)
+    assert freqdeck_count(deck, WHEAT) == 2
 
-    with pytest.raises(ValueError):  # not enough
-        deck.draw(10, Resource.WHEAT)
-
-    deck.draw(9, Resource.WHEAT)
-    assert deck.count(Resource.WHEAT) == 0
-
-    with pytest.raises(ValueError):  # not enough
-        deck.draw(1, Resource.WHEAT)
-
-    deck.replenish(2, Resource.WHEAT)
-    assert deck.count(Resource.WHEAT) == 2
-
-    deck.draw(1, Resource.WHEAT)
-    assert deck.count(Resource.WHEAT) == 1
+    freqdeck_draw(deck, 1, WHEAT)
+    assert freqdeck_count(deck, WHEAT) == 1
 
 
 def test_can_add():
-    a = ResourceDeck()
-    b = ResourceDeck()
+    a = [0, 0, 0, 0, 0]
+    b = [0, 0, 0, 0, 0]
 
-    a.replenish(10, Resource.ORE)
-    b.replenish(1, Resource.ORE)
+    freqdeck_replenish(a, 10, ORE)
+    freqdeck_replenish(b, 1, ORE)
 
-    assert a.count(Resource.ORE) == 10
-    assert b.count(Resource.ORE) == 1
-    b += a
-    assert a.count(Resource.ORE) == 10
-    assert b.count(Resource.ORE) == 11
+    assert freqdeck_count(a, ORE) == 10
+    assert freqdeck_count(b, ORE) == 1
+    b = freqdeck_add(b, a)
+    assert freqdeck_count(a, ORE) == 10
+    assert freqdeck_count(b, ORE) == 11
 
 
 def test_can_subtract():
-    a = ResourceDeck()
-    b = ResourceDeck()
+    a = [0, 0, 0, 0, 0]
+    b = [0, 0, 0, 0, 0]
 
-    a.replenish(13, Resource.SHEEP)
-    b.replenish(4, Resource.SHEEP)
+    freqdeck_replenish(a, 13, SHEEP)
+    freqdeck_replenish(b, 4, SHEEP)
 
-    assert a.count(Resource.SHEEP) == 13
-    assert b.count(Resource.SHEEP) == 4
-    with pytest.raises(ValueError):  # not enough
-        b -= a
+    assert freqdeck_count(a, SHEEP) == 13
+    assert freqdeck_count(b, SHEEP) == 4
 
-    b.replenish(11, Resource.SHEEP)  # now has 15
-    b -= a
-    assert a.count(Resource.SHEEP) == 13
-    assert b.count(Resource.SHEEP) == 2
-
-
-def test_to_array():
-    a = ResourceDeck()
-    assert len(a.to_array()) == 0
-
-    a.replenish(3, Resource.SHEEP)
-    a.replenish(2, Resource.BRICK)
-    assert len(a.to_array()) == 5
-    assert len(set(a.to_array())) == 2
-
-
-def test_random_draw():
-    a = DevelopmentDeck.starting_bank()
-    num_cards = a.num_cards()
-
-    a.random_draw()
-    assert a.num_cards() == num_cards - 1
+    freqdeck_replenish(b, 11, SHEEP)  # now has 15
+    b = freqdeck_subtract(b, a)
+    assert freqdeck_count(a, SHEEP) == 13
+    assert freqdeck_count(b, SHEEP) == 2
 
 
 def test_from_array():
-    a = ResourceDeck.from_array(
-        [
-            Resource.BRICK,
-            Resource.BRICK,
-            Resource.WOOD,
-        ]
-    )
-    assert a.num_cards() == 3
-    assert a.count(Resource.BRICK) == 2
-    assert a.count(Resource.WOOD) == 1
+    a = freqdeck_from_listdeck([BRICK, BRICK, WOOD])
+    assert sum(a) == 3
+    assert freqdeck_count(a, BRICK) == 2
+    assert freqdeck_count(a, WOOD) == 1
 
 
 def test_deck_proba():
-    assert DevelopmentDeck.starting_card_proba(DevelopmentCard.KNIGHT) == 14 / 25
-    assert DevelopmentDeck.starting_card_proba(DevelopmentCard.VICTORY_POINT) == 5 / 25
+    assert starting_devcard_proba(KNIGHT) == 14 / 25
+    assert starting_devcard_proba(VICTORY_POINT) == 5 / 25
+
+
+def test_draw_from_listdeck():
+    listdeck = [1, 2, 2, 4]
+    draw_from_listdeck(listdeck, 1, 2)
+    assert listdeck == [1, 2, 4]

@@ -3,15 +3,14 @@ from gym import spaces
 
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.map import BaseMap, NUM_NODES, Tile
-from catanatron.models.enums import Action, Resource, ActionType
+from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile
+from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
 from catanatron_gym.features import create_sample_vector, get_feature_ordering
 
 
-BASE_TOPOLOGY = BaseMap().topology
-TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == Tile]
-RESOURCE_LIST = list(Resource)
+BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
+TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == LandTile]
 ACTIONS_ARRAY = [
     (ActionType.ROLL, None),
     # TODO: One for each tile (and abuse 1v1 setting).
@@ -23,38 +22,42 @@ ACTIONS_ARRAY = [
     (ActionType.BUY_DEVELOPMENT_CARD, None),
     (ActionType.PLAY_KNIGHT_CARD, None),
     *[
-        (ActionType.PLAY_YEAR_OF_PLENTY, (first_card, RESOURCE_LIST[j]))
-        for i, first_card in enumerate(RESOURCE_LIST)
-        for j in range(i, len(RESOURCE_LIST))
+        (ActionType.PLAY_YEAR_OF_PLENTY, (first_card, RESOURCES[j]))
+        for i, first_card in enumerate(RESOURCES)
+        for j in range(i, len(RESOURCES))
     ],
-    *[(ActionType.PLAY_YEAR_OF_PLENTY, (first_card,)) for first_card in RESOURCE_LIST],
+    *[(ActionType.PLAY_YEAR_OF_PLENTY, (first_card,)) for first_card in RESOURCES],
     (ActionType.PLAY_ROAD_BUILDING, None),
-    *[(ActionType.PLAY_MONOPOLY, r) for r in Resource],
+    *[(ActionType.PLAY_MONOPOLY, r) for r in RESOURCES],
     # 4:1 with bank
     *[
         (ActionType.MARITIME_TRADE, tuple(4 * [i] + [j]))
-        for i in Resource
-        for j in Resource
+        for i in RESOURCES
+        for j in RESOURCES
         if i != j
     ],
     # 3:1 with port
     *[
-        (ActionType.MARITIME_TRADE, tuple(3 * [i] + [None, j]))
-        for i in Resource
-        for j in Resource
+        (ActionType.MARITIME_TRADE, tuple(3 * [i] + [None, j]))  # type: ignore
+        for i in RESOURCES
+        for j in RESOURCES
         if i != j
     ],
     # 2:1 with port
     *[
-        (ActionType.MARITIME_TRADE, tuple(2 * [i] + [None, None, j]))
-        for i in Resource
-        for j in Resource
+        (ActionType.MARITIME_TRADE, tuple(2 * [i] + [None, None, j]))  # type: ignore
+        for i in RESOURCES
+        for j in RESOURCES
         if i != j
     ],
     (ActionType.END_TURN, None),
 ]
-
 ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
+ACTION_TYPES = [i for i in ActionType]
+
+
+def to_action_type_space(action):
+    return ACTION_TYPES.index(action.action_type)
 
 
 def normalize_action(action):

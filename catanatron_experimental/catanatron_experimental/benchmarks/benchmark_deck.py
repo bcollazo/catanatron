@@ -1,84 +1,84 @@
 import timeit
 
 setup = """
-from catanatron.models.decks import Deck, ResourceDeck, DevelopmentDeck
-from catanatron.models.enums import Resource
+from catanatron.models.decks import (
+    starting_resource_bank, freqdeck_count, freqdeck_draw, freqdeck_can_draw,
+    freqdeck_replenish, freqdeck_subtract, freqdeck_add, starting_devcard_bank,
+    freqdeck_from_listdeck)
+from catanatron.models.enums import WOOD, BRICK, SHEEP, WHEAT, ORE, KNIGHT
 """
 
 code = """
-deck = ResourceDeck.starting_bank()
-assert deck.count(Resource.WOOD) == 19
+deck = starting_resource_bank()
+assert freqdeck_count(deck, WOOD) == 19
 
-deck = ResourceDeck.starting_bank()
-assert deck.can_draw(10, Resource.BRICK)
-assert not deck.can_draw(20, Resource.BRICK)
+deck = starting_resource_bank()
+assert freqdeck_can_draw(deck, 10, BRICK)
+assert not freqdeck_can_draw(deck, 20, BRICK)
 
-deck = ResourceDeck.starting_bank()
-assert deck.count(Resource.WHEAT) == 19
-assert deck.num_cards() == 19 * 5
+deck = starting_resource_bank()
+assert freqdeck_count(deck, WHEAT) == 19
+assert sum(deck) == 19 * 5
 
-assert deck.can_draw(10, Resource.WHEAT)
-deck.draw(10, Resource.WHEAT)
-assert deck.count(Resource.WHEAT) == 9
+assert freqdeck_can_draw(deck, 10, WHEAT)
+freqdeck_draw(deck, 10, WHEAT)
+assert freqdeck_count(deck, WHEAT) == 9
 
-deck.draw(9, Resource.WHEAT)
-assert deck.count(Resource.WHEAT) == 0
+freqdeck_draw(deck, 9, WHEAT)
+assert freqdeck_count(deck, WHEAT) == 0
 
-deck.replenish(2, Resource.WHEAT)
-assert deck.count(Resource.WHEAT) == 2
+freqdeck_replenish(deck, 2, WHEAT)
+assert freqdeck_count(deck, WHEAT) == 2
 
-deck.draw(1, Resource.WHEAT)
-assert deck.count(Resource.WHEAT) == 1
+freqdeck_draw(deck, 1, WHEAT)
+assert freqdeck_count(deck, WHEAT) == 1
 
-a = ResourceDeck()
-b = ResourceDeck()
+a = [0,0,0,0,0]
+b = [0,0,0,0,0]
 
-a.replenish(10, Resource.ORE)
-b.replenish(1, Resource.ORE)
+freqdeck_replenish(a, 10, ORE)
+freqdeck_replenish(b, 1, ORE)
 
-assert a.count(Resource.ORE) == 10
-assert b.count(Resource.ORE) == 1
-b += a
-assert a.count(Resource.ORE) == 10
-assert b.count(Resource.ORE) == 11
+assert freqdeck_count(a, ORE) == 10
+assert freqdeck_count(b, ORE) == 1
+b = freqdeck_add(b, a)
+assert freqdeck_count(a, ORE) == 10
+assert freqdeck_count(b, ORE) == 11
 
-a = ResourceDeck()
-b = ResourceDeck()
+a = [0,0,0,0,0]
+b = [0,0,0,0,0]
 
-a.replenish(13, Resource.SHEEP)
-b.replenish(4, Resource.SHEEP)
+freqdeck_replenish(a, 13, SHEEP)
+freqdeck_replenish(b, 4, SHEEP)
 
-assert a.count(Resource.SHEEP) == 13
-assert b.count(Resource.SHEEP) == 4
+assert freqdeck_count(a, SHEEP) == 13
+assert freqdeck_count(b, SHEEP) == 4
 
-b.replenish(11, Resource.SHEEP)  # now has 15
-b -= a
-assert a.count(Resource.SHEEP) == 13
-assert b.count(Resource.SHEEP) == 2
+freqdeck_replenish(b, 11, SHEEP)  # now has 15
+b = freqdeck_subtract(b, a)
+assert freqdeck_count(a, SHEEP) == 13
+assert freqdeck_count(b, SHEEP) == 2
 
-a = ResourceDeck()
-assert len(a.to_array()) == 0
+a = [0,0,0,0,0]
 
-a.replenish(3, Resource.SHEEP)
-a.replenish(2, Resource.BRICK)
-assert len(a.to_array()) == 5
-assert len(set(a.to_array())) == 2
+freqdeck_replenish(a, 3, SHEEP)
+freqdeck_replenish(a, 2, BRICK)
 
-a = DevelopmentDeck.starting_bank()
-num_cards = a.num_cards()
+a = starting_devcard_bank()
+num_cards = len(a)
 
-a.random_draw()
+a.pop()
 
-a = ResourceDeck.from_array(
+a = freqdeck_from_listdeck(
     [
-        Resource.BRICK,
-        Resource.BRICK,
-        Resource.WOOD,
+        BRICK,
+        BRICK,
+        WOOD,
     ]
 )
-assert a.num_cards() == 3
-assert a.count(Resource.BRICK) == 2
-assert a.count(Resource.WOOD) == 1
+assert sum(a) == 3
+assert freqdeck_count(a, BRICK) == 2
+assert freqdeck_count(a, WOOD) == 1
 """
 
 NUMBER = 10000
@@ -90,4 +90,4 @@ result = timeit.timeit(
 print("deck integration", result / NUMBER, "secs")
 
 # Results:
-# deck integration 7.86495955006103e-05 secs
+# deck integration 4.865029100000001e-06 secs

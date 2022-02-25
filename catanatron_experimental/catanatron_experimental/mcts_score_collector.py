@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from catanatron.game import Game
 from catanatron.models.actions import Action
-from catanatron.models.enums import BuildingType, Resource
+from catanatron.models.enums import BuildingType
 from catanatron.state_functions import (
     get_longest_road_length,
     get_played_dev_cards,

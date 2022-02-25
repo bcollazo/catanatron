@@ -5,11 +5,10 @@ Classes to encode/decode catanatron classes to JSON format.
 import json
 from enum import Enum
 
+from catanatron.models.map import Water, Port, LandTile
 from catanatron.game import Game
-from catanatron.models.map import Water, Port, Tile
 from catanatron.models.player import Color
-from catanatron.models.decks import Deck
-from catanatron.models.enums import Resource, Action, ActionType
+from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.state_functions import get_longest_road_length
 
 
@@ -29,7 +28,7 @@ def action_from_json(data):
         action = Action(
             color,
             action_type,
-            tuple([None if i is None else Resource[i] for i in data[2]]),
+            tuple([None if i is None else RESOURCES[i] for i in data[2]]),
         )
     else:
         action = Action(color, action_type, data[2])
@@ -40,6 +39,8 @@ class GameEncoder(json.JSONEncoder):
     def default(self, obj):
         if obj is None:
             return None
+        if isinstance(obj, str):
+            return obj
         if isinstance(obj, Enum):
             return obj.value
         if isinstance(obj, tuple):
@@ -92,8 +93,6 @@ class GameEncoder(json.JSONEncoder):
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
                 "winning_color": obj.winning_color(),
             }
-        if isinstance(obj, Deck):
-            return {resource.value: obj.array[i] for i, resource in enumerate(Resource)}
         if isinstance(obj, Water):
             return {"type": "WATER"}
         if isinstance(obj, Port):
@@ -103,7 +102,7 @@ class GameEncoder(json.JSONEncoder):
                 "direction": self.default(obj.direction),
                 "resource": self.default(obj.resource),
             }
-        if isinstance(obj, Tile):
+        if isinstance(obj, LandTile):
             if obj.resource is None:
                 return {"id": obj.id, "type": "DESERT"}
             return {

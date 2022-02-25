@@ -18,9 +18,7 @@ def objective(config):
         ValueFunctionPlayer(Color.RED, "C", params=DEFAULT_WEIGHTS),
         ValueFunctionPlayer(Color.BLUE, "C", params=config),
     ]
-    wins, results_by_player = play_batch(
-        100, players, None, False, False, loglevel="ERROR"
-    )
+    wins, results_by_player = play_batch(100, players)
     vps = results_by_player[players[1].color]
     avg_vps = sum(vps) / len(vps)
     score = 100 * wins[players[1].color] + avg_vps

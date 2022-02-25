@@ -39,9 +39,7 @@ def objective(trial):
         ValueFunctionPlayer(Color.RED, "C", params=DEFAULT_WEIGHTS),
         ValueFunctionPlayer(Color.BLUE, "C", params=weights),
     ]
-    wins, results_by_player = play_batch(
-        200, players, None, False, False, loglevel="ERROR"
-    )
+    wins, results_by_player = play_batch(200, players)
     vps = results_by_player[players[1].color]
     avg_vps = sum(vps) / len(vps)
     return 1000 * wins[players[1].color] + avg_vps

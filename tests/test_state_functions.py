@@ -1,6 +1,5 @@
 import pytest
 
-from catanatron.models.map import BaseMap
 from catanatron.state import State, apply_action
 from catanatron.state_functions import (
     buy_dev_card,
@@ -24,7 +23,7 @@ from catanatron.models.player import Color, SimplePlayer
 def test_cant_steal_devcards():
     # Arrange: Have RED buy 1 dev card (and have no resource cards)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    state = State(players, BaseMap())
+    state = State(players)
     player_deck_replenish(state, Color.RED, WHEAT)
     player_deck_replenish(state, Color.RED, ORE)
     player_deck_replenish(state, Color.RED, SHEEP)
@@ -38,7 +37,7 @@ def test_cant_steal_devcards():
 def test_defeating_your_own_largest_army_doesnt_give_more_vps():
     # Arrange: Buy all dev cards
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
-    state = State(players, BaseMap())
+    state = State(players)
     player_deck_replenish(state, players[0].color, SHEEP, 26)
     player_deck_replenish(state, players[0].color, WHEAT, 26)
     player_deck_replenish(state, players[0].color, ORE, 26)

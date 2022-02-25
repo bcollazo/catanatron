@@ -5,8 +5,7 @@ import numpy as np
 import pickle
 from catanatron.game import Game, State
 from catanatron.models.player import RandomPlayer, Color
-from catanatron.models.decks import ResourceDeck
-from catanatron.models.enums import Resource, BuildingType, Action, ActionType
+from catanatron.models.enums import BuildingType, Action, ActionType
 
 game = Game(
     [
@@ -44,8 +43,8 @@ state_copy = dict()
 state_copy['players'] = players
 state_copy['board'] = board
 state_copy['actions'] = game.state.actions.copy()
-state_copy['resource_deck'] = pickle.loads(pickle.dumps(game.state.resource_deck))
-state_copy['development_deck'] = pickle.loads(pickle.dumps(game.state.development_deck))
+state_copy['resource_freqdeck'] = game.state.resource_freqdeck.copy()
+state_copy['development_listdeck'] = game.state.development_listdeck.copy()
 state_copy['current_player_index'] = game.state.current_player_index
 state_copy['num_turns'] = game.state.num_turns
 
@@ -88,8 +87,6 @@ print(result / NUMBER, "secs; theoretical-limit? (arrays + dicts + map-reuse)")
 
 
 # Results:
-# 0.00045712706199992683 secs; game.copy()
-# 8.875908100162633e-05 secs; hand-hydrated
-# 1.0377163001976441e-05 secs; theoretical-limit? (arrays + dicts + map-reuse)
-# 8.97490599891171e-06 secs
-# 8.097766003629659e-06 secs
+# 3.558104199999998e-05 secs; game.copy()
+# 5.459833999999997e-06 secs; hand-hydrated
+# 2.3131659999999776e-06 secs; theoretical-limit? (arrays + dicts + map-reuse)
