@@ -5,8 +5,17 @@ of the code decoupled from state representation.
 """
 import random
 
-from catanatron.models.decks import ResourceDeck
-from catanatron.models.enums import VICTORY_POINT, BuildingType, Resource
+from catanatron.models.decks import ROAD_COST_FREQDECK, freqdeck_add
+from catanatron.models.enums import (
+    VICTORY_POINT,
+    BuildingType,
+    WOOD,
+    BRICK,
+    SHEEP,
+    WHEAT,
+    ORE,
+    FastResource,
+)
 
 
 def mantain_longest_road(state, previous_road_color, road_color, road_lengths):
@@ -143,7 +152,9 @@ def build_road(state, color, edge, is_free):
     if not is_free:
         state.player_state[f"{key}_WOOD_IN_HAND"] -= 1
         state.player_state[f"{key}_BRICK_IN_HAND"] -= 1
-        state.resource_deck += ResourceDeck.road_cost()  # replenish bank
+        state.resource_freqdeck = freqdeck_add(
+            state.resource_freqdeck, ROAD_COST_FREQDECK
+        )  # replenish bank
 
 
 def build_city(state, color, node_id):
@@ -171,14 +182,14 @@ def player_can_afford_dev_card(state, color):
     )
 
 
-def player_resource_deck_contains(state, color, deck):
+def player_resource_freqdeck_contains(state, color, freqdeck):
     key = player_key(state, color)
     return (
-        state.player_state[f"{key}_WOOD_IN_HAND"] >= deck.array[0]
-        and state.player_state[f"{key}_BRICK_IN_HAND"] >= deck.array[1]
-        and state.player_state[f"{key}_SHEEP_IN_HAND"] >= deck.array[2]
-        and state.player_state[f"{key}_WHEAT_IN_HAND"] >= deck.array[3]
-        and state.player_state[f"{key}_ORE_IN_HAND"] >= deck.array[4]
+        state.player_state[f"{key}_WOOD_IN_HAND"] >= freqdeck[0]
+        and state.player_state[f"{key}_BRICK_IN_HAND"] >= freqdeck[1]
+        and state.player_state[f"{key}_SHEEP_IN_HAND"] >= freqdeck[2]
+        and state.player_state[f"{key}_WHEAT_IN_HAND"] >= freqdeck[3]
+        and state.player_state[f"{key}_ORE_IN_HAND"] >= freqdeck[4]
     )
 
 
@@ -190,13 +201,13 @@ def player_can_play_dev(state, color, dev_card):
     )
 
 
-def player_deck_add(state, color, deck):
+def player_freqdeck_add(state, color, freqdeck):
     key = player_key(state, color)
-    state.player_state[f"{key}_WOOD_IN_HAND"] += deck.array[0]
-    state.player_state[f"{key}_BRICK_IN_HAND"] += deck.array[1]
-    state.player_state[f"{key}_SHEEP_IN_HAND"] += deck.array[2]
-    state.player_state[f"{key}_WHEAT_IN_HAND"] += deck.array[3]
-    state.player_state[f"{key}_ORE_IN_HAND"] += deck.array[4]
+    state.player_state[f"{key}_WOOD_IN_HAND"] += freqdeck[0]
+    state.player_state[f"{key}_BRICK_IN_HAND"] += freqdeck[1]
+    state.player_state[f"{key}_SHEEP_IN_HAND"] += freqdeck[2]
+    state.player_state[f"{key}_WHEAT_IN_HAND"] += freqdeck[3]
+    state.player_state[f"{key}_ORE_IN_HAND"] += freqdeck[4]
 
 
 def buy_dev_card(state, color, dev_card):
@@ -215,7 +226,7 @@ def buy_dev_card(state, color, dev_card):
     state.player_state[f"{key}_ORE_IN_HAND"] -= 1
 
 
-def player_num_resource_cards(state, color, card=None):
+def player_num_resource_cards(state, color, card: FastResource = None):
     key = player_key(state, color)
     if card is None:
         return (
@@ -243,21 +254,21 @@ def player_num_dev_cards(state, color):
 def player_deck_to_array(state, color):
     key = player_key(state, color)
     return (
-        state.player_state[f"{key}_WOOD_IN_HAND"] * [Resource.WOOD]
-        + state.player_state[f"{key}_BRICK_IN_HAND"] * [Resource.BRICK]
-        + state.player_state[f"{key}_SHEEP_IN_HAND"] * [Resource.SHEEP]
-        + state.player_state[f"{key}_WHEAT_IN_HAND"] * [Resource.WHEAT]
-        + state.player_state[f"{key}_ORE_IN_HAND"] * [Resource.ORE]
+        state.player_state[f"{key}_WOOD_IN_HAND"] * [WOOD]
+        + state.player_state[f"{key}_BRICK_IN_HAND"] * [BRICK]
+        + state.player_state[f"{key}_SHEEP_IN_HAND"] * [SHEEP]
+        + state.player_state[f"{key}_WHEAT_IN_HAND"] * [WHEAT]
+        + state.player_state[f"{key}_ORE_IN_HAND"] * [ORE]
     )
 
 
-def player_deck_subtract(state, color, to_discard):
+def player_deck_subtract(state, color, freqdeck):
     key = player_key(state, color)
-    state.player_state[f"{key}_WOOD_IN_HAND"] -= to_discard.array[0]
-    state.player_state[f"{key}_BRICK_IN_HAND"] -= to_discard.array[1]
-    state.player_state[f"{key}_SHEEP_IN_HAND"] -= to_discard.array[2]
-    state.player_state[f"{key}_WHEAT_IN_HAND"] -= to_discard.array[3]
-    state.player_state[f"{key}_ORE_IN_HAND"] -= to_discard.array[4]
+    state.player_state[f"{key}_WOOD_IN_HAND"] -= freqdeck[0]
+    state.player_state[f"{key}_BRICK_IN_HAND"] -= freqdeck[1]
+    state.player_state[f"{key}_SHEEP_IN_HAND"] -= freqdeck[2]
+    state.player_state[f"{key}_WHEAT_IN_HAND"] -= freqdeck[3]
+    state.player_state[f"{key}_ORE_IN_HAND"] -= freqdeck[4]
 
 
 def player_deck_draw(state, color, card, amount=1):
@@ -274,7 +285,7 @@ def player_deck_replenish(state, color, resource, amount=1):
 def player_deck_random_draw(state, color):
     deck_array = player_deck_to_array(state, color)
     resource = random.choice(deck_array)
-    player_deck_draw(state, color, resource.value)
+    player_deck_draw(state, color, resource)
     return resource
 
 
@@ -286,7 +297,7 @@ def play_dev_card(state, color, dev_card):
     state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = True
     state.player_state[f"{key}_PLAYED_{dev_card}"] += 1
     if dev_card == "KNIGHT":
-        mantain_largets_army(state, color, previous_army_color, previous_army_size)
+        mantain_largets_army(state, color, previous_army_color, previous_army_size)  # type: ignore
 
 
 def player_clean_turn(state, color):

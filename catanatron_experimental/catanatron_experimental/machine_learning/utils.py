@@ -128,7 +128,7 @@ def get_discounted_return(game, p0_color, discount_factor):
     """
     assert discount_factor <= 1
     episode_return = p0_color == game.winning_color()
-    return episode_return * discount_factor ** game.state.num_turns
+    return episode_return * discount_factor**game.state.num_turns
 
 
 def get_tournament_return(game, p0_color, discount_factor):
@@ -138,7 +138,7 @@ def get_tournament_return(game, p0_color, discount_factor):
     key = player_key(game.state, p0_color)
     points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
     episode_return = episode_return * 1000 + min(points, 10)
-    return episode_return * discount_factor ** game.state.num_turns
+    return episode_return * discount_factor**game.state.num_turns
 
 
 def get_victory_points_return(game, p0_color):
@@ -148,7 +148,7 @@ def get_victory_points_return(game, p0_color):
     key = player_key(game.state, p0_color)
     points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
     episode_return = min(points, 10)
-    return episode_return * 0.9999 ** game.state.num_turns
+    return episode_return * 0.9999**game.state.num_turns
 
 
 def populate_matrices(

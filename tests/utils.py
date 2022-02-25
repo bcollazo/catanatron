@@ -1,8 +1,11 @@
+from catanatron.game import Game
 from catanatron.models.enums import Action, ActionType
 
 
 def build_initial_placements(
-    game, p0_actions=[0, (0, 1), 2, (1, 2)], p1_actions=[24, (24, 25), 26, (25, 26)]
+    game: Game,
+    p0_actions=[0, (0, 1), 2, (1, 2)],
+    p1_actions=[24, (24, 25), 26, (25, 26)],
 ):
     p0_color = game.state.players[0].color
     p1_color = game.state.players[1].color

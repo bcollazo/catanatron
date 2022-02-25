@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
-from catanatron.game import Accumulator, Game
+from catanatron.game import GameAccumulator, Game
 from catanatron.json import GameEncoder
 from catanatron.state_functions import (
     get_actual_victory_points,
@@ -28,13 +28,13 @@ from catanatron_experimental.machine_learning.utils import (
     DISCOUNT_FACTOR,
 )
 from catanatron_gym.features import create_sample
-from catanatron_gym.envs.catanatron_env import to_action_space
+from catanatron_gym.envs.catanatron_env import to_action_space, to_action_type_space
 from catanatron_experimental.machine_learning.board_tensor_features import (
     create_board_tensor,
 )
 
 
-class VpDistributionAccumulator(Accumulator):
+class VpDistributionAccumulator(GameAccumulator):
     """
     Accumulates CITIES,SETTLEMENTS,DEVVPS,LONGEST,LARGEST
     in each game per player.
@@ -50,7 +50,7 @@ class VpDistributionAccumulator(Accumulator):
 
         self.num_games = 0
 
-    def finalize(self, game: Game):
+    def after(self, game: Game):
         winner = game.winning_color()
         if winner is None:
             return  # throw away data
@@ -103,7 +103,7 @@ class VpDistributionAccumulator(Accumulator):
             return self.devvps[color] / self.num_games
 
 
-class StatisticsAccumulator(Accumulator):
+class StatisticsAccumulator(GameAccumulator):
     def __init__(self):
         self.wins = defaultdict(int)
         self.turns = []
@@ -112,10 +112,10 @@ class StatisticsAccumulator(Accumulator):
         self.games = []
         self.results_by_player = defaultdict(list)
 
-    def initialize(self, game):
+    def before(self, game):
         self.start = time.time()
 
-    def finalize(self, game):
+    def after(self, game):
         duration = time.time() - self.start
         winning_color = game.winning_color()
         if winning_color is None:
@@ -141,50 +141,53 @@ class StatisticsAccumulator(Accumulator):
         return sum(self.durations) / len(self.durations)
 
 
-class StepDatabaseAccumulator(Accumulator):
+class StepDatabaseAccumulator(GameAccumulator):
     """
     Saves a game state to database for each tick.
     Slows game ~1s per tick.
     """
 
-    def initialize(self, game):
+    def before(self, game):
         with database_session() as session:
             upsert_game_state(game, session)
 
-    def step(game):
+    def step(self, game):
         with database_session() as session:
             upsert_game_state(game, session)
 
 
-class DatabaseAccumulator(Accumulator):
+class DatabaseAccumulator(GameAccumulator):
     """Saves last game state to database"""
 
-    def finalize(self, game):
+    def after(self, game):
         self.link = ensure_link(game)
 
 
-class JsonDataAccumulator(Accumulator):
+class JsonDataAccumulator(GameAccumulator):
     def __init__(self, output):
         self.output = output
 
-    def finalize(self, game):
+    def after(self, game):
         filepath = os.path.join(self.output, f"{game.id}.json")
         with open(filepath, "w") as f:
             f.write(json.dumps(game, cls=GameEncoder))
 
 
-class CsvDataAccumulator(Accumulator):
+class CsvDataAccumulator(GameAccumulator):
     def __init__(self, output):
         self.output = output
 
-    def initialize(self, game):
+    def before(self, game):
         self.data = defaultdict(
-            lambda: {"samples": [], "actions": [], "board_tensors": []}
+            lambda: {"samples": [], "actions": [], "board_tensors": [], "games": []}
         )
 
     def step(self, game, action):
         self.data[action.color]["samples"].append(create_sample(game, action.color))
-        self.data[action.color]["actions"].append(to_action_space(action))
+        self.data[action.color]["actions"].append(
+            [to_action_space(action), to_action_type_space(action)]
+        )
+        self.data[action.color]["games"].append(game.copy())
         board_tensor = create_board_tensor(game, action.color)
         shape = board_tensor.shape
         flattened_tensor = tf.reshape(
@@ -192,7 +195,7 @@ class CsvDataAccumulator(Accumulator):
         ).numpy()
         self.data[action.color]["board_tensors"].append(flattened_tensor)
 
-    def finalize(self, game):
+    def after(self, game):
         if game.winning_color() is None:
             return  # drop game
 
@@ -204,6 +207,7 @@ class CsvDataAccumulator(Accumulator):
         labels = []
         for color in game.state.colors:
             player_data = self.data[color]
+            # TODO: return label, 2-ply search label, 1-play value function.
 
             # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
             episode_return = get_discounted_return(game, color, 1)
@@ -240,7 +244,9 @@ class CsvDataAccumulator(Accumulator):
         board_tensors_df = (
             pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
         )
-        actions_df = pd.DataFrame(actions, columns=["ACTION"]).astype("int")
+        actions_df = pd.DataFrame(actions, columns=["ACTION", "ACTION_TYPE"]).astype(
+            "int"
+        )
         rewards_df = pd.DataFrame(
             labels,
             columns=[

@@ -16,7 +16,7 @@ from catanatron_experimental.machine_learning.players.minimax import (
 
 SIMULATIONS = 10
 epsilon = 1e-8
-EXP_C = 2 ** 0.5
+EXP_C = 2**0.5
 
 
 class StateNode:

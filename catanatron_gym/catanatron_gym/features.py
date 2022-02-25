@@ -1,6 +1,7 @@
-from typing import Tuple
+from typing import Any, List, Tuple
 import functools
 from collections import Counter
+from catanatron.models.decks import freqdeck_count
 
 import networkx as nx
 
@@ -11,12 +12,11 @@ from catanatron.state_functions import (
     player_num_resource_cards,
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
-from catanatron.models.map import NUM_NODES, NUM_TILES
+from catanatron.models.map import NUM_TILES, CatanMap
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
-    Resource,
     BuildingType,
     ActionType,
     VICTORY_POINT,
@@ -50,7 +50,7 @@ def iter_players(colors: Tuple[Color], p0_color: Color):
 
 
 # ===== Extractors
-def player_features(game, p0_color):
+def player_features(game: Game, p0_color: Color):
     # P0_ACTUAL_VPS
     # P{i}_PUBLIC_VPS, P1_PUBLIC_VPS, ...
     # P{i}_HAS_ARMY, P{i}_HAS_ROAD, P1_HAS_ARMY, ...
@@ -82,7 +82,7 @@ def player_features(game, p0_color):
     return features
 
 
-def resource_hand_features(game, p0_color):
+def resource_hand_features(game: Game, p0_color: Color):
     # P0_WHEATS_IN_HAND, P0_WOODS_IN_HAND, ...
     # P0_ROAD_BUILDINGS_IN_HAND, P0_KNIGHT_IN_HAND, ..., P0_VPS_IN_HAND
     # P0_ROAD_BUILDINGS_PLAYABLE, P0_KNIGHT_PLAYABLE, ...
@@ -123,16 +123,15 @@ def resource_hand_features(game, p0_color):
     return features
 
 
-@functools.lru_cache(NUM_TILES)  # one for each robber
-def map_tile_features(catan_map, robber_coordinate):
+@functools.lru_cache(NUM_TILES * 2)  # one for each robber, and acount for Minimap
+def map_tile_features(catan_map: CatanMap, robber_coordinate):
     # Returns list of functions that take a game and output a feature.
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
     features = {}
 
-    for tile_id in range(NUM_TILES):
-        tile = catan_map.tiles_by_id[tile_id]
-        for resource in Resource:
-            features[f"TILE{tile_id}_IS_{resource.value}"] = tile.resource == resource
+    for tile_id, tile in catan_map.tiles_by_id.items():
+        for resource in RESOURCES:
+            features[f"TILE{tile_id}_IS_{resource}"] = tile.resource == resource
         features[f"TILE{tile_id}_IS_DESERT"] = tile.resource == None
         features[f"TILE{tile_id}_PROBA"] = (
             0 if tile.resource is None else number_probability(tile.number)
@@ -143,7 +142,7 @@ def map_tile_features(catan_map, robber_coordinate):
     return features
 
 
-def tile_features(game, p0_color):
+def tile_features(game: Game, p0_color: Color):
     # Returns list of functions that take a game and output a feature.
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
     return map_tile_features(game.state.board.map, game.state.board.robber_coordinate)
@@ -153,8 +152,8 @@ def tile_features(game, p0_color):
 def map_port_features(catan_map):
     features = {}
     for port_id, port in catan_map.ports_by_id.items():
-        for resource in Resource:
-            features[f"PORT{port_id}_IS_{resource.value}"] = port.resource == resource
+        for resource in RESOURCES:
+            features[f"PORT{port_id}_IS_{resource}"] = port.resource == resource
         features[f"PORT{port_id}_IS_THREE_TO_ONE"] = port.resource is None
     return features
 
@@ -165,13 +164,13 @@ def port_features(game, p0_color):
 
 
 @functools.lru_cache(4)
-def initialize_graph_features_template(num_players):
+def initialize_graph_features_template(num_players, catan_map: CatanMap):
     features = {}
     for i in range(num_players):
-        for node_id in range(NUM_NODES):
+        for node_id in range(len(catan_map.land_nodes)):
             for building in [BuildingType.SETTLEMENT, BuildingType.CITY]:
                 features[f"NODE{node_id}_P{i}_{building.value}"] = False
-        for edge in get_edges():
+        for edge in get_edges(catan_map.land_nodes):
             features[f"EDGE{edge}_P{i}_ROAD"] = False
     return features
 
@@ -190,8 +189,10 @@ def get_node_hot_encoded(player_index, colors, settlements, cities, roads):
     return features
 
 
-def graph_features(game, p0_color):
-    features = initialize_graph_features_template(len(game.state.colors)).copy()
+def graph_features(game: Game, p0_color: Color):
+    features = initialize_graph_features_template(
+        len(game.state.colors), game.state.board.map
+    ).copy()
 
     for i, color in iter_players(game.state.colors, p0_color):
         settlements = tuple(
@@ -210,12 +211,12 @@ def graph_features(game, p0_color):
 def build_production_features(consider_robber):
     prefix = "EFFECTIVE_" if consider_robber else "TOTAL_"
 
-    def production_features(game, p0_color):
+    def production_features(game: Game, p0_color: Color):
         # P0_WHEAT_PRODUCTION, P0_ORE_PRODUCTION, ..., P1_WHEAT_PRODUCTION, ...
         features = {}
         board = game.state.board
         robbed_nodes = set(board.map.tiles[board.robber_coordinate].nodes.values())
-        for resource in Resource:
+        for resource in RESOURCES:
             for i, color in iter_players(game.state.colors, p0_color):
                 production = 0
                 for node_id in get_player_buildings(
@@ -234,7 +235,7 @@ def build_production_features(consider_robber):
                     production += 2 * get_node_production(
                         game.state.board, node_id, resource
                     )
-                features[f"{prefix}P{i}_{resource.value}_PRODUCTION"] = production
+                features[f"{prefix}P{i}_{resource}_PRODUCTION"] = production
 
         return features
 
@@ -247,7 +248,7 @@ def get_node_production(board, node_id, resource):
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 
-def get_player_expandable_nodes(game, color):
+def get_player_expandable_nodes(game: Game, color: Color):
     node_sets = game.state.board.find_connected_components(color)
     enemies = [enemy for enemy in game.state.players if enemy.color != color]
     enemy_node_ids = set()
@@ -271,7 +272,7 @@ def get_player_expandable_nodes(game, color):
 REACHABLE_FEATURES_MAX = 3  # exclusive
 
 
-def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
+def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES_MAX):
     features = {}
 
     board_buildable = game.state.board.buildable_node_ids(p0_color, True)
@@ -292,8 +293,8 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
             frozenset(owned_or_buildable.intersection(base_layer_nodes)),
             game.state.board,
         )
-        for resource in Resource:
-            features[f"P{i}_0_ROAD_REACHABLE_{resource.value}"] = production[resource]
+        for resource in RESOURCES:
+            features[f"P{i}_0_ROAD_REACHABLE_{resource}"] = production[resource]
 
         # for layers deep:
         last_layer_nodes = base_layer_nodes
@@ -314,8 +315,8 @@ def reachability_features(game, p0_color, levels=REACHABLE_FEATURES_MAX):
                 frozenset(owned_or_buildable.intersection(level_nodes)),
                 game.state.board,
             )
-            for resource in Resource:
-                features[f"P{i}_{level}_ROAD_REACHABLE_{resource.value}"] = production[
+            for resource in RESOURCES:
+                features[f"P{i}_{level}_ROAD_REACHABLE_{resource}"] = production[
                     resource
                 ]
 
@@ -332,14 +333,14 @@ def count_production(nodes, board):
     return production
 
 
-def expansion_features(game, p0_color):
+def expansion_features(game: Game, p0_color: Color):
     global STATIC_GRAPH
     MAX_EXPANSION_DISTANCE = 3  # exclusive
 
     features = {}
 
     # For each connected component node, bfs_edges (skipping enemy edges and nodes nodes)
-    empty_edges = set(get_edges())
+    empty_edges = set(get_edges(game.state.board.map.land_nodes))
     for i, color in iter_players(game.state.colors, p0_color):
         empty_edges.difference_update(
             get_player_buildings(game.state, color, BuildingType.ROAD)
@@ -361,12 +362,12 @@ def expansion_features(game, p0_color):
 
         # owned_edges = get_player_buildings(state, color, BuildingType.ROAD)
         dis_res_prod = {
-            distance: {k: 0 for k in Resource}
+            distance: {k: 0 for k in RESOURCES}
             for distance in range(MAX_EXPANSION_DISTANCE)
         }
         for node_id in expandable_node_ids:
             if node_id in board_buildable_node_ids:  # node itself is buildable
-                for resource in Resource:
+                for resource in RESOURCES:
                     production = get_node_production(
                         game.state.board, node_id, resource
                     )
@@ -395,7 +396,7 @@ def expansion_features(game, p0_color):
                     continue
 
                 # means we can get to node b, at distance=d, starting from path[0]
-                for resource in Resource:
+                for resource in RESOURCES:
                     production = get_node_production(game.state.board, b, resource)
                     dis_res_prod[distance][resource] = max(
                         production, dis_res_prod[distance][resource]
@@ -403,18 +404,20 @@ def expansion_features(game, p0_color):
 
         for distance, res_prod in dis_res_prod.items():
             for resource, prod in res_prod.items():
-                features[f"P{i}_{resource.value}_AT_DISTANCE_{int(distance)}"] = prod
+                features[f"P{i}_{resource}_AT_DISTANCE_{int(distance)}"] = prod
 
     return features
 
 
-def port_distance_features(game, p0_color):
+def port_distance_features(game: Game, p0_color: Color):
     # P0_HAS_WHEAT_PORT, P0_WHEAT_PORT_DISTANCE, ..., P1_HAS_WHEAT_PORT,
     features = {}
     ports = game.state.board.map.port_nodes
     distances = get_node_distances()
-    for resource_or_none in list(Resource) + [None]:
-        port_name = "3:1" if resource_or_none is None else resource_or_none.value
+    resources_and_none: List[Any] = RESOURCES.copy()
+    resources_and_none += [None]
+    for resource_or_none in resources_and_none:
+        port_name = resource_or_none or "3:1"
         for i, color in iter_players(game.state.colors, p0_color):
             expandable_node_ids = get_player_expandable_nodes(game, color)
             if len(expandable_node_ids) == 0:
@@ -433,16 +436,18 @@ def port_distance_features(game, p0_color):
     return features
 
 
-def game_features(game, p0_color):
+def game_features(game: Game, p0_color: Color):
     # BANK_WOODS, BANK_WHEATS, ..., BANK_DEV_CARDS
     possibilities = set([a.action_type for a in game.state.playable_actions])
     features = {
-        "BANK_DEV_CARDS": game.state.development_deck.num_cards(),
+        "BANK_DEV_CARDS": len(game.state.development_listdeck),
         "IS_MOVING_ROBBER": ActionType.MOVE_ROBBER in possibilities,
         "IS_DISCARDING": ActionType.DISCARD in possibilities,
     }
-    for resource in Resource:
-        features[f"BANK_{resource.value}"] = game.state.resource_deck.count(resource)
+    for resource in RESOURCES:
+        features[f"BANK_{resource}"] = freqdeck_count(
+            game.state.resource_freqdeck, resource
+        )
     return features
 
 

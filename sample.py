@@ -1,5 +1,5 @@
-from catanatron.game import Game
-from catanatron.models.player import RandomPlayer, Color
+from catanatron import Game, RandomPlayer, Color
+
 from catanatron_experimental.my_player import MyPlayer
 from catanatron_server.utils import open_link
 

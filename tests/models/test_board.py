@@ -1,6 +1,7 @@
 import pytest
 
-from catanatron.models.enums import Resource
+from catanatron.models.map import MINI_MAP_TEMPLATE, CatanMap
+from catanatron.models.enums import RESOURCES
 from catanatron.models.board import Board, get_node_distances
 from catanatron.models.player import Color
 
@@ -67,7 +68,7 @@ def test_calling_the_edge_differently_is_not_a_problem():
 def test_get_ports():
     board = Board()
     ports = board.map.port_nodes
-    for resource in Resource:
+    for resource in RESOURCES:
         assert len(ports[resource]) == 2
     assert len(ports[None]) == 8
 
@@ -94,6 +95,14 @@ def test_buildable_nodes():
     assert len(nodes) == 0
     nodes = board.buildable_node_ids(Color.RED, initial_build_phase=True)
     assert len(nodes) == 54
+
+
+def test_buildable_nodes_in_mini_map():
+    board = Board(catan_map=CatanMap(MINI_MAP_TEMPLATE))
+    nodes = board.buildable_node_ids(Color.RED)
+    assert len(nodes) == 0
+    nodes = board.buildable_node_ids(Color.RED, initial_build_phase=True)
+    assert len(nodes) == 24
 
 
 def test_placing_settlement_removes_four_buildable_nodes():
@@ -144,6 +153,13 @@ def test_buildable_edges_simple():
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
     buildable = board.buildable_edges(Color.RED)
     assert len(buildable) == 3
+
+
+def test_buildable_edges_in_mini():
+    board = Board(catan_map=CatanMap(MINI_MAP_TEMPLATE))
+    board.build_settlement(Color.RED, 19, initial_build_phase=True)
+    buildable = board.buildable_edges(Color.RED)
+    assert len(buildable) == 2
 
 
 def test_buildable_edges():

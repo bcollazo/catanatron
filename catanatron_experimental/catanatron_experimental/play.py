@@ -1,4 +1,6 @@
 import os
+import importlib.util
+from dataclasses import dataclass
 
 import click
 from rich.console import Console
@@ -13,11 +15,16 @@ from rich.text import Text
 from catanatron.game import Game
 from catanatron.models.player import Color
 from catanatron.state_functions import get_actual_victory_points
+from catanatron.models.map import BASE_MAP_TEMPLATE, MINI_MAP_TEMPLATE, CatanMap
 
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from catanatron_experimental.utils import ensure_dir, formatSecs
-from catanatron_experimental.cli.cli_players import player_help_table, CLI_PLAYERS
+from catanatron_experimental.cli.cli_players import (
+    CUSTOM_ACCUMULATORS,
+    player_help_table,
+    CLI_PLAYERS,
+)
 from catanatron_experimental.cli.accumulators import (
     JsonDataAccumulator,
     CsvDataAccumulator,
@@ -25,6 +32,7 @@ from catanatron_experimental.cli.accumulators import (
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
+from catanatron_experimental.cli.simulation_accumulator import SimulationAccumulator
 
 
 custom_theme = Theme(
@@ -62,6 +70,11 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     """,
 )
 @click.option(
+    "--code",
+    default=None,
+    help="Path to file with custom Players and Accumulators to import and use.",
+)
+@click.option(
     "-o",
     "--output",
     default=None,
@@ -87,9 +100,26 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
         """,
 )
 @click.option(
-    "--quiet/--no-quiet",
+    "--config-discard-limit",
+    default=7,
+    help="Sets Discard Limit to use in games.",
+)
+@click.option(
+    "--config-vps-to-win",
+    default=10,
+    help="Sets Victory Points needed to win games.",
+)
+@click.option(
+    "--config-map",
+    default="BASE",
+    type=click.Choice(["BASE", "MINI"], case_sensitive=False),
+    help="Sets Map to use. MINI is a 7-tile smaller version.",
+)
+@click.option(
+    "--quiet",
     default=False,
-    help="Whether to print results to the console",
+    is_flag=True,
+    help="Silence console output. Useful for debugging.",
 )
 @click.option(
     "--help-players",
@@ -98,7 +128,20 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Show player codes and exits.",
     is_flag=True,
 )
-def simulate(num, players, output, json, csv, db, quiet, help_players):
+def simulate(
+    num,
+    players,
+    code,
+    output,
+    json,
+    csv,
+    db,
+    config_discard_limit,
+    config_vps_to_win,
+    config_map,
+    quiet,
+    help_players,
+):
     """
     Catan Bot Simulator.
     Catanatron allows you to simulate millions of games at scale
@@ -110,8 +153,14 @@ def simulate(num, players, output, json, csv, db, quiet, help_players):
         catanatron-play --players=VP,F --num=10 --output=data/ --json\n
         catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
     """
+    if code:
+        abspath = os.path.abspath(code)
+        spec = importlib.util.spec_from_file_location("module.name", abspath)
+        user_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(user_module)
+
     if help_players:
-        return Console().print(player_help_table)
+        return Console().print(player_help_table())
     if output and not (json or csv):
         return print("--output requires either --json or --csv to be set")
 
@@ -128,7 +177,32 @@ def simulate(num, players, output, json, csv, db, quiet, help_players):
                 players.append(player)
                 break
 
-    play_batch(num, players, output, json, csv, db, quiet)
+    output_options = OutputOptions(output, csv, json, db)
+    game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
+    play_batch(
+        num,
+        players,
+        output_options,
+        game_config,
+        quiet,
+    )
+
+
+@dataclass(frozen=True)
+class OutputOptions:
+    """Class to keep track of output CLI flags"""
+
+    output: str = None  # path to store files
+    csv: bool = False
+    json: bool = False
+    db: bool = False
+
+
+@dataclass(frozen=True)
+class GameConfigOptions:
+    discard_limit: int = 7
+    vps_to_win: int = 10
+    catan_map: str = "BASE"
 
 
 COLOR_TO_RICH_STYLE = {
@@ -151,40 +225,65 @@ def rich_color(color):
     return f"[{style}]{color.value}[/{style}]"
 
 
-def play_batch_core(num_games, players, accumulators=[]):
+def play_batch_core(num_games, players, game_config, accumulators=[]):
+    for accumulator in accumulators:
+        if isinstance(accumulator, SimulationAccumulator):
+            accumulator.before_all()
+
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        game = Game(players)
+        catan_map = (
+            CatanMap(MINI_MAP_TEMPLATE)
+            if game_config.catan_map == "MINI"
+            else CatanMap(BASE_MAP_TEMPLATE)
+        )
+        game = Game(
+            players,
+            discard_limit=game_config.discard_limit,
+            vps_to_win=game_config.vps_to_win,
+            catan_map=catan_map,
+        )
         game.play(accumulators)
         yield game
+
+    for accumulator in accumulators:
+        if isinstance(accumulator, SimulationAccumulator):
+            accumulator.after_all()
 
 
 def play_batch(
     num_games,
     players,
-    output=None,
-    json=False,
-    csv=False,
-    db=False,
+    output_options=None,
+    game_config=None,
     quiet=False,
 ):
+    output_options = output_options or OutputOptions()
+    game_config = game_config or GameConfigOptions()
+
     statistics_accumulator = StatisticsAccumulator()
     vp_accumulator = VpDistributionAccumulator()
     accumulators = [statistics_accumulator, vp_accumulator]
-    if output:
-        ensure_dir(output)
-    if output and csv:
-        accumulators.append(CsvDataAccumulator(output))
-    if output and json:
-        accumulators.append(JsonDataAccumulator(output))
-    if db:
+    if output_options.output:
+        ensure_dir(output_options.output)
+    if output_options.output and output_options.csv:
+        accumulators.append(CsvDataAccumulator(output_options.output))
+    if output_options.output and output_options.json:
+        accumulators.append(JsonDataAccumulator(output_options.output))
+    if output_options.db:
         accumulators.append(DatabaseAccumulator())
+    for accumulator_class in CUSTOM_ACCUMULATORS:
+        accumulators.append(accumulator_class(players=players, game_config=game_config))
 
     if quiet:
-        for _ in play_batch_core(num_games, players, accumulators):
+        for _ in play_batch_core(num_games, players, game_config, accumulators):
             pass
-        return
+        return (
+            dict(statistics_accumulator.wins),
+            dict(statistics_accumulator.results_by_player),
+            statistics_accumulator.games,
+        )
 
     # ===== Game Details
     last_n = 10
@@ -196,7 +295,7 @@ def play_batch(
     for player in players:
         table.add_column(f"{player.color.value} VP", justify="right")
     table.add_column("WINNER")
-    if db:
+    if output_options.db:
         table.add_column("LINK", overflow="fold")
 
     with Progress(
@@ -214,7 +313,9 @@ def play_batch(
             for player in players
         ]
 
-        for i, game in enumerate(play_batch_core(num_games, players, accumulators)):
+        for i, game in enumerate(
+            play_batch_core(num_games, players, game_config, accumulators)
+        ):
             winning_color = game.winning_color()
 
             if (num_games - last_n) < (i + 1):
@@ -228,7 +329,7 @@ def play_batch(
                     points = get_actual_victory_points(game.state, player.color)
                     row.append(str(points))
                 row.append(rich_color(winning_color))
-                if db:
+                if output_options.db:
                     row.append(accumulators[-1].link)
 
                 table.add_row(*row)
@@ -284,8 +385,8 @@ def play_batch(
     table.add_row(avg_ticks, avg_turns, avg_duration)
     console.print(table)
 
-    if output and csv:
-        console.print(f"GZIP CSVs saved at: [green]{output}[/green]")
+    if output_options.output and output_options.csv:
+        console.print(f"GZIP CSVs saved at: [green]{output_options.output}[/green]")
 
     return (
         dict(statistics_accumulator.wins),

@@ -2,7 +2,7 @@ from catanatron.state import (
     State,
     build_city,
     build_settlement,
-    player_deck_add,
+    player_freqdeck_add,
     player_deck_replenish,
 )
 from catanatron.models.actions import (
@@ -15,19 +15,19 @@ from catanatron.models.actions import (
     robber_possibilities,
     maritime_trade_possibilities,
 )
-from catanatron.models.board import Board
 from catanatron.models.enums import (
     BRICK,
     ORE,
-    Resource,
+    RESOURCES,
     ActionType,
-    ActionPrompt,
     WHEAT,
     WOOD,
 )
 from catanatron.models.player import Color, SimplePlayer
-from catanatron.game import Game
-from catanatron.models.decks import ResourceDeck
+from catanatron.models.decks import (
+    SETTLEMENT_COST_FREQDECK,
+    starting_resource_bank,
+)
 
 
 def test_playable_actions():
@@ -40,20 +40,19 @@ def test_playable_actions():
 
 
 def test_year_of_plenty_possible_actions_full_resource_bank():
-    bank_resource_deck = ResourceDeck.starting_bank()
-    actions = year_of_plenty_possibilities(Color.RED, bank_resource_deck)
+    bank_resource_freqdeck = starting_resource_bank()
+    actions = year_of_plenty_possibilities(Color.RED, bank_resource_freqdeck)
     assert len(actions) == 15
 
 
 def test_year_of_plenty_possible_actions_not_enough_cards():
-    bank_resource_deck = ResourceDeck()
-    bank_resource_deck.replenish(2, Resource.ORE)
-    actions = year_of_plenty_possibilities(Color.RED, bank_resource_deck)
+    bank_resource_freqdeck = [0, 0, 0, 0, 2]
+    actions = year_of_plenty_possibilities(Color.RED, bank_resource_freqdeck)
     assert len(actions) == 2  # one ORE, or 2 OREs.
 
 
 def test_monopoly_possible_actions():
-    assert len(monopoly_possibilities(Color.RED)) == len(Resource)
+    assert len(monopoly_possibilities(Color.RED)) == len(RESOURCES)
 
 
 def test_road_possible_actions():
@@ -84,7 +83,7 @@ def test_settlement_possible_actions():
     state.board.build_road(Color.RED, (4, 5))
     assert len(settlement_possibilities(state, Color.RED)) == 0  # no money
 
-    player_deck_add(state, player.color, ResourceDeck.settlement_cost())
+    player_freqdeck_add(state, player.color, SETTLEMENT_COST_FREQDECK)
     assert len(settlement_possibilities(state, Color.RED)) == 1
 
     state.board.build_road(Color.RED, (5, 0))
@@ -134,7 +133,7 @@ def test_robber_possibilities():
     player_deck_replenish(state, blue.color, WHEAT)
     possibilities = len(robber_possibilities(state, Color.RED))
     assert possibilities == 19 or (
-        possibilities == 18 and state.board.map.tiles[(0, 0, 0)].resource is None
+        possibilities == 18 and state.board.map.land_tiles[(0, 0, 0)].resource is None
     )
 
 
@@ -208,11 +207,9 @@ def test_maritime_possibities_respect_bank_not_having_cards():
 
 
 def test_year_of_plenty_same_resource():
-    bank = ResourceDeck()
-    bank.replenish(1, Resource.WHEAT)
+    bank = [0, 0, 0, 1, 0]
 
-    player = SimplePlayer(Color.RED)
     actions = year_of_plenty_possibilities(Color.RED, bank)
 
     assert len(actions) == 1
-    assert actions[0].value[0] == Resource.WHEAT
+    assert actions[0].value[0] == WHEAT

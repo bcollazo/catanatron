@@ -3,9 +3,9 @@
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
 [![Join the chat at https://gitter.im/bcollazo-catanatron/community](https://badges.gitter.im/bcollazo-catanatron/community.svg)](https://gitter.im/bcollazo-catanatron/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/catanatron_experimental/catanatron_experimental/notebooks/Overview.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/catanatron_experimental/catanatron_experimental/Overview.ipynb)
 
-Settlers of Catan Bot Simulator. Test out bot strategies at scale (thousands of games per minutes). The goal of this project is to find the strongest Settlers of Catan bot possible.
+Settlers of Catan Bot and Bot Simulator. Test out bot strategies at scale (thousands of games per minutes). The goal of this project is to find the strongest Settlers of Catan bot possible.
 
 See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https://medium.com/@bcollazo2010/5-ways-not-to-build-a-catan-ai-e01bc491af17).
 
@@ -13,19 +13,16 @@ See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https:/
  <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/cli.gif">
 </p>
 
-## Getting Started
+## Installation
 
-The main usage is to clone this repo, install dependencies, and run simulations/experiments
-so as to find stronger bot implementations and strategies.
-
-1. Clone the repository
+Clone this repository and install dependencies. This will include the Catanatron bot implementation and the `catanatron-play` simulator.
 
 ```
-git clone https://github.com/bcollazo/catanatron
+git clone git@github.com:bcollazo/catanatron.git
 cd catanatron/
 ```
 
-2. Install dependencies (needs Python3.8)
+Create a virtual environment with Python3.8 or higher. Then:
 
 ```
 pip install -r dev-requirements.txt
@@ -35,50 +32,133 @@ pip install -e catanatron_gym
 pip install -e catanatron_experimental
 ```
 
-3. Use `catanatron-play` to run simulations and generate datasets!
+## Usage
+
+Run simulations and generate datasets via the CLI:
 
 ```
-catanatron-play --players=R,W,F,AB:2 --num=1000
+catanatron-play --players=R,R,R,W --num=100
 ```
-
-Currently, we can execute one game in ~76 milliseconds and the best bot is `AB:2` (basically an Alpha Beta Prunning algorithm with a hand-crafted value function).
 
 See more information with `catanatron-play --help`.
 
-## How to make Catanatron stronger?
+## Try Your Own Bots
 
-There are two main ways of testing a potentially stronger bot.
+Implement your own bots by creating a file (e.g. `myplayers.py`) with some `Player` implementations:
 
-- Use Contender Bot in `catanatron-play`. There is already some infrastructure in which you can change the weights of the hand-crafted features in the current evaluation function right now ([minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)). You could also come up with new hand-crafted features! To do this, edit the `CONTENDER_WEIGHTS` and/or `contender_fn` function and run a command like: `catanatron-play --players=AB:2,AB:2:False:C --num=100` to see if your changes improve the main bot (it should consistently win more games).
+```python
+from catanatron import Player
+from catanatron_experimental.cli.cli_players import register_player
 
-- If your bot idea is considerably different than the tree-search structure `AlphaBetaPlayer` follows, implement your idea in the provided `MyPlayer` stub ([my_player.py](catanatron_experimental/catanatron_experimental/my_player.py)), and test it against the best bot: `catanatron-play --players=AB:2,M --num=100`. See other example player implementations in [catanatron_core/catanatron/players](catanatron_core/catanatron/players) and [minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)
+@register_player("FOO")
+class FooPlayer(Player):
+  def decide(self, game, playable_actions):
+    """Should return one of the playable_actions.
+
+    Args:
+        game (Game): complete game state. read-only.
+        playable_actions (Iterable[Action]): options to choose from
+    Return:
+        action (Action): Chosen element of playable_actions
+    """
+    # ===== YOUR CODE HERE =====
+    # As an example we simply return the first action:
+    return playable_actions[0]
+    # ===== END YOUR CODE =====
+```
+
+Run it by passing the source code to `catanatron-play`:
+
+```
+catanatron-play --code=myplayers.py --players=R,R,R,FOO --num=10
+```
+
+## How to Make Catanatron Stronger?
+
+The best bot right now is Alpha Beta Search with a hand-crafted value function. One of the most promising ways of improving Catanatron
+is to copy the code from ([minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)) to your
+`myplayers.py` and tweak the weights of the value function. You can
+also come up with your own innovative features!
+
+For more sophisticated approaches, see example player implementations in [catanatron_core/catanatron/players](catanatron_core/catanatron/players)
 
 If you find a bot that consistently beats the best bot right now, please submit a Pull Request! :)
 
-## Watching Games (Browser UI)
+## Advanced Usage
+
+### Inspecting Games (Browser UI)
+
+We provide a [docker-compose.yml](docker-compose.yml) with everything needed to watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
 
 <p align="left">
  <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/CatanatronUI.png">
 </p>
 
-We provide a [docker-compose.yml](docker-compose.yml) with everything needed to watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
-
-To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install/) installed, and run (from repo root):
+To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install/) installed, and run (from this repo's root):
 
 ```
 docker-compose up
 ```
 
-Then alongside it, use the `open_link` helper function to open up any finished game you have:
+You can now use the `--db` flag to make the catanatron-play simulator save
+the game in the database for inspection via the web server.
+
+```
+catanatron-play --players=W,W,W,W --db --num=1
+```
+
+NOTE: A great contribution would be to make the Web UI allow to step forwards and backwards in a game to inspect it (ala chess.com).
+
+### Accumulators
+
+The `Accumulator` class allows you to hook into important events during simulations.
+
+For example, write a file like `mycode.py` and have:
+
+```python
+from catanatron import ActionType
+from catanatron_experimental import SimulationAccumulator, register_accumulator
+
+@register_accumulator
+class PortTradeCounter(SimulationAccumulator):
+  def before_all(self):
+    self.num_trades = 0
+
+  def step(self, game_before_action, action):
+    if action.action_type == ActionType.MARITIME_TRADE:
+      self.num_trades += 1
+
+  def after_all(self):
+    print(f'There were {self.num_trades} port trades!')
+```
+
+Then `catanatron-play --code=mycode.py` will count the number of trades in all simulations.
+
+### As a Package / Library
+
+You can also use `catanatron` package directly which provides a core
+implementation of the Settlers of Catan game logic.
+
+```python
+from catanatron import Game, RandomPlayer, Color
+
+# Play a simple 4v4 game
+players = [
+    RandomPlayer(Color.RED),
+    RandomPlayer(Color.BLUE),
+    RandomPlayer(Color.WHITE),
+    RandomPlayer(Color.ORANGE),
+]
+game = Game(players)
+print(game.play())  # returns winning color
+```
+
+You can use the `open_link` helper function to open up the game (useful for debugging):
 
 ```python
 from catanatron_server.utils import open_link
 open_link(game)  # opens game in browser
 ```
-
-See [sample.py](sample.py) for an example of this (run `python sample.py`).
-
-NOTE: A great contribution would be to make the Web UI allow to step forwards and backwards in a game to inspect it (ala chess.com).
 
 ## Architecture
 
@@ -147,12 +227,10 @@ As an alternative to running the project with Docker, you can run the following 
 
 ### React UI
 
-Make sure you have `yarn` installed (https://classic.yarnpkg.com/en/docs/install/).
-
 ```
 cd ui/
-yarn install
-yarn start
+npm install
+npm start
 ```
 
 This can also be run via Docker independetly like (after building):
@@ -177,7 +255,7 @@ flask run
 This can also be run via Docker independetly like (after building):
 
 ```
-docker build -t bcollazo/catanatron-server:latest .
+docker build -t bcollazo/catanatron-server:latest . -f Dockerfile.web
 docker run -it -p 5000:5000 bcollazo/catanatron-server
 ```
 

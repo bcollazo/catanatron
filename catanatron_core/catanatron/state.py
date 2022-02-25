@@ -5,20 +5,35 @@ Module with main State class and main apply_action call (game controller).
 import random
 import pickle
 from collections import defaultdict
+from typing import Any, List
 
-from catanatron.models.map import BaseMap
+from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     MONOPOLY,
     RESOURCES,
-    Resource,
+    YEAR_OF_PLENTY,
     BuildingType,
     Action,
     ActionPrompt,
     ActionType,
 )
-from catanatron.models.decks import DevelopmentDeck, ResourceDeck
+from catanatron.models.decks import (
+    CITY_COST_FREQDECK,
+    DEVELOPMENT_CARD_COST_FREQDECK,
+    SETTLEMENT_COST_FREQDECK,
+    draw_from_listdeck,
+    freqdeck_add,
+    freqdeck_can_draw,
+    freqdeck_contains,
+    freqdeck_draw,
+    freqdeck_from_listdeck,
+    freqdeck_replenish,
+    freqdeck_subtract,
+    starting_devcard_bank,
+    starting_resource_bank,
+)
 from catanatron.models.actions import (
     generate_playable_actions,
     road_building_possibilities,
@@ -33,7 +48,7 @@ from catanatron.state_functions import (
     player_can_afford_dev_card,
     player_can_play_dev,
     player_clean_turn,
-    player_deck_add,
+    player_freqdeck_add,
     player_deck_draw,
     player_deck_random_draw,
     player_deck_replenish,
@@ -41,13 +56,8 @@ from catanatron.state_functions import (
     player_deck_to_array,
     player_key,
     player_num_resource_cards,
-    player_resource_deck_contains,
+    player_resource_freqdeck_contains,
 )
-
-# For now have some Game-Configuration aspects hard-coded here
-#   eventually it might become part of an immutable (not copied)
-#   property for game-config in state.
-DISCARD_LIMIT = 7
 
 # These will be prefixed by P0_, P1_, ...
 # Create Player State blueprint
@@ -87,10 +97,10 @@ class State:
             Example: { P0_HAS_ROAD: False, P1_SETTLEMENTS_AVAILABLE: 18, ... }
         color_to_index (Dict[Color, int]): Color to seating location cache
         colors (Tuple[Color]): Represents seating order.
-        resource_deck (ResourceDeck): Represents resource cards in the bank.
-            TODO: Change to less abstracted (faster) representation.
-        development_deck (DevelopmentDeck): Represents development cards in
-            the bank. TODO: Change to less abstracted (faster) representation.
+        resource_freqdeck (List[int]): Represents resource cards in the bank.
+            Each element is the amount of [WOOD, BRICK, SHEEP, WHEAT, ORE].
+        development_listdeck (List[FastDevCard]): Represents development cards in
+            the bank. Already shuffled.
         buildings_by_color (Dict[Color, Dict[BuildingType, List]]): Cache of
             buildings. Can be used like: `buildings_by_color[Color.RED][BuildingType.SETTLEMENT]`
             to get a list of all node ids where RED has settlements.
@@ -111,10 +121,17 @@ class State:
         playable_actions (List[Action]): List of playable actions by current player.
     """
 
-    def __init__(self, players, catan_map=None, initialize=True):
+    def __init__(
+        self,
+        players: List[Any],
+        catan_map=None,
+        discard_limit=7,
+        initialize=True,
+    ):
         if initialize:
             self.players = random.sample(players, len(players))
-            self.board = Board(catan_map or BaseMap())
+            self.board = Board(catan_map or CatanMap(BASE_MAP_TEMPLATE))
+            self.discard_limit = discard_limit
 
             # feature-ready dictionary
             self.player_state = dict()
@@ -126,8 +143,9 @@ class State:
             }
             self.colors = tuple([player.color for player in self.players])
 
-            self.resource_deck = ResourceDeck.starting_bank()
-            self.development_deck = DevelopmentDeck.starting_bank()
+            self.resource_freqdeck = starting_resource_bank()
+            self.development_listdeck = starting_devcard_bank()
+            random.shuffle(self.development_listdeck)
 
             # Auxiliary attributes to implement game logic
             self.buildings_by_color = {p.color: defaultdict(list) for p in players}
@@ -155,23 +173,23 @@ class State:
 
     def copy(self):
         """Creates a copy of this State class that can be modified without
-        repercusions to this one.
+        repercusions to this one. Immutable values are just copied over.
 
         Returns:
             State: State copy.
         """
-        state_copy = State(None, None, initialize=False)
+        state_copy = State([], None, initialize=False)
         state_copy.players = self.players
+        state_copy.discard_limit = self.discard_limit  # immutable
 
         state_copy.board = self.board.copy()
 
         state_copy.player_state = self.player_state.copy()
         state_copy.color_to_index = self.color_to_index
-        state_copy.colors = self.colors  # immutable, so no need to copy
+        state_copy.colors = self.colors  # immutable
 
-        # TODO: Move Deck to functional code, so as to quick-copy arrays.
-        state_copy.resource_deck = pickle.loads(pickle.dumps(self.resource_deck))
-        state_copy.development_deck = pickle.loads(pickle.dumps(self.development_deck))
+        state_copy.resource_freqdeck = self.resource_freqdeck.copy()
+        state_copy.development_listdeck = self.development_listdeck.copy()
 
         state_copy.buildings_by_color = pickle.loads(
             pickle.dumps(self.buildings_by_color)
@@ -204,23 +222,23 @@ def roll_dice():
     return (random.randint(1, 6), random.randint(1, 6))
 
 
-def yield_resources(board, resource_deck, number):
+def yield_resources(board: Board, resource_freqdeck, number):
     """Computes resource payouts for given board and dice roll number.
 
     Args:
         board (Board): Board state
-        resource_deck (ResourceDeck): Bank's resource deck
+        resource_freqdeck (List[int]): Bank's resource freqdeck
         number (int): Sum of dice roll
 
     Returns:
-        (dict, array): 2-tuple. First element is color => deck mapping.
-            e.g. {Color.RED: ResourceDeck({Resource.WEAT: 3})}.
+        (dict, List[int]): 2-tuple.
+            First element is color => freqdeck mapping. e.g. {Color.RED: [0,0,0,3,0]}.
             Second is an array of resources that couldn't be yieleded
-            because they depleted.
+                because they depleted.
     """
     intented_payout = defaultdict(lambda: defaultdict(int))
     resource_totals = defaultdict(int)
-    for coordinate, tile in board.map.resource_tiles:
+    for (coordinate, tile) in board.map.land_tiles.items():
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield
 
@@ -237,19 +255,19 @@ def yield_resources(board, resource_deck, number):
 
     # for each resource, check enough in deck to yield.
     depleted = []
-    for resource in Resource:
+    for resource in RESOURCES:
         total = resource_totals[resource]
-        if not resource_deck.can_draw(total, resource):
+        if not freqdeck_can_draw(resource_freqdeck, total, resource):
             depleted.append(resource)
 
-    # build final data ResourceDeck structure
+    # build final data color => freqdeck structure
     payout = {}
     for player, player_payout in intented_payout.items():
-        payout[player] = ResourceDeck()
+        payout[player] = [0, 0, 0, 0, 0]
 
         for resource, count in player_payout.items():
             if resource not in depleted:
-                payout[player].replenish(count, resource)
+                freqdeck_replenish(payout[player], count, resource)
 
     return payout, depleted
 
@@ -305,8 +323,8 @@ def apply_action(state: State, action: Action):
                 key = player_key(state, action.color)
                 for tile in state.board.map.adjacent_tiles[node_id]:
                     if tile.resource != None:
-                        state.resource_deck.draw(1, tile.resource)
-                        state.player_state[f"{key}_{tile.resource.value}_IN_HAND"] += 1
+                        freqdeck_draw(state.resource_freqdeck, 1, tile.resource)  # type: ignore
+                        state.player_state[f"{key}_{tile.resource}_IN_HAND"] += 1
 
             # state.current_player_index stays the same
             state.current_prompt = ActionPrompt.BUILD_INITIAL_ROAD
@@ -318,7 +336,9 @@ def apply_action(state: State, action: Action):
                 road_lengths,
             ) = state.board.build_settlement(action.color, node_id, False)
             build_settlement(state, action.color, node_id, False)
-            state.resource_deck += ResourceDeck.settlement_cost()  # replenish bank
+            state.resource_freqdeck = freqdeck_add(
+                state.resource_freqdeck, SETTLEMENT_COST_FREQDECK
+            )  # replenish bank
             mantain_longest_road(state, previous_road_color, road_color, road_lengths)
 
             # state.current_player_index stays the same
@@ -381,25 +401,29 @@ def apply_action(state: State, action: Action):
         node_id = action.value
         state.board.build_city(action.color, node_id)
         build_city(state, action.color, node_id)
-        state.resource_deck += ResourceDeck.city_cost()  # replenish bank
+        state.resource_freqdeck = freqdeck_add(
+            state.resource_freqdeck, CITY_COST_FREQDECK
+        )  # replenish bank
 
         # state.current_player_index stays the same
         # state.current_prompt stays as PLAY
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-        if state.development_deck.num_cards() == 0:
+        if len(state.development_listdeck) == 0:
             raise ValueError("No more development cards")
         if not player_can_afford_dev_card(state, action.color):
             raise ValueError("No money to buy development card")
 
         if action.value is None:
-            card = state.development_deck.random_draw()
+            card = state.development_listdeck.pop()  # already shuffled
         else:
             card = action.value
-            state.development_deck.draw(1, card)
+            draw_from_listdeck(state.development_listdeck, 1, card)
 
-        buy_dev_card(state, action.color, card.value)
-        state.resource_deck += ResourceDeck.development_card_cost()
+        buy_dev_card(state, action.color, card)
+        state.resource_freqdeck = freqdeck_add(
+            state.resource_freqdeck, DEVELOPMENT_CARD_COST_FREQDECK
+        )
 
         action = Action(action.color, action.action_type, card)
         # state.current_player_index stays the same
@@ -415,7 +439,7 @@ def apply_action(state: State, action: Action):
 
         if number == 7:
             discarders = [
-                player_num_resource_cards(state, color) > DISCARD_LIMIT
+                player_num_resource_cards(state, color) > state.discard_limit
                 for color in state.colors
             ]
             is_discarding = any(discarders)
@@ -430,11 +454,13 @@ def apply_action(state: State, action: Action):
                 state.is_moving_knight = True
             state.playable_actions = generate_playable_actions(state)
         else:
-            payout, _ = yield_resources(state.board, state.resource_deck, number)
-            for color, resource_deck in payout.items():
+            payout, _ = yield_resources(state.board, state.resource_freqdeck, number)
+            for color, resource_freqdeck in payout.items():
                 # Atomically add to player's hand and remove from bank
-                player_deck_add(state, color, resource_deck)
-                state.resource_deck -= resource_deck
+                player_freqdeck_add(state, color, resource_freqdeck)
+                state.resource_freqdeck = freqdeck_subtract(
+                    state.resource_freqdeck, resource_freqdeck
+                )
 
             # state.current_player_index stays the same
             state.current_prompt = ActionPrompt.PLAY_TURN
@@ -447,10 +473,10 @@ def apply_action(state: State, action: Action):
             discarded = random.sample(hand, k=num_to_discard)
         else:
             discarded = action.value  # for replay functionality
-        to_discard = ResourceDeck.from_array(discarded)
+        to_discard = freqdeck_from_listdeck(discarded)
 
         player_deck_subtract(state, action.color, to_discard)
-        state.resource_deck += to_discard
+        state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, to_discard)
         action = Action(action.color, action.action_type, discarded)
 
         # Advance turn
@@ -480,8 +506,8 @@ def apply_action(state: State, action: Action):
                     (coordinate, robbed_color, robbed_resource),
                 )
             else:  # for replay functionality
-                player_deck_draw(state, robbed_color, robbed_resource.value)
-            player_deck_replenish(state, action.color, robbed_resource.value)
+                player_deck_draw(state, robbed_color, robbed_resource)
+            player_deck_replenish(state, action.color, robbed_resource)
 
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.PLAY_TURN
@@ -496,34 +522,36 @@ def apply_action(state: State, action: Action):
         state.current_prompt = ActionPrompt.MOVE_ROBBER
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
-        cards_selected = ResourceDeck.from_array(action.value)
-        if not player_can_play_dev(state, action.color, "YEAR_OF_PLENTY"):
+        cards_selected = freqdeck_from_listdeck(action.value)
+        if not player_can_play_dev(state, action.color, YEAR_OF_PLENTY):
             raise ValueError("Player cant play year of plenty now")
-        if not state.resource_deck.includes(cards_selected):
+        if not freqdeck_contains(state.resource_freqdeck, cards_selected):
             raise ValueError("Not enough resources of this type (these types?) in bank")
-        player_deck_add(state, action.color, cards_selected)
-        state.resource_deck -= cards_selected
-        play_dev_card(state, action.color, "YEAR_OF_PLENTY")
+        player_freqdeck_add(state, action.color, cards_selected)
+        state.resource_freqdeck = freqdeck_subtract(
+            state.resource_freqdeck, cards_selected
+        )
+        play_dev_card(state, action.color, YEAR_OF_PLENTY)
 
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.PLAY_TURN
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_MONOPOLY:
         mono_resource = action.value
-        cards_stolen = ResourceDeck()
-        if not player_can_play_dev(state, action.color, "MONOPOLY"):
+        cards_stolen = [0, 0, 0, 0, 0]
+        if not player_can_play_dev(state, action.color, MONOPOLY):
             raise ValueError("Player cant play monopoly now")
         for color in state.colors:
             if not color == action.color:
                 key = player_key(state, color)
                 number_of_cards_to_steal = state.player_state[
-                    f"{key}_{mono_resource.value}_IN_HAND"
+                    f"{key}_{mono_resource}_IN_HAND"
                 ]
-                cards_stolen.replenish(number_of_cards_to_steal, mono_resource)
-                player_deck_draw(
-                    state, color, mono_resource.value, number_of_cards_to_steal
+                freqdeck_replenish(
+                    cards_stolen, number_of_cards_to_steal, mono_resource
                 )
-        player_deck_add(state, action.color, cards_stolen)
+                player_deck_draw(state, color, mono_resource, number_of_cards_to_steal)
+        player_freqdeck_add(state, action.color, cards_stolen)
         play_dev_card(state, action.color, MONOPOLY)
 
         # state.current_player_index stays the same
@@ -542,18 +570,18 @@ def apply_action(state: State, action: Action):
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.MARITIME_TRADE:
         trade_offer = action.value
-        offering = ResourceDeck.from_array(
+        offering = freqdeck_from_listdeck(
             filter(lambda r: r is not None, trade_offer[:-1])
         )
-        asking = ResourceDeck.from_array(trade_offer[-1:])
-        if not player_resource_deck_contains(state, action.color, offering):
+        asking = freqdeck_from_listdeck(trade_offer[-1:])
+        if not player_resource_freqdeck_contains(state, action.color, offering):
             raise ValueError("Trying to trade without money")
-        if not state.resource_deck.includes(asking):
+        if not freqdeck_contains(state.resource_freqdeck, asking):
             raise ValueError("Bank doenst have those cards")
         player_deck_subtract(state, action.color, offering)
-        state.resource_deck += offering
-        player_deck_add(state, action.color, asking)
-        state.resource_deck -= asking
+        state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, offering)
+        player_freqdeck_add(state, action.color, asking)
+        state.resource_freqdeck = freqdeck_subtract(state.resource_freqdeck, asking)
 
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.PLAY_TURN

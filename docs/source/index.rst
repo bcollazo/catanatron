@@ -70,7 +70,7 @@ the ``State.copy`` function.
 The second parameter is the list of playable Actions. An ``Action`` is a tuple of 
 enums and primitives like: 
 
-- ``(ActionType.PLAY_MONOPOLY, Resource.WHEAT)`` (i.e. play monopoly card and select wheat)
+- ``(ActionType.PLAY_MONOPOLY, WHEAT)`` (i.e. play monopoly card and select wheat)
 - ``(ActionType.BUILD_SETTLEMENT, 3)`` (i.e. build settlement on node 3)
 - ``(ActionType.MOVE_ROBBER, (1,0,1), Color.BLUE)`` (i.e. move robber to tile on coordinate (1,0,1) and steal from blue)
 - ``(ActionType.END_TURN, None)`` (i.e. do nothing else and end turn)

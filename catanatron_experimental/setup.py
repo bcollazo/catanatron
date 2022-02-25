@@ -14,7 +14,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=[],  # leaving empty so that heroku build works
+    install_requires=[
+        "rich"
+    ],  # careful including heavy ml-libs since might break heroku build
     entry_points={
         "console_scripts": ["catanatron-play=catanatron_experimental.play:simulate"],
     },

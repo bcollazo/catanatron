@@ -10,31 +10,39 @@ from typing import Iterable, Union
 from catanatron.models.enums import Action
 from catanatron.state import State, apply_action
 from catanatron.state_functions import player_key
-from catanatron.models.map import BaseMap
+from catanatron.models.map import CatanMap
 from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
 
 
-class Accumulator:
+class GameAccumulator:
     """Interface to hook into different game lifecycle events.
 
     Useful to compute aggregate statistics, log information, etc...
     """
 
-    def initialize(self, game):
-        """Called when the game is created, no actions have
+    def __init__(*args, **kwargs):
+        pass
+
+    def before(self, game):
+        """
+        Called when the game is created, no actions have
         been taken by players yet, but the board is decided.
         """
         pass
 
-    def step(self, game, action):
-        """Called after each action taken by a player"""
+    def step(self, game_before_action, action):
+        """
+        Called after each action taken by a player.
+        Game should be right before action is taken.
+        """
         pass
 
-    def finalize(self, game):
-        """Called when the game is finished.
+    def after(self, game):
+        """
+        Called when the game is finished.
 
         Check game.winning_color() to see if the game
         actually finished or exceeded turn limit (is None).
@@ -53,7 +61,9 @@ class Game:
         self,
         players: Iterable[Player],
         seed: int = None,
-        catan_map: BaseMap = None,
+        discard_limit: int = 7,
+        vps_to_win: int = 10,
+        catan_map: CatanMap = None,
         initialize: bool = True,
     ):
         """Creates a game (doesn't run it).
@@ -61,7 +71,9 @@ class Game:
         Args:
             players (Iterable[Player]): list of players, should be at most 4.
             seed (int, optional): Random seed to use (for reproducing games). Defaults to None.
-            catan_map (BaseMap, optional): Map configuration to use. Defaults to None.
+            discard_limit (int, optional): Discard limit to use. Defaults to 7.
+            vps_to_win (int, optional): Victory Points needed to win. Defaults to 10.
+            catan_map (CatanMap, optional): Map to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
         if initialize:
@@ -69,7 +81,8 @@ class Game:
             random.seed(self.seed)
 
             self.id = str(uuid.uuid4())
-            self.state = State(players, catan_map or BaseMap())
+            self.vps_to_win = vps_to_win
+            self.state = State(players, catan_map, discard_limit=discard_limit)
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
@@ -84,17 +97,17 @@ class Game:
         Returns:
             Color: winning color or None if game exceeded TURNS_LIMIT
         """
+        initial_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.initialize(self)
+            accumulator.before(initial_game_state)
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
-            action = self.play_tick(decide_fn=decide_fn)
-            for accumulator in accumulators:
-                accumulator.step(self, action)
+            self.play_tick(decide_fn=decide_fn, accumulators=accumulators)
+        final_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.finalize(self)
+            accumulator.after(final_game_state)
         return self.winning_color()
 
-    def play_tick(self, decide_fn=None):
+    def play_tick(self, decide_fn=None, accumulators=[]):
         """Advances game by one ply (player decision).
 
         Args:
@@ -112,6 +125,11 @@ class Game:
             if decide_fn is not None
             else player.decide(self, actions)
         )
+        # Call accumulator.step here, because we want game_before_action, action
+        if len(accumulators) > 0:
+            game_snapshot = self.copy()
+            for accumulator in accumulators:
+                accumulator.step(game_snapshot, action)
         return self.execute(action)
 
     def execute(self, action: Action, validate_action: bool = True) -> Action:
@@ -132,7 +150,10 @@ class Game:
         winning_player = None
         for player in self.state.players:
             key = player_key(self.state, player.color)
-            if self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] >= 10:
+            if (
+                self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+                >= self.vps_to_win
+            ):
                 winning_player = player
 
         return None if winning_player is None else winning_player.color
@@ -147,5 +168,6 @@ class Game:
         game_copy = Game([], None, None, initialize=False)
         game_copy.seed = self.seed
         game_copy.id = self.id
+        game_copy.vps_to_win = self.vps_to_win
         game_copy.state = self.state.copy()
         return game_copy
