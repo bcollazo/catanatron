@@ -31,8 +31,6 @@ print(result / NUMBER, "secs; game.copy()")
 # Next step
 result = timeit.timeit(
     """
-players = game.state.players.copy()
-
 board = dict()
 board['map'] = game.state.board.map  # for caching speedups
 board['buildings'] = game.state.board.buildings.copy()
@@ -40,7 +38,7 @@ board['roads'] = game.state.board.roads.copy()
 board['connected_components'] = game.state.board.connected_components.copy()
 
 state_copy = dict()
-state_copy['players'] = players
+state_copy['colors'] = game.state.colors.copy()
 state_copy['board'] = board
 state_copy['actions'] = game.state.actions.copy()
 state_copy['resource_freqdeck'] = game.state.resource_freqdeck.copy()

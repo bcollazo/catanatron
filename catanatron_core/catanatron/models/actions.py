@@ -41,7 +41,7 @@ from catanatron.state_functions import (
 
 def generate_playable_actions(state) -> List[Action]:
     action_prompt = state.current_prompt
-    color = state.current_player().color
+    color = state.current_color()
 
     if action_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT:
         return settlement_possibilities(state, color, True)

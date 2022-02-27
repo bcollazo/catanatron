@@ -250,14 +250,14 @@ def get_node_production(board, node_id, resource):
 
 def get_player_expandable_nodes(game: Game, color: Color):
     node_sets = game.state.board.find_connected_components(color)
-    enemies = [enemy for enemy in game.state.players if enemy.color != color]
+    enemy_colors = [enemy_color for enemy_color in game.state.colors if enemy_color != color]
     enemy_node_ids = set()
-    for enemy in enemies:
+    for enemy_color in enemy_colors:
         enemy_node_ids.update(
-            get_player_buildings(game.state, enemy.color, BuildingType.SETTLEMENT)
+            get_player_buildings(game.state, enemy_color, BuildingType.SETTLEMENT)
         )
         enemy_node_ids.update(
-            get_player_buildings(game.state, enemy.color, BuildingType.CITY)
+            get_player_buildings(game.state, enemy_color, BuildingType.CITY)
         )
 
     expandable_node_ids = [
