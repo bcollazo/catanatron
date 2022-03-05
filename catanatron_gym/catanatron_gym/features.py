@@ -284,19 +284,20 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
         )
 
         # Do layer 0
-        zero_nodes = set()
+        base_layer_nodes = set()
         for component in game.state.board.connected_components[color]:
             for node_id in component:
-                zero_nodes.add(node_id)
+                base_layer_nodes.add(node_id)
 
         production = count_production(
-            frozenset(owned_or_buildable.intersection(zero_nodes)), game.state.board
+            frozenset(owned_or_buildable.intersection(base_layer_nodes)),
+            game.state.board,
         )
         for resource in RESOURCES:
             features[f"P{i}_0_ROAD_REACHABLE_{resource}"] = production[resource]
 
         # for layers deep:
-        last_layer_nodes = zero_nodes
+        last_layer_nodes = base_layer_nodes
         for level in range(1, levels):
             level_nodes = set(last_layer_nodes)
             for node_id in last_layer_nodes:
