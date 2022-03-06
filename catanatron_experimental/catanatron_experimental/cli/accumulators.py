@@ -127,9 +127,9 @@ class StatisticsAccumulator(GameAccumulator):
         self.durations.append(duration)
         self.games.append(game)
 
-        for player in game.state.players:
-            points = get_actual_victory_points(game.state, player.color)
-            self.results_by_player[player.color].append(points)
+        for color in game.state.colors:
+            points = get_actual_victory_points(game.state, color)
+            self.results_by_player[color].append(points)
 
     def get_avg_ticks(self):
         return sum(self.ticks) / len(self.ticks)

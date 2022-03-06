@@ -186,9 +186,9 @@ def test_sequence():
     ]
     state = State(players)
 
-    p0 = state.players[0]
+    p0_color = state.colors[0]
     assert state.current_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT
-    assert Action(p0.color, ActionType.BUILD_SETTLEMENT, 0) in state.playable_actions
-    assert Action(p0.color, ActionType.BUILD_SETTLEMENT, 50) in state.playable_actions
+    assert Action(p0_color, ActionType.BUILD_SETTLEMENT, 0) in state.playable_actions
+    assert Action(p0_color, ActionType.BUILD_SETTLEMENT, 50) in state.playable_actions
 
     apply_action(state, state.playable_actions[0])

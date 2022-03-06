@@ -68,7 +68,7 @@ def test_initial_build_phase():
     )
     assert (
         game.state.current_prompt == ActionPrompt.PLAY_TURN
-        and game.state.current_player().color == p0_color
+        and game.state.current_color() == p0_color
     )
 
     assert game.state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 2
@@ -185,19 +185,19 @@ def test_end_turn_goes_to_next_player(fake_roll_dice):
     p1_color = game.state.colors[1]
     assert (
         game.state.current_prompt == ActionPrompt.PLAY_TURN
-        and game.state.current_player().color == p0_color
+        and game.state.current_color() == p0_color
     )
     assert game.state.playable_actions == [Action(p0_color, ActionType.ROLL, None)]
 
     game.execute(Action(p0_color, ActionType.ROLL, None))
     assert game.state.current_prompt == ActionPrompt.PLAY_TURN
-    assert game.state.current_player().color == p0_color
+    assert game.state.current_color() == p0_color
     assert player_has_rolled(game.state, p0_color)
     assert Action(p0_color, ActionType.END_TURN, None) in game.state.playable_actions
 
     game.execute(Action(p0_color, ActionType.END_TURN, None))
     assert game.state.current_prompt == ActionPrompt.PLAY_TURN
-    assert game.state.current_player().color == p1_color
+    assert game.state.current_color() == p1_color
     assert not player_has_rolled(game.state, p0_color)
     assert not player_has_rolled(game.state, p1_color)
     assert game.state.playable_actions == [Action(p1_color, ActionType.ROLL, None)]

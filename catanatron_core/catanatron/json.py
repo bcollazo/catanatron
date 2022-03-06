@@ -14,8 +14,8 @@ from catanatron.state_functions import get_longest_road_length
 
 def longest_roads_by_player(state):
     result = dict()
-    for player in state.players:
-        result[player.color.value] = get_longest_road_length(state, player.color)
+    for color in state.colors:
+        result[color.value] = get_longest_road_length(state, color)
     return result
 
 
@@ -87,7 +87,7 @@ class GameEncoder(json.JSONEncoder):
                 ),
                 "is_initial_build_phase": obj.state.is_initial_build_phase,
                 "robber_coordinate": obj.state.board.robber_coordinate,
-                "current_color": obj.state.current_player().color,
+                "current_color": obj.state.current_color(),
                 "current_prompt": obj.state.current_prompt,
                 "current_playable_actions": obj.state.playable_actions,
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
