@@ -70,17 +70,17 @@ def get_actual_victory_points(state, color):
 
 
 def get_longest_road_color(state):
-    for index in range(len(state.players)):
+    for index in range(len(state.colors)):
         if state.player_state[f"P{index}_HAS_ROAD"]:
-            return state.players[index].color
+            return state.colors[index]
     return None
 
 
 def get_largest_army(state):
-    for index in range(len(state.players)):
+    for index in range(len(state.colors)):
         if state.player_state[f"P{index}_HAS_ARMY"]:
             return (
-                state.players[index].color,
+                state.colors[index],
                 state.player_state[f"P{index}_PLAYED_KNIGHT"],
             )
     return None, None

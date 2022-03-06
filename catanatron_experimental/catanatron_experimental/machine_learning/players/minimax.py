@@ -290,7 +290,7 @@ class AlphaBetaPlayer(Player):
             node.expected_value = value
             return None, value
 
-        maximizingPlayer = game.state.current_player().color == self.color
+        maximizingPlayer = game.state.current_color() == self.color
         actions = self.get_actions(game)  # list of actions.
         action_outcomes = expand_spectrum(game, actions)  # action => (game, proba)[]
 
@@ -303,7 +303,7 @@ class AlphaBetaPlayer(Player):
                 expected_value = 0
                 for j, (outcome, proba) in enumerate(outcomes):
                     out_node = DebugStateNode(
-                        f"{node.label} {i} {j}", outcome.state.current_player().color
+                        f"{node.label} {i} {j}", outcome.state.current_color()
                     )
 
                     result = self.alphabeta(
@@ -336,7 +336,7 @@ class AlphaBetaPlayer(Player):
                 expected_value = 0
                 for j, (outcome, proba) in enumerate(outcomes):
                     out_node = DebugStateNode(
-                        f"{node.label} {i} {j}", outcome.state.current_player().color
+                        f"{node.label} {i} {j}", outcome.state.current_color()
                     )
 
                     result = self.alphabeta(
@@ -414,7 +414,7 @@ def render_debug_tree(node):
 
 
 def list_prunned_actions(game):
-    current_color = game.state.current_player().color
+    current_color = game.state.current_color()
     playable_actions = game.state.playable_actions
     actions = playable_actions.copy()
     types = set(map(lambda a: a.action_type, playable_actions))
@@ -450,13 +450,13 @@ def list_prunned_actions(game):
 
 def prune_robber_actions(current_color, game, actions):
     """Eliminate all but the most impactful tile"""
-    enemy = next(filter(lambda p: p.color != current_color, game.state.players))
+    enemy_color = next(filter(lambda c: c != current_color, game.state.colors))
     enemy_owned_tiles = set()
     for node_id in get_player_buildings(
-        game.state, enemy.color, BuildingType.SETTLEMENT
+        game.state, enemy_color, BuildingType.SETTLEMENT
     ):
         enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
-    for node_id in get_player_buildings(game.state, enemy.color, BuildingType.CITY):
+    for node_id in get_player_buildings(game.state, enemy_color, BuildingType.CITY):
         enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
 
     robber_moves = set(

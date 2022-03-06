@@ -141,7 +141,7 @@ def test_building_settlement_gives_vp():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players)
 
-    build_settlement(state, state.players[0].color, 0, True)
+    build_settlement(state, state.colors[0], 0, True)
     assert state.player_state["P0_VICTORY_POINTS"] == 1
     assert state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 1
 
@@ -150,10 +150,10 @@ def test_building_city_gives_vp():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players)
 
-    build_settlement(state, state.players[0].color, 0, True)
-    player_deck_replenish(state, state.players[0].color, WHEAT, 2)
-    player_deck_replenish(state, state.players[0].color, ORE, 2)
-    build_city(state, state.players[0].color, 0)
+    build_settlement(state, state.colors[0], 0, True)
+    player_deck_replenish(state, state.colors[0], WHEAT, 2)
+    player_deck_replenish(state, state.colors[0], ORE, 2)
+    build_city(state, state.colors[0], 0)
     assert state.player_state["P0_VICTORY_POINTS"] == 2
     assert state.player_state["P0_ACTUAL_VICTORY_POINTS"] == 2
 

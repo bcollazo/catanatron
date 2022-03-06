@@ -87,7 +87,7 @@ def post_action_endpoint(game_id):
 #     if game is None:
 #         abort(404, description="Resource not found")
 
-#     return create_sample(game, game.state.players[player_index].color)
+#     return create_sample(game, game.state.colors[player_index])
 
 
 # @app.route("/games/<string:game_id>/value-function", methods=["GET"])
@@ -101,15 +101,15 @@ def post_action_endpoint(game_id):
 #     feature_ordering = get_feature_ordering()
 #     indices = [feature_ordering.index(f) for f in NUMERIC_FEATURES]
 #     data = {}
-#     for player in game.state.players:
-#         sample = create_sample_vector(game, player.color)
+#     for color in game.state.colors:
+#         sample = create_sample_vector(game, color)
 #         # scores = model.call(tf.convert_to_tensor([sample]))
 
-#         inputs1 = [create_board_tensor(game, player.color)]
+#         inputs1 = [create_board_tensor(game, color)]
 #         inputs2 = [[float(sample[i]) for i in indices]]
 #         scores2 = model2.call(
 #             [tf.convert_to_tensor(inputs1), tf.convert_to_tensor(inputs2)]
 #         )
-#         data[player.color.value] = float(scores2.numpy()[0][0])
+#         data[color.value] = float(scores2.numpy()[0][0])
 
 #     return data

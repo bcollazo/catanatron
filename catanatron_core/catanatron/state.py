@@ -130,18 +130,18 @@ class State:
     ):
         if initialize:
             self.players = random.sample(players, len(players))
+            self.colors = tuple([player.color for player in self.players])
             self.board = Board(catan_map or CatanMap(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit
 
             # feature-ready dictionary
             self.player_state = dict()
-            for index in range(len(self.players)):
+            for index in range(len(self.colors)):
                 for key, value in PLAYER_INITIAL_STATE.items():
                     self.player_state[f"P{index}_{key}"] = value
             self.color_to_index = {
-                player.color: index for index, player in enumerate(self.players)
+                color: index for index, color in enumerate(self.colors)
             }
-            self.colors = tuple([player.color for player in self.players])
 
             self.resource_freqdeck = starting_resource_bank()
             self.development_listdeck = starting_devcard_bank()
@@ -170,6 +170,10 @@ class State:
     def current_player(self):
         """Helper for accessing Player instance who should decide next"""
         return self.players[self.current_player_index]
+
+    def current_color(self):
+        """Helper for accessing color (player) who should decide next"""
+        return self.colors[self.current_player_index]
 
     def copy(self):
         """Creates a copy of this State class that can be modified without
@@ -281,7 +285,7 @@ def advance_turn(state, direction=1):
 
 
 def next_player_index(state, direction=1):
-    return (state.current_player_index + direction) % len(state.players)
+    return (state.current_player_index + direction) % len(state.colors)
 
 
 def apply_action(state: State, action: Action):

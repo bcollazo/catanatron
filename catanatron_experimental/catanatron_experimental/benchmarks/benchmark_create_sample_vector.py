@@ -21,28 +21,28 @@ game.play()
 
 NUMBER = 1000  # usually a game has around 300 turns and 1000 ticks
 result = timeit.timeit(
-    "create_sample_vector(game, game.state.players[0].color)",
+    "create_sample_vector(game, game.state.colors[0])",
     setup=setup,
     number=NUMBER,
 )
 print("create_sample_vector\t", result / NUMBER, "secs")
 
 result = timeit.timeit(
-    "expansion_features(game, game.state.players[0].color)",
+    "expansion_features(game, game.state.colors[0])",
     setup=setup,
     number=NUMBER,
 )
 print("expansion_features\t", result / NUMBER, "secs")
 
 result = timeit.timeit(
-    "reachability_features(game, game.state.players[0].color)",
+    "reachability_features(game, game.state.colors[0])",
     setup=setup,
     number=NUMBER,
 )
 print("reachability_features\t", result / NUMBER, "secs")
 
 result = timeit.timeit(
-    "graph_features(game, game.state.players[0].color)",
+    "graph_features(game, game.state.colors[0])",
     setup=setup,
     number=NUMBER,
 )
@@ -50,7 +50,7 @@ print("graph_features\t\t", result / NUMBER, "secs")
 
 
 result = timeit.timeit(
-    "tile_features(game, game.state.players[0].color)",
+    "tile_features(game, game.state.colors[0])",
     setup=setup,
     number=NUMBER,
 )

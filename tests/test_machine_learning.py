@@ -71,7 +71,7 @@ def test_port_distance_features():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    color = game.state.players[0].color
+    color = game.state.colors[0]
     game.execute(Action(color, ActionType.BUILD_SETTLEMENT, 3))
     game.execute(Action(color, ActionType.BUILD_ROAD, (2, 3)))
 
@@ -112,7 +112,7 @@ def test_expansion_features():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    color = game.state.players[0].color
+    color = game.state.colors[0]
     game.execute(Action(color, ActionType.BUILD_SETTLEMENT, 3))
     game.execute(Action(color, ActionType.BUILD_ROAD, (2, 3)))
 
@@ -141,7 +141,7 @@ def test_reachability_features():
     random.sample(players, len(players))
     catan_map = CatanMap(BASE_MAP_TEMPLATE)
     game = Game(players, seed=123, catan_map=catan_map)
-    p0_color = game.state.players[0].color
+    p0_color = game.state.colors[0]
 
     game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 5))
     features = reachability_features(game, p0_color)
@@ -177,7 +177,7 @@ def test_reachability_features():
     )
 
     # Test enemy making building removes buildability
-    p1_color = game.state.players[1].color
+    p1_color = game.state.colors[1]
     game.execute(Action(p1_color, ActionType.BUILD_SETTLEMENT, 1))
     features = reachability_features(game, p0_color)
     assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(8)
@@ -236,7 +236,7 @@ def test_graph_features():
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    p0_color = game.state.players[0].color
+    p0_color = game.state.colors[0]
     game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
 
@@ -261,7 +261,7 @@ def test_graph_features_in_mini():
         SimplePlayer(Color.BLUE),
     ]
     game = Game(players, catan_map=CatanMap(MINI_MAP_TEMPLATE))
-    p0_color = game.state.players[0].color
+    p0_color = game.state.colors[0]
     game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
 
@@ -329,10 +329,10 @@ def test_init_tile_map():
 def test_create_board_tensor():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    p0 = game.state.players[0]
+    p0_color = game.state.colors[0]
 
     # assert starts with no settlement/cities
-    tensor = create_board_tensor(game, p0.color)
+    tensor = create_board_tensor(game, p0_color)
     assert tensor.shape == (21, 11, 20 - 4)
     assert tensor[0][0][0] == 0
     assert tensor[10][6][0] == 0
@@ -340,15 +340,15 @@ def test_create_board_tensor():
 
     # assert settlement and road mark 1s correspondingly
     build_initial_placements(game, p0_actions=[3, (3, 4), 37, (14, 37)])
-    tensor = create_board_tensor(game, p0.color)
+    tensor = create_board_tensor(game, p0_color)
     assert tensor[10][6][0] == 1
     assert tensor[9][6][1] == 1
 
-    player_deck_replenish(game.state, p0.color, WHEAT, 2)
-    player_deck_replenish(game.state, p0.color, ORE, 3)
+    player_deck_replenish(game.state, p0_color, WHEAT, 2)
+    player_deck_replenish(game.state, p0_color, ORE, 3)
     advance_to_play_turn(game)
-    game.execute(Action(p0.color, ActionType.BUILD_CITY, 3))
-    tensor = create_board_tensor(game, p0.color)
+    game.execute(Action(p0_color, ActionType.BUILD_CITY, 3))
+    tensor = create_board_tensor(game, p0_color)
     assert tensor[10][6][0] == 2
     assert tensor[9][6][1] == 1
 
@@ -488,20 +488,20 @@ def test_iter_players():
 
     # Test the firsts look good.
     for i in range(4):
-        j, c = iter_players(tuple(game.state.colors), game.state.players[i].color)[0]
-        assert c == game.state.players[i].color
+        j, c = iter_players(tuple(game.state.colors), game.state.colors[i])[0]
+        assert c == game.state.colors[i]
 
-    # Test a specific case (p0=game.state.players[0])
-    iterator = iter_players(tuple(game.state.colors), game.state.players[0].color)
+    # Test a specific case (p0=game.state.colors[0])
+    iterator = iter_players(tuple(game.state.colors), game.state.colors[0])
     i, c = iterator[0]
     assert i == 0
-    assert c == game.state.players[0].color
+    assert c == game.state.colors[0]
     i, c = iterator[1]
     assert i == 1
-    assert c == game.state.players[1].color
+    assert c == game.state.colors[1]
     i, c = iterator[2]
     assert i == 2
-    assert c == game.state.players[2].color
+    assert c == game.state.colors[2]
     i, c = iterator[3]
     assert i == 3
-    assert c == game.state.players[3].color
+    assert c == game.state.colors[3]

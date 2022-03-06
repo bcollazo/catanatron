@@ -163,7 +163,7 @@ class CatanatronEnv(gym.Env):
     def _advance_until_p0_decision(self):
         while (
             self.game.winning_color() is None
-            and self.game.state.current_player().color != self.p0.color
+            and self.game.state.current_color() != self.p0.color
         ):
             self.game.play_tick()  # will play bot
 

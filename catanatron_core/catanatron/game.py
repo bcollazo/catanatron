@@ -147,16 +147,16 @@ class Game:
         Returns:
             Union[Color, None]: Might be None if game truncated by TURNS_LIMIT
         """
-        winning_player = None
-        for player in self.state.players:
-            key = player_key(self.state, player.color)
+        result = None
+        for color in self.state.colors:
+            key = player_key(self.state, color)
             if (
                 self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
                 >= self.vps_to_win
             ):
-                winning_player = player
+                result = color
 
-        return None if winning_player is None else winning_player.color
+        return result
 
     def copy(self) -> "Game":
         """Creates a copy of this Game, that can be modified without
