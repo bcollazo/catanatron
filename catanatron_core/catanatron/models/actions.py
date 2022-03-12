@@ -251,10 +251,24 @@ def ncr(n, r):
 
 
 def maritime_trade_possibilities(state, color) -> List[Action]:
+    hand_freqdeck = [
+        player_num_resource_cards(state, color, resource) for resource in RESOURCES
+    ]
+    port_resources = set(state.board.get_player_port_resources(color))
+    trade_offers = inner_maritime_trade_possibilities(
+        hand_freqdeck, state.resource_freqdeck, port_resources
+    )
+
+    return list(
+        map(lambda t: Action(color, ActionType.MARITIME_TRADE, t), trade_offers)
+    )
+
+
+def inner_maritime_trade_possibilities(hand_freqdeck, bank_freqdeck, port_resources):
+    """This inner function is to make this logic more shareable"""
     trade_offers = set()
 
     # Get lowest rate per resource
-    port_resources = set(state.board.get_player_port_resources(color))
     rates: Dict[FastResource, int] = {WOOD: 4, BRICK: 4, SHEEP: 4, WHEAT: 4, ORE: 4}
     if None in port_resources:
         rates = {WOOD: 3, BRICK: 3, SHEEP: 3, WHEAT: 3, ORE: 3}
@@ -263,19 +277,17 @@ def maritime_trade_possibilities(state, color) -> List[Action]:
             rates[resource] = 2
 
     # For resource in hand
-    for resource in RESOURCES:
-        amount = player_num_resource_cards(state, color, resource)
+    for index, resource in enumerate(RESOURCES):
+        amount = hand_freqdeck[index]
         if amount >= rates[resource]:
             resource_out: List[Any] = [resource] * rates[resource]
             resource_out += [None] * (4 - rates[resource])
             for j_resource in RESOURCES:
                 if (
                     resource != j_resource
-                    and freqdeck_count(state.resource_freqdeck, j_resource) > 0
+                    and freqdeck_count(bank_freqdeck, j_resource) > 0
                 ):
                     trade_offer = tuple(resource_out + [j_resource])
                     trade_offers.add(trade_offer)
 
-    return list(
-        map(lambda t: Action(color, ActionType.MARITIME_TRADE, t), trade_offers)
-    )
+    return trade_offers

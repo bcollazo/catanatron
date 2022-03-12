@@ -225,7 +225,7 @@ def build_production_features(consider_robber):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += get_node_production(
-                        game.state.board, node_id, resource
+                        game.state.board.map, node_id, resource
                     )
                 for node_id in get_player_buildings(
                     game.state, color, BuildingType.CITY
@@ -233,7 +233,7 @@ def build_production_features(consider_robber):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += 2 * get_node_production(
-                        game.state.board, node_id, resource
+                        game.state.board.map, node_id, resource
                     )
                 features[f"{prefix}P{i}_{resource}_PRODUCTION"] = production
 
@@ -242,9 +242,9 @@ def build_production_features(consider_robber):
     return production_features
 
 
-# @functools.lru_cache(maxsize=None)
-def get_node_production(board, node_id, resource):
-    tiles = board.map.adjacent_tiles[node_id]
+@functools.lru_cache(maxsize=None)
+def get_node_production(catan_map, node_id, resource):
+    tiles = catan_map.adjacent_tiles[node_id]
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 
@@ -271,7 +271,7 @@ def get_player_expandable_nodes(game: Game, color: Color):
     return expandable_node_ids
 
 
-REACHABLE_FEATURES_MAX = 3  # exclusive
+REACHABLE_FEATURES_MAX = 2  # inclusive
 
 
 def get_zero_nodes(game, color):
@@ -282,24 +282,46 @@ def get_zero_nodes(game, color):
     return zero_nodes
 
 
-def iter_level_nodes(game, color, levels, zero_nodes):
-    """Yields (level, level_nodes) tuples"""
+def iter_level_nodes(board, color, num_roads, zero_nodes):
+    """Iterates over possible expansion paths.
+
+    Args:
+        board (Board): _description_
+        color (Color): _description_
+        num_roads (int): Max-depth of BFS (inclusive). e.g. 2 will yield
+            possible expansions with up to 2 roads.
+        zero_nodes (Set[NodeId]): Nodes reachable per board.connected_components
+
+    Yields:
+        Tuple[int, Set[NodeId], Dict[NodeId, List[EdgeId]]:
+            First element is level (roads needed to get there).
+            Second element is set of node_ids reachable at this level.
+            Third is mapping of NodeId to the list of edges
+                that leads to shortest path to that NodeId.
+    """
     last_layer_nodes = zero_nodes
-    for level in range(1, levels):
+    paths = {i: [] for i in zero_nodes}
+    for level in range(1, num_roads + 1):
         level_nodes = set(last_layer_nodes)
         for node_id in last_layer_nodes:
-            if game.state.board.is_enemy_node(node_id, color):
+            if board.is_enemy_node(node_id, color):
                 continue  # not expandable.
 
             def can_follow_edge(neighbor_id):
                 edge = (node_id, neighbor_id)
-                return not game.state.board.is_enemy_road(edge, color)
+                return not board.is_enemy_road(edge, color)
 
             # here we can assume node is empty or owned
-            expandable = filter(can_follow_edge, STATIC_GRAPH.neighbors(node_id))
+            expandable = list(filter(can_follow_edge, STATIC_GRAPH.neighbors(node_id)))
+            for expandable_node_id in expandable:
+                if expandable_node_id not in paths:
+                    paths[expandable_node_id] = paths[node_id] + [
+                        (node_id, expandable_node_id)
+                    ]
+
             level_nodes.update(expandable)
 
-        yield level, level_nodes
+        yield level, level_nodes, paths
 
         last_layer_nodes = level_nodes
 
@@ -323,16 +345,18 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
         zero_nodes = get_zero_nodes(game, color)
         production = count_production(
             frozenset(owned_or_buildable.intersection(zero_nodes)),
-            game.state.board,
+            game.state.board.map,
         )
         for resource in RESOURCES:
             features[f"P{i}_0_ROAD_REACHABLE_{resource}"] = production[resource]
 
         # do rest of layers
-        for (level, level_nodes) in iter_level_nodes(game, color, levels, zero_nodes):
+        for (level, level_nodes, paths) in iter_level_nodes(
+            game.state.board, color, levels, zero_nodes
+        ):
             production = count_production(
                 frozenset(owned_or_buildable.intersection(level_nodes)),
-                game.state.board,
+                game.state.board.map,
             )
             for resource in RESOURCES:
                 features[f"P{i}_{level}_ROAD_REACHABLE_{resource}"] = production[
@@ -343,10 +367,10 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
 
 
 @functools.lru_cache(maxsize=1000)
-def count_production(nodes, board):
+def count_production(nodes, catan_map):
     production = Counter()
     for node_id in nodes:
-        production += board.map.node_production[node_id]
+        production += catan_map.node_production[node_id]
     return production
 
 
@@ -386,7 +410,7 @@ def expansion_features(game: Game, p0_color: Color):
             if node_id in board_buildable_node_ids:  # node itself is buildable
                 for resource in RESOURCES:
                     production = get_node_production(
-                        game.state.board, node_id, resource
+                        game.state.board.map, node_id, resource
                     )
                     dis_res_prod[0][resource] = max(
                         production, dis_res_prod[0][resource]
@@ -414,7 +438,7 @@ def expansion_features(game: Game, p0_color: Color):
 
                 # means we can get to node b, at distance=d, starting from path[0]
                 for resource in RESOURCES:
-                    production = get_node_production(game.state.board, b, resource)
+                    production = get_node_production(game.state.board.map, b, resource)
                     dis_res_prod[distance][resource] = max(
                         production, dis_res_prod[distance][resource]
                     )
