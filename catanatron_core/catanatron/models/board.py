@@ -60,7 +60,7 @@ class Board:
                 BASE_MAP_TEMPLATE
             )  # Static State (no need to copy)
 
-            self.buildings = dict()  # node_id => (color, building_type)
+            self.buildings: Dict[NodeId, Tuple[Color, BuildingType]] = dict()
             self.roads = dict()  # (node_id, node_id) => color
 
             # color => int{}[] (list of node_id sets) one per component
