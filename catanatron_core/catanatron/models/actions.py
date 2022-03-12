@@ -23,7 +23,7 @@ from catanatron.models.enums import (
     BRICK,
     ORE,
     FastResource,
-    BuildingType,
+    SETTLEMENT,
     SHEEP,
     WHEAT,
     WOOD,
@@ -169,7 +169,7 @@ def city_possibilities(state, color) -> List[Action]:
     if has_money and has_cities_available:
         return [
             Action(color, ActionType.BUILD_CITY, node_id)
-            for node_id in get_player_buildings(state, color, BuildingType.SETTLEMENT)
+            for node_id in get_player_buildings(state, color, SETTLEMENT)
         ]
     else:
         return []
@@ -211,9 +211,7 @@ def robber_possibilities(state, color) -> List[Action]:
 
 def initial_road_possibilities(state, color) -> List[Action]:
     # Must be connected to last settlement
-    last_settlement_node_id = state.buildings_by_color[color][BuildingType.SETTLEMENT][
-        -1
-    ]
+    last_settlement_node_id = state.buildings_by_color[color][SETTLEMENT][-1]
 
     buildable_edges = filter(
         lambda edge: last_settlement_node_id in edge,

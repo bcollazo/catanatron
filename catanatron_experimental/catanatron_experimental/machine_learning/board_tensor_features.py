@@ -8,7 +8,9 @@ from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
     VICTORY_POINT,
-    BuildingType,
+    SETTLEMENT,
+    CITY,
+    ROAD,
 )
 from catanatron.models.coordinate_system import offset_to_cube
 from catanatron.models.board import STATIC_GRAPH
@@ -164,10 +166,10 @@ def create_board_tensor(game: Game, p0_color: Color):
 
         indices = []
         updates = []
-        for node_id in get_player_buildings(game.state, color, BuildingType.SETTLEMENT):
+        for node_id in get_player_buildings(game.state, color, SETTLEMENT):
             indices.append(node_map[node_id])
             updates.append(1)
-        for node_id in get_player_buildings(game.state, color, BuildingType.CITY):
+        for node_id in get_player_buildings(game.state, color, CITY):
             indices.append(node_map[node_id])
             updates.append(2)
         if len(indices) > 0:
@@ -175,7 +177,7 @@ def create_board_tensor(game: Game, p0_color: Color):
 
         indices = []
         updates = []
-        for edge in get_player_buildings(game.state, color, BuildingType.ROAD):
+        for edge in get_player_buildings(game.state, color, ROAD):
             indices.append(edge_map[edge])
             updates.append(1)
         if len(indices) > 0:

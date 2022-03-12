@@ -8,12 +8,14 @@ import random
 from catanatron.models.decks import ROAD_COST_FREQDECK, freqdeck_add
 from catanatron.models.enums import (
     VICTORY_POINT,
-    BuildingType,
     WOOD,
     BRICK,
     SHEEP,
     WHEAT,
     ORE,
+    SETTLEMENT,
+    CITY,
+    ROAD,
     FastResource,
 )
 
@@ -129,7 +131,7 @@ def get_player_buildings(state, color_param, building_type_param):
 
 # ===== State Mutators
 def build_settlement(state, color, node_id, is_free):
-    state.buildings_by_color[color][BuildingType.SETTLEMENT].append(node_id)
+    state.buildings_by_color[color][SETTLEMENT].append(node_id)
 
     key = player_key(state, color)
     state.player_state[f"{key}_SETTLEMENTS_AVAILABLE"] -= 1
@@ -145,7 +147,7 @@ def build_settlement(state, color, node_id, is_free):
 
 
 def build_road(state, color, edge, is_free):
-    state.buildings_by_color[color][BuildingType.ROAD].append(edge)
+    state.buildings_by_color[color][ROAD].append(edge)
 
     key = player_key(state, color)
     state.player_state[f"{key}_ROADS_AVAILABLE"] -= 1
@@ -158,8 +160,8 @@ def build_road(state, color, edge, is_free):
 
 
 def build_city(state, color, node_id):
-    state.buildings_by_color[color][BuildingType.SETTLEMENT].remove(node_id)
-    state.buildings_by_color[color][BuildingType.CITY].append(node_id)
+    state.buildings_by_color[color][SETTLEMENT].remove(node_id)
+    state.buildings_by_color[color][CITY].append(node_id)
 
     key = player_key(state, color)
     state.player_state[f"{key}_SETTLEMENTS_AVAILABLE"] += 1

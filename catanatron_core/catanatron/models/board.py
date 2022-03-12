@@ -1,6 +1,6 @@
 import pickle
 from collections import defaultdict
-from typing import Any, Set
+from typing import Any, Set, Dict, Tuple
 import functools
 
 import networkx as nx
@@ -11,8 +11,9 @@ from catanatron.models.map import (
     MINI_MAP_TEMPLATE,
     NUM_NODES,
     CatanMap,
+    NodeId,
 )
-from catanatron.models.enums import BuildingType
+from catanatron.models.enums import FastBuildingType, SETTLEMENT, CITY
 
 
 # Used to find relationships between nodes and edges
@@ -40,7 +41,7 @@ class Board:
     """Encapsulates all state information regarding the board.
 
     Attributes:
-        buildings (Dict[NodeId, Tuple[Color, BuildingType]]): Mapping from
+        buildings (Dict[NodeId, Tuple[Color, FastBuildingType]]): Mapping from
             node id to building (if there is a building there).
         roads (Dict[EdgeId, Color]): Mapping from edge
             to Color (if there is a road there). Contains inverted
@@ -60,7 +61,7 @@ class Board:
                 BASE_MAP_TEMPLATE
             )  # Static State (no need to copy)
 
-            self.buildings: Dict[NodeId, Tuple[Color, BuildingType]] = dict()
+            self.buildings: Dict[NodeId, Tuple[Color, FastBuildingType]] = dict()
             self.roads = dict()  # (node_id, node_id) => color
 
             # color => int{}[] (list of node_id sets) one per component
@@ -98,7 +99,7 @@ class Board:
         if node_id in self.buildings:
             raise ValueError("Invalid Settlement Placement: a building exists there")
 
-        self.buildings[node_id] = (color, BuildingType.SETTLEMENT)
+        self.buildings[node_id] = (color, SETTLEMENT)
 
         previous_road_color = self.road_color
         if initial_build_phase:
@@ -222,14 +223,10 @@ class Board:
 
     def build_city(self, color, node_id):
         building = self.buildings.get(node_id, None)
-        if (
-            building is None
-            or building[0] != color
-            or building[1] != BuildingType.SETTLEMENT
-        ):
+        if building is None or building[0] != color or building[1] != SETTLEMENT:
             raise ValueError("Invalid City Placement: no player settlement there")
 
-        self.buildings[node_id] = (color, BuildingType.CITY)
+        self.buildings[node_id] = (color, CITY)
 
     def buildable_node_ids(self, color: Color, initial_build_phase=False):
         if initial_build_phase:

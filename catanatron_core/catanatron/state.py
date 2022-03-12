@@ -14,7 +14,8 @@ from catanatron.models.enums import (
     MONOPOLY,
     RESOURCES,
     YEAR_OF_PLENTY,
-    BuildingType,
+    SETTLEMENT,
+    CITY,
     Action,
     ActionPrompt,
     ActionType,
@@ -101,8 +102,8 @@ class State:
             Each element is the amount of [WOOD, BRICK, SHEEP, WHEAT, ORE].
         development_listdeck (List[FastDevCard]): Represents development cards in
             the bank. Already shuffled.
-        buildings_by_color (Dict[Color, Dict[BuildingType, List]]): Cache of
-            buildings. Can be used like: `buildings_by_color[Color.RED][BuildingType.SETTLEMENT]`
+        buildings_by_color (Dict[Color, Dict[FastBuildingType, List]]): Cache of
+            buildings. Can be used like: `buildings_by_color[Color.RED][SETTLEMENT]`
             to get a list of all node ids where RED has settlements.
         actions (List[Action]): Log of all actions taken. Fully-specified actions.
         num_turns (int): number of turns thus far
@@ -250,10 +251,10 @@ def yield_resources(board: Board, resource_freqdeck, number):
             building = board.buildings.get(node_id, None)
             if building is None:
                 continue
-            elif building[1] == BuildingType.SETTLEMENT:
+            elif building[1] == SETTLEMENT:
                 intented_payout[building[0]][tile.resource] += 1
                 resource_totals[tile.resource] += 1
-            elif building[1] == BuildingType.CITY:
+            elif building[1] == CITY:
                 intented_payout[building[0]][tile.resource] += 2
                 resource_totals[tile.resource] += 2
 
@@ -319,7 +320,7 @@ def apply_action(state: State, action: Action):
         if state.is_initial_build_phase:
             state.board.build_settlement(action.color, node_id, True)
             build_settlement(state, action.color, node_id, True)
-            buildings = state.buildings_by_color[action.color][BuildingType.SETTLEMENT]
+            buildings = state.buildings_by_color[action.color][SETTLEMENT]
 
             # yield resources if second settlement
             is_second_house = len(buildings) == 2
@@ -357,7 +358,7 @@ def apply_action(state: State, action: Action):
             # state.current_player_index depend on what index are we
             # state.current_prompt too
             buildings = [
-                len(state.buildings_by_color[color][BuildingType.SETTLEMENT])
+                len(state.buildings_by_color[color][SETTLEMENT])
                 for color in state.color_to_index.keys()
             ]
             num_buildings = sum(buildings)

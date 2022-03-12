@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from catanatron.game import Game
 from catanatron.models.actions import Action
-from catanatron.models.enums import BuildingType
+from catanatron.models.enums import SETTLEMENT, CITY
 from catanatron.state_functions import (
     get_longest_road_length,
     get_played_dev_cards,
@@ -52,7 +52,7 @@ def simple_feature_vector(game, p0_color):
 
     # blockability
     buildings = game.state.buildings_by_color[p0_color]
-    owned_nodes = buildings[BuildingType.SETTLEMENT] + buildings[BuildingType.CITY]
+    owned_nodes = buildings[SETTLEMENT] + buildings[CITY]
     owned_tiles = set()
     for n in owned_nodes:
         owned_tiles.update(game.state.board.map.adjacent_tiles[n])

@@ -17,7 +17,9 @@ from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
-    BuildingType,
+    SETTLEMENT,
+    CITY,
+    ROAD,
     ActionType,
     VICTORY_POINT,
 )
@@ -168,8 +170,8 @@ def initialize_graph_features_template(num_players, catan_map: CatanMap):
     features = {}
     for i in range(num_players):
         for node_id in range(len(catan_map.land_nodes)):
-            for building in [BuildingType.SETTLEMENT, BuildingType.CITY]:
-                features[f"NODE{node_id}_P{i}_{building.value}"] = False
+            for building in [SETTLEMENT, CITY]:
+                features[f"NODE{node_id}_P{i}_{building}"] = False
         for edge in get_edges(catan_map.land_nodes):
             features[f"EDGE{edge}_P{i}_ROAD"] = False
     return features
@@ -195,11 +197,9 @@ def graph_features(game: Game, p0_color: Color):
     ).copy()
 
     for i, color in iter_players(game.state.colors, p0_color):
-        settlements = tuple(
-            game.state.buildings_by_color[color][BuildingType.SETTLEMENT]
-        )
-        cities = tuple(game.state.buildings_by_color[color][BuildingType.CITY])
-        roads = tuple(game.state.buildings_by_color[color][BuildingType.ROAD])
+        settlements = tuple(game.state.buildings_by_color[color][SETTLEMENT])
+        cities = tuple(game.state.buildings_by_color[color][CITY])
+        roads = tuple(game.state.buildings_by_color[color][ROAD])
         to_update = get_node_hot_encoded(
             i, game.state.colors, settlements, cities, roads
         )
@@ -219,17 +219,13 @@ def build_production_features(consider_robber):
         for resource in RESOURCES:
             for i, color in iter_players(game.state.colors, p0_color):
                 production = 0
-                for node_id in get_player_buildings(
-                    game.state, color, BuildingType.SETTLEMENT
-                ):
+                for node_id in get_player_buildings(game.state, color, SETTLEMENT):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += get_node_production(
                         game.state.board.map, node_id, resource
                     )
-                for node_id in get_player_buildings(
-                    game.state, color, BuildingType.CITY
-                ):
+                for node_id in get_player_buildings(game.state, color, CITY):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += 2 * get_node_production(
@@ -242,7 +238,7 @@ def build_production_features(consider_robber):
     return production_features
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=1000)
 def get_node_production(catan_map, node_id, resource):
     tiles = catan_map.adjacent_tiles[node_id]
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
@@ -255,12 +251,8 @@ def get_player_expandable_nodes(game: Game, color: Color):
     ]
     enemy_node_ids = set()
     for enemy_color in enemy_colors:
-        enemy_node_ids.update(
-            get_player_buildings(game.state, enemy_color, BuildingType.SETTLEMENT)
-        )
-        enemy_node_ids.update(
-            get_player_buildings(game.state, enemy_color, BuildingType.CITY)
-        )
+        enemy_node_ids.update(get_player_buildings(game.state, enemy_color, SETTLEMENT))
+        enemy_node_ids.update(get_player_buildings(game.state, enemy_color, CITY))
 
     expandable_node_ids = [
         node_id
@@ -330,8 +322,8 @@ def iter_level_nodes(enemy_nodes, enemy_roads, num_roads, zero_nodes):
 
 def get_owned_or_buildable(game, color, board_buildable):
     return frozenset(
-        get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
-        + get_player_buildings(game.state, color, BuildingType.CITY)
+        get_player_buildings(game.state, color, SETTLEMENT)
+        + get_player_buildings(game.state, color, CITY)
         + board_buildable
     )
 
@@ -393,9 +385,7 @@ def expansion_features(game: Game, p0_color: Color):
     # For each connected component node, bfs_edges (skipping enemy edges and nodes nodes)
     empty_edges = set(get_edges(game.state.board.map.land_nodes))
     for i, color in iter_players(game.state.colors, p0_color):
-        empty_edges.difference_update(
-            get_player_buildings(game.state, color, BuildingType.ROAD)
-        )
+        empty_edges.difference_update(get_player_buildings(game.state, color, ROAD))
     searchable_subgraph = STATIC_GRAPH.edge_subgraph(empty_edges)
 
     board_buildable_node_ids = game.state.board.buildable_node_ids(
@@ -411,7 +401,7 @@ def expansion_features(game: Game, p0_color: Color):
                 if node_color is None or node_color == color:
                     yield node_id  # not owned by enemy, can explore
 
-        # owned_edges = get_player_buildings(state, color, BuildingType.ROAD)
+        # owned_edges = get_player_buildings(state, color, ROAD)
         dis_res_prod = {
             distance: {k: 0 for k in RESOURCES}
             for distance in range(MAX_EXPANSION_DISTANCE)

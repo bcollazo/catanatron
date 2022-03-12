@@ -5,7 +5,7 @@ import numpy as np
 import pickle
 from catanatron.game import Game, State
 from catanatron.models.player import RandomPlayer, Color
-from catanatron.models.enums import BuildingType, Action, ActionType
+from catanatron.models.enums import CITY, SETTLEMENT, Action, ActionType
 
 game = Game(
     [

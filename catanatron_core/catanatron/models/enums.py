@@ -7,6 +7,7 @@ FastResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE"]
 FastDevCard = Literal[
     "KNIGHT", "YEAR_OF_PLENTY", "MONOPOLY", "ROAD_BUILDING", "VICTORY_POINT"
 ]
+FastBuildingType = Literal["SETTLEMENT", "CITY", "ROAD"]
 
 # Strings are considerably faster than Python Enum's (e.g. at being hashed).
 # TODO: Move to ints
@@ -30,11 +31,9 @@ DEVELOPMENT_CARDS: List[FastDevCard] = [
     VICTORY_POINT,
 ]
 
-
-class BuildingType(Enum):
-    SETTLEMENT = "SETTLEMENT"
-    CITY = "CITY"
-    ROAD = "ROAD"
+SETTLEMENT = "SETTLEMENT"
+CITY = "CITY"
+ROAD = "ROAD"
 
 
 class ActionPrompt(Enum):
