@@ -300,13 +300,18 @@ class Board:
 
     # ===== Helper functions
     def get_node_color(self, node_id):
+        # using try-except instead of .get for performance
         try:
             return self.buildings[node_id][0]
         except KeyError:
             return None
 
     def get_edge_color(self, edge):
-        return self.roads.get(edge)
+        # using try-except instead of .get for performance
+        try:
+            return self.roads[edge]
+        except KeyError:
+            return None
 
     def is_enemy_node(self, node_id, color):
         node_color = self.get_node_color(node_id)

@@ -282,15 +282,16 @@ def get_zero_nodes(game, color):
     return zero_nodes
 
 
-def iter_level_nodes(board, color, num_roads, zero_nodes):
+@functools.lru_cache(maxsize=2000)
+def iter_level_nodes(enemy_nodes, enemy_roads, num_roads, zero_nodes):
     """Iterates over possible expansion paths.
 
     Args:
-        board (Board): _description_
-        color (Color): _description_
+        enemy_nodes (frozenset[NodeId]): node_ids owned by enemy colors
+        enemy_roads (frozenset[EdgeId]): edge_ids owned by enemy colors
         num_roads (int): Max-depth of BFS (inclusive). e.g. 2 will yield
             possible expansions with up to 2 roads.
-        zero_nodes (Set[NodeId]): Nodes reachable per board.connected_components
+        zero_nodes (frozenset[NodeId]): Nodes reachable per board.connected_components
 
     Yields:
         Tuple[int, Set[NodeId], Dict[NodeId, List[EdgeId]]:
@@ -301,29 +302,30 @@ def iter_level_nodes(board, color, num_roads, zero_nodes):
     """
     last_layer_nodes = zero_nodes
     paths = {i: [] for i in zero_nodes}
+    results = []
     for level in range(1, num_roads + 1):
         level_nodes = set(last_layer_nodes)
         for node_id in last_layer_nodes:
-            if board.is_enemy_node(node_id, color):
+            if node_id in enemy_nodes:
                 continue  # not expandable.
 
-            def can_follow_edge(neighbor_id):
-                edge = (node_id, neighbor_id)
-                return not board.is_enemy_road(edge, color)
-
             # here we can assume node is empty or owned
-            expandable = list(filter(can_follow_edge, STATIC_GRAPH.neighbors(node_id)))
-            for expandable_node_id in expandable:
-                if expandable_node_id not in paths:
-                    paths[expandable_node_id] = paths[node_id] + [
-                        (node_id, expandable_node_id)
-                    ]
+            expandable = []
+            for neighbor_id in STATIC_GRAPH.neighbors(node_id):
+                edge = (node_id, neighbor_id)
+                can_follow_edge = edge not in enemy_roads
+                if can_follow_edge:
+                    expandable.append(neighbor_id)
+                    if neighbor_id not in paths:
+                        paths[neighbor_id] = paths[node_id] + [(node_id, neighbor_id)]
 
             level_nodes.update(expandable)
 
-        yield level, level_nodes, paths
+        results.append((level, level_nodes, paths))
 
         last_layer_nodes = level_nodes
+
+    return results
 
 
 def get_owned_or_buildable(game, color, board_buildable):
@@ -351,8 +353,16 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
             features[f"P{i}_0_ROAD_REACHABLE_{resource}"] = production[resource]
 
         # do rest of layers
+        enemy_nodes = frozenset(
+            k
+            for k, v in game.state.board.buildings.items()
+            if v is not None and v[0] != color
+        )
+        enemy_roads = frozenset(
+            k for k, v in game.state.board.roads.items() if v is not None and v != color
+        )
         for (level, level_nodes, paths) in iter_level_nodes(
-            game.state.board, color, levels, zero_nodes
+            enemy_nodes, enemy_roads, levels, frozenset(zero_nodes)
         ):
             production = count_production(
                 frozenset(owned_or_buildable.intersection(level_nodes)),
