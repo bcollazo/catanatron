@@ -1,0 +1,18 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 20
+      arrivalRate: 5
+      name: Warm up
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 50
+      name: Ramp up load
+    - duration: 120
+      arrivalRate: 50
+      name: Sustained load
+scenarios:
+  - name: "Ask Catanatron"
+    flow:
+      - get:
+          url: "/api/stress-test"
