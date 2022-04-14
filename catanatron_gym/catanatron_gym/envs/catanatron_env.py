@@ -3,7 +3,7 @@ from gym import spaces
 
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile
+from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
 from catanatron_gym.features import create_sample_vector, get_feature_ordering
@@ -103,6 +103,16 @@ NUM_FEATURES = len(FEATURES)
 HIGH = 19 * 5
 
 
+def simple_reward(game, p0_color):
+    winning_color = game.winning_color()
+    if p0_color == winning_color:
+        return 1
+    elif winning_color is None:
+        return 0
+    else:
+        return -1
+
+
 class CatanatronEnv(gym.Env):
     metadata = {"render.modes": []}
 
@@ -112,7 +122,15 @@ class CatanatronEnv(gym.Env):
     reward_range = (-1, 1)
 
     def __init__(self, config=None):
-        pass
+        self.config = config or dict()
+        self.invalid_action_reward = self.config.get("invalid_action_reward", -100)
+        self.reward_function = self.config.get("reward_function", simple_reward)
+        self.map_type = self.config.get("map_type", "BASE")
+        self.vps_to_win = self.config.get("vps_to_win", 10)
+
+        self.p0 = Player(Color.BLUE)
+        self.players = [self.p0, RandomPlayer(Color.RED)]
+        self.features = get_feature_ordering(len(self.players))
 
     def get_valid_actions(self):
         """
@@ -125,40 +143,38 @@ class CatanatronEnv(gym.Env):
         try:
             catan_action = from_action_space(action, self.game.state.playable_actions)
         except Exception as e:
-            observation = create_sample_vector(self.game, self.p0.color)
+            observation = self._get_observation()
             winning_color = self.game.winning_color()
             done = winning_color is not None
             info = dict(valid_actions=self.get_valid_actions())
-            return observation, -100, True, info
+            return observation, self.invalid_action_reward, True, info
         self.game.execute(catan_action)
         self._advance_until_p0_decision()
 
-        observation = create_sample_vector(self.game, self.p0.color)
+        observation = self._get_observation()
         info = dict(valid_actions=self.get_valid_actions())
 
         winning_color = self.game.winning_color()
         done = winning_color is not None
-
-        if self.p0.color == winning_color:
-            reward = 1
-        elif winning_color is None:
-            reward = 0
-        else:
-            reward = -1
+        reward = self.reward_function(self.game, self.p0.color)
 
         return observation, reward, done, info
 
     def reset(self):
-        p0 = Player(Color.BLUE)
-        players = [p0, RandomPlayer(Color.RED)]
-        game = Game(players=players)
-        self.game = game
-        self.p0 = p0
+        catan_map = build_map(self.map_type)
+        for player in self.players:
+            player.reset_state()
+        self.game = Game(
+            players=self.players, catan_map=catan_map, vps_to_win=self.vps_to_win
+        )
 
         self._advance_until_p0_decision()
 
-        observation = create_sample_vector(self.game, self.p0.color)
+        observation = self._get_observation()
         return observation
+
+    def _get_observation(self):
+        return create_sample_vector(self.game, self.p0.color)
 
     def _advance_until_p0_decision(self):
         while (

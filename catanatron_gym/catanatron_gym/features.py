@@ -510,6 +510,7 @@ feature_extractors = [
 ]
 
 
+# TODO: Use OrderedDict instead? To minimize mis-aligned features errors.
 def create_sample(game, p0_color):
     record = {}
     for extractor in feature_extractors:
@@ -520,7 +521,7 @@ def create_sample(game, p0_color):
 def create_sample_vector(game, p0_color, features=None):
     features = features or get_feature_ordering()
     sample_dict = create_sample(game, p0_color)
-    return [float(sample_dict[i]) for i in features]
+    return [float(sample_dict[i]) for i in features if i in sample_dict]
 
 
 FEATURE_ORDERING = None

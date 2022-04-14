@@ -44,9 +44,40 @@ def test_gym():
 def test_gym_registration_and_api_works():
     env = gym.make("catanatron_gym:catanatron-v0")
     observation = env.reset()
-    for _ in range(1000):
+    done = False
+    reward = 0
+    while not done:
         action = random.choice(env.get_valid_actions())  # type: ignore
         observation, reward, done, info = env.step(action)
-        if done:
-            observation = env.reset()
     env.close()
+    assert reward in [-1, 1]
+
+
+def test_invalid_action_reward():
+    env = gym.make(
+        "catanatron_gym:catanatron-v0", config={"invalid_action_reward": -1234}
+    )
+    observation = env.reset()
+    action = next(filter(lambda i: i not in env.get_valid_actions(), range(1000)))  # type: ignore
+    observation, reward, done, info = env.step(action)
+    assert reward == -1234
+
+
+def test_custom_reward():
+    def custom_reward(game, p0_color):
+        return 123
+
+    env = gym.make(
+        "catanatron_gym:catanatron-v0", config={"reward_function": custom_reward}
+    )
+    observation = env.reset()
+    action = random.choice(env.get_valid_actions())  # type: ignore
+    observation, reward, done, info = env.step(action)
+    assert reward == 123
+
+
+def test_custom_map():
+    env = gym.make("catanatron_gym:catanatron-v0", config={"map_type": "MINI"})
+    observation = env.reset()
+    assert len(env.get_valid_actions()) < 50  # type: ignore
+    assert len(observation) < 614

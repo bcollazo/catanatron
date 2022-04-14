@@ -1,7 +1,7 @@
 import os
 import importlib.util
 from dataclasses import dataclass
-from typing import Union
+from typing import Literal, Union
 
 import click
 from rich.console import Console
@@ -15,13 +15,8 @@ from rich.text import Text
 
 from catanatron.game import Game
 from catanatron.models.player import Color
+from catanatron.models.map import build_map
 from catanatron.state_functions import get_actual_victory_points
-from catanatron.models.map import (
-    BASE_MAP_TEMPLATE,
-    MINI_MAP_TEMPLATE,
-    TOURNAMENT_MAP,
-    CatanMap,
-)
 
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -209,7 +204,7 @@ class OutputOptions:
 class GameConfigOptions:
     discard_limit: int = 7
     vps_to_win: int = 10
-    catan_map: str = "BASE"
+    catan_map: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
 
 
 COLOR_TO_RICH_STYLE = {
@@ -232,15 +227,6 @@ def rich_color(color):
     return f"[{style}]{color.value}[/{style}]"
 
 
-def build_map(game_config: GameConfigOptions):
-    if game_config.catan_map == "TOURNAMENT":
-        return TOURNAMENT_MAP  # this assumes map is read-only data struct
-    elif game_config.catan_map == "MINI":
-        return CatanMap.from_template(MINI_MAP_TEMPLATE)
-    else:
-        return CatanMap.from_template(BASE_MAP_TEMPLATE)
-
-
 def play_batch_core(num_games, players, game_config, accumulators=[]):
     for accumulator in accumulators:
         if isinstance(accumulator, SimulationAccumulator):
@@ -249,7 +235,7 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        catan_map = build_map(game_config)
+        catan_map = build_map(game_config.catan_map)
         game = Game(
             players,
             discard_limit=game_config.discard_limit,
