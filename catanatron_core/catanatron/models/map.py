@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import random
 from enum import Enum
 from collections import Counter, defaultdict
-from typing import Dict, List, Mapping, Set, Tuple, Type, Union
+from typing import Dict, FrozenSet, List, Mapping, Set, Tuple, Type, Union
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.enums import (
@@ -225,8 +225,37 @@ BASE_MAP_TEMPLATE = MapTemplate(
 class CatanMap:
     """Represents a randomly initialized map."""
 
-    def __init__(self, map_template: MapTemplate):
-        self.tiles = initialize_board(map_template)
+    def __init__(
+        self,
+        tiles: Dict[Coordinate, Tile] = dict(),
+        land_tiles: Dict[Coordinate, LandTile] = dict(),
+        port_nodes: Dict[Union[FastResource, None], Set[int]] = dict(),
+        land_nodes: FrozenSet[NodeId] = frozenset(),
+        adjacent_tiles: Dict[int, List[LandTile]] = dict(),
+        node_production: Dict[NodeId, Counter] = dict(),
+        tiles_by_id: Dict[int, LandTile] = dict(),
+        ports_by_id: Dict[int, Port] = dict(),
+    ):
+        self.tiles = tiles
+        self.land_tiles = land_tiles
+        self.port_nodes = port_nodes
+        self.land_nodes = land_nodes
+        self.adjacent_tiles = adjacent_tiles
+        self.node_production = node_production
+        self.tiles_by_id = tiles_by_id
+        self.ports_by_id = ports_by_id
+
+    @staticmethod
+    def from_template(map_template: MapTemplate):
+        tiles = initialize_tiles(map_template)
+
+        return CatanMap.from_tiles(tiles)
+
+    @staticmethod
+    def from_tiles(tiles: Dict[Coordinate, Tile]):
+        self = CatanMap()
+        self.tiles = tiles
+
         self.land_tiles = {
             k: v for k, v in self.tiles.items() if isinstance(v, LandTile)
         }
@@ -244,6 +273,8 @@ class CatanMap:
             t.id: t for t in self.tiles.values() if isinstance(t, LandTile)
         }
         self.ports_by_id = {p.id: p for p in self.tiles.values() if isinstance(p, Port)}
+
+        return self
 
 
 def init_port_nodes_cache(
@@ -279,7 +310,9 @@ def init_adjacent_tiles(
     return adjacent_tiles
 
 
-def init_node_production(adjacent_tiles: Dict[int, List[LandTile]]):
+def init_node_production(
+    adjacent_tiles: Dict[int, List[LandTile]]
+) -> Dict[NodeId, Counter]:
     """Returns node_id => Counter({WHEAT: 0.123, ...})"""
     node_production = dict()
     for node_id in adjacent_tiles.keys():
@@ -313,7 +346,12 @@ def number_probability(number):
     return DICE_PROBAS[number]
 
 
-def initialize_board(map_template: MapTemplate) -> Dict[Coordinate, Tile]:
+def initialize_tiles(
+    map_template: MapTemplate,
+    shuffled_numbers_param=None,
+    shuffled_port_resources_param=None,
+    shuffled_tile_resources_param=None,
+) -> Dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
     It first shuffles tiles, ports, and numbers. Then goes satisfying the
@@ -329,13 +367,15 @@ def initialize_board(map_template: MapTemplate) -> Dict[Coordinate, Tile]:
     Returns:
         Dict[Coordinate, Tile]: Coordinate to initialized Tile mapping.
     """
-    shuffled_port_resources = random.sample(
+    shuffled_port_resources = shuffled_port_resources_param or random.sample(
         map_template.port_resources, len(map_template.port_resources)
     )
-    shuffled_tile_resources = random.sample(
+    shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
         map_template.tile_resources, len(map_template.tile_resources)
     )
-    shuffled_numbers = random.sample(map_template.numbers, len(map_template.numbers))
+    shuffled_numbers = shuffled_numbers_param or random.sample(
+        map_template.numbers, len(map_template.numbers)
+    )
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles = {}
@@ -465,3 +505,42 @@ PORT_DIRECTION_TO_NODEREFS = {
     Direction.SOUTHEAST: (NodeRef.SOUTH, NodeRef.SOUTHEAST),
     Direction.SOUTHWEST: (NodeRef.SOUTHWEST, NodeRef.SOUTH),
 }
+
+TOURNAMENT_MAP_TILES = initialize_tiles(
+    BASE_MAP_TEMPLATE,
+    [10, 8, 3, 6, 2, 5, 10, 8, 4, 11, 12, 9, 5, 4, 9, 11, 3, 6],
+    [
+        None,
+        SHEEP,
+        None,
+        ORE,
+        WHEAT,
+        None,
+        WOOD,
+        BRICK,
+        None,
+    ],
+    [
+        None,
+        WOOD,
+        SHEEP,
+        SHEEP,
+        WOOD,
+        WHEAT,
+        WOOD,
+        WHEAT,
+        BRICK,
+        SHEEP,
+        BRICK,
+        SHEEP,
+        WHEAT,
+        WHEAT,
+        ORE,
+        BRICK,
+        ORE,
+        WOOD,
+        ORE,
+        None,
+    ],
+)
+TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)

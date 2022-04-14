@@ -14,7 +14,7 @@ from catanatron.models.board import Board
 from catanatron.models.enums import (
     ORE,
     ActionPrompt,
-    BuildingType,
+    SETTLEMENT,
     ActionType,
     Action,
     WHEAT,
@@ -80,7 +80,7 @@ def test_initial_build_phase():
     settlements = [
         building
         for building in game.state.board.buildings.values()
-        if building[1] == BuildingType.SETTLEMENT
+        if building[1] == SETTLEMENT
     ]
     assert len(settlements) == 4
 

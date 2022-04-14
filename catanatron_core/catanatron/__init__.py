@@ -13,5 +13,5 @@ from catanatron.models.enums import (
     SHEEP,
     WHEAT,
     ORE,
-    BuildingType,
+    RESOURCES,
 )

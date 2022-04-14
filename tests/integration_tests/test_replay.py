@@ -3,7 +3,7 @@ import json
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
 from catanatron.json import GameEncoder
 from catanatron.game import Game
-from catanatron.models.enums import VICTORY_POINT, Action, ActionType, BuildingType
+from catanatron.models.enums import VICTORY_POINT, Action, ActionType, CITY, SETTLEMENT
 from catanatron.state_functions import (
     get_actual_victory_points,
     get_dev_cards_in_hand,
@@ -26,10 +26,8 @@ def test_play_many_games():
 
         # Assert everything looks good
         for color in game.state.colors:
-            cities = len(get_player_buildings(game.state, color, BuildingType.CITY))
-            settlements = len(
-                get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
-            )
+            cities = len(get_player_buildings(game.state, color, CITY))
+            settlements = len(get_player_buildings(game.state, color, SETTLEMENT))
             longest = get_longest_road_color(game.state) == color
             largest = get_largest_army(game.state)[0] == color
             devvps = get_dev_cards_in_hand(game.state, color, VICTORY_POINT)

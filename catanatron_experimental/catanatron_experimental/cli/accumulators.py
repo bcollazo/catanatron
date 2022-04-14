@@ -16,7 +16,7 @@ from catanatron.state_functions import (
     get_longest_road_color,
     get_player_buildings,
 )
-from catanatron.models.enums import VICTORY_POINT, BuildingType
+from catanatron.models.enums import VICTORY_POINT, SETTLEMENT, CITY
 from catanatron_server.models import database_session, upsert_game_state
 from catanatron_server.utils import ensure_link
 from catanatron_experimental.utils import formatSecs
@@ -56,10 +56,8 @@ class VpDistributionAccumulator(GameAccumulator):
             return  # throw away data
 
         for color in game.state.colors:
-            cities = len(get_player_buildings(game.state, color, BuildingType.CITY))
-            settlements = len(
-                get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
-            )
+            cities = len(get_player_buildings(game.state, color, CITY))
+            settlements = len(get_player_buildings(game.state, color, SETTLEMENT))
             longest = get_longest_road_color(game.state) == color
             largest = get_largest_army(game.state)[0] == color
             devvps = get_dev_cards_in_hand(game.state, color, VICTORY_POINT)

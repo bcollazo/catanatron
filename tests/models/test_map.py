@@ -9,7 +9,7 @@ from catanatron.models.map import (
 
 
 def test_mini_map_can_be_created():
-    mini = CatanMap(MINI_MAP_TEMPLATE)
+    mini = CatanMap.from_template(MINI_MAP_TEMPLATE)
     assert len(mini.land_tiles) == 7
     assert len(mini.land_nodes) == 24
     assert len(mini.tiles_by_id) == 7
@@ -24,7 +24,7 @@ def test_mini_map_can_be_created():
 
 
 def test_base_map_can_be_created():
-    catan_map = CatanMap(BASE_MAP_TEMPLATE)
+    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
     assert len(catan_map.land_tiles) == 19
     assert len(catan_map.node_production) == 54
 

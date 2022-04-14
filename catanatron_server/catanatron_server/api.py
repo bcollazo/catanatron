@@ -78,6 +78,23 @@ def post_action_endpoint(game_id):
     )
 
 
+@bp.route("/stress-test", methods=["GET"])
+def stress_test_endpoint():
+    players = [
+        AlphaBetaPlayer(Color.RED, 2, True),
+        AlphaBetaPlayer(Color.BLUE, 2, True),
+        AlphaBetaPlayer(Color.ORANGE, 2, True),
+        AlphaBetaPlayer(Color.WHITE, 2, True),
+    ]
+    game = Game(players=players)
+    game.play_tick()
+    return Response(
+        response=json.dumps(game, cls=GameEncoder),
+        status=200,
+        mimetype="application/json",
+    )
+
+
 # ===== Debugging Routes
 # @app.route(
 #     "/games/<string:game_id>/players/<int:player_index>/features", methods=["GET"]

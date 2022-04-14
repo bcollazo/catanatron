@@ -1,6 +1,7 @@
 import os
 import importlib.util
 from dataclasses import dataclass
+from typing import Union
 
 import click
 from rich.console import Console
@@ -15,7 +16,12 @@ from rich.text import Text
 from catanatron.game import Game
 from catanatron.models.player import Color
 from catanatron.state_functions import get_actual_victory_points
-from catanatron.models.map import BASE_MAP_TEMPLATE, MINI_MAP_TEMPLATE, CatanMap
+from catanatron.models.map import (
+    BASE_MAP_TEMPLATE,
+    MINI_MAP_TEMPLATE,
+    TOURNAMENT_MAP,
+    CatanMap,
+)
 
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -112,8 +118,8 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
 @click.option(
     "--config-map",
     default="BASE",
-    type=click.Choice(["BASE", "MINI"], case_sensitive=False),
-    help="Sets Map to use. MINI is a 7-tile smaller version.",
+    type=click.Choice(["BASE", "MINI", "TOURNAMENT"], case_sensitive=False),
+    help="Sets Map to use. MINI is a 7-tile smaller version. TOURNAMENT uses a fixed balanced map.",
 )
 @click.option(
     "--quiet",
@@ -156,8 +162,9 @@ def simulate(
     if code:
         abspath = os.path.abspath(code)
         spec = importlib.util.spec_from_file_location("module.name", abspath)
-        user_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(user_module)
+        if spec is not None and spec.loader is not None:
+            user_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(user_module)
 
     if help_players:
         return Console().print(player_help_table())
@@ -192,7 +199,7 @@ def simulate(
 class OutputOptions:
     """Class to keep track of output CLI flags"""
 
-    output: str = None  # path to store files
+    output: Union[str, None] = None  # path to store files
     csv: bool = False
     json: bool = False
     db: bool = False
@@ -225,6 +232,15 @@ def rich_color(color):
     return f"[{style}]{color.value}[/{style}]"
 
 
+def build_map(game_config: GameConfigOptions):
+    if game_config.catan_map == "TOURNAMENT":
+        return TOURNAMENT_MAP  # this assumes map is read-only data struct
+    elif game_config.catan_map == "MINI":
+        return CatanMap.from_template(MINI_MAP_TEMPLATE)
+    else:
+        return CatanMap.from_template(BASE_MAP_TEMPLATE)
+
+
 def play_batch_core(num_games, players, game_config, accumulators=[]):
     for accumulator in accumulators:
         if isinstance(accumulator, SimulationAccumulator):
@@ -233,11 +249,7 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        catan_map = (
-            CatanMap(MINI_MAP_TEMPLATE)
-            if game_config.catan_map == "MINI"
-            else CatanMap(BASE_MAP_TEMPLATE)
-        )
+        catan_map = build_map(game_config)
         game = Game(
             players,
             discard_limit=game_config.discard_limit,

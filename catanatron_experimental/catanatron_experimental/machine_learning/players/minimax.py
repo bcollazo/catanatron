@@ -13,7 +13,7 @@ from catanatron.state_functions import (
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
-from catanatron.models.enums import RESOURCES, BuildingType
+from catanatron.models.enums import RESOURCES, SETTLEMENT, CITY
 from catanatron_gym.features import (
     build_production_features,
     reachability_features,
@@ -151,7 +151,7 @@ def base_fn(params=DEFAULT_WEIGHTS):
 
         # blockability
         buildings = game.state.buildings_by_color[p0_color]
-        owned_nodes = buildings[BuildingType.SETTLEMENT] + buildings[BuildingType.CITY]
+        owned_nodes = buildings[SETTLEMENT] + buildings[CITY]
         owned_tiles = set()
         for n in owned_nodes:
             owned_tiles.update(game.state.board.map.adjacent_tiles[n])
@@ -452,11 +452,9 @@ def prune_robber_actions(current_color, game, actions):
     """Eliminate all but the most impactful tile"""
     enemy_color = next(filter(lambda c: c != current_color, game.state.colors))
     enemy_owned_tiles = set()
-    for node_id in get_player_buildings(
-        game.state, enemy_color, BuildingType.SETTLEMENT
-    ):
+    for node_id in get_player_buildings(game.state, enemy_color, SETTLEMENT):
         enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
-    for node_id in get_player_buildings(game.state, enemy_color, BuildingType.CITY):
+    for node_id in get_player_buildings(game.state, enemy_color, CITY):
         enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
 
     robber_moves = set(

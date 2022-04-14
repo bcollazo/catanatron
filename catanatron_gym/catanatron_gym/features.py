@@ -17,7 +17,9 @@ from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
-    BuildingType,
+    SETTLEMENT,
+    CITY,
+    ROAD,
     ActionType,
     VICTORY_POINT,
 )
@@ -168,8 +170,8 @@ def initialize_graph_features_template(num_players, catan_map: CatanMap):
     features = {}
     for i in range(num_players):
         for node_id in range(len(catan_map.land_nodes)):
-            for building in [BuildingType.SETTLEMENT, BuildingType.CITY]:
-                features[f"NODE{node_id}_P{i}_{building.value}"] = False
+            for building in [SETTLEMENT, CITY]:
+                features[f"NODE{node_id}_P{i}_{building}"] = False
         for edge in get_edges(catan_map.land_nodes):
             features[f"EDGE{edge}_P{i}_ROAD"] = False
     return features
@@ -195,11 +197,9 @@ def graph_features(game: Game, p0_color: Color):
     ).copy()
 
     for i, color in iter_players(game.state.colors, p0_color):
-        settlements = tuple(
-            game.state.buildings_by_color[color][BuildingType.SETTLEMENT]
-        )
-        cities = tuple(game.state.buildings_by_color[color][BuildingType.CITY])
-        roads = tuple(game.state.buildings_by_color[color][BuildingType.ROAD])
+        settlements = tuple(game.state.buildings_by_color[color][SETTLEMENT])
+        cities = tuple(game.state.buildings_by_color[color][CITY])
+        roads = tuple(game.state.buildings_by_color[color][ROAD])
         to_update = get_node_hot_encoded(
             i, game.state.colors, settlements, cities, roads
         )
@@ -219,21 +219,17 @@ def build_production_features(consider_robber):
         for resource in RESOURCES:
             for i, color in iter_players(game.state.colors, p0_color):
                 production = 0
-                for node_id in get_player_buildings(
-                    game.state, color, BuildingType.SETTLEMENT
-                ):
+                for node_id in get_player_buildings(game.state, color, SETTLEMENT):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += get_node_production(
-                        game.state.board, node_id, resource
+                        game.state.board.map, node_id, resource
                     )
-                for node_id in get_player_buildings(
-                    game.state, color, BuildingType.CITY
-                ):
+                for node_id in get_player_buildings(game.state, color, CITY):
                     if consider_robber and node_id in robbed_nodes:
                         continue
                     production += 2 * get_node_production(
-                        game.state.board, node_id, resource
+                        game.state.board.map, node_id, resource
                     )
                 features[f"{prefix}P{i}_{resource}_PRODUCTION"] = production
 
@@ -242,9 +238,9 @@ def build_production_features(consider_robber):
     return production_features
 
 
-# @functools.lru_cache(maxsize=None)
-def get_node_production(board, node_id, resource):
-    tiles = board.map.adjacent_tiles[node_id]
+@functools.lru_cache(maxsize=1000)
+def get_node_production(catan_map, node_id, resource):
+    tiles = catan_map.adjacent_tiles[node_id]
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 
@@ -255,12 +251,8 @@ def get_player_expandable_nodes(game: Game, color: Color):
     ]
     enemy_node_ids = set()
     for enemy_color in enemy_colors:
-        enemy_node_ids.update(
-            get_player_buildings(game.state, enemy_color, BuildingType.SETTLEMENT)
-        )
-        enemy_node_ids.update(
-            get_player_buildings(game.state, enemy_color, BuildingType.CITY)
-        )
+        enemy_node_ids.update(get_player_buildings(game.state, enemy_color, SETTLEMENT))
+        enemy_node_ids.update(get_player_buildings(game.state, enemy_color, CITY))
 
     expandable_node_ids = [
         node_id
@@ -271,7 +263,7 @@ def get_player_expandable_nodes(game: Game, color: Color):
     return expandable_node_ids
 
 
-REACHABLE_FEATURES_MAX = 3  # exclusive
+REACHABLE_FEATURES_MAX = 2  # inclusive
 
 
 def get_zero_nodes(game, color):
@@ -282,32 +274,56 @@ def get_zero_nodes(game, color):
     return zero_nodes
 
 
-def iter_level_nodes(game, color, levels, zero_nodes):
-    """Yields (level, level_nodes) tuples"""
+@functools.lru_cache(maxsize=2000)
+def iter_level_nodes(enemy_nodes, enemy_roads, num_roads, zero_nodes):
+    """Iterates over possible expansion paths.
+
+    Args:
+        enemy_nodes (frozenset[NodeId]): node_ids owned by enemy colors
+        enemy_roads (frozenset[EdgeId]): edge_ids owned by enemy colors
+        num_roads (int): Max-depth of BFS (inclusive). e.g. 2 will yield
+            possible expansions with up to 2 roads.
+        zero_nodes (frozenset[NodeId]): Nodes reachable per board.connected_components
+
+    Yields:
+        Tuple[int, Set[NodeId], Dict[NodeId, List[EdgeId]]:
+            First element is level (roads needed to get there).
+            Second element is set of node_ids reachable at this level.
+            Third is mapping of NodeId to the list of edges
+                that leads to shortest path to that NodeId.
+    """
     last_layer_nodes = zero_nodes
-    for level in range(1, levels):
+    paths = {i: [] for i in zero_nodes}
+    results = []
+    for level in range(1, num_roads + 1):
         level_nodes = set(last_layer_nodes)
         for node_id in last_layer_nodes:
-            if game.state.board.is_enemy_node(node_id, color):
+            if node_id in enemy_nodes:
                 continue  # not expandable.
 
-            def can_follow_edge(neighbor_id):
-                edge = (node_id, neighbor_id)
-                return not game.state.board.is_enemy_road(edge, color)
-
             # here we can assume node is empty or owned
-            expandable = filter(can_follow_edge, STATIC_GRAPH.neighbors(node_id))
+            expandable = []
+            for neighbor_id in STATIC_GRAPH.neighbors(node_id):
+                edge = (node_id, neighbor_id)
+                can_follow_edge = edge not in enemy_roads
+                if can_follow_edge:
+                    expandable.append(neighbor_id)
+                    if neighbor_id not in paths:
+                        paths[neighbor_id] = paths[node_id] + [(node_id, neighbor_id)]
+
             level_nodes.update(expandable)
 
-        yield level, level_nodes
+        results.append((level, level_nodes, paths))
 
         last_layer_nodes = level_nodes
+
+    return results
 
 
 def get_owned_or_buildable(game, color, board_buildable):
     return frozenset(
-        get_player_buildings(game.state, color, BuildingType.SETTLEMENT)
-        + get_player_buildings(game.state, color, BuildingType.CITY)
+        get_player_buildings(game.state, color, SETTLEMENT)
+        + get_player_buildings(game.state, color, CITY)
         + board_buildable
     )
 
@@ -323,16 +339,26 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
         zero_nodes = get_zero_nodes(game, color)
         production = count_production(
             frozenset(owned_or_buildable.intersection(zero_nodes)),
-            game.state.board,
+            game.state.board.map,
         )
         for resource in RESOURCES:
             features[f"P{i}_0_ROAD_REACHABLE_{resource}"] = production[resource]
 
         # do rest of layers
-        for (level, level_nodes) in iter_level_nodes(game, color, levels, zero_nodes):
+        enemy_nodes = frozenset(
+            k
+            for k, v in game.state.board.buildings.items()
+            if v is not None and v[0] != color
+        )
+        enemy_roads = frozenset(
+            k for k, v in game.state.board.roads.items() if v is not None and v != color
+        )
+        for (level, level_nodes, paths) in iter_level_nodes(
+            enemy_nodes, enemy_roads, levels, frozenset(zero_nodes)
+        ):
             production = count_production(
                 frozenset(owned_or_buildable.intersection(level_nodes)),
-                game.state.board,
+                game.state.board.map,
             )
             for resource in RESOURCES:
                 features[f"P{i}_{level}_ROAD_REACHABLE_{resource}"] = production[
@@ -343,10 +369,10 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
 
 
 @functools.lru_cache(maxsize=1000)
-def count_production(nodes, board):
+def count_production(nodes, catan_map):
     production = Counter()
     for node_id in nodes:
-        production += board.map.node_production[node_id]
+        production += catan_map.node_production[node_id]
     return production
 
 
@@ -359,9 +385,7 @@ def expansion_features(game: Game, p0_color: Color):
     # For each connected component node, bfs_edges (skipping enemy edges and nodes nodes)
     empty_edges = set(get_edges(game.state.board.map.land_nodes))
     for i, color in iter_players(game.state.colors, p0_color):
-        empty_edges.difference_update(
-            get_player_buildings(game.state, color, BuildingType.ROAD)
-        )
+        empty_edges.difference_update(get_player_buildings(game.state, color, ROAD))
     searchable_subgraph = STATIC_GRAPH.edge_subgraph(empty_edges)
 
     board_buildable_node_ids = game.state.board.buildable_node_ids(
@@ -377,7 +401,7 @@ def expansion_features(game: Game, p0_color: Color):
                 if node_color is None or node_color == color:
                     yield node_id  # not owned by enemy, can explore
 
-        # owned_edges = get_player_buildings(state, color, BuildingType.ROAD)
+        # owned_edges = get_player_buildings(state, color, ROAD)
         dis_res_prod = {
             distance: {k: 0 for k in RESOURCES}
             for distance in range(MAX_EXPANSION_DISTANCE)
@@ -386,7 +410,7 @@ def expansion_features(game: Game, p0_color: Color):
             if node_id in board_buildable_node_ids:  # node itself is buildable
                 for resource in RESOURCES:
                     production = get_node_production(
-                        game.state.board, node_id, resource
+                        game.state.board.map, node_id, resource
                     )
                     dis_res_prod[0][resource] = max(
                         production, dis_res_prod[0][resource]
@@ -414,7 +438,7 @@ def expansion_features(game: Game, p0_color: Color):
 
                 # means we can get to node b, at distance=d, starting from path[0]
                 for resource in RESOURCES:
-                    production = get_node_production(game.state.board, b, resource)
+                    production = get_node_production(game.state.board.map, b, resource)
                     dis_res_prod[distance][resource] = max(
                         production, dis_res_prod[distance][resource]
                     )
