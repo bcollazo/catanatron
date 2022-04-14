@@ -71,6 +71,11 @@ def get_actual_victory_points(state, color):
     return state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
 
 
+def get_visible_victory_points(state, color):
+    key = player_key(state, color)
+    return state.player_state[f"{key}_VICTORY_POINTS"]
+
+
 def get_longest_road_color(state):
     for index in range(len(state.colors)):
         if state.player_state[f"P{index}_HAS_ROAD"]:
