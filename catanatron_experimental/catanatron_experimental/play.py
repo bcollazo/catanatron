@@ -1,6 +1,7 @@
 import os
 import importlib.util
 from dataclasses import dataclass
+from typing import Union
 
 import click
 from rich.console import Console
@@ -156,8 +157,9 @@ def simulate(
     if code:
         abspath = os.path.abspath(code)
         spec = importlib.util.spec_from_file_location("module.name", abspath)
-        user_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(user_module)
+        if spec is not None and spec.loader is not None:
+            user_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(user_module)
 
     if help_players:
         return Console().print(player_help_table())
@@ -192,7 +194,7 @@ def simulate(
 class OutputOptions:
     """Class to keep track of output CLI flags"""
 
-    output: str = None  # path to store files
+    output: Union[str, None] = None  # path to store files
     csv: bool = False
     json: bool = False
     db: bool = False
@@ -234,9 +236,9 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
         for player in players:
             player.reset_state()
         catan_map = (
-            CatanMap(MINI_MAP_TEMPLATE)
+            CatanMap.from_template(MINI_MAP_TEMPLATE)
             if game_config.catan_map == "MINI"
-            else CatanMap(BASE_MAP_TEMPLATE)
+            else CatanMap.from_template(BASE_MAP_TEMPLATE)
         )
         game = Game(
             players,

@@ -132,7 +132,7 @@ class State:
         if initialize:
             self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
-            self.board = Board(catan_map or CatanMap(BASE_MAP_TEMPLATE))
+            self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit
 
             # feature-ready dictionary
@@ -239,7 +239,7 @@ def yield_resources(board: Board, resource_freqdeck, number):
         (dict, List[int]): 2-tuple.
             First element is color => freqdeck mapping. e.g. {Color.RED: [0,0,0,3,0]}.
             Second is an array of resources that couldn't be yieleded
-                because they depleted.
+            because they depleted.
     """
     intented_payout = defaultdict(lambda: defaultdict(int))
     resource_totals = defaultdict(int)
