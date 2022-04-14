@@ -403,3 +403,7 @@ Out[3]: 0.333771405974403
 - Game.copy() took 45% of the time when using ValueFunctionPlayer (5.7s).
 - 3/21/21 playable_actions is 50% of time when running random 1v1s.
   Accounts for 7s in a 14s 100-game run.
+
+Time Estimates:
+
+- AB2 takes 0.01 seconds per tick.
