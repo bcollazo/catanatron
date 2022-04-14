@@ -247,9 +247,15 @@ class CatanMap:
 
     @staticmethod
     def from_template(map_template: MapTemplate):
-        self = CatanMap()
+        tiles = initialize_tiles(map_template)
 
-        self.tiles = initialize_board(map_template)
+        return CatanMap.from_tiles(tiles)
+
+    @staticmethod
+    def from_tiles(tiles: Dict[Coordinate, Tile]):
+        self = CatanMap()
+        self.tiles = tiles
+
         self.land_tiles = {
             k: v for k, v in self.tiles.items() if isinstance(v, LandTile)
         }
@@ -340,7 +346,12 @@ def number_probability(number):
     return DICE_PROBAS[number]
 
 
-def initialize_board(map_template: MapTemplate) -> Dict[Coordinate, Tile]:
+def initialize_tiles(
+    map_template: MapTemplate,
+    shuffled_numbers_param=None,
+    shuffled_port_resources_param=None,
+    shuffled_tile_resources_param=None,
+) -> Dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
     It first shuffles tiles, ports, and numbers. Then goes satisfying the
@@ -356,13 +367,15 @@ def initialize_board(map_template: MapTemplate) -> Dict[Coordinate, Tile]:
     Returns:
         Dict[Coordinate, Tile]: Coordinate to initialized Tile mapping.
     """
-    shuffled_port_resources = random.sample(
+    shuffled_port_resources = shuffled_port_resources_param or random.sample(
         map_template.port_resources, len(map_template.port_resources)
     )
-    shuffled_tile_resources = random.sample(
+    shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
         map_template.tile_resources, len(map_template.tile_resources)
     )
-    shuffled_numbers = random.sample(map_template.numbers, len(map_template.numbers))
+    shuffled_numbers = shuffled_numbers_param or random.sample(
+        map_template.numbers, len(map_template.numbers)
+    )
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles = {}
@@ -492,3 +505,42 @@ PORT_DIRECTION_TO_NODEREFS = {
     Direction.SOUTHEAST: (NodeRef.SOUTH, NodeRef.SOUTHEAST),
     Direction.SOUTHWEST: (NodeRef.SOUTHWEST, NodeRef.SOUTH),
 }
+
+TOURNAMENT_MAP_TILES = initialize_tiles(
+    BASE_MAP_TEMPLATE,
+    [10, 8, 3, 6, 2, 5, 10, 8, 4, 11, 12, 9, 5, 4, 9, 11, 3, 6],
+    [
+        None,
+        SHEEP,
+        None,
+        ORE,
+        WHEAT,
+        None,
+        WOOD,
+        BRICK,
+        None,
+    ],
+    [
+        None,
+        WOOD,
+        SHEEP,
+        SHEEP,
+        WOOD,
+        WHEAT,
+        WOOD,
+        WHEAT,
+        BRICK,
+        SHEEP,
+        BRICK,
+        SHEEP,
+        WHEAT,
+        WHEAT,
+        ORE,
+        BRICK,
+        ORE,
+        WOOD,
+        ORE,
+        None,
+    ],
+)
+TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
