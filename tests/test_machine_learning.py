@@ -2,7 +2,6 @@ import math
 import random
 
 import tensorflow as tf
-import gym
 
 from tests.utils import advance_to_play_turn, build_initial_placements
 from catanatron.state import player_deck_replenish
@@ -36,17 +35,6 @@ from catanatron_experimental.machine_learning.board_tensor_features import (
     init_board_tensor_map,
     init_tile_coordinate_map,
 )
-
-
-def test_gym_api_works():
-    env = gym.make("catanatron_gym:catanatron-v0")
-    observation = env.reset()
-    for _ in range(1000):
-        action = random.choice(env.get_valid_actions())  # type: ignore
-        observation, reward, done, info = env.step(action)
-        if done:
-            observation = env.reset()
-    env.close()
 
 
 def test_create_sample():
