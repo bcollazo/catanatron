@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import random
 from enum import Enum
 from collections import Counter, defaultdict
-from typing import Dict, FrozenSet, List, Mapping, Set, Tuple, Type, Union
+from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.enums import (
@@ -544,3 +544,12 @@ TOURNAMENT_MAP_TILES = initialize_tiles(
     ],
 )
 TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
+
+
+def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
+    if map_type == "TOURNAMENT":
+        return TOURNAMENT_MAP  # this assumes map is read-only data struct
+    elif map_type == "MINI":
+        return CatanMap.from_template(MINI_MAP_TEMPLATE)
+    else:
+        return CatanMap.from_template(BASE_MAP_TEMPLATE)
