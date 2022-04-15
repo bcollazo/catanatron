@@ -156,6 +156,7 @@ export default function ZoomableBoard({ replayMode }) {
       ({ color, building, direction, tile_coordinate, id }) => (
         <Node
           key={id}
+          id={id}
           center={center}
           size={size}
           coordinate={tile_coordinate}

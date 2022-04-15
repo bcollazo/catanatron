@@ -9,6 +9,7 @@ function Building({ building, color }) {
 }
 
 export default function Node({
+  id,
   center,
   size,
   coordinate,
@@ -40,6 +41,7 @@ export default function Node({
     >
       {color && <Building building={building} color={color} />}
       {flashing && <div className="pulse"></div>}
+      {/* {id} */}
     </div>
   );
 }
