@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple
+from typing import Any, List, Literal, Tuple
 import functools
 from collections import Counter
 from catanatron.models.decks import freqdeck_count
@@ -12,7 +12,7 @@ from catanatron.state_functions import (
     player_num_resource_cards,
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
-from catanatron.models.map import NUM_TILES, CatanMap
+from catanatron.models.map import NUM_TILES, CatanMap, build_map
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -524,20 +524,17 @@ def create_sample_vector(game, p0_color, features=None):
     return [float(sample_dict[i]) for i in features if i in sample_dict]
 
 
-FEATURE_ORDERING = None
-
-
-def get_feature_ordering(num_players=4):
-    global FEATURE_ORDERING
-    if FEATURE_ORDERING is None:
-        players = [
-            SimplePlayer(Color.RED),
-            SimplePlayer(Color.BLUE),
-            SimplePlayer(Color.WHITE),
-            SimplePlayer(Color.ORANGE),
-        ]
-        players = players[:num_players]
-        game = Game(players)
-        sample = create_sample(game, players[0].color)
-        FEATURE_ORDERING = sorted(sample.keys())
-    return FEATURE_ORDERING
+@functools.lru_cache(4 * 3)
+def get_feature_ordering(
+    num_players=4, map_type: Literal["BASE", "MINI", "TOURNAMENT"] = "BASE"
+):
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    players = players[:num_players]
+    game = Game(players, catan_map=build_map(map_type))
+    sample = create_sample(game, players[0].color)
+    return sorted(sample.keys())

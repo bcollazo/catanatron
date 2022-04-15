@@ -4,7 +4,7 @@ import gym
 
 from catanatron_gym.features import get_feature_ordering
 
-features = get_feature_ordering()
+features = get_feature_ordering(2)
 
 
 def get_p0_num_settlements(obs):
@@ -57,10 +57,16 @@ def test_invalid_action_reward():
     env = gym.make(
         "catanatron_gym:catanatron-v0", config={"invalid_action_reward": -1234}
     )
-    observation = env.reset()
-    action = next(filter(lambda i: i not in env.get_valid_actions(), range(1000)))  # type: ignore
-    observation, reward, done, info = env.step(action)
+    first_obs = env.reset()
+    invalid_action = next(filter(lambda i: i not in env.get_valid_actions(), range(1000)))  # type: ignore
+    observation, reward, done, info = env.step(invalid_action)
     assert reward == -1234
+    assert not done
+    assert observation == first_obs
+    for _ in range(500):
+        observation, reward, done, info = env.step(invalid_action)
+        assert observation == first_obs
+    assert done
 
 
 def test_custom_reward():
@@ -81,3 +87,4 @@ def test_custom_map():
     observation = env.reset()
     assert len(env.get_valid_actions()) < 50  # type: ignore
     assert len(observation) < 614
+    # assert env.action_space.n == 260
