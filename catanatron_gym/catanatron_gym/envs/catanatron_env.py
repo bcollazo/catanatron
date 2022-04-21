@@ -129,9 +129,11 @@ class CatanatronEnv(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
+        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
 
+        assert all(p.color != Color.BLUE for p in self.enemies)
         self.p0 = Player(Color.BLUE)
-        self.players = [self.p0, RandomPlayer(Color.RED)]
+        self.players = [self.p0] + self.enemies  # type: ignore
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10

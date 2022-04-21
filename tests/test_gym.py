@@ -1,8 +1,11 @@
 import random
-from catanatron_gym.envs.catanatron_env import CatanatronEnv
+
 import gym
 
 from catanatron_gym.features import get_feature_ordering
+from catanatron.models.player import Color, RandomPlayer
+from catanatron_experimental.machine_learning.players.minimax import ValueFunctionPlayer
+from catanatron_gym.envs.catanatron_env import CatanatronEnv
 
 features = get_feature_ordering(2)
 
@@ -88,3 +91,29 @@ def test_custom_map():
     assert len(env.get_valid_actions()) < 50  # type: ignore
     assert len(observation) < 614
     # assert env.action_space.n == 260
+
+
+def test_enemies():
+    env = gym.make(
+        "catanatron_gym:catanatron-v0",
+        config={
+            "enemies": [
+                ValueFunctionPlayer(Color.RED),
+                RandomPlayer(Color.ORANGE),
+                RandomPlayer(Color.WHITE),
+            ]
+        },
+    )
+    observation = env.reset()
+    assert len(observation) == len(get_feature_ordering(4))
+
+    done = False
+    reward = 0
+    while not done:
+        action = random.choice(env.get_valid_actions())  # type: ignore
+        observation, reward, done, info = env.step(action)
+
+    # Virtually impossible for a Random bot to beat Value Function Player
+    assert env.game.winning_color() == Color.RED  # type: ignore
+    assert reward - 1
+    env.close()
