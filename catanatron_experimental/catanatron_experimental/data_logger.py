@@ -7,7 +7,7 @@ from catanatron_gym.features import (
     create_sample_vector,
     get_feature_ordering,
 )
-from catanatron_experimental.machine_learning.board_tensor_features import (
+from catanatron_gym.board_tensor_features import (
     CHANNELS,
     HEIGHT,
     WIDTH,

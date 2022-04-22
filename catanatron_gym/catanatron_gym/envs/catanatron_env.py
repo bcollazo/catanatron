@@ -9,16 +9,9 @@ from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
 from catanatron_gym.features import (
     create_sample,
-    create_sample_vector,
     get_feature_ordering,
 )
-
-# TODO: Move to gym
-from catanatron_experimental.machine_learning.board_tensor_features import (
-    create_board_tensor,
-    get_numeric_features,
-    is_graph_feature,
-)
+from catanatron_gym.board_tensor_features import create_board_tensor, is_graph_feature
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology

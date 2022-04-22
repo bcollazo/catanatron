@@ -5,9 +5,7 @@ from catanatron.state_functions import get_player_buildings
 from catanatron.models.player import Color
 from catanatron.game import Game
 from catanatron.models.enums import (
-    DEVELOPMENT_CARDS,
     RESOURCES,
-    VICTORY_POINT,
     SETTLEMENT,
     CITY,
     ROAD,
