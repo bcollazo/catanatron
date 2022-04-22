@@ -11,7 +11,11 @@ from catanatron_gym.features import (
     create_sample,
     get_feature_ordering,
 )
-from catanatron_gym.board_tensor_features import create_board_tensor, is_graph_feature
+from catanatron_gym.board_tensor_features import (
+    create_board_tensor,
+    get_channels,
+    is_graph_feature,
+)
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
@@ -133,14 +137,14 @@ class CatanatronEnv(gym.Env):
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
-        self.representation = self.config.get("representation", "1d-array")
+        self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
-        assert self.representation in ["mixed", "1d-array"]
+        assert self.representation in ["mixed", "vector"]
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
         # self.game set by .reset()
-        self.representation = "mixed" if self.representation == "mixed" else "1d-array"
+        self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
@@ -149,9 +153,10 @@ class CatanatronEnv(gym.Env):
         # self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
 
         if self.representation == "mixed":
+            channels = get_channels(len(self.players))
             board_tensor_space = spaces.Box(
-                low=0, high=1, shape=(21, 11, 16), dtype=float
-            )  # TODO: Parametrize by num-players
+                low=0, high=1, shape=(channels, 21, 11), dtype=float
+            )
             self.numeric_features = [
                 f for f in self.features if not is_graph_feature(f)
             ]
@@ -221,7 +226,9 @@ class CatanatronEnv(gym.Env):
     def _get_observation(self):
         sample = create_sample(self.game, self.p0.color)
         if self.representation == "mixed":
-            board_tensor = create_board_tensor(self.game, self.p0.color)
+            board_tensor = create_board_tensor(
+                self.game, self.p0.color, channels_first=True
+            )
             numeric = [float(sample[i]) for i in self.numeric_features]
             return {"board": board_tensor, "numeric": numeric}
 

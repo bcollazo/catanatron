@@ -122,7 +122,7 @@ def init_tile_coordinate_map():
     return tile_map
 
 
-def create_board_tensor(game: Game, p0_color: Color):
+def create_board_tensor(game: Game, p0_color: Color, channels_first=False):
     """Creates a tensor of shape (WIDTH=21, HEIGHT=11, CHANNELS).
 
     1 x n hot-encoded planes (2 and 1s for city/settlements).
@@ -208,7 +208,10 @@ def create_board_tensor(game: Game, p0_color: Color):
             updates.append(1)
         port_planes = tf.tensor_scatter_nd_add(port_planes, indices, updates)
 
-    return tf.concat(
+    result = tf.concat(
         [color_multiplier_planes, resource_proba_planes, robber_plane, port_planes],
         axis=2,
     )
+    if channels_first:
+        return tf.transpose(result, perm=(2, 0, 1))
+    return result

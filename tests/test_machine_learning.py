@@ -314,6 +314,15 @@ def test_init_tile_map():
         assert coordinate in tile_map
 
 
+def test_create_board_tensor_channels_first():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    p0_color = game.state.colors[0]
+
+    tensor = create_board_tensor(game, p0_color, True)
+    assert tensor.shape == (20 - 4, 21, 11)
+
+
 def test_create_board_tensor():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
