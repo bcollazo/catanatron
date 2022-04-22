@@ -15,7 +15,7 @@ from catanatron.models.enums import (
 from catanatron.models.coordinate_system import offset_to_cube
 from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.map import number_probability
-from catanatron_gym.features import iter_players
+from catanatron_gym.features import get_feature_ordering, iter_players
 
 # These assume 4 players
 WIDTH = 21
@@ -35,39 +35,18 @@ EDGE_MAP = None
 TILE_COORDINATE_MAP = None
 
 
-def get_numeric_features(num_players):
-    return sorted(
-        set(
-            # Player features
-            ["P0_ACTUAL_VPS"]
-            + [f"P{i}_PUBLIC_VPS" for i in range(num_players)]
-            + [f"P{i}_HAS_ARMY" for i in range(num_players)]
-            + [f"P{i}_HAS_ROAD" for i in range(num_players)]
-            + [f"P{i}_ROADS_LEFT" for i in range(num_players)]
-            + [f"P{i}_SETTLEMENTS_LEFT" for i in range(num_players)]
-            + [f"P{i}_CITIES_LEFT" for i in range(num_players)]
-            + [f"P{i}_HAS_ROLLED" for i in range(num_players)]
-            # Player Hand Features
-            + [
-                f"P{i}_{card}_PLAYED"
-                for i in range(num_players)
-                for card in DEVELOPMENT_CARDS
-                if card != VICTORY_POINT
-            ]
-            + [f"P{i}_NUM_RESOURCES_IN_HAND" for i in range(num_players)]
-            + [f"P{i}_NUM_DEVS_IN_HAND" for i in range(num_players)]
-            + [f"P0_{card}_IN_HAND" for card in DEVELOPMENT_CARDS]
-            + [
-                f"P0_{card}_PLAYABLE"
-                for card in DEVELOPMENT_CARDS
-                if card != VICTORY_POINT
-            ]
-            + [f"P0_{resource}_IN_HAND" for resource in RESOURCES]
-            # Game Features
-            + ["BANK_DEV_CARDS"]
-            + [f"BANK_{resource}" for resource in RESOURCES]
-        )
+def is_graph_feature(feature_name):
+    return (
+        feature_name.startswith("TILE")
+        or feature_name.startswith("PORT")
+        or feature_name.startswith("NODE")
+        or feature_name.startswith("EDGE")
     )
+
+
+def get_numeric_features(num_players):
+    features = get_feature_ordering(num_players)
+    return [f for f in features if not is_graph_feature(f)]
 
 
 NUMERIC_FEATURES = get_numeric_features(4)
