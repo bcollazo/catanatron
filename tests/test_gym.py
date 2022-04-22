@@ -117,3 +117,13 @@ def test_enemies():
     assert env.game.winning_color() == Color.RED  # type: ignore
     assert reward - 1
     env.close()
+
+
+def test_mixed_rep():
+    env = gym.make(
+        "catanatron_gym:catanatron-v0",
+        config={"representation": "mixed"},
+    )
+    observation = env.reset()
+    assert "board" in observation
+    assert "numeric" in observation

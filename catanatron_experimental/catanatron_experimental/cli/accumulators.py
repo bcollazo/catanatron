@@ -29,7 +29,7 @@ from catanatron_experimental.machine_learning.utils import (
 )
 from catanatron_gym.features import create_sample
 from catanatron_gym.envs.catanatron_env import to_action_space, to_action_type_space
-from catanatron_experimental.machine_learning.board_tensor_features import (
+from catanatron_gym.board_tensor_features import (
     create_board_tensor,
 )
 

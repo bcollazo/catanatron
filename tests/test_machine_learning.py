@@ -29,7 +29,7 @@ from catanatron_gym.features import (
     tile_features,
     graph_features,
 )
-from catanatron_experimental.machine_learning.board_tensor_features import (
+from catanatron_gym.board_tensor_features import (
     create_board_tensor,
     get_node_and_edge_maps,
     init_board_tensor_map,
@@ -312,6 +312,15 @@ def test_init_tile_map():
 
     for coordinate in Board().map.land_tiles.keys():
         assert coordinate in tile_map
+
+
+def test_create_board_tensor_channels_first():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    p0_color = game.state.colors[0]
+
+    tensor = create_board_tensor(game, p0_color, True)
+    assert tensor.shape == (20 - 4, 21, 11)
 
 
 def test_create_board_tensor():

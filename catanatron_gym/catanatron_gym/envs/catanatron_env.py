@@ -1,12 +1,21 @@
 import gym
 from gym import spaces
+import numpy as np
 
 from catanatron.game import Game
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
-from catanatron_gym.features import create_sample_vector, get_feature_ordering
+from catanatron_gym.features import (
+    create_sample,
+    get_feature_ordering,
+)
+from catanatron_gym.board_tensor_features import (
+    create_board_tensor,
+    get_channels,
+    is_graph_feature,
+)
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
@@ -118,9 +127,7 @@ class CatanatronEnv(gym.Env):
 
     action_space = spaces.Discrete(ACTION_SPACE_SIZE)
     # TODO: This could be smaller (there are many binary features). float b.c. TILE0_PROBA
-    observation_space = spaces.Box(
-        low=-0, high=HIGH, shape=(NUM_FEATURES,), dtype=float
-    )
+    observation_space = spaces.Box(low=0, high=HIGH, shape=(NUM_FEATURES,), dtype=float)
     reward_range = (-1, 1)
 
     def __init__(self, config=None):
@@ -130,19 +137,43 @@ class CatanatronEnv(gym.Env):
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
+        self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
+        assert self.representation in ["mixed", "vector"]
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
+        # self.game set by .reset()
+        self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
         # TODO: Make self.action_space smaller if possible (per map_type)
         # self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
-        self.observation_space = spaces.Box(
-            low=-0, high=HIGH, shape=(len(self.features),), dtype=float
-        )
+
+        if self.representation == "mixed":
+            channels = get_channels(len(self.players))
+            board_tensor_space = spaces.Box(
+                low=0, high=1, shape=(channels, 21, 11), dtype=float
+            )
+            self.numeric_features = [
+                f for f in self.features if not is_graph_feature(f)
+            ]
+            numeric_space = spaces.Box(
+                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=float
+            )
+            mixed = spaces.Dict(
+                {
+                    "board": board_tensor_space,
+                    "numeric": numeric_space,
+                }
+            )
+            self.observation_space = mixed
+        else:
+            self.observation_space = spaces.Box(
+                low=0, high=HIGH, shape=(len(self.features),), dtype=float
+            )
 
     def get_valid_actions(self):
         """
@@ -193,7 +224,15 @@ class CatanatronEnv(gym.Env):
         return observation
 
     def _get_observation(self):
-        return create_sample_vector(self.game, self.p0.color, self.features)
+        sample = create_sample(self.game, self.p0.color)
+        if self.representation == "mixed":
+            board_tensor = create_board_tensor(
+                self.game, self.p0.color, channels_first=True
+            )
+            numeric = [float(sample[i]) for i in self.numeric_features]
+            return {"board": board_tensor, "numeric": numeric}
+
+        return [float(sample[i]) for i in self.features]
 
     def _advance_until_p0_decision(self):
         while (

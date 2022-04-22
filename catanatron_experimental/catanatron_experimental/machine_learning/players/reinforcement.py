@@ -12,7 +12,7 @@ from catanatron_gym.features import (
     get_feature_ordering,
 )
 from catanatron_gym.envs.catanatron_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
-from catanatron_experimental.machine_learning.board_tensor_features import (
+from catanatron_gym.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
 )
