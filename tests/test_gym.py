@@ -1,6 +1,7 @@
 import random
 
 import gym
+from gym.utils.env_checker import check_env
 
 from catanatron_gym.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
@@ -19,6 +20,11 @@ def get_p0_num_settlements(obs):
     return sum([obs[i] for i in indexes])
 
 
+def test_check_env():
+    env = CatanatronEnv()
+    check_env(env)
+
+
 def test_gym():
     env = CatanatronEnv()
 
@@ -28,7 +34,7 @@ def test_gym():
 
     action = random.choice(env.get_valid_actions())
     second_observation, reward, done, info = env.step(action)
-    assert first_observation != second_observation
+    assert (first_observation != second_observation).any()
     assert reward == 0
     assert not done
     assert len(env.get_valid_actions()) in [2, 3]
@@ -38,7 +44,7 @@ def test_gym():
     assert get_p0_num_settlements(second_observation) == 1
 
     reset_obs = env.reset()
-    assert reset_obs != second_observation
+    assert (reset_obs != second_observation).any()
     assert get_p0_num_settlements(reset_obs) == 0
 
     env.close()
@@ -65,10 +71,10 @@ def test_invalid_action_reward():
     observation, reward, done, info = env.step(invalid_action)
     assert reward == -1234
     assert not done
-    assert observation == first_obs
+    assert (observation == first_obs).all()
     for _ in range(500):
         observation, reward, done, info = env.step(invalid_action)
-        assert observation == first_obs
+        assert (observation == first_obs).all()
     assert done
 
 
