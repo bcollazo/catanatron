@@ -2,6 +2,7 @@ import math
 import random
 
 import tensorflow as tf
+import numpy as np
 
 from tests.utils import advance_to_play_turn, build_initial_placements
 from catanatron.state import player_deck_replenish
@@ -416,18 +417,18 @@ def test_resource_proba_planes():
 
     # assert brick tile has 6 non-zero node as expected
     four_proba = number_probability(4)
-    tf.assert_equal(tensor[6, 2, 9], four_proba)
-    tf.assert_equal(tensor[7, 2, 9], 0.0)
-    tf.assert_equal(tensor[8, 2, 9], four_proba)
-    tf.assert_equal(tensor[9, 2, 9], 0.0)
-    tf.assert_equal(tensor[10, 2, 9], four_proba)
+    assert tensor[6, 2, 9] == four_proba
+    assert tensor[7, 2, 9] == 0.0
+    assert tensor[8, 2, 9] == four_proba
+    assert tensor[9, 2, 9] == 0.0
+    assert tensor[10, 2, 9] == four_proba
     for i in range(5):
-        tf.assert_equal(tensor[6 + i, 3, 9], 0.0)
-    tf.assert_equal(tensor[6, 4, 9], four_proba)
-    tf.assert_equal(tensor[7, 4, 9], 0.0)
-    tf.assert_equal(tensor[8, 4, 9], four_proba)
-    tf.assert_equal(tensor[9, 4, 9], 0.0)
-    tf.assert_equal(tensor[10, 4, 9], four_proba)
+        assert tensor[6 + i, 3, 9] == 0.0
+    assert tensor[6, 4, 9] == four_proba
+    assert tensor[7, 4, 9] == 0.0
+    assert tensor[8, 4, 9] == four_proba
+    assert tensor[9, 4, 9] == 0.0
+    assert tensor[10, 4, 9] == four_proba
 
 
 def test_port_planes():
@@ -469,9 +470,9 @@ def test_robber_plane():
         [0.0, 0.0, 0.0, 0.0, 0.0],
         [1.0, 0.0, 1.0, 0.0, 1.0],
     ]
-    tf.assert_equal(
-        tf.transpose(tensor[i : i + 5, j : j + 3, robber_plane_channel]), expected
-    )
+    assert (
+        np.transpose(tensor[i : i + 5, j : j + 3, robber_plane_channel]) == expected
+    ).all()
 
 
 def test_iter_players():

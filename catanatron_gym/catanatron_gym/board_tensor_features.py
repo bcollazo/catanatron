@@ -1,5 +1,5 @@
 import networkx as nx
-import tensorflow as tf
+import numpy as np
 
 from catanatron.state_functions import get_player_buildings
 from catanatron.models.player import Color
@@ -193,7 +193,7 @@ def create_board_tensor(game: Game, p0_color: Color, channels_first=False):
             (x, y) = node_map[node_id]
             planes[channel_idx][x][y] = 1
 
-    result = tf.convert_to_tensor(planes)
+    result = np.array(planes)
     if not channels_first:
-        return tf.transpose(result, perm=(1, 2, 0))
+        return np.transpose(result, (1, 2, 0))
     return result
