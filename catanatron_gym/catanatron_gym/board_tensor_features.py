@@ -134,30 +134,26 @@ def create_board_tensor(game: Game, p0_color: Color, channels_first=False):
     Example:
         - To see WHEAT plane: tf.transpose(board_tensor[:,:,3])
     """
-    # add 4 hot-encoded color multiplier planes (nodes), and 4 edge planes. 8 planes
-    color_multiplier_planes = []
+    # add n hot-encoded color multiplier planes (nodes), and n edge planes. 2*n planes
+    n = len(game.state.colors)
+    channels = 2 * n + 5 + 1 + 6
+    planes = [
+        [[0.0 for i in range(HEIGHT)] for j in range(WIDTH)] for _ in range(channels)
+    ]
     node_map, edge_map = get_node_and_edge_maps()
-    for _, color in iter_players(tuple(game.state.colors), p0_color):
-        node_plane = [[0.0 for i in range(HEIGHT)] for j in range(WIDTH)]
-        edge_plane = [[0.0 for i in range(HEIGHT)] for j in range(WIDTH)]
-
+    for i, color in iter_players(tuple(game.state.colors), p0_color):
         for node_id in get_player_buildings(game.state, color, SETTLEMENT):
             indices = node_map[node_id]
-            node_plane[indices[0]][indices[1]] = 1.0
+            planes[2 * i][indices[0]][indices[1]] = 1.0
         for node_id in get_player_buildings(game.state, color, CITY):
             indices = node_map[node_id]
-            node_plane[indices[0]][indices[1]] = 2.0
+            planes[2 * i][indices[0]][indices[1]] = 2.0
 
         for edge in get_player_buildings(game.state, color, ROAD):
             indices = edge_map[edge]
-            edge_plane[indices[0]][indices[1]] = 1.0
+            planes[2 * i + 1][indices[0]][indices[1]] = 1.0
 
-        color_multiplier_planes.append(node_plane)
-        color_multiplier_planes.append(edge_plane)
-    color_multiplier_planes = tf.stack(color_multiplier_planes, axis=2)  # axis=channels
-
-    # add 5 node-resource probas, add color edges
-    planes = [[[0.0 for _ in range(5)] for i in range(HEIGHT)] for j in range(WIDTH)]
+    # set 5 node-resource probas
     resources = [i for i in RESOURCES]
     tile_map = get_tile_coordinate_map()
     for (coordinate, tile) in game.state.board.map.land_tiles.items():
@@ -170,42 +166,34 @@ def create_board_tensor(game: Game, p0_color: Color, channels_first=False):
         # [0.33, 0, 0.33, 0, 0.33]
         proba = 0 if tile.number is None else number_probability(tile.number)
         (y, x) = tile_map[coordinate]  # returns values in (row, column) math def
-        channel_idx = resources.index(tile.resource)
-        planes[x][y][channel_idx] += proba
-        planes[x + 2][y][channel_idx] += proba
-        planes[x + 4][y][channel_idx] += proba
-        planes[x][y + 2][channel_idx] += proba
-        planes[x + 2][y + 2][channel_idx] += proba
-        planes[x + 4][y + 2][channel_idx] += proba
+        channel_idx = 2 * n + resources.index(tile.resource)
+        planes[channel_idx][x][y] += proba
+        planes[channel_idx][x + 2][y] += proba
+        planes[channel_idx][x + 4][y] += proba
+        planes[channel_idx][x][y + 2] += proba
+        planes[channel_idx][x + 2][y + 2] += proba
+        planes[channel_idx][x + 4][y + 2] += proba
 
-    # add 1 robber channel
-    robber_plane = [
-        [[0.0 for _ in range(1)] for i in range(HEIGHT)] for j in range(WIDTH)
-    ]
+    # set 1 robber channel
     (y, x) = tile_map[game.state.board.robber_coordinate]
-    robber_plane[x][y][0] = 1
-    robber_plane[x + 2][y][0] = 1
-    robber_plane[x + 4][y][0] = 1
-    robber_plane[x][y + 2][0] = 1
-    robber_plane[x + 2][y + 2][0] = 1
-    robber_plane[x + 4][y + 2][0] = 1
+    planes[2 * n + 5][x][y] = 1
+    planes[2 * n + 5][x + 2][y] = 1
+    planes[2 * n + 5][x + 4][y] = 1
+    planes[2 * n + 5][x][y + 2] = 1
+    planes[2 * n + 5][x + 2][y + 2] = 1
+    planes[2 * n + 5][x + 4][y + 2] = 1
 
     # Q: Would this be simpler as boolean features for each player?
     # add 6 port channels (5 resources + 1 for 3:1 ports)
     # for each port, take index and take node_id coordinates
-    port_planes = [
-        [[0.0 for _ in range(6)] for i in range(HEIGHT)] for j in range(WIDTH)
-    ]
     for resource, node_ids in game.state.board.map.port_nodes.items():
-        channel_idx = 5 if resource is None else resources.index(resource)
+        channel_idx_delta = 5 if resource is None else resources.index(resource)
+        channel_idx = 2 * n + 5 + 1 + channel_idx_delta
         for node_id in node_ids:
             (x, y) = node_map[node_id]
-            port_planes[x][y][channel_idx] = 1
+            planes[channel_idx][x][y] = 1
 
-    result = tf.concat(
-        [color_multiplier_planes, planes, robber_plane, port_planes],
-        axis=2,
-    )
-    if channels_first:
-        return tf.transpose(result, perm=(2, 0, 1))
+    result = tf.convert_to_tensor(planes)
+    if not channels_first:
+        return tf.transpose(result, perm=(1, 2, 0))
     return result
