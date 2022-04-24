@@ -143,7 +143,6 @@ class CatanatronEnv(gym.Env):
         assert self.representation in ["mixed", "vector"]
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
-        # self.game set by .reset()
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -174,6 +173,8 @@ class CatanatronEnv(gym.Env):
             self.observation_space = spaces.Box(
                 low=0, high=HIGH, shape=(len(self.features),), dtype=float
             )
+
+        self.reset()
 
     def get_valid_actions(self):
         """
@@ -229,10 +230,10 @@ class CatanatronEnv(gym.Env):
             board_tensor = create_board_tensor(
                 self.game, self.p0.color, channels_first=True
             )
-            numeric = [float(sample[i]) for i in self.numeric_features]
+            numeric = np.array([float(sample[i]) for i in self.numeric_features])
             return {"board": board_tensor, "numeric": numeric}
 
-        return [float(sample[i]) for i in self.features]
+        return np.array([float(sample[i]) for i in self.features])
 
     def _advance_until_p0_decision(self):
         while (
