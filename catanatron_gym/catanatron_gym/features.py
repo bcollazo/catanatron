@@ -519,7 +519,7 @@ def create_sample(game, p0_color):
 
 
 def create_sample_vector(game, p0_color, features=None):
-    features = features or get_feature_ordering()
+    features = features or get_feature_ordering(len(game.state.colors))
     sample_dict = create_sample(game, p0_color)
     return [float(sample_dict[i]) for i in features if i in sample_dict]
 
