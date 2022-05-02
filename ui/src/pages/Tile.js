@@ -26,21 +26,21 @@ const numberToPips = (number) => {
   switch(number) {
     case 2:
     case 12:
-      return 1;
+      return '•';
     case 3:
     case 11:
-      return 2;
+      return '••';
     case 4:
     case 10:
-      return 3;
+      return '•••';
     case 5:
     case 9:
-      return 4;
+      return '••••';
     case 6:
     case 8:
-      return 5;
+      return '•••••';
     default:
-      return 0;  
+      return '';  
   }
 };
 
