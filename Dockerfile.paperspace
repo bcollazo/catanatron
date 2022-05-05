@@ -4,7 +4,7 @@
 #   `docker run --rm -it bcollazo/paperspace-rl catanatron-play` to ensure it works.
 #   `docker push bcollazo/paperspace-rl` to publish.
 # FROM paperspace/tensorflow:2.0.0-gpu-py3-jupyter-lab
-FROM tensorflow/tensorflow:2.8.0-gpu-jupyter
+FROM tensorflow/tensorflow:2.9.0rc2-gpu-jupyter
 
 # Install Python3.8
 RUN apt update && \
