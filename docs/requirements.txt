@@ -11,7 +11,7 @@ imagesize==1.2.0
 Jinja2==3.0.1
 m2r2==0.2.8
 MarkupSafe==2.0.1
-mistune==0.8.4
+mistune==2.0.3
 networkx==2.5.1
 packaging==20.9
 pydata-sphinx-theme==0.6.3
