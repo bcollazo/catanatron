@@ -68,6 +68,7 @@ jobs:
           python-version: 3.8
       - name: Install dependencies
         run: |
+          pip install -e catanatron_core
           pip install -e catanatron_gym
       - name: Inline test
         run: |
