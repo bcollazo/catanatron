@@ -57,6 +57,26 @@ jobs:
         run: |
           coveralls --service=github
 
+  build-pypi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          pip install -e catanatron_core
+          pip install -e catanatron_gym
+      - name: Run sample catanatron-play
+        run: |
+          catanatron-play --players=R,W,F,AB:2 --num=2
+      - name: Test with pytest
+        run: |
+          pytest tests/
+
   build-ui:
     runs-on: ubuntu-latest
 
