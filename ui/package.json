@@ -8,7 +8,7 @@
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
-    "axios": "^0.26.1",
+    "axios": "^0.27.2",
     "classnames": "^2.2.6",
     "fast-memoize": "^2.5.2",
     "notistack": "^1.0.10",
