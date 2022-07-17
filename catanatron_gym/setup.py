@@ -8,7 +8,7 @@ with open(readme_path, "r") as fh:
 
 setuptools.setup(
     name="catanatron_gym",
-    version="3.0.1",
+    version="3.2.0",
     author="Bryan Collazo",
     author_email="bcollazo2010@gmail.com",
     description="Open AI Gym to play 1v1 Catan against a random bot",
