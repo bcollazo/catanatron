@@ -57,7 +57,7 @@ jobs:
         run: |
           coveralls --service=github
 
-  build-pypi:
+  build-gym:
     runs-on: ubuntu-latest
 
     steps:
@@ -68,14 +68,13 @@ jobs:
           python-version: 3.8
       - name: Install dependencies
         run: |
-          pip install -e catanatron_core
           pip install -e catanatron_gym
-      - name: Run sample catanatron-play
-        run: |
-          catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Test with pytest
         run: |
           pytest tests/
+      - name: Inline test
+        run: |
+          python -c "import gym; env = gym.make('catanatron_gym:catanatron-v0')"
 
   build-ui:
     runs-on: ubuntu-latest
