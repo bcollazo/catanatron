@@ -290,7 +290,7 @@ def iter_level_nodes(enemy_nodes, enemy_roads, num_roads, zero_nodes):
             First element is level (roads needed to get there).
             Second element is set of node_ids reachable at this level.
             Third is mapping of NodeId to the list of edges
-                that leads to shortest path to that NodeId.
+            that leads to shortest path to that NodeId.
     """
     last_layer_nodes = zero_nodes
     paths = {i: [] for i in zero_nodes}
