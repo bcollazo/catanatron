@@ -61,6 +61,7 @@ class Board:
         # Set must_recompute_buildable_edges to true after an action that potentially changes
         # the buildable edges
         self.buildable_edges_cache = {}
+        self.player_port_resources_cache = {}
         if initialize:
             self.map: CatanMap = catan_map or CatanMap.from_template(
                 BASE_MAP_TEMPLATE
@@ -154,6 +155,8 @@ class Board:
 
         # Reset buildable_edges
         self.buildable_edges_cache = {}
+        # Reset port resources
+        self.player_port_resources_cache = {}
         return previous_road_color, self.road_color, self.road_lengths
 
     def bfs_walk(self, node_id, color):
@@ -282,10 +285,17 @@ class Board:
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
+        if color in self.player_port_resources_cache:
+            return self.player_port_resources_cache[color]
+        
+        resources = set()
         for resource, node_ids in self.map.port_nodes.items():
             for node_id in node_ids:
                 if self.get_node_color(node_id) == color:
-                    yield resource
+                    resources.add(resource)
+
+        self.player_port_resources_cache[color] = resources
+        return resources
 
     def find_connected_components(self, color: Color):
         """
