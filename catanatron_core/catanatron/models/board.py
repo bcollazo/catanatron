@@ -245,9 +245,6 @@ class Board:
 
         self.buildings[node_id] = (color, CITY)
 
-        # Reset buildable_edges
-        self.buildable_edges_cache = {}
-
     def buildable_node_ids(self, color: Color, initial_build_phase=False):
         if initial_build_phase:
             return sorted(list(self.board_buildable_ids))
