@@ -56,6 +56,7 @@ class Board:
     """
 
     def __init__(self, catan_map=None, initialize=True):
+        self.buildable_subgraph = None
         if initialize:
             self.map: CatanMap = catan_map or CatanMap.from_template(
                 BASE_MAP_TEMPLATE
@@ -77,6 +78,10 @@ class Board:
                 lambda coordinate: self.map.land_tiles[coordinate].resource is None,
                 self.map.land_tiles.keys(),
             ).__next__()
+
+            # Cache buildable subgraph
+            global STATIC_GRAPH
+            self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
 
     def build_settlement(self, color, node_id, initial_build_phase=False):
         """Adds a settlement, and ensures is a valid place to build.
@@ -238,8 +243,10 @@ class Board:
 
     def buildable_edges(self, color: Color):
         """List of (n1,n2) tuples. Edges are in n1 < n2 order."""
-        global STATIC_GRAPH
-        buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
+        if self.buildable_subgraph is None:
+            global STATIC_GRAPH
+            self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
+
         expandable = set()
 
         # non-enemy-nodes in your connected components
@@ -249,7 +256,7 @@ class Board:
                 if not self.is_enemy_node(node, color):
                     expandable_nodes.add(node)
 
-        candidate_edges = buildable_subgraph.edges(expandable_nodes)
+        candidate_edges = self.buildable_subgraph.edges(expandable_nodes)
         for edge in candidate_edges:
             if self.get_edge_color(edge) is None:
                 expandable.add(tuple(sorted(edge)))
