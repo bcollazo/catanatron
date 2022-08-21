@@ -57,6 +57,10 @@ class Board:
 
     def __init__(self, catan_map=None, initialize=True):
         self.buildable_subgraph = None
+        
+        # Set must_recompute_buildable_edges to true after an action that potentially changes
+        # the buildable edges
+        self.buildable_edges_cache = {}
         if initialize:
             self.map: CatanMap = catan_map or CatanMap.from_template(
                 BASE_MAP_TEMPLATE
@@ -148,6 +152,8 @@ class Board:
         for n in STATIC_GRAPH.neighbors(node_id):
             self.board_buildable_ids.discard(n)
 
+        # Reset buildable_edges
+        self.buildable_edges_cache = {}
         return previous_road_color, self.road_color, self.road_lengths
 
     def bfs_walk(self, node_id, color):
@@ -224,6 +230,9 @@ class Board:
         if candidate_length >= 5 and candidate_length > self.road_length:
             self.road_color = color
             self.road_length = candidate_length
+
+        # Reset buildable_edges
+        self.buildable_edges_cache = {}
         return previous_road_color, self.road_color, self.road_lengths
 
     def build_city(self, color, node_id):
@@ -232,6 +241,9 @@ class Board:
             raise ValueError("Invalid City Placement: no player settlement there")
 
         self.buildings[node_id] = (color, CITY)
+
+        # Reset buildable_edges
+        self.buildable_edges_cache = {}
 
     def buildable_node_ids(self, color: Color, initial_build_phase=False):
         if initial_build_phase:
@@ -243,6 +255,9 @@ class Board:
 
     def buildable_edges(self, color: Color):
         """List of (n1,n2) tuples. Edges are in n1 < n2 order."""
+        if color in self.buildable_edges_cache:
+            return self.buildable_edges_cache[color]
+
         if self.buildable_subgraph is None:
             global STATIC_GRAPH
             self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
@@ -261,7 +276,9 @@ class Board:
             if self.get_edge_color(edge) is None:
                 expandable.add(tuple(sorted(edge)))
 
-        return list(expandable)
+        buildable_edges_list = list(expandable)
+        self.buildable_edges_cache[color] = buildable_edges_list
+        return buildable_edges_list
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
