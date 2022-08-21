@@ -26,7 +26,7 @@ def test_accumulators():
             self.initialized = True
 
         def step(self, game, action):
-            self.games.append(game)
+            self.games.append(game.copy())
             self.actions.append(action)
 
         def after(self, game):
