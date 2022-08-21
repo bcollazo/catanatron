@@ -57,7 +57,7 @@ class Board:
 
     def __init__(self, catan_map=None, initialize=True):
         self.buildable_subgraph = None
-        
+
         # Set must_recompute_buildable_edges to true after an action that potentially changes
         # the buildable edges
         self.buildable_edges_cache = {}
@@ -284,7 +284,7 @@ class Board:
         """Yields resources (None for 3:1) of ports owned by color"""
         if color in self.player_port_resources_cache:
             return self.player_port_resources_cache[color]
-        
+
         resources = set()
         for resource, node_ids in self.map.port_nodes.items():
             for node_id in node_ids:

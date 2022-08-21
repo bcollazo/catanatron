@@ -65,7 +65,7 @@ class Game:
         vps_to_win: int = 10,
         catan_map: CatanMap = None,
         initialize: bool = True,
-        disable_accumulator_copy = True,
+        disable_accumulator_copy=True,
     ):
         """Creates a game (doesn't run it).
 
