@@ -15,13 +15,9 @@ from catanatron.players.weighted_random import WeightedRandomPlayer
 #     VRLPlayer,
 #     PRLPlayer,
 # )
-from catanatron_experimental.machine_learning.players.minimax import (
-    AlphaBetaPlayer,
-    ValueFunctionPlayer,
-)
-from catanatron.players.search import (
-    VictoryPointPlayer,
-)
+from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
+from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
+from catanatron.players.search import VictoryPointPlayer
 from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
 from catanatron_experimental.machine_learning.players.playouts import (
     GreedyPlayoutsPlayer,

@@ -7,7 +7,7 @@ import random
 import numpy as np
 
 from catanatron.models.player import Color
-from catanatron_experimental.machine_learning.players.minimax import (
+from catanatron_experimental.machine_learning.players.value import (
     DEFAULT_WEIGHTS,
     ValueFunctionPlayer,
 )
