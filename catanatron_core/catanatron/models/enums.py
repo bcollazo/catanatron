@@ -67,12 +67,16 @@ class ActionType(Enum):
     PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is None
 
-    # Trade
+    # ===== Trade
     # MARITIME_TRADE value is 5-resouce tuple, where last resource is resource asked.
     #   resources in index 2 and 3 might be None, denoting a port-trade.
     MARITIME_TRADE = "MARITIME_TRADE"
-
-    # TODO: Domestic trade. Im thinking should contain SUGGEST_TRADE, ACCEPT_TRADE actions...
+    # Domestic Trade (player to player trade)
+    # OFFER_TRADE value is a 10-resource tuple, first 5 is offered freqdeck, last 5 is
+    #   receiving freqdeck.
+    OFFER_TRADE = "OFFER_TRADE"
+    ACCEPT_TRADE = "ACCEPT_TRADE"
+    REJECT_TRADE = "REJECT_TRADE"
 
     END_TURN = "END_TURN"  # value is None
 

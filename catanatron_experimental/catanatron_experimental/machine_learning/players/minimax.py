@@ -3,6 +3,14 @@ import random
 from typing import Any
 
 from catanatron.game import Game
+from catanatron.models.decks import (
+    CITY_COST_FREQDECK,
+    DEVELOPMENT_CARD_COST_FREQDECK,
+    ROAD_COST_FREQDECK,
+    SETTLEMENT_COST_FREQDECK,
+    freqdeck_subtract,
+)
+from catanatron.models.enums import RESOURCES
 from catanatron.models.player import Player
 from catanatron_experimental.machine_learning.players.tree_search_utils import (
     expand_spectrum,
@@ -223,3 +231,47 @@ def render_debug_tree(node):
                 dot.edge(action_label, action_child.label, label=str(proba))
                 agenda.append(action_child)
     print(dot.render())
+
+
+def generate_desired_domestic_trades(hand_freqdeck):
+    """
+    Will generate 1:1 trades that get hand to a buildable state.
+
+    Does not consider what is "buildable" on board
+    or if other players have that resource (i.e. dumb generation).
+    """
+    interesting = set()  # set of 1:1 trades that get you to build
+
+    costs = [
+        ROAD_COST_FREQDECK,
+        SETTLEMENT_COST_FREQDECK,
+        CITY_COST_FREQDECK,
+        DEVELOPMENT_CARD_COST_FREQDECK,
+    ]
+
+    # Costs are 1-1-1-1-0, 1-1-0-0-0, 0-0-0-2-3, 0-0-1-1-1
+    # Check how "close hand_freqdeck is to each, if missing one use"
+    for cost in costs:
+        diff = freqdeck_subtract(hand_freqdeck, cost)
+
+        num_missing = sum(i < 0 for i in diff)
+        only_missing_one_of_one_resource = diff.count(-1) == 1 and num_missing == 1
+        if only_missing_one_of_one_resource:
+            to_ask_index = diff.index(-1)
+            to_ask = [0, 0, 0, 0, 0]
+            to_ask[to_ask_index] = 1
+            for i, _ in enumerate(RESOURCES):
+                if diff[i] > 0:
+                    to_give = [0, 0, 0, 0, 0]
+                    to_give[i] = 1
+                    interesting.add((*to_give, *to_ask))
+        else:
+            # theres either no -1s, so can buy, or there are more
+            # than 1 -1, in which case would need several trades...
+            pass
+
+    return interesting
+
+
+# TODO: Evaluate generation so as to
+#   get ones that improve value respect to other player.
