@@ -16,7 +16,10 @@ from catanatron.players.weighted_random import WeightedRandomPlayer
 #     PRLPlayer,
 # )
 from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
-from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
+from catanatron_experimental.machine_learning.players.minimax import (
+    AlphaBetaPlayer,
+    SameTurnAlphaBetaPlayer,
+)
 from catanatron.players.search import VictoryPointPlayer
 from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
 from catanatron_experimental.machine_learning.players.playouts import (
@@ -85,6 +88,12 @@ CLI_PLAYERS = [
         + "levels deep evaluating leafs with hand-crafted value function. "
         + "Params are DEPTH, PRUNNING",
         AlphaBetaPlayer,
+    ),
+    CliPlayer(
+        "SAB",
+        "SameTurnAlphaBetaPlayer",
+        "AlphaBeta but searches only within turn",
+        SameTurnAlphaBetaPlayer,
     ),
 ]
 

@@ -223,3 +223,70 @@ def render_debug_tree(node):
                 dot.edge(action_label, action_child.label, label=str(proba))
                 agenda.append(action_child)
     print(dot.render())
+
+
+class SameTurnAlphaBetaPlayer(AlphaBetaPlayer):
+    """
+    Same like AlphaBeta but only within turn
+    """
+
+    def alphabeta(self, game, depth, alpha, beta, deadline, node):
+        """AlphaBeta MiniMax Algorithm.
+
+        NOTE: Sometimes returns a value, sometimes an (action, value). This is
+        because some levels are state=>action, some are action=>state and in
+        action=>state would probably need (action, proba, value) as return type.
+
+        {'value', 'action'|None if leaf, 'node' }
+        """
+        if (
+            depth == 0
+            or game.state.current_color() != self.color
+            or game.winning_color() is not None
+            or time.time() >= deadline
+        ):
+            value_fn = get_value_fn(
+                self.value_fn_builder_name,
+                self.params,
+                self.value_function if self.use_value_function else None,
+            )
+            value = value_fn(game, self.color)
+
+            node.expected_value = value
+            return None, value
+
+        actions = self.get_actions(game)  # list of actions.
+        action_outcomes = expand_spectrum(game, actions)  # action => (game, proba)[]
+
+        best_action = None
+        best_value = float("-inf")
+        for i, (action, outcomes) in enumerate(action_outcomes.items()):
+            action_node = DebugActionNode(action)
+
+            expected_value = 0
+            for j, (outcome, proba) in enumerate(outcomes):
+                out_node = DebugStateNode(
+                    f"{node.label} {i} {j}", outcome.state.current_color()
+                )
+
+                result = self.alphabeta(
+                    outcome, depth - 1, alpha, beta, deadline, out_node
+                )
+                value = result[1]
+                expected_value += proba * value
+
+                action_node.children.append(out_node)
+                action_node.probas.append(proba)
+
+            action_node.expected_value = expected_value
+            node.children.append(action_node)
+
+            if expected_value > best_value:
+                best_action = action
+                best_value = expected_value
+            alpha = max(alpha, best_value)
+            if alpha >= beta:
+                break  # beta cutoff
+
+        node.expected_value = best_value
+        return best_action, best_value
