@@ -172,8 +172,9 @@ def prune_robber_actions(current_color, game, actions):
         robber_moves, key=impact
     )  # most production and variety producing
     actions = filter(
-        # lambda a: a.action_type != action_type or a == most_impactful_robber_action,
-        lambda a: a.action_type != ActionType.MOVE_ROBBER or a in robber_moves,
+        lambda a: a.action_type != ActionType.MOVE_ROBBER
+        or a == most_impactful_robber_action,
+        # lambda a: a.action_type != ActionType.MOVE_ROBBER or a in robber_moves,
         actions,
     )
     return actions
