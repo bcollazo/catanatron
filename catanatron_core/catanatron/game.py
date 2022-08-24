@@ -65,7 +65,6 @@ class Game:
         vps_to_win: int = 10,
         catan_map: CatanMap = None,
         initialize: bool = True,
-        disable_accumulator_copy = True,
     ):
         """Creates a game (doesn't run it).
 
@@ -77,7 +76,6 @@ class Game:
             catan_map (CatanMap, optional): Map to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
-        self.disable_accumulator_copy = disable_accumulator_copy
         if initialize:
             self.seed = seed or random.randrange(sys.maxsize)
             random.seed(self.seed)
@@ -99,18 +97,12 @@ class Game:
         Returns:
             Color: winning color or None if game exceeded TURNS_LIMIT
         """
-        initial_game_state = self
-        if not self.disable_accumulator_copy:
-            initial_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.before(initial_game_state)
+            accumulator.before(self)
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
             self.play_tick(decide_fn=decide_fn, accumulators=accumulators)
-        final_game_state = self
-        if not self.disable_accumulator_copy:
-            final_game_state = self.copy()
         for accumulator in accumulators:
-            accumulator.after(final_game_state)
+            accumulator.after(self)
         return self.winning_color()
 
     def play_tick(self, decide_fn=None, accumulators=[]):
@@ -133,11 +125,8 @@ class Game:
         )
         # Call accumulator.step here, because we want game_before_action, action
         if len(accumulators) > 0:
-            game_snapshot = self
-            if not self.disable_accumulator_copy:
-                game_snapshot = self.copy()
             for accumulator in accumulators:
-                accumulator.step(game_snapshot, action)
+                accumulator.step(self, action)
         return self.execute(action)
 
     def execute(self, action: Action, validate_action: bool = True) -> Action:
