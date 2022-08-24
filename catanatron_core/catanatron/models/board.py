@@ -58,9 +58,6 @@ class Board:
 
     def __init__(self, catan_map=None, initialize=True):
         self.buildable_subgraph = None
-
-        # Set must_recompute_buildable_edges to true after an action that potentially changes
-        # the buildable edges
         self.buildable_edges_cache = {}
         self.player_port_resources_cache = {}
         if initialize:
