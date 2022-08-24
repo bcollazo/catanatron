@@ -1,4 +1,5 @@
 import pickle
+import copy
 from collections import defaultdict
 from typing import Any, Set, Dict, Tuple
 import functools
@@ -57,7 +58,7 @@ class Board:
 
     def __init__(self, catan_map=None, initialize=True):
         self.buildable_subgraph = None
-        
+
         # Set must_recompute_buildable_edges to true after an action that potentially changes
         # the buildable edges
         self.buildable_edges_cache = {}
@@ -153,10 +154,8 @@ class Board:
         for n in STATIC_GRAPH.neighbors(node_id):
             self.board_buildable_ids.discard(n)
 
-        # Reset buildable_edges
-        self.buildable_edges_cache = {}
-        # Reset port resources
-        self.player_port_resources_cache = {}
+        self.buildable_edges_cache = {}  # Reset buildable_edges
+        self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
 
     def bfs_walk(self, node_id, color):
@@ -234,8 +233,7 @@ class Board:
             self.road_color = color
             self.road_length = candidate_length
 
-        # Reset buildable_edges
-        self.buildable_edges_cache = {}
+        self.buildable_edges_cache = {}  # Reset buildable_edges
         return previous_road_color, self.road_color, self.road_lengths
 
     def build_city(self, color, node_id):
@@ -257,10 +255,6 @@ class Board:
         """List of (n1,n2) tuples. Edges are in n1 < n2 order."""
         if color in self.buildable_edges_cache:
             return self.buildable_edges_cache[color]
-
-        if self.buildable_subgraph is None:
-            global STATIC_GRAPH
-            self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
 
         expandable = set()
 
@@ -284,7 +278,7 @@ class Board:
         """Yields resources (None for 3:1) of ports owned by color"""
         if color in self.player_port_resources_cache:
             return self.player_port_resources_cache[color]
-        
+
         resources = set()
         for resource, node_ids in self.map.port_nodes.items():
             for node_id in node_ids:
@@ -324,6 +318,11 @@ class Board:
         board.road_length = self.road_length
 
         board.robber_coordinate = self.robber_coordinate
+        board.buildable_subgraph = self.buildable_subgraph
+        board.buildable_edges_cache = copy.deepcopy(self.buildable_edges_cache)
+        board.player_port_resources_cache = copy.deepcopy(
+            self.player_port_resources_cache
+        )
         return board
 
     # ===== Helper functions
