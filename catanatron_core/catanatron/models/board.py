@@ -1,4 +1,5 @@
 import pickle
+import copy
 from collections import defaultdict
 from typing import Any, Set, Dict, Tuple
 import functools
@@ -56,6 +57,9 @@ class Board:
     """
 
     def __init__(self, catan_map=None, initialize=True):
+        self.buildable_subgraph = None
+        self.buildable_edges_cache = {}
+        self.player_port_resources_cache = {}
         if initialize:
             self.map: CatanMap = catan_map or CatanMap.from_template(
                 BASE_MAP_TEMPLATE
@@ -77,6 +81,10 @@ class Board:
                 lambda coordinate: self.map.land_tiles[coordinate].resource is None,
                 self.map.land_tiles.keys(),
             ).__next__()
+
+            # Cache buildable subgraph
+            global STATIC_GRAPH
+            self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
 
     def build_settlement(self, color, node_id, initial_build_phase=False):
         """Adds a settlement, and ensures is a valid place to build.
@@ -143,6 +151,8 @@ class Board:
         for n in STATIC_GRAPH.neighbors(node_id):
             self.board_buildable_ids.discard(n)
 
+        self.buildable_edges_cache = {}  # Reset buildable_edges
+        self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
 
     def bfs_walk(self, node_id, color):
@@ -219,6 +229,8 @@ class Board:
         if candidate_length >= 5 and candidate_length > self.road_length:
             self.road_color = color
             self.road_length = candidate_length
+
+        self.buildable_edges_cache = {}  # Reset buildable_edges
         return previous_road_color, self.road_color, self.road_lengths
 
     def build_city(self, color, node_id):
@@ -238,8 +250,9 @@ class Board:
 
     def buildable_edges(self, color: Color):
         """List of (n1,n2) tuples. Edges are in n1 < n2 order."""
-        global STATIC_GRAPH
-        buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
+        if color in self.buildable_edges_cache:
+            return self.buildable_edges_cache[color]
+
         expandable = set()
 
         # non-enemy-nodes in your connected components
@@ -249,19 +262,28 @@ class Board:
                 if not self.is_enemy_node(node, color):
                     expandable_nodes.add(node)
 
-        candidate_edges = buildable_subgraph.edges(expandable_nodes)
+        candidate_edges = self.buildable_subgraph.edges(expandable_nodes)
         for edge in candidate_edges:
             if self.get_edge_color(edge) is None:
                 expandable.add(tuple(sorted(edge)))
 
-        return list(expandable)
+        buildable_edges_list = list(expandable)
+        self.buildable_edges_cache[color] = buildable_edges_list
+        return buildable_edges_list
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
+        if color in self.player_port_resources_cache:
+            return self.player_port_resources_cache[color]
+
+        resources = set()
         for resource, node_ids in self.map.port_nodes.items():
             for node_id in node_ids:
                 if self.get_node_color(node_id) == color:
-                    yield resource
+                    resources.add(resource)
+
+        self.player_port_resources_cache[color] = resources
+        return resources
 
     def find_connected_components(self, color: Color):
         """
@@ -293,6 +315,11 @@ class Board:
         board.road_length = self.road_length
 
         board.robber_coordinate = self.robber_coordinate
+        board.buildable_subgraph = self.buildable_subgraph
+        board.buildable_edges_cache = copy.deepcopy(self.buildable_edges_cache)
+        board.player_port_resources_cache = copy.deepcopy(
+            self.player_port_resources_cache
+        )
         return board
 
     # ===== Helper functions

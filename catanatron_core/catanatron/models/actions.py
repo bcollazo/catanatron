@@ -252,7 +252,7 @@ def maritime_trade_possibilities(state, color) -> List[Action]:
     hand_freqdeck = [
         player_num_resource_cards(state, color, resource) for resource in RESOURCES
     ]
-    port_resources = set(state.board.get_player_port_resources(color))
+    port_resources = state.board.get_player_port_resources(color)
     trade_offers = inner_maritime_trade_possibilities(
         hand_freqdeck, state.resource_freqdeck, port_resources
     )
