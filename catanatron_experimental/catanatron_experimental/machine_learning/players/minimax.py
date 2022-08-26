@@ -1,6 +1,7 @@
 import time
 import random
 from typing import Any
+from collections import deque
 
 from catanatron.game import Game
 from catanatron.models.decks import (
@@ -275,6 +276,42 @@ def generate_desired_domestic_trades(hand_freqdeck):
 
 # TODO: Evaluate generation so as to
 #   get ones that improve value respect to other player.
+
+
+class CardCountingPlayer(AlphaBetaPlayer):
+    """
+    Keeps hand
+    """
+
+    def __init__(self, color, num_memory, is_bot=True):
+        super().__init__(color, is_bot)
+        self.memory = int(num_memory)
+        self.distribution = None
+        self.last_action_index = 0
+        self.last_cards = deque([], self.memory)  # FIFO queue of "seen cards"
+        self.hand_belief = {}  # color => freqdeck
+
+    def decide(self, game, playable_actions):
+        actions_catch_up = game.state.actions[self.last_action_index :]
+        for action in actions_catch_up:
+            self.consume(game, action)
+
+        return super().decide(game, playable_actions)
+
+    def consume(self, game, action):
+        # if its a BUILD_ROAD, get cost, and subtract from that players hand
+        is_initial_building_phase = self.last_action_index < 4 * len(game.state.colors)
+        is_first_roll = self.last_action_index == 4 * len(game.state.colors)
+        if is_initial_building_phase:
+            pass  # skip and just get cards and last
+        elif is_first_roll:
+            pass
+        else:
+            pass
+
+        print(self.last_action_index, is_initial_building_phase, is_first_roll)
+        breakpoint()
+        self.last_action_index += 1
 
 
 class SameTurnAlphaBetaPlayer(AlphaBetaPlayer):

@@ -18,6 +18,7 @@ from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
 from catanatron_experimental.machine_learning.players.minimax import (
     AlphaBetaPlayer,
+    CardCountingPlayer,
     SameTurnAlphaBetaPlayer,
 )
 from catanatron.players.search import VictoryPointPlayer
@@ -94,6 +95,12 @@ CLI_PLAYERS = [
         "SameTurnAlphaBetaPlayer",
         "AlphaBeta but searches only within turn",
         SameTurnAlphaBetaPlayer,
+    ),
+    CliPlayer(
+        "CC",
+        "CardCountingPlayer",
+        "Test",
+        CardCountingPlayer,
     ),
 ]
 
