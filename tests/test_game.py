@@ -2,15 +2,11 @@ import pytest
 from unittest.mock import patch
 
 from catanatron.state_functions import get_actual_victory_points, player_has_rolled
-from catanatron.models.actions import maritime_trade_possibilities
 from catanatron.game import Game
 from catanatron.state import (
-    State,
     player_deck_replenish,
     player_num_resource_cards,
-    yield_resources,
 )
-from catanatron.models.board import Board
 from catanatron.models.enums import (
     ORE,
     ActionPrompt,
@@ -21,11 +17,6 @@ from catanatron.models.enums import (
     YEAR_OF_PLENTY,
 )
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
-from catanatron.models.decks import (
-    freqdeck_count,
-    freqdeck_draw,
-    starting_resource_bank,
-)
 
 
 def test_initial_build_phase():
@@ -150,7 +141,7 @@ def test_rolling_a_seven_triggers_default_discard_limit(fake_roll_dice):
 
 
 @patch("catanatron.state.roll_dice")
-def test_discard_config(fake_roll_dice):
+def test_discard_is_configurable(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players, discard_limit=10)
@@ -204,8 +195,6 @@ def test_end_turn_goes_to_next_player(fake_roll_dice):
 
 
 # ===== Development Cards
-
-
 def test_play_year_of_plenty_not_enough_resources():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     player_to_act = players[0]
@@ -243,108 +232,6 @@ def test_play_monopoly_no_monopoly_card():
 
     with pytest.raises(ValueError):  # no monopoly
         game.execute(action_to_execute)
-
-
-# ===== Yield Resources
-def test_yield_resources():
-    board = Board()
-    resource_freqdeck = starting_resource_bank()
-
-    tile = board.map.land_tiles[(0, 0, 0)]
-    if tile.resource is None:  # is desert
-        tile = board.map.land_tiles[(-1, 0, 1)]
-
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    payout, depleted = yield_resources(board, resource_freqdeck, tile.number)
-    assert len(depleted) == 0
-    assert freqdeck_count(payout[Color.RED], tile.resource) >= 1  # type: ignore
-
-
-def test_yield_resources_two_settlements():
-    board = Board()
-    resource_freqdeck = starting_resource_bank()
-
-    tile, edge2, node2 = board.map.land_tiles[(0, 0, 0)], (4, 5), 5
-    if tile.resource is None:  # is desert
-        tile, edge2, node2 = board.map.land_tiles[(-1, 0, 1)], (4, 15), 15
-
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    board.build_road(Color.RED, (3, 4))
-    board.build_road(Color.RED, edge2)
-    board.build_settlement(Color.RED, node2)
-    payout, depleted = yield_resources(board, resource_freqdeck, tile.number)
-    assert len(depleted) == 0
-    assert freqdeck_count(payout[Color.RED], tile.resource) >= 2  # type: ignore
-
-
-def test_yield_resources_two_players_and_city():
-    board = Board()
-    resource_freqdeck = starting_resource_bank()
-
-    tile, edge1, edge2, red_node, blue_node = (
-        board.map.land_tiles[(0, 0, 0)],
-        (2, 3),
-        (3, 4),
-        4,
-        0,
-    )
-    if tile.resource is None:  # is desert
-        tile, edge1, edge2, red_node, blue_node = (
-            board.map.land_tiles[(1, -1, 0)],
-            (9, 2),
-            (9, 8),
-            8,
-            6,
-        )
-
-    # red has one settlements and one city on tile
-    board.build_settlement(Color.RED, 2, initial_build_phase=True)
-    board.build_road(Color.RED, edge1)
-    board.build_road(Color.RED, edge2)
-    board.build_settlement(Color.RED, red_node)
-    board.build_city(Color.RED, red_node)
-
-    # blue has a city in tile
-    board.build_settlement(Color.BLUE, blue_node, initial_build_phase=True)
-    board.build_city(Color.BLUE, blue_node)
-    payout, depleted = yield_resources(board, resource_freqdeck, tile.number)
-    assert len(depleted) == 0
-    assert freqdeck_count(payout[Color.RED], tile.resource) >= 3  # type: ignore
-    assert freqdeck_count(payout[Color.BLUE], tile.resource) >= 2  # type: ignore
-
-
-def test_empty_payout_if_not_enough_resources():
-    board = Board()
-    resource_freqdeck = starting_resource_bank()
-
-    tile = board.map.land_tiles[(0, 0, 0)]
-    if tile.resource is None:  # is desert
-        tile = board.map.land_tiles[(-1, 0, 1)]
-
-    board.build_settlement(Color.RED, 3, initial_build_phase=True)
-    board.build_city(Color.RED, 3)
-    freqdeck_draw(resource_freqdeck, 18, tile.resource)  # type: ignore
-
-    payout, depleted = yield_resources(board, resource_freqdeck, tile.number)
-    assert depleted == [tile.resource]
-    assert (
-        Color.RED not in payout or freqdeck_count(payout[Color.RED], tile.resource) == 0  # type: ignore
-    )
-
-
-def test_can_trade_with_port():
-    players = [SimplePlayer(Color.RED)]
-
-    state = State(players)
-    state.board.build_settlement(Color.RED, 26, initial_build_phase=True)
-
-    port_tile = state.board.map.tiles[(3, -3, 0)]  # port with node_id=25,26
-    resource_out = port_tile.resource or WHEAT  # type: ignore
-    num_out = 3 if port_tile.resource is None else 2  # type: ignore
-    player_deck_replenish(state, Color.RED, resource_out, num_out)
-
-    possibilities = maritime_trade_possibilities(state, Color.RED)
-    assert len(possibilities) == 4
 
 
 def test_second_placement_takes_cards_from_bank():
