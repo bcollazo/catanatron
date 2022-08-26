@@ -213,3 +213,18 @@ def test_year_of_plenty_same_resource():
 
     assert len(actions) == 1
     assert actions[0].value[0] == WHEAT
+
+
+def test_can_trade_with_port():
+    players = [SimplePlayer(Color.RED)]
+
+    state = State(players)
+    state.board.build_settlement(Color.RED, 26, initial_build_phase=True)
+
+    port_tile = state.board.map.tiles[(3, -3, 0)]  # port with node_id=25,26
+    resource_out = port_tile.resource or WHEAT  # type: ignore
+    num_out = 3 if port_tile.resource is None else 2  # type: ignore
+    player_deck_replenish(state, Color.RED, resource_out, num_out)
+
+    possibilities = maritime_trade_possibilities(state, Color.RED)
+    assert len(possibilities) == 4
