@@ -386,10 +386,10 @@ def apply_action(state: State, action: Action):
             state.free_roads_available -= 1
             if (
                 state.free_roads_available == 0
-                or len(road_building_possibilities(state, action.color)) == 0
+                or len(road_building_possibilities(state, action.color, False)) == 0
             ):
                 state.is_road_building = False
-                state.free_roads_available == 0
+                state.free_roads_available = 0
                 # state.current_player_index stays the same
                 # state.current_prompt stays as PLAY
             state.playable_actions = generate_playable_actions(state)

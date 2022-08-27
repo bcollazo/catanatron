@@ -51,7 +51,7 @@ def generate_playable_actions(state) -> List[Action]:
         return robber_possibilities(state, color)
     elif action_prompt == ActionPrompt.PLAY_TURN:
         if state.is_road_building:
-            actions = road_building_possibilities(state, color)
+            actions = road_building_possibilities(state, color, False)
         elif not player_has_rolled(state, color):
             actions = [Action(color, ActionType.ROLL, None)]
             if player_can_play_dev(state, color, "KNIGHT"):
@@ -80,7 +80,7 @@ def generate_playable_actions(state) -> List[Action]:
                 actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
             if (
                 player_can_play_dev(state, color, "ROAD_BUILDING")
-                and len(road_building_possibilities(state, color)) > 0
+                and len(road_building_possibilities(state, color, False)) > 0
             ):
                 actions.append(Action(color, ActionType.PLAY_ROAD_BUILDING, None))
 
@@ -120,13 +120,13 @@ def year_of_plenty_possibilities(color, freqdeck: List[int]) -> List[Action]:
     )
 
 
-def road_building_possibilities(state, color) -> List[Action]:
+def road_building_possibilities(state, color, check_money=True) -> List[Action]:
     key = player_key(state, color)
 
     has_money = player_resource_freqdeck_contains(state, color, ROAD_COST_FREQDECK)
     has_roads_available = state.player_state[f"{key}_ROADS_AVAILABLE"] > 0
 
-    if has_money and has_roads_available:
+    if (not check_money or has_money) and has_roads_available:
         buildable_edges = state.board.buildable_edges(color)
         return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
     else:
