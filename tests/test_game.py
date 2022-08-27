@@ -15,6 +15,7 @@ from catanatron.models.enums import (
     Action,
     WHEAT,
     YEAR_OF_PLENTY,
+    ROAD_BUILDING,
 )
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
 
@@ -301,6 +302,34 @@ def test_play_monopoly_no_monopoly_card():
 
     with pytest.raises(ValueError):  # no monopoly
         game.execute(action_to_execute)
+
+
+@patch("catanatron.state.roll_dice")
+def test_play_road_building(fake_roll_dice):
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    p0 = game.state.players[0]
+    player_deck_replenish(game.state, p0.color, ROAD_BUILDING)
+
+    # play initial phase
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        game.play_tick()
+
+    # roll not a 7
+    fake_roll_dice.return_value = (1, 2)
+    game.play_tick()  # roll
+
+    game.execute(Action(p0.color, ActionType.PLAY_ROAD_BUILDING, None))
+    assert game.state.is_road_building
+    assert game.state.free_roads_available == 2
+    game.play_tick()
+    assert game.state.is_road_building
+    assert game.state.free_roads_available == 1
+    game.play_tick()
+    assert not game.state.is_road_building
+    assert game.state.free_roads_available == 0
 
 
 def test_second_placement_takes_cards_from_bank():
