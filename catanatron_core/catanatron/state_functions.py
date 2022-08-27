@@ -217,6 +217,15 @@ def player_freqdeck_add(state, color, freqdeck):
     state.player_state[f"{key}_ORE_IN_HAND"] += freqdeck[4]
 
 
+def player_freqdeck_subtract(state, color, freqdeck):
+    key = player_key(state, color)
+    state.player_state[f"{key}_WOOD_IN_HAND"] -= freqdeck[0]
+    state.player_state[f"{key}_BRICK_IN_HAND"] -= freqdeck[1]
+    state.player_state[f"{key}_SHEEP_IN_HAND"] -= freqdeck[2]
+    state.player_state[f"{key}_WHEAT_IN_HAND"] -= freqdeck[3]
+    state.player_state[f"{key}_ORE_IN_HAND"] -= freqdeck[4]
+
+
 def buy_dev_card(state, color, dev_card):
     key = player_key(state, color)
 
@@ -267,15 +276,6 @@ def player_deck_to_array(state, color):
         + state.player_state[f"{key}_WHEAT_IN_HAND"] * [WHEAT]
         + state.player_state[f"{key}_ORE_IN_HAND"] * [ORE]
     )
-
-
-def player_deck_subtract(state, color, freqdeck):
-    key = player_key(state, color)
-    state.player_state[f"{key}_WOOD_IN_HAND"] -= freqdeck[0]
-    state.player_state[f"{key}_BRICK_IN_HAND"] -= freqdeck[1]
-    state.player_state[f"{key}_SHEEP_IN_HAND"] -= freqdeck[2]
-    state.player_state[f"{key}_WHEAT_IN_HAND"] -= freqdeck[3]
-    state.player_state[f"{key}_ORE_IN_HAND"] -= freqdeck[4]
 
 
 def player_deck_draw(state, color, card, amount=1):

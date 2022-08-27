@@ -53,7 +53,7 @@ from catanatron.state_functions import (
     player_deck_draw,
     player_deck_random_draw,
     player_deck_replenish,
-    player_deck_subtract,
+    player_freqdeck_subtract,
     player_deck_to_array,
     player_key,
     player_num_resource_cards,
@@ -480,7 +480,7 @@ def apply_action(state: State, action: Action):
             discarded = action.value  # for replay functionality
         to_discard = freqdeck_from_listdeck(discarded)
 
-        player_deck_subtract(state, action.color, to_discard)
+        player_freqdeck_subtract(state, action.color, to_discard)
         state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, to_discard)
         action = Action(action.color, action.action_type, discarded)
 
@@ -583,7 +583,7 @@ def apply_action(state: State, action: Action):
             raise ValueError("Trying to trade without money")
         if not freqdeck_contains(state.resource_freqdeck, asking):
             raise ValueError("Bank doenst have those cards")
-        player_deck_subtract(state, action.color, offering)
+        player_freqdeck_subtract(state, action.color, offering)
         state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, offering)
         player_freqdeck_add(state, action.color, asking)
         state.resource_freqdeck = freqdeck_subtract(state.resource_freqdeck, asking)
