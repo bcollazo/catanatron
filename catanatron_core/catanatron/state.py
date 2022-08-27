@@ -447,9 +447,9 @@ def apply_action(state: State, action: Action):
                 player_num_resource_cards(state, color) > state.discard_limit
                 for color in state.colors
             ]
-            is_discarding = any(discarders)
+            should_enter_discarding_sequence = any(discarders)
 
-            if is_discarding:
+            if should_enter_discarding_sequence:
                 state.current_player_index = discarders.index(True)
                 state.current_prompt = ActionPrompt.DISCARD
                 state.is_discarding = True
