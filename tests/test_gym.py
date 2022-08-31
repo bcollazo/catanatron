@@ -5,7 +5,7 @@ from gym.utils.env_checker import check_env
 
 from catanatron_gym.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
-from catanatron_experimental.machine_learning.players.minimax import ValueFunctionPlayer
+from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
 from catanatron_gym.envs.catanatron_env import CatanatronEnv
 
 features = get_feature_ordering(2)

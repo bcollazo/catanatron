@@ -102,7 +102,7 @@ We use this class to represent both the _intent_ of say "moving a
 robber to Tile (0,0,0) and stealing from Blue" as well as
 the final result of such a move. In moves like these where the intent
 is not enough to be used to reproduce the game identically,
-we use `None`s in the "value" container as placeholders 
+we use "None"s in the "value" container as placeholders 
 for that information needed for fully reproducing a game.
 (e.g. card stolen, dev card bought, etc...)
 

@@ -76,9 +76,8 @@ catanatron-play --code=myplayers.py --players=R,R,R,FOO --num=10
 ## How to Make Catanatron Stronger?
 
 The best bot right now is Alpha Beta Search with a hand-crafted value function. One of the most promising ways of improving Catanatron
-is to copy the code from ([minimax.py](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)) to your
-`myplayers.py` and tweak the weights of the value function. You can
-also come up with your own innovative features!
+is to have your custom player inhert from ([`AlphaBetaPlayer`](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)) and set a better set of weights for the value function. You can
+also edit the value function and come up with your own innovative features!
 
 For more sophisticated approaches, see example player implementations in [catanatron_core/catanatron/players](catanatron_core/catanatron/players)
 

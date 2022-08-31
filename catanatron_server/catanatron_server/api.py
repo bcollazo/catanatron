@@ -6,10 +6,9 @@ from catanatron_server.models import upsert_game_state, get_game_state
 from catanatron.json import GameEncoder, action_from_json
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.game import Game
-from catanatron_experimental.machine_learning.players.minimax import (
-    AlphaBetaPlayer,
-    ValueFunctionPlayer,
-)
+from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
+from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
+
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 

@@ -15,7 +15,7 @@ export function NumberToken({ className, children, style, size }) {
     <Paper
       elevation={3}
       className={cn("number-token", className)}
-      style={{ ...style, width: size * 0.5, height: size * 0.5 }}
+      style={{ ...style, width: size, height: size, "text-align": "center" }}
     >
       {children}
     </Paper>
@@ -23,24 +23,24 @@ export function NumberToken({ className, children, style, size }) {
 }
 
 const numberToPips = (number) => {
-  switch(number) {
+  switch (number) {
     case 2:
     case 12:
-      return '•';
+      return "•";
     case 3:
     case 11:
-      return '••';
+      return "••";
     case 4:
     case 10:
-      return '•••';
+      return "•••";
     case 5:
     case 9:
-      return '••••';
+      return "••••";
     case 6:
     case 8:
-      return '•••••';
+      return "•••••";
     default:
-      return '';  
+      return "";
   }
 };
 
@@ -53,7 +53,13 @@ export default function Tile({ center, coordinate, tile, size }) {
   let contents;
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
-    contents = <NumberToken size={size}>{tile.number}<br/>{numberToPips(tile.number)}</NumberToken>;
+    contents = (
+      <NumberToken size={size}>
+        {tile.number}
+        <br />
+        {numberToPips(tile.number)}
+      </NumberToken>
+    );
     resourceTile = {
       BRICK: brickTile,
       SHEEP: woolTile,

@@ -19,8 +19,8 @@ jobs:
         run: docker build ui/ -t bcollazo/catanatron-react-ui:latest
       - name: Build the Server Docker image
         run: docker build . -f Dockerfile.web -t bcollazo/catanatron-server:latest
-      - name: Build the Paperspace Docker image
-        run: docker build . -f Dockerfile.paperspace -t bcollazo/paperspace-rl
+      # - name: Build the Paperspace Docker image
+      #   run: docker build . -f Dockerfile.paperspace -t bcollazo/paperspace-rl
 
   build-python:
     runs-on: ubuntu-latest
@@ -56,6 +56,23 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           coveralls --service=github
+
+  build-gym:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          pip install -e catanatron_core
+          pip install -e catanatron_gym
+      - name: Inline test
+        run: |
+          python -c "import gym; env = gym.make('catanatron_gym:catanatron-v0')"
 
   build-ui:
     runs-on: ubuntu-latest
