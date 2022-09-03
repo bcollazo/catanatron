@@ -146,12 +146,16 @@ class Board:
                     self.road_color, self.road_length = max(
                         self.road_lengths.items(), key=lambda e: e[1]
                     )
+                # reset edges for edge_color
+                if edge_color in self.buildable_edges_cache:
+                    del self.buildable_edges_cache[edge_color]
 
         self.board_buildable_ids.discard(node_id)
         for n in STATIC_GRAPH.neighbors(node_id):
             self.board_buildable_ids.discard(n)
 
-        self.buildable_edges_cache = {}  # Reset buildable_edges
+        if initial_build_phase:
+            self.buildable_edges_cache = {}  # Reset buildable_edges
         self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
 
@@ -189,12 +193,17 @@ class Board:
 
     def build_road(self, color, edge):
         buildable = self.buildable_edges(color)
+        sorted_edge = tuple(sorted(edge))
         inverted_edge = (edge[1], edge[0])
-        if edge not in buildable and inverted_edge not in buildable:
+        if sorted_edge not in buildable:
             raise ValueError("Invalid Road Placement")
 
         self.roads[edge] = color
         self.roads[inverted_edge] = color
+
+        for color_key in self.buildable_edges_cache:
+            if sorted_edge in self.buildable_edges_cache[color_key]:
+                self.buildable_edges_cache[color_key].remove(sorted_edge)
 
         # Update self.connected_components accordingly. Maybe merge.
         a, b = edge
@@ -203,11 +212,21 @@ class Board:
         if a_index is None and b_index is not None and not self.is_enemy_node(a, color):
             self.connected_components[color][b_index].add(a)
             component = self.connected_components[color][b_index]
+
+            candidate_edges = self.buildable_subgraph.edges(a)
+            for candidate_edge in candidate_edges:
+                if self.get_edge_color(candidate_edge) is None:
+                    self.buildable_edges_cache[color].add(tuple(sorted(candidate_edge)))
         elif (
             a_index is not None and b_index is None and not self.is_enemy_node(b, color)
         ):
             self.connected_components[color][a_index].add(b)
             component = self.connected_components[color][a_index]
+
+            candidate_edges = self.buildable_subgraph.edges(b)
+            for candidate_edge in candidate_edges:
+                if self.get_edge_color(candidate_edge) is None:
+                    self.buildable_edges_cache[color].add(tuple(sorted(candidate_edge)))
         elif a_index is not None and b_index is not None and a_index != b_index:
             # merge
             merged_component = self.connected_components[color][a_index].union(
@@ -230,7 +249,6 @@ class Board:
             self.road_color = color
             self.road_length = candidate_length
 
-        self.buildable_edges_cache = {}  # Reset buildable_edges
         return previous_road_color, self.road_color, self.road_lengths
 
     def build_city(self, color, node_id):
@@ -267,9 +285,8 @@ class Board:
             if self.get_edge_color(edge) is None:
                 expandable.add(tuple(sorted(edge)))
 
-        buildable_edges_list = list(expandable)
-        self.buildable_edges_cache[color] = buildable_edges_list
-        return buildable_edges_list
+        self.buildable_edges_cache[color] = expandable
+        return expandable
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
