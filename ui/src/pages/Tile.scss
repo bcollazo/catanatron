@@ -1,0 +1,10 @@
+.hexagon {
+    --hex-height-factor: 1.1547; // make the height and width look even for hexagon
+    --scale-factor: 0.6;
+    width: calc(var(--base-size) * var(--scale-factor));
+    height: calc(var(--base-size) * var(--scale-factor) * var(--hex-height-factor));
+    clip-path: polygon(0% 25%, 0% 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0%);
+    text-align: center;
+    font-size: 95%;
+    line-height: .8em;
+}

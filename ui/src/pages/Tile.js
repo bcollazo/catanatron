@@ -2,6 +2,7 @@ import React from "react";
 import cn from "classnames";
 import Paper from "@material-ui/core/Paper";
 
+import "./Tile.scss";
 import brickTile from "../assets/tile_brick.svg";
 import desertTile from "../assets/tile_desert.svg";
 import grainTile from "../assets/tile_wheat.svg";
@@ -14,8 +15,11 @@ export function NumberToken({ className, children, style, size }) {
   return (
     <Paper
       elevation={3}
-      className={cn("number-token", className)}
-      style={{ ...style, width: size, height: size, "text-align": "center" }}
+      className={cn("number-token", "hexagon", className)}
+      style={{
+        "--base-size": `${size}px`, // this var can be overrided via `style` prop
+        ...style,
+      }}
     >
       {children}
     </Paper>
