@@ -61,7 +61,6 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
 @click.command()
 @click.option("-n", "--num", default=5, help="Number of games to play.")
 @click.option(
-    "-p",
     "--players",
     default="R,R,R,R",
     help="""
