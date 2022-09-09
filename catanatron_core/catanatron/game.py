@@ -17,18 +17,18 @@ from catanatron.models.player import Color, Player
 TURNS_LIMIT = 1000
 
 
-def is_valid_action(game, action):
+def is_valid_action(state, action):
     """True if its a valid action right now. An action is valid
     if its in playable_actions or if its a OFFER_TRADE in the right time."""
     if action.action_type == ActionType.OFFER_TRADE:
         return (
-            game.state.current_color() == action.color
-            and game.state.current_prompt == ActionPrompt.PLAY_TURN
-            and player_has_rolled(game.state, action.color)
+            state.current_color() == action.color
+            and state.current_prompt == ActionPrompt.PLAY_TURN
+            and player_has_rolled(state, action.color)
             and is_valid_trade(action.value)
         )
 
-    return action in game.state.playable_actions
+    return action in state.playable_actions
 
 
 def is_valid_trade(action_value):
@@ -160,7 +160,7 @@ class Game:
 
     def execute(self, action: Action, validate_action: bool = True) -> Action:
         """Internal call that carries out decided action by player"""
-        if validate_action and not is_valid_action(self, action):
+        if validate_action and not is_valid_action(self.state, action):
             raise ValueError(
                 f"{action} not playable right now. playable_actions={self.state.playable_actions}"
             )
