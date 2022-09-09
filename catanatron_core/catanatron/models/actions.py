@@ -30,6 +30,7 @@ from catanatron.models.enums import (
 )
 from catanatron.state_functions import (
     get_player_buildings,
+    get_player_freqdeck,
     player_can_afford_dev_card,
     player_can_play_dev,
     player_has_rolled,
@@ -89,8 +90,32 @@ def generate_playable_actions(state) -> List[Action]:
         return actions
     elif action_prompt == ActionPrompt.DISCARD:
         return discard_possibilities(color)
+    elif action_prompt == ActionPrompt.DECIDE_TRADE:
+        actions = [Action(color, ActionType.REJECT_TRADE, state.current_trade)]
+
+        # can only accept if have enough cards
+        freqdeck = get_player_freqdeck(state, color)
+        asked = state.current_trade[5:10]
+        if freqdeck_contains(freqdeck, asked):
+            actions.append(Action(color, ActionType.ACCEPT_TRADE, state.current_trade))
+
+        return actions
+    elif action_prompt == ActionPrompt.DECIDE_ACCEPTEES:
+        # you should be able to accept for each of the "accepting players"
+        actions = [Action(color, ActionType.CANCEL_TRADE, None)]
+
+        for (other_color, accepted) in zip(state.colors, state.acceptees):
+            if accepted:
+                actions.append(
+                    Action(
+                        color,
+                        ActionType.CONFIRM_TRADE,
+                        (*state.current_trade[:10], other_color),
+                    )
+                )
+        return actions
     else:
-        raise RuntimeError("Unknown ActionPrompt")
+        raise RuntimeError("Unknown ActionPrompt: " + str(action_prompt))
 
 
 def monopoly_possibilities(color) -> List[Action]:

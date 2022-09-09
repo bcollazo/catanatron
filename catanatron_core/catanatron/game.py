@@ -7,14 +7,43 @@ import random
 import sys
 from typing import Iterable, Union
 
-from catanatron.models.enums import Action
+from catanatron.models.enums import Action, ActionPrompt, ActionType
 from catanatron.state import State, apply_action
-from catanatron.state_functions import player_key
+from catanatron.state_functions import player_key, player_has_rolled
 from catanatron.models.map import CatanMap
 from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
+
+
+def is_valid_action(state, action):
+    """True if its a valid action right now. An action is valid
+    if its in playable_actions or if its a OFFER_TRADE in the right time."""
+    if action.action_type == ActionType.OFFER_TRADE:
+        return (
+            state.current_color() == action.color
+            and state.current_prompt == ActionPrompt.PLAY_TURN
+            and player_has_rolled(state, action.color)
+            and is_valid_trade(action.value)
+        )
+
+    return action in state.playable_actions
+
+
+def is_valid_trade(action_value):
+    """Checks the value of a OFFER_TRADE does not
+    give away resources or trade matching resources.
+    """
+    offering = action_value[:5]
+    asking = action_value[5:]
+    if sum(offering) == 0 or sum(asking) == 0:
+        return False  # cant give away cards
+
+    for i, j in zip(offering, asking):
+        if i > 0 and j > 0:
+            return False  # cant trade same resources
+    return True
 
 
 class GameAccumulator:
@@ -131,9 +160,9 @@ class Game:
 
     def execute(self, action: Action, validate_action: bool = True) -> Action:
         """Internal call that carries out decided action by player"""
-        if validate_action and action not in self.state.playable_actions:
+        if validate_action and not is_valid_action(self.state, action):
             raise ValueError(
-                f"{action} not in playable actions: {self.state.playable_actions}"
+                f"{action} not playable right now. playable_actions={self.state.playable_actions}"
             )
 
         return apply_action(self.state, action)

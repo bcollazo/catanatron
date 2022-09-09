@@ -1,14 +1,19 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from catanatron.state_functions import get_actual_victory_points, player_has_rolled
-from catanatron.game import Game
+from catanatron.state_functions import (
+    get_actual_victory_points,
+    get_player_freqdeck,
+    player_has_rolled,
+)
+from catanatron.game import Game, is_valid_trade
 from catanatron.state import (
     player_deck_replenish,
     player_num_resource_cards,
 )
 from catanatron.models.enums import (
     ORE,
+    RESOURCES,
     ActionPrompt,
     SETTLEMENT,
     ActionType,
@@ -361,3 +366,182 @@ def test_vps_to_win_config():
     winning_color = game.winning_color()
     vps = get_actual_victory_points(game.state, winning_color)
     assert vps >= 4 and vps < 6
+
+
+def test_cant_trade_same_resources_or_give():
+    offering = [1, 0, 0, 0, 0]
+    asking = [1, 0, 0, 0, 0]
+    action_value = tuple([*offering, *asking])
+    assert not is_valid_trade(action_value)
+
+    offering = [0, 1, 0, 0, 0]
+    asking = [0, 2, 0, 0, 0]
+    action_value = tuple([*offering, *asking])
+    assert not is_valid_trade(action_value)
+
+    offering = [0, 1, 3, 0, 0]
+    asking = [0, 0, 1, 0, 0]
+    action_value = tuple([*offering, *asking])
+    assert not is_valid_trade(action_value)
+
+
+def test_cant_give_away_resources():
+    offering = [1, 0, 0, 0, 0]
+    asking = [0, 0, 0, 0, 0]
+    action_value = tuple([*offering, *asking])
+    assert not is_valid_trade(action_value)
+
+    offering = [0, 0, 0, 0, 0]
+    asking = [0, 2, 0, 0, 1]
+    action_value = tuple([*offering, *asking])
+    assert not is_valid_trade(action_value)
+
+
+def test_trade_offers_are_valid():
+    offering = [1, 0, 0, 0, 0]
+    asking = [0, 1, 0, 0, 0]
+    action_value = tuple([*offering, *asking])
+    assert is_valid_trade(action_value)
+
+    offering = [0, 0, 1, 0, 0]
+    asking = [0, 2, 0, 0, 1]
+    action_value = tuple([*offering, *asking])
+    assert is_valid_trade(action_value)
+
+    offering = [0, 0, 0, 2, 0]
+    asking = [0, 1, 0, 0, 0]
+    action_value = tuple([*offering, *asking])
+    assert is_valid_trade(action_value)
+
+    offering = [0, 0, 1, 1, 0]
+    asking = [0, 1, 0, 0, 0]
+    action_value = tuple([*offering, *asking])
+    assert is_valid_trade(action_value)
+
+
+@patch("catanatron.state.roll_dice")
+def test_trading_sequence(fake_roll_dice):
+    # Play initial building phase
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+    ]
+    game = Game(players)
+    [p0, p1, p2] = game.state.players
+    while not any(
+        a.action_type == ActionType.ROLL for a in game.state.playable_actions
+    ):
+        game.play_tick()
+
+    # create 1:1 trade
+    freqdeck = get_player_freqdeck(game.state, p0.color)
+    index_of_a_resource_owned = next(i for i, v in enumerate(freqdeck) if v > 0)
+    missing_resource_index = freqdeck.index(
+        0
+    )  # assumes its impossible to have one of each resource in first turn
+    offered = [0, 0, 0, 0, 0]
+    offered[index_of_a_resource_owned] = 1
+    asking = [0, 0, 0, 0, 0]
+    asking[missing_resource_index] = 1
+    trade_action_value = tuple([*offered, *asking])
+    action = Action(p0.color, ActionType.OFFER_TRADE, trade_action_value)
+
+    # apply action, and listen to p1.decide_trade
+    with pytest.raises(ValueError):  # can't offer trades before rolling. must risk 7
+        game.execute(action)
+
+    # roll not a 7
+    fake_roll_dice.return_value = (1, 2)
+    game.play_tick()
+    freqdeck = get_player_freqdeck(game.state, p0.color)
+
+    # test 1: players deny trade
+    p1.decide = MagicMock(
+        return_value=Action(p1.color, ActionType.REJECT_TRADE, (*trade_action_value, 0))
+    )
+    p2.decide = MagicMock(
+        return_value=Action(p2.color, ActionType.REJECT_TRADE, (*trade_action_value, 0))
+    )
+    game.execute(action)  # now you can offer trades
+    assert game.state.is_resolving_trade
+    assert all(a.color == p1.color for a in game.state.playable_actions)
+    assert all(
+        a.action_type in [ActionType.ACCEPT_TRADE, ActionType.REJECT_TRADE]
+        for a in game.state.playable_actions
+    )
+
+    # assert they asked players to accept/deny trade
+    game.play_tick()  # ask p1 to decide
+    game.play_tick()  # ask p2 to decide
+    p1.decide.assert_called_once()
+    p2.decide.assert_called_once()
+    # assert trade didn't happen and is back at PLAY_TURN
+    assert freqdeck == get_player_freqdeck(game.state, p0.color)
+    assert not game.state.is_resolving_trade
+    assert game.state.current_prompt == ActionPrompt.PLAY_TURN
+
+    # test 2: one of them (p1) accepts trade, but p0 regrets
+    # ensure p1 has cards
+    player_deck_replenish(game.state, p1.color, RESOURCES[missing_resource_index], 1)
+    p1.decide = MagicMock(
+        return_value=Action(p1.color, ActionType.ACCEPT_TRADE, (*trade_action_value, 0))
+    )
+    p2.decide = MagicMock(
+        return_value=Action(p2.color, ActionType.REJECT_TRADE, (*trade_action_value, 0))
+    )
+    p0.decide = MagicMock(return_value=Action(p0.color, ActionType.CANCEL_TRADE, None))
+    game.execute(action)
+    assert game.state.is_resolving_trade
+    game.play_tick()  # ask p1 to accept/reject
+    game.play_tick()  # ask p2 to accept/reject
+    game.play_tick()  # ask p1 to confirm
+    p1.decide.assert_called_once()
+    p2.decide.assert_called_once()
+    p0.decide.assert_called_once_with(
+        game,
+        [
+            Action(p0.color, ActionType.CANCEL_TRADE, None),
+            Action(p0.color, ActionType.CONFIRM_TRADE, (*trade_action_value, p1.color)),
+        ],
+    )
+    # assert trade didn't happen
+    assert freqdeck == get_player_freqdeck(game.state, p0.color)
+    assert not game.state.is_resolving_trade
+    assert game.state.current_prompt == ActionPrompt.PLAY_TURN
+
+    # test 3: both of them accepts trade, p0 selects p2
+    # ensure p1 and p2 have cards
+    player_deck_replenish(game.state, p1.color, RESOURCES[missing_resource_index], 1)
+    player_deck_replenish(game.state, p2.color, RESOURCES[missing_resource_index], 1)
+    p1.decide = MagicMock(
+        return_value=Action(p1.color, ActionType.ACCEPT_TRADE, (*trade_action_value, 0))
+    )
+    p2.decide = MagicMock(
+        return_value=Action(p2.color, ActionType.ACCEPT_TRADE, (*trade_action_value, 0))
+    )
+    p0.decide = MagicMock(
+        return_value=Action(
+            p0.color, ActionType.CONFIRM_TRADE, (*trade_action_value, p2.color)
+        )
+    )
+    game.execute(action)
+    assert game.state.is_resolving_trade
+    game.play_tick()  # ask p1 to accept/reject
+    game.play_tick()  # ask p2 to accept/reject
+    game.play_tick()  # ask p1 to confirm
+    p1.decide.assert_called_once()
+    p2.decide.assert_called_once()
+    p0.decide.assert_called_once_with(
+        game,
+        [
+            Action(p0.color, ActionType.CANCEL_TRADE, None),
+            Action(p0.color, ActionType.CONFIRM_TRADE, (*trade_action_value, p1.color)),
+            Action(p0.color, ActionType.CONFIRM_TRADE, (*trade_action_value, p2.color)),
+        ],
+    )
+    # assert trade did happen
+    expected = freqdeck[:]
+    expected[index_of_a_resource_owned] -= 1
+    expected[missing_resource_index] += 1
+    assert get_player_freqdeck(game.state, p0.color) == expected

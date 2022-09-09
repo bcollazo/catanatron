@@ -1,3 +1,8 @@
+"""Providers helper functions to deal with representations of decks of cards
+
+We use a histogram / 'frequency list' to represent decks (aliased 'freqdeck').
+This representation is concise, easy to copy, access and fast to compare.
+"""
 from typing import Iterable, List
 
 from catanatron.models.enums import (

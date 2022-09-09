@@ -5,7 +5,7 @@ Module with main State class and main apply_action call (game controller).
 import random
 import pickle
 from collections import defaultdict
-from typing import Any, List
+from typing import Any, List, Tuple
 
 from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
@@ -166,6 +166,10 @@ class State:
             self.is_road_building = False
             self.free_roads_available = 0
 
+            self.is_resolving_trade = False
+            self.current_trade: Tuple = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            self.acceptees = tuple(False for _ in self.colors)
+
             self.playable_actions = generate_playable_actions(self)
 
     def current_player(self):
@@ -213,6 +217,10 @@ class State:
         state_copy.is_moving_knight = self.is_moving_knight
         state_copy.is_road_building = self.is_road_building
         state_copy.free_roads_available = self.free_roads_available
+
+        state_copy.is_resolving_trade = self.is_resolving_trade
+        state_copy.current_trade = self.current_trade
+        state_copy.acceptees = self.acceptees
 
         state_copy.playable_actions = self.playable_actions
         return state_copy
@@ -591,9 +599,90 @@ def apply_action(state: State, action: Action):
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.PLAY_TURN
         state.playable_actions = generate_playable_actions(state)
+    elif action.action_type == ActionType.OFFER_TRADE:
+        state.is_resolving_trade = True
+        state.current_trade = (*action.value, state.current_turn_index)
+
+        # go in seating order; order won't matter because of "acceptees hook"
+        state.current_player_index = next(
+            i for i, c in enumerate(state.colors) if c != action.color
+        )  # cant ask yourself
+        state.current_prompt = ActionPrompt.DECIDE_TRADE
+
+        state.playable_actions = generate_playable_actions(state)
+    elif action.action_type == ActionType.ACCEPT_TRADE:
+        # add yourself to self.acceptees
+        index = state.colors.index(action.color)
+        new_acceptess = list(state.acceptees)
+        new_acceptess[index] = True  # type: ignore
+        state.acceptees = tuple(new_acceptess)
+
+        try:
+            # keep going around table w/o asking yourself or players that have answered
+            state.current_player_index = next(
+                i
+                for i, c in enumerate(state.colors)
+                if c != action.color and i > state.current_player_index
+            )
+            # .is_resolving_trade, .current_trade, .current_prompt, .acceptees stay the same
+        except StopIteration:
+            # by this action, there is at least 1 acceptee, so go to DECIDE_ACCEPTEES
+            # .is_resolving_trade, .current_trade, .acceptees stay the same
+            state.current_player_index = state.current_turn_index
+            state.current_prompt = ActionPrompt.DECIDE_ACCEPTEES
+
+        state.playable_actions = generate_playable_actions(state)
+    elif action.action_type == ActionType.REJECT_TRADE:
+        try:
+            # keep going around table w/o asking yourself or players that have answered
+            state.current_player_index = next(
+                i
+                for i, c in enumerate(state.colors)
+                if c != action.color and i > state.current_player_index
+            )
+            # .is_resolving_trade, .current_trade, .current_prompt, .acceptees stay the same
+        except StopIteration:
+            # if no acceptees at this point, go back to PLAY_TURN
+            if sum(state.acceptees) == 0:
+                reset_trading_state(state)
+
+                state.current_player_index = state.current_turn_index
+                state.current_prompt = ActionPrompt.PLAY_TURN
+            else:
+                # go to offering player with all the answers
+                # .is_resolving_trade, .current_trade, .acceptees stay the same
+                state.current_player_index = state.current_turn_index
+                state.current_prompt = ActionPrompt.DECIDE_ACCEPTEES
+
+        state.playable_actions = generate_playable_actions(state)
+    elif action.action_type == ActionType.CONFIRM_TRADE:
+        # apply trade
+        offering = action.value[:5]
+        asking = action.value[5:10]
+        enemy_color = action.value[10]
+        player_freqdeck_subtract(state, action.color, offering)
+        player_freqdeck_add(state, action.color, asking)
+        player_freqdeck_subtract(state, enemy_color, asking)
+        player_freqdeck_add(state, enemy_color, offering)
+
+        reset_trading_state(state)
+
+        state.current_player_index = state.current_turn_index
+        state.current_prompt = ActionPrompt.PLAY_TURN
+    elif action.action_type == ActionType.CANCEL_TRADE:
+        reset_trading_state(state)
+
+        state.current_player_index = state.current_turn_index
+        state.current_prompt = ActionPrompt.PLAY_TURN
     else:
         raise ValueError("Unknown ActionType " + str(action.action_type))
 
     # TODO: Think about possible-action/idea vs finalized-action design
     state.actions.append(action)
     return action
+
+
+def reset_trading_state(state):
+    state.is_resolving_trade = False
+    state.current_trade = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    state.acceptees = tuple(False for _ in state.colors)

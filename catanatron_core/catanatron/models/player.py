@@ -22,7 +22,8 @@ class Player:
         self.is_bot = is_bot
 
     def decide(self, game, playable_actions):
-        """Should return one of the playable_actions.
+        """Should return one of the playable_actions or
+        an OFFER_TRADE action if its your turn and you have already rolled.
 
         Args:
             game (Game): complete game state. read-only.

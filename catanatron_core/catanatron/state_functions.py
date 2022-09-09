@@ -134,6 +134,18 @@ def get_player_buildings(state, color_param, building_type_param):
     return state.buildings_by_color[color_param][building_type_param]
 
 
+def get_player_freqdeck(state, color):
+    """Returns a 'freqdeck' of a player's resource hand."""
+    key = player_key(state, color)
+    return [
+        state.player_state[f"{key}_WOOD_IN_HAND"],
+        state.player_state[f"{key}_BRICK_IN_HAND"],
+        state.player_state[f"{key}_SHEEP_IN_HAND"],
+        state.player_state[f"{key}_WHEAT_IN_HAND"],
+        state.player_state[f"{key}_ORE_IN_HAND"],
+    ]
+
+
 # ===== State Mutators
 def build_settlement(state, color, node_id, is_free):
     state.buildings_by_color[color][SETTLEMENT].append(node_id)
