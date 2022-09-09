@@ -659,11 +659,11 @@ def apply_action(state: State, action: Action):
         # apply trade
         offering = action.value[:5]
         asking = action.value[5:10]
-        enemy = action.value[10]
+        enemy_color = action.value[10]
         player_freqdeck_subtract(state, action.color, offering)
         player_freqdeck_add(state, action.color, asking)
-        player_freqdeck_subtract(state, enemy, asking)
-        player_freqdeck_add(state, enemy, offering)
+        player_freqdeck_subtract(state, enemy_color, asking)
+        player_freqdeck_add(state, enemy_color, offering)
 
         reset_trading_state(state)
 
