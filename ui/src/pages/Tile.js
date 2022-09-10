@@ -15,7 +15,7 @@ export function NumberToken({ className, children, style, size }) {
   return (
     <Paper
       elevation={3}
-      className={cn("number-token", "hexagon", className)}
+      className={cn("number-token", className)}
       style={{
         "--base-size": `${size}px`, // this var can be overrided via `style` prop
         ...style,
@@ -59,9 +59,11 @@ export default function Tile({ center, coordinate, tile, size }) {
   if (tile.type === "RESOURCE_TILE") {
     contents = (
       <NumberToken size={size}>
-        {tile.number}
-        <br />
-        {numberToPips(tile.number)}
+        <span>
+          {tile.number}
+          <br />
+          {numberToPips(tile.number)}
+        </span>
       </NumberToken>
     );
     resourceTile = {
