@@ -2,19 +2,19 @@
 
 .number-token {
     --scale-factor: 0.65;
-    width: calc(var(--base-size) * var(--scale-factor));
-    height: calc(var(--base-size) * var(--scale-factor));
+    --base-font-size: 100%;
+    height: min-content;
+    width: min-content;
     text-align: center;
+    padding: 5px;
+    line-height: .8rem;
 
-    span {
-            line-height: .8;
-            top: 0;
-            bottom: 0;
-            margin: auto;
+    .pips {
+        font-size: calc(var(--base-font-size) * 60);
     }
     @media(max-width: $sm-breakpoint) {
         .number-token {
-            font-size: 75%;
+            --base-font-size: 75%;
         }
     }
 
