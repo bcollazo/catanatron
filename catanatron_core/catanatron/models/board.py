@@ -37,7 +37,6 @@ try:
         STATIC_GRAPH.add_edges_from(list(tile.edges.values()))
     USING_FAST_GRAPH = True
 except ImportError as e:
-    print("import error", e)
     STATIC_GRAPH = STATIC_GRAPH_NX
 
 
