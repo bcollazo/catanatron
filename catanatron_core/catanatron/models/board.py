@@ -16,14 +16,29 @@ from catanatron.models.map import (
 )
 from catanatron.models.enums import FastBuildingType, SETTLEMENT, CITY
 
-
 # Used to find relationships between nodes and edges
 base_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
 mini_map = CatanMap.from_template(MINI_MAP_TEMPLATE)
-STATIC_GRAPH = nx.Graph()
+STATIC_GRAPH_NX = nx.Graph()
 for tile in base_map.tiles.values():
-    STATIC_GRAPH.add_nodes_from(tile.nodes.values())
-    STATIC_GRAPH.add_edges_from(tile.edges.values())
+    STATIC_GRAPH_NX.add_nodes_from(tile.nodes.values())
+    STATIC_GRAPH_NX.add_edges_from(tile.edges.values())
+
+USING_FAST_GRAPH = False
+
+# Use fast compiled graph if can be imported
+# Fall back to NX graph for additional features such as floyd_warshall
+try:
+    from catanatron_compiled import graph
+
+    STATIC_GRAPH = graph.Graph()
+    for tile in base_map.tiles.values():
+        STATIC_GRAPH.add_nodes_from(list(tile.nodes.values()))
+        STATIC_GRAPH.add_edges_from(list(tile.edges.values()))
+    USING_FAST_GRAPH = True
+except ImportError as e:
+    print("import error", e)
+    STATIC_GRAPH = STATIC_GRAPH_NX
 
 
 @functools.lru_cache(1)
@@ -33,7 +48,7 @@ def get_node_distances():
 
 @functools.lru_cache(3)  # None, range(54), range(24)
 def get_edges(land_nodes=None):
-    return list(STATIC_GRAPH.subgraph(land_nodes or range(NUM_NODES)).edges())
+    return list(STATIC_GRAPH.subgraph(list(land_nodes or range(NUM_NODES))).edges())
 
 
 class Board:
@@ -63,7 +78,9 @@ class Board:
                 BASE_MAP_TEMPLATE
             )  # Static State (no need to copy)
 
-            self.buildings: Dict[NodeId, Tuple[Color, FastBuildingType]] = dict()
+            self.buildings: Dict[
+                NodeId, Tuple[int, FastBuildingType]
+            ] = dict()  # node_id => color_value, buildingtype
             self.roads = dict()  # (node_id, node_id) => color
 
             # color => int{}[] (list of node_id sets) one per component
@@ -81,7 +98,7 @@ class Board:
             ).__next__()
 
             # Cache buildable subgraph
-            self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
+            self.buildable_subgraph = STATIC_GRAPH.subgraph(list(self.map.land_nodes))
 
     def build_settlement(self, color, node_id, initial_build_phase=False):
         """Adds a settlement, and ensures is a valid place to build.
@@ -104,7 +121,7 @@ class Board:
         if node_id in self.buildings:
             raise ValueError("Invalid Settlement Placement: a building exists there")
 
-        self.buildings[node_id] = (color, SETTLEMENT)
+        self.buildings[node_id] = (color.value, SETTLEMENT)
 
         previous_road_color = self.road_color
         if initial_build_phase:
@@ -190,8 +207,8 @@ class Board:
         if edge not in buildable and inverted_edge not in buildable:
             raise ValueError("Invalid Road Placement")
 
-        self.roads[edge] = color
-        self.roads[inverted_edge] = color
+        self.roads[edge] = color.value
+        self.roads[inverted_edge] = color.value
 
         # Update self.connected_components accordingly. Maybe merge.
         a, b = edge
@@ -235,7 +252,7 @@ class Board:
         if building is None or building[0] != color or building[1] != SETTLEMENT:
             raise ValueError("Invalid City Placement: no player settlement there")
 
-        self.buildings[node_id] = (color, CITY)
+        self.buildings[node_id] = (color.value, CITY)
 
     def buildable_node_ids(self, color: Color, initial_build_phase=False):
         if initial_build_phase:
@@ -346,6 +363,13 @@ class Board:
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
+    if USING_FAST_GRAPH:
+        if type(color) != int:
+            color = color.value
+        return graph.longest_acyclic_path(
+            board.buildings, board.roads, node_set, color, STATIC_GRAPH
+        )
+
     paths = []
     for start_node in node_set:
         # do DFS when reach leaf node, stop and add to paths

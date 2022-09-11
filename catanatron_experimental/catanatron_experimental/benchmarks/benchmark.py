@@ -1,4 +1,4 @@
-from catanatron.models.board import STATIC_GRAPH
+from catanatron.models.board import STATIC_GRAPH_NX
 import pickle
 import timeit
 import time
@@ -79,7 +79,7 @@ end = time.time()
 print("graph = nx.DiGraph(a)", end - start, "seconds")
 
 start = time.time()
-STATIC_GRAPH.copy()
+STATIC_GRAPH_NX.copy()
 end = time.time()
 print("graph.copy()", end - start, "seconds")
 

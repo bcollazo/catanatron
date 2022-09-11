@@ -36,6 +36,8 @@ class GameEncoder(json.JSONEncoder):
     def default(self, obj):
         if obj is None:
             return None
+        if isinstance(obj, int):
+            return obj
         if isinstance(obj, str):
             return obj
         if isinstance(obj, Enum):
