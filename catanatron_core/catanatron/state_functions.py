@@ -323,3 +323,9 @@ def player_clean_turn(state, color):
     key = player_key(state, color)
     state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = False
     state.player_state[f"{key}_HAS_ROLLED"] = False
+
+
+def player_check_is_winner(state, color):
+    key = player_key(state, color)
+    if state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] >= state.vps_to_win:
+        state.winning_color = color

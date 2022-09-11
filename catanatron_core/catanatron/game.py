@@ -110,8 +110,9 @@ class Game:
             random.seed(self.seed)
 
             self.id = str(uuid.uuid4())
-            self.vps_to_win = vps_to_win
-            self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.state = State(
+                players, catan_map, discard_limit=discard_limit, vps_to_win=vps_to_win
+            )
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
@@ -173,16 +174,7 @@ class Game:
         Returns:
             Union[Color, None]: Might be None if game truncated by TURNS_LIMIT
         """
-        result = None
-        for color in self.state.colors:
-            key = player_key(self.state, color)
-            if (
-                self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-                >= self.vps_to_win
-            ):
-                result = color
-
-        return result
+        return self.state.winning_color
 
     def copy(self) -> "Game":
         """Creates a copy of this Game, that can be modified without
@@ -194,6 +186,5 @@ class Game:
         game_copy = Game([], None, None, initialize=False)
         game_copy.seed = self.seed
         game_copy.id = self.id
-        game_copy.vps_to_win = self.vps_to_win
         game_copy.state = self.state.copy()
         return game_copy
