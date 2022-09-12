@@ -3,21 +3,22 @@
 .number-token {
     --scale-factor: 0.65;
     --base-font-size: 100%;
-    height: min-content;
-    width: min-content;
+    height: 4ch;
+    width: 4ch;
     text-align: center;
     padding: 5px;
     line-height: .8rem;
-
+    position: relative;
+    display: flex;
+    flex-direction: column;
     .pips {
-        font-size: calc(var(--base-font-size) * 60);
+        font-size: calc(var(--base-font-size) * 60%);
     }
-    @media(max-width: $sm-breakpoint) {
-        .number-token {
-            --base-font-size: 75%;
-        }
-    }
-
 }
 
+@media(max-width: $sm-breakpoint) {
+    .number-token {
+        --base-font-size: 75%;
+    }
+}
 
