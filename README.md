@@ -27,6 +27,7 @@ Create a virtual environment with Python3.8 or higher. Then:
 ```
 pip install -r dev-requirements.txt
 pip install -e catanatron_core
+pip install -e catanatron_compiled
 pip install -e catanatron_server
 pip install -e catanatron_gym
 pip install -e catanatron_experimental

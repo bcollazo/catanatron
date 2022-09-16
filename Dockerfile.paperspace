@@ -27,6 +27,7 @@ RUN python3.8 -m pip install -r dev-requirements.txt
 #   it separately, here:
 COPY . .
 RUN python3.8 -m pip install -e catanatron_core
+RUN python3.8 -m pip install -e catanatron_compiled
 RUN python3.8 -m pip install -e catanatron_gym
 RUN python3.8 -m pip install -e catanatron_server
 RUN python3.8 -m pip install -e catanatron_experimental
