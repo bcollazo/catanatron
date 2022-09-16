@@ -69,6 +69,7 @@ jobs:
           python-version: 3.8
       - name: Install dependencies
         run: |
+          pip install -r dev-requirements.txt
           pip install -e catanatron_core
           pip install -e catanatron_compiled
           pip install -e catanatron_gym
