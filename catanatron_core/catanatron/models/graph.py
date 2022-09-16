@@ -1,6 +1,7 @@
 from catanatron_compiled import graph
 import networkx as nx
 
+
 class HybridGraph:
     def __init__(self):
         self.NX_GRAPH = nx.Graph()

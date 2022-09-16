@@ -29,7 +29,6 @@ for tile in base_map.tiles.values():
     STATIC_GRAPH.add_edges_from(tile.edges.values())
 
 
-
 @functools.lru_cache(1)
 def get_node_distances():
     return STATIC_GRAPH.floyd_warshall()
