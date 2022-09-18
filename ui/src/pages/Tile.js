@@ -2,6 +2,7 @@ import React from "react";
 import cn from "classnames";
 import Paper from "@material-ui/core/Paper";
 
+import "./Tile.scss";
 import brickTile from "../assets/tile_brick.svg";
 import desertTile from "../assets/tile_desert.svg";
 import grainTile from "../assets/tile_wheat.svg";
@@ -15,12 +16,37 @@ export function NumberToken({ className, children, style, size }) {
     <Paper
       elevation={3}
       className={cn("number-token", className)}
-      style={{ ...style, width: size * 0.5, height: size * 0.5 }}
+      style={{
+        "--base-size": `${size}px`, // this var can be overrided via `style` prop
+        ...style,
+      }}
     >
       {children}
     </Paper>
   );
 }
+
+const numberToPips = (number) => {
+  switch (number) {
+    case 2:
+    case 12:
+      return "•";
+    case 3:
+    case 11:
+      return "••";
+    case 4:
+    case 10:
+      return "•••";
+    case 5:
+    case 9:
+      return "••••";
+    case 6:
+    case 8:
+      return "•••••";
+    default:
+      return "";
+  }
+};
 
 export default function Tile({ center, coordinate, tile, size }) {
   const w = SQRT3 * size;
@@ -31,7 +57,12 @@ export default function Tile({ center, coordinate, tile, size }) {
   let contents;
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
-    contents = <NumberToken size={size}>{tile.number}</NumberToken>;
+    contents = (
+      <NumberToken size={size}>
+        <div>{tile.number}</div>
+        <div class="pips">{numberToPips(tile.number)}</div>
+      </NumberToken>
+    );
     resourceTile = {
       BRICK: brickTile,
       SHEEP: woolTile,
