@@ -377,7 +377,6 @@ def count_production(nodes, catan_map):
 
 
 def expansion_features(game: Game, p0_color: Color):
-    global STATIC_GRAPH
     MAX_EXPANSION_DISTANCE = 3  # exclusive
 
     features = {}
