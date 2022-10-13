@@ -28,13 +28,11 @@ for tile in base_map.tiles.values():
 
 @functools.lru_cache(1)
 def get_node_distances():
-    global STATIC_GRAPH
     return nx.floyd_warshall(STATIC_GRAPH)
 
 
 @functools.lru_cache(3)  # None, range(54), range(24)
 def get_edges(land_nodes=None):
-    global STATIC_GRAPH, NUM_NODES
     return list(STATIC_GRAPH.subgraph(land_nodes or range(NUM_NODES)).edges())
 
 
@@ -83,7 +81,6 @@ class Board:
             ).__next__()
 
             # Cache buildable subgraph
-            global STATIC_GRAPH
             self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
 
     def build_settlement(self, color, node_id, initial_build_phase=False):
@@ -349,8 +346,6 @@ class Board:
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
-    global STATIC_GRAPH
-
     paths = []
     for start_node in node_set:
         # do DFS when reach leaf node, stop and add to paths

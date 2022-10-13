@@ -67,7 +67,6 @@ def get_tile_coordinate_map():
 
 # Create mapping of node_id => i,j and edge => i,j. Respecting (WIDTH, HEIGHT)
 def init_board_tensor_map():
-    global STATIC_GRAPH
     # These are node-pairs (start,end) for the lines that go from left to right
     pairs = [
         (82, 93),
