@@ -217,21 +217,20 @@ def build_production_features(consider_robber):
         board = game.state.board
         robbed_nodes = set(board.map.tiles[board.robber_coordinate].nodes.values())
         for resource in RESOURCES:
-            for i, color in iter_players(game.state.colors, p0_color):
-                production = 0
-                for node_id in get_player_buildings(game.state, color, SETTLEMENT):
-                    if consider_robber and node_id in robbed_nodes:
-                        continue
-                    production += get_node_production(
-                        game.state.board.map, node_id, resource
-                    )
-                for node_id in get_player_buildings(game.state, color, CITY):
-                    if consider_robber and node_id in robbed_nodes:
-                        continue
-                    production += 2 * get_node_production(
-                        game.state.board.map, node_id, resource
-                    )
-                features[f"{prefix}P{i}_{resource}_PRODUCTION"] = production
+            production = 0
+            for node_id in get_player_buildings(game.state, p0_color, SETTLEMENT):
+                if consider_robber and node_id in robbed_nodes:
+                    continue
+                production += get_node_production(
+                    game.state.board.map, node_id, resource
+                )
+            for node_id in get_player_buildings(game.state, p0_color, CITY):
+                if consider_robber and node_id in robbed_nodes:
+                    continue
+                production += 2 * get_node_production(
+                    game.state.board.map, node_id, resource
+                )
+            features[f"{prefix}P0_{resource}_PRODUCTION"] = production
 
         return features
 
