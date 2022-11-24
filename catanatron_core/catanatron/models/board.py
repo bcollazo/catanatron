@@ -316,9 +316,11 @@ class Board:
 
         board.robber_coordinate = self.robber_coordinate
         board.buildable_subgraph = self.buildable_subgraph
-        board.buildable_edges_cache = copy.deepcopy(self.buildable_edges_cache)
-        board.player_port_resources_cache = copy.deepcopy(
-            self.player_port_resources_cache
+        board.buildable_edges_cache = pickle.loads(
+            pickle.dumps(self.buildable_edges_cache)
+        )
+        board.player_port_resources_cache = pickle.loads(
+            pickle.dumps(self.player_port_resources_cache)
         )
         return board
 
