@@ -11,7 +11,7 @@ from catanatron.models.enums import (
     ROAD,
 )
 from catanatron.models.coordinate_system import offset_to_cube
-from catanatron.models.board import STATIC_GRAPH_NX
+from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.map import number_probability
 from catanatron_gym.features import get_feature_ordering, iter_players
 
@@ -76,7 +76,7 @@ def init_board_tensor_map():
         (73, 59),
         (72, 60),
     ]
-    paths = [nx.shortest_path(STATIC_GRAPH_NX, a, b) for (a, b) in pairs]
+    paths = [STATIC_GRAPH.shortest_path(a, b) for (a, b) in pairs]
 
     node_map = {}
     edge_map = {}

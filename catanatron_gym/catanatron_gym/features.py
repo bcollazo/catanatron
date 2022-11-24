@@ -11,7 +11,7 @@ from catanatron.state_functions import (
     player_num_dev_cards,
     player_num_resource_cards,
 )
-from catanatron.models.board import STATIC_GRAPH_NX, get_edges, get_node_distances
+from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.map import NUM_TILES, CatanMap, build_map
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
@@ -302,7 +302,7 @@ def iter_level_nodes(enemy_nodes, enemy_roads, num_roads, zero_nodes):
 
             # here we can assume node is empty or owned
             expandable = []
-            for neighbor_id in STATIC_GRAPH_NX.neighbors(node_id):
+            for neighbor_id in STATIC_GRAPH.neighbors(node_id):
                 edge = (node_id, neighbor_id)
                 can_follow_edge = edge not in enemy_roads
                 if can_follow_edge:
@@ -381,7 +381,7 @@ def expansion_features(game: Game, p0_color: Color):
     empty_edges = set(get_edges(game.state.board.map.land_nodes))
     for i, color in iter_players(game.state.colors, p0_color):
         empty_edges.difference_update(get_player_buildings(game.state, color, ROAD))
-    searchable_subgraph = STATIC_GRAPH_NX.edge_subgraph(empty_edges)
+    searchable_subgraph = STATIC_GRAPH.edge_subgraph(empty_edges)
 
     board_buildable_node_ids = game.state.board.buildable_node_ids(
         p0_color, True
