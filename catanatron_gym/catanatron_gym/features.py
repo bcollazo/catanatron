@@ -332,38 +332,35 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
     features = {}
 
     board_buildable = game.state.board.buildable_node_ids(p0_color, True)
-    for i, color in iter_players(game.state.colors, p0_color):
-        owned_or_buildable = get_owned_or_buildable(game, color, board_buildable)
+    owned_or_buildable = get_owned_or_buildable(game, p0_color, board_buildable)
 
-        # do layer 0
-        zero_nodes = get_zero_nodes(game, color)
+    # do layer 0
+    zero_nodes = get_zero_nodes(game, p0_color)
+    production = count_production(
+        frozenset(owned_or_buildable.intersection(zero_nodes)),
+        game.state.board.map,
+    )
+    for resource in RESOURCES:
+        features[f"P0_0_ROAD_REACHABLE_{resource}"] = production[resource]
+
+    # do rest of layers
+    enemy_nodes = frozenset(
+        k
+        for k, v in game.state.board.buildings.items()
+        if v is not None and v[0] != p0_color
+    )
+    enemy_roads = frozenset(
+        k for k, v in game.state.board.roads.items() if v is not None and v != p0_color
+    )
+    for (level, level_nodes, paths) in iter_level_nodes(
+        enemy_nodes, enemy_roads, levels, frozenset(zero_nodes)
+    ):
         production = count_production(
-            frozenset(owned_or_buildable.intersection(zero_nodes)),
+            frozenset(owned_or_buildable.intersection(level_nodes)),
             game.state.board.map,
         )
         for resource in RESOURCES:
-            features[f"P{i}_0_ROAD_REACHABLE_{resource}"] = production[resource]
-
-        # do rest of layers
-        enemy_nodes = frozenset(
-            k
-            for k, v in game.state.board.buildings.items()
-            if v is not None and v[0] != color
-        )
-        enemy_roads = frozenset(
-            k for k, v in game.state.board.roads.items() if v is not None and v != color
-        )
-        for (level, level_nodes, paths) in iter_level_nodes(
-            enemy_nodes, enemy_roads, levels, frozenset(zero_nodes)
-        ):
-            production = count_production(
-                frozenset(owned_or_buildable.intersection(level_nodes)),
-                game.state.board.map,
-            )
-            for resource in RESOURCES:
-                features[f"P{i}_{level}_ROAD_REACHABLE_{resource}"] = production[
-                    resource
-                ]
+            features[f"P0_{level}_ROAD_REACHABLE_{resource}"] = production[resource]
 
     return features
 
