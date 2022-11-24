@@ -1,4 +1,5 @@
 -e catanatron_core
+-e catanatron_compiled
 -e catanatron_server
 -e catanatron_gym
 -e catanatron_experimental

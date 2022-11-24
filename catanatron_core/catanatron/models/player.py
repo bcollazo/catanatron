@@ -1,12 +1,12 @@
 import random
-from enum import Enum
+from enum import IntEnum
 
 
-class Color(Enum):
-    RED = "RED"
-    BLUE = "BLUE"
-    ORANGE = "ORANGE"
-    WHITE = "WHITE"
+class Color(IntEnum):
+    RED = 0
+    BLUE = 1
+    ORANGE = 2
+    WHITE = 3
 
 
 class Player:

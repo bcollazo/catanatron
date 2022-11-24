@@ -15,12 +15,15 @@ from catanatron.models.map import (
     NodeId,
 )
 from catanatron.models.enums import FastBuildingType, SETTLEMENT, CITY
-
+from catanatron.models.graph import HybridGraph
+from catanatron_compiled import graph
 
 # Used to find relationships between nodes and edges
 base_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
 mini_map = CatanMap.from_template(MINI_MAP_TEMPLATE)
-STATIC_GRAPH = nx.Graph()
+
+STATIC_GRAPH = HybridGraph()
+
 for tile in base_map.tiles.values():
     STATIC_GRAPH.add_nodes_from(tile.nodes.values())
     STATIC_GRAPH.add_edges_from(tile.edges.values())
@@ -28,13 +31,11 @@ for tile in base_map.tiles.values():
 
 @functools.lru_cache(1)
 def get_node_distances():
-    global STATIC_GRAPH
-    return nx.floyd_warshall(STATIC_GRAPH)
+    return STATIC_GRAPH.floyd_warshall()
 
 
 @functools.lru_cache(3)  # None, range(54), range(24)
 def get_edges(land_nodes=None):
-    global STATIC_GRAPH, NUM_NODES
     return list(STATIC_GRAPH.subgraph(land_nodes or range(NUM_NODES)).edges())
 
 
@@ -65,7 +66,9 @@ class Board:
                 BASE_MAP_TEMPLATE
             )  # Static State (no need to copy)
 
-            self.buildings: Dict[NodeId, Tuple[Color, FastBuildingType]] = dict()
+            self.buildings: Dict[
+                NodeId, Tuple[int, FastBuildingType]
+            ] = dict()  # node_id => color_value, buildingtype
             self.roads = dict()  # (node_id, node_id) => color
 
             # color => int{}[] (list of node_id sets) one per component
@@ -83,7 +86,6 @@ class Board:
             ).__next__()
 
             # Cache buildable subgraph
-            global STATIC_GRAPH
             self.buildable_subgraph = STATIC_GRAPH.subgraph(self.map.land_nodes)
 
     def build_settlement(self, color, node_id, initial_build_phase=False):
@@ -316,9 +318,11 @@ class Board:
 
         board.robber_coordinate = self.robber_coordinate
         board.buildable_subgraph = self.buildable_subgraph
-        board.buildable_edges_cache = copy.deepcopy(self.buildable_edges_cache)
-        board.player_port_resources_cache = copy.deepcopy(
-            self.player_port_resources_cache
+        board.buildable_edges_cache = pickle.loads(
+            pickle.dumps(self.buildable_edges_cache)
+        )
+        board.player_port_resources_cache = pickle.loads(
+            pickle.dumps(self.player_port_resources_cache)
         )
         return board
 
@@ -347,33 +351,6 @@ class Board:
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
-    global STATIC_GRAPH
-
-    paths = []
-    for start_node in node_set:
-        # do DFS when reach leaf node, stop and add to paths
-        paths_from_this_node = []
-        agenda = [(start_node, [])]
-        while len(agenda) > 0:
-            node, path_thus_far = agenda.pop()
-
-            able_to_navigate = False
-            for neighbor_node in STATIC_GRAPH.neighbors(node):
-                edge_color = board.get_edge_color((node, neighbor_node))
-                if edge_color != color:
-                    continue
-
-                neighbor_color = board.get_node_color(neighbor_node)
-                if neighbor_color is not None and neighbor_color != color:
-                    continue  # enemy-owned, cant use this to navigate.
-                edge = tuple(sorted((node, neighbor_node)))
-                if edge not in path_thus_far:
-                    agenda.insert(0, (neighbor_node, path_thus_far + [edge]))
-                    able_to_navigate = True
-
-            if not able_to_navigate:  # then it is leaf node
-                paths_from_this_node.append(path_thus_far)
-
-        paths.extend(paths_from_this_node)
-
-    return max(paths, key=len)
+    return graph.longest_acyclic_path(
+        board.buildings, board.roads, node_set, color, STATIC_GRAPH.CPP_GRAPH
+    )

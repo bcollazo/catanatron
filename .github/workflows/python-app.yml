@@ -36,6 +36,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r dev-requirements.txt
           pip install -e catanatron_core
+          pip install -e catanatron_compiled
           pip install -e catanatron_gym
           pip install -e catanatron_server
           pip install -e catanatron_experimental
@@ -68,7 +69,9 @@ jobs:
           python-version: 3.8
       - name: Install dependencies
         run: |
+          pip install -r dev-requirements.txt
           pip install -e catanatron_core
+          pip install -e catanatron_compiled
           pip install -e catanatron_gym
       - name: Inline test
         run: |

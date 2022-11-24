@@ -57,10 +57,8 @@ CONTENDER_WEIGHTS = {
 def base_fn(params=DEFAULT_WEIGHTS):
     def fn(game, p0_color):
         production_features = build_production_features(True)
-        our_production_sample = production_features(game, p0_color)
-        enemy_production_sample = production_features(game, p0_color)
-        production = value_production(our_production_sample, "P0")
-        enemy_production = value_production(enemy_production_sample, "P1", False)
+        production_sample = production_features(game, p0_color)
+        production = value_production(production_sample, "P0")
 
         key = player_key(game.state, p0_color)
         longest_road_length = get_longest_road_length(game.state, p0_color)
@@ -105,7 +103,6 @@ def base_fn(params=DEFAULT_WEIGHTS):
         return float(
             game.state.player_state[f"{key}_VICTORY_POINTS"] * params["public_vps"]
             + production * params["production"]
-            + enemy_production * params["enemy_production"]
             + reachable_production_at_zero * params["reachable_production_0"]
             + reachable_production_at_one * params["reachable_production_1"]
             + hand_synergy * params["hand_synergy"]

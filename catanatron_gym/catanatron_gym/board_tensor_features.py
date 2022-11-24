@@ -67,7 +67,6 @@ def get_tile_coordinate_map():
 
 # Create mapping of node_id => i,j and edge => i,j. Respecting (WIDTH, HEIGHT)
 def init_board_tensor_map():
-    global STATIC_GRAPH
     # These are node-pairs (start,end) for the lines that go from left to right
     pairs = [
         (82, 93),
@@ -77,7 +76,7 @@ def init_board_tensor_map():
         (73, 59),
         (72, 60),
     ]
-    paths = [nx.shortest_path(STATIC_GRAPH, a, b) for (a, b) in pairs]
+    paths = [STATIC_GRAPH.shortest_path(a, b) for (a, b) in pairs]
 
     node_map = {}
     edge_map = {}

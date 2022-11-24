@@ -9,7 +9,9 @@ ENV FLASK_RUN_HOST=0.0.0.0
 RUN pip install --upgrade pip
 
 COPY . .
+RUN pip install -r dev-requirements.txt
 RUN pip install -e catanatron_core
+RUN pip install -e catanatron_compiled
 RUN pip install -e catanatron_server
 RUN pip install -e catanatron_gym
 RUN pip install -e catanatron_experimental
