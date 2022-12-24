@@ -78,3 +78,4 @@ watchdog==2.1.6
 Werkzeug==2.0.2
 wrapt==1.13.3
 zipp==3.7.0
+wheel>=0.38.0 # not directly required, pinned by Snyk to avoid a vulnerability
