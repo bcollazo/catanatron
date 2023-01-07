@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from catanatron.models.map import number_probability
 from catanatron.models.enums import (
+    DEVELOPMENT_CARDS,
     RESOURCES,
     SETTLEMENT,
     CITY,
@@ -10,7 +11,7 @@ from catanatron.models.enums import (
     ActionType,
 )
 
-from catanatron.state_functions import get_player_buildings
+from catanatron.state_functions import get_player_buildings, get_dev_cards_in_hand
 from catanatron_gym.features import (
     build_production_features,
 )
@@ -40,7 +41,17 @@ def execute_spectrum(game, action):
         return [(copy, 1)]
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
         results = []
-        current_deck = game.state.development_listdeck
+
+        # Get the possible deck from the perspective of the current player
+        # by getting all face down cards
+        current_deck = game.state.development_listdeck.copy()
+        for color in game.state.colors:
+            if color == action.color:
+                continue
+            for card in DEVELOPMENT_CARDS:
+                number = get_dev_cards_in_hand(game.state, color, card)
+                current_deck += [card]*number
+
         for card in set(current_deck):
             option_action = Action(action.color, action.action_type, card)
             option_game = game.copy()
