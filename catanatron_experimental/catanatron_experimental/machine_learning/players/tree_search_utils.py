@@ -11,12 +11,16 @@ from catanatron.models.enums import (
     ActionType,
 )
 
-from catanatron.state_functions import get_player_buildings, get_dev_cards_in_hand
+from catanatron.state_functions import get_player_buildings, get_dev_cards_in_hand, get_player_freqdeck
 from catanatron_gym.features import (
     build_production_features,
 )
 from catanatron_experimental.machine_learning.players.value import value_production
 
+def execute_deterministic(game, action):
+    copy = game.copy()
+    copy.execute(action, validate_action=False)
+    return [(copy, 1)]
 
 def execute_spectrum(game, action):
     """Returns [(game_copy, proba), ...] tuples for result of given action.
@@ -36,9 +40,7 @@ def execute_spectrum(game, action):
         ]
     )
     if action.action_type in deterministic_actions:
-        copy = game.copy()
-        copy.execute(action, validate_action=False)
-        return [(copy, 1)]
+        return execute_deterministic(game, action)
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
         results = []
 
@@ -77,27 +79,37 @@ def execute_spectrum(game, action):
     elif action.action_type == ActionType.MOVE_ROBBER:
         (coordinate, robbed_color, _) = action.value
         if robbed_color is None:  # no one to steal, then deterministic
-            copy = game.copy()
-            copy.execute(action, validate_action=False)
-            return [(copy, 1)]
-        else:
-            results = []
-            for card in RESOURCES:
-                option_action = Action(
-                    action.color,
-                    action.action_type,
-                    (coordinate, robbed_color, card),
-                )
-                option_game = game.copy()
-                try:
-                    option_game.execute(option_action, validate_action=False)
-                except Exception:
-                    # ignore exceptions, since player might imagine impossible outcomes.
-                    # ignoring means the value function of this node will be flattened,
-                    # to the one before.
-                    pass
-                results.append((option_game, 1 / 5.0))
-            return results
+            return execute_deterministic(game, action)
+
+        results = []
+        opponent_hand = get_player_freqdeck(game.state, robbed_color)
+        opponent_hand_size = sum(opponent_hand)
+        if opponent_hand_size == 0:
+            # Nothing to steal
+            # TODO: Not wrapped in a Try
+            return execute_deterministic(game, action)
+
+        for i, card in enumerate(RESOURCES):
+            resource_count = opponent_hand[i]
+            if resource_count == 0:
+                # No point in calculating a 0% outcome
+                continue
+
+            option_action = Action(
+                action.color,
+                action.action_type,
+                (coordinate, robbed_color, card),
+            )
+            option_game = game.copy()
+            try:
+                option_game.execute(option_action, validate_action=False)
+            except Exception:
+                # ignore exceptions, since player might imagine impossible outcomes.
+                # ignoring means the value function of this node will be flattened,
+                # to the one before.
+                pass
+            results.append((option_game, resource_count / opponent_hand_size))
+        return results
     else:
         raise RuntimeError("Unknown ActionType " + str(action.action_type))
 
