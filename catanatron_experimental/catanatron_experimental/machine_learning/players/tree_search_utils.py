@@ -17,6 +17,21 @@ from catanatron_gym.features import (
 )
 from catanatron_experimental.machine_learning.players.value import value_production
 
+DETERMINISTIC_ACTIONS = set(
+    [
+        ActionType.END_TURN,
+        ActionType.BUILD_SETTLEMENT,
+        ActionType.BUILD_ROAD,
+        ActionType.BUILD_CITY,
+        ActionType.PLAY_KNIGHT_CARD,
+        ActionType.PLAY_YEAR_OF_PLENTY,
+        ActionType.PLAY_ROAD_BUILDING,
+        ActionType.MARITIME_TRADE,
+        ActionType.DISCARD,  # for simplicity... ok if reality is slightly different
+        ActionType.PLAY_MONOPOLY,  # for simplicity... we assume good card-counting and bank is visible...
+    ]
+)
+
 def execute_deterministic(game, action):
     copy = game.copy()
     copy.execute(action, validate_action=False)
@@ -25,21 +40,7 @@ def execute_deterministic(game, action):
 def execute_spectrum(game, action):
     """Returns [(game_copy, proba), ...] tuples for result of given action.
     Result probas should add up to 1. Does not modify self"""
-    deterministic_actions = set(
-        [
-            ActionType.END_TURN,
-            ActionType.BUILD_SETTLEMENT,
-            ActionType.BUILD_ROAD,
-            ActionType.BUILD_CITY,
-            ActionType.PLAY_KNIGHT_CARD,
-            ActionType.PLAY_YEAR_OF_PLENTY,
-            ActionType.PLAY_ROAD_BUILDING,
-            ActionType.MARITIME_TRADE,
-            ActionType.DISCARD,  # for simplicity... ok if reality is slightly different
-            ActionType.PLAY_MONOPOLY,  # for simplicity... we assume good card-counting and bank is visible...
-        ]
-    )
-    if action.action_type in deterministic_actions:
+    if action.action_type in DETERMINISTIC_ACTIONS:
         return execute_deterministic(game, action)
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
         results = []
@@ -57,13 +58,7 @@ def execute_spectrum(game, action):
         for card in set(current_deck):
             option_action = Action(action.color, action.action_type, card)
             option_game = game.copy()
-            try:
-                option_game.execute(option_action, validate_action=False)
-            except Exception:
-                # ignore exceptions, since player might imagine impossible outcomes.
-                # ignoring means the value function of this node will be flattened,
-                # to the one before.
-                pass
+            option_game.execute(option_action, validate_action=False)
             results.append((option_game, current_deck.count(card)/len(current_deck)))
         return results
     elif action.action_type == ActionType.ROLL:
@@ -86,7 +81,6 @@ def execute_spectrum(game, action):
         opponent_hand_size = sum(opponent_hand)
         if opponent_hand_size == 0:
             # Nothing to steal
-            # TODO: Not wrapped in a Try
             return execute_deterministic(game, action)
 
         for i, card in enumerate(RESOURCES):
@@ -101,13 +95,7 @@ def execute_spectrum(game, action):
                 (coordinate, robbed_color, card),
             )
             option_game = game.copy()
-            try:
-                option_game.execute(option_action, validate_action=False)
-            except Exception:
-                # ignore exceptions, since player might imagine impossible outcomes.
-                # ignoring means the value function of this node will be flattened,
-                # to the one before.
-                pass
+            option_game.execute(option_action, validate_action=False)
             results.append((option_game, resource_count / opponent_hand_size))
         return results
     else:
@@ -118,6 +106,10 @@ def expand_spectrum(game, actions):
     """Consumes game if playable_actions not specified"""
     children = defaultdict(list)
     for action in actions:
+        if action not in game.state.playable_actions:
+            # Can't meaningfully expand this
+            continue
+
         outprobas = execute_spectrum(game, action)
         children[action] = outprobas
     return children  # action => (game, proba)[]
