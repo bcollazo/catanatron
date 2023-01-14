@@ -11,7 +11,11 @@ from catanatron.models.enums import (
     ActionType,
 )
 
-from catanatron.state_functions import get_player_buildings, get_dev_cards_in_hand, get_player_freqdeck
+from catanatron.state_functions import (
+    get_player_buildings,
+    get_dev_cards_in_hand,
+    get_player_freqdeck,
+)
 from catanatron_gym.features import (
     build_production_features,
 )
@@ -32,10 +36,12 @@ DETERMINISTIC_ACTIONS = set(
     ]
 )
 
+
 def execute_deterministic(game, action):
     copy = game.copy()
     copy.execute(action, validate_action=False)
     return [(copy, 1)]
+
 
 def execute_spectrum(game, action):
     """Returns [(game_copy, proba), ...] tuples for result of given action.
@@ -53,13 +59,13 @@ def execute_spectrum(game, action):
                 continue
             for card in DEVELOPMENT_CARDS:
                 number = get_dev_cards_in_hand(game.state, color, card)
-                current_deck += [card]*number
+                current_deck += [card] * number
 
         for card in set(current_deck):
             option_action = Action(action.color, action.action_type, card)
             option_game = game.copy()
             option_game.execute(option_action, validate_action=False)
-            results.append((option_game, current_deck.count(card)/len(current_deck)))
+            results.append((option_game, current_deck.count(card) / len(current_deck)))
         return results
     elif action.action_type == ActionType.ROLL:
         results = []
