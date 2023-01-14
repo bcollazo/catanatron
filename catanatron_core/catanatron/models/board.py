@@ -1,10 +1,10 @@
 import pickle
 import copy
 from collections import defaultdict
-from typing import Any, Set, Dict, Tuple
+from typing import Any, Set, Dict, Tuple, List
 import functools
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from catanatron.models.player import Color
 from catanatron.models.map import (
@@ -55,7 +55,7 @@ class Board:
     """
 
     def __init__(self, catan_map=None, initialize=True):
-        self.buildable_subgraph = None
+        self.buildable_subgraph: Any = None
         self.buildable_edges_cache = {}
         self.player_port_resources_cache = {}
         if initialize:
@@ -348,7 +348,7 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
     for start_node in node_set:
         # do DFS when reach leaf node, stop and add to paths
         paths_from_this_node = []
-        agenda = [(start_node, [])]
+        agenda: List[Tuple[int, Any]] = [(start_node, [])]
         while len(agenda) > 0:
             node, path_thus_far = agenda.pop()
 

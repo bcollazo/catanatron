@@ -31,9 +31,9 @@ DEVELOPMENT_CARDS: List[FastDevCard] = [
     VICTORY_POINT,
 ]
 
-SETTLEMENT = "SETTLEMENT"
-CITY = "CITY"
-ROAD = "ROAD"
+SETTLEMENT: Final = "SETTLEMENT"
+CITY: Final = "CITY"
+ROAD: Final = "ROAD"
 
 
 class ActionPrompt(Enum):
