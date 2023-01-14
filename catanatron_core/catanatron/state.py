@@ -5,7 +5,7 @@ Module with main State class and main apply_action call (game controller).
 import random
 import pickle
 from collections import defaultdict
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Dict
 
 from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
@@ -59,6 +59,8 @@ from catanatron.state_functions import (
     player_num_resource_cards,
     player_resource_freqdeck_contains,
 )
+from catanatron.models.player import Color
+from catanatron.models.enums import FastBuildingType, FastResource
 
 # These will be prefixed by P0_, P1_, ...
 # Create Player State blueprint
@@ -149,8 +151,10 @@ class State:
             random.shuffle(self.development_listdeck)
 
             # Auxiliary attributes to implement game logic
-            self.buildings_by_color = {p.color: defaultdict(list) for p in players}
-            self.actions = []  # log of all action taken by players
+            self.buildings_by_color: Dict[Color, Dict[Any, Any]] = {
+                p.color: defaultdict(list) for p in players
+            }
+            self.actions: List[Action] = []  # log of all action taken by players
             self.num_turns = 0  # num_completed_turns
 
             # Current prompt / player
@@ -249,22 +253,25 @@ def yield_resources(board: Board, resource_freqdeck, number):
             Second is an array of resources that couldn't be yieleded
             because they depleted.
     """
-    intented_payout = defaultdict(lambda: defaultdict(int))
-    resource_totals = defaultdict(int)
+    intented_payout: Dict[Color, Dict[FastResource, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
+    resource_totals: Dict[FastResource, int] = defaultdict(int)
     for (coordinate, tile) in board.map.land_tiles.items():
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield
 
         for _, node_id in tile.nodes.items():
             building = board.buildings.get(node_id, None)
+            assert tile.resource is not None
             if building is None:
                 continue
             elif building[1] == SETTLEMENT:
-                intented_payout[building[0]][tile.resource] += 1
-                resource_totals[tile.resource] += 1
+                intented_payout[building[0]][resource] += 1
+                resource_totals[resource] += 1
             elif building[1] == CITY:
-                intented_payout[building[0]][tile.resource] += 2
-                resource_totals[tile.resource] += 2
+                intented_payout[building[0]][resource] += 2
+                resource_totals[resource] += 2
 
     # for each resource, check enough in deck to yield.
     depleted = []
