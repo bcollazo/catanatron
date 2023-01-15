@@ -5,7 +5,7 @@ Module with main State class and main apply_action call (game controller).
 import random
 import pickle
 from collections import defaultdict
-from typing import Any, List, Tuple, Dict
+from typing import Any, List, Tuple, Dict, Iterable
 
 from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
@@ -59,8 +59,8 @@ from catanatron.state_functions import (
     player_num_resource_cards,
     player_resource_freqdeck_contains,
 )
-from catanatron.models.player import Color
-from catanatron.models.enums import FastBuildingType, FastResource
+from catanatron.models.player import Color, Player
+from catanatron.models.enums import FastResource
 
 # These will be prefixed by P0_, P1_, ...
 # Create Player State blueprint
@@ -126,7 +126,7 @@ class State:
 
     def __init__(
         self,
-        players: List[Any],
+        players: List[Player],
         catan_map=None,
         discard_limit=7,
         initialize=True,
