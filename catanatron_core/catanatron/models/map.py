@@ -378,7 +378,7 @@ def initialize_tiles(
     )
 
     # for each topology entry, place a tile. keep track of nodes and edges
-    all_tiles = {}
+    all_tiles: Dict[Coordinate, Tile] = {}
     node_autoinc = 0
     tile_autoinc = 0
     port_autoinc = 0

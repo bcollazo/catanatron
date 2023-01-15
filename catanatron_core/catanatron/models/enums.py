@@ -1,6 +1,6 @@
 from enum import Enum
 from collections import namedtuple
-from typing import List, Literal
+from typing import List, Literal, Final
 
 
 FastResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE"]
@@ -11,18 +11,18 @@ FastBuildingType = Literal["SETTLEMENT", "CITY", "ROAD"]
 
 # Strings are considerably faster than Python Enum's (e.g. at being hashed).
 # TODO: Move to ints
-WOOD = "WOOD"
-BRICK = "BRICK"
-SHEEP = "SHEEP"
-WHEAT = "WHEAT"
-ORE = "ORE"
+WOOD: Final = "WOOD"
+BRICK: Final = "BRICK"
+SHEEP: Final = "SHEEP"
+WHEAT: Final = "WHEAT"
+ORE: Final = "ORE"
 RESOURCES: List[FastResource] = [WOOD, BRICK, SHEEP, WHEAT, ORE]
 
-KNIGHT = "KNIGHT"
-YEAR_OF_PLENTY = "YEAR_OF_PLENTY"
-MONOPOLY = "MONOPOLY"
-ROAD_BUILDING = "ROAD_BUILDING"
-VICTORY_POINT = "VICTORY_POINT"
+KNIGHT: Final = "KNIGHT"
+YEAR_OF_PLENTY: Final = "YEAR_OF_PLENTY"
+MONOPOLY: Final = "MONOPOLY"
+ROAD_BUILDING: Final = "ROAD_BUILDING"
+VICTORY_POINT: Final = "VICTORY_POINT"
 DEVELOPMENT_CARDS: List[FastDevCard] = [
     KNIGHT,
     YEAR_OF_PLENTY,
@@ -31,9 +31,9 @@ DEVELOPMENT_CARDS: List[FastDevCard] = [
     VICTORY_POINT,
 ]
 
-SETTLEMENT = "SETTLEMENT"
-CITY = "CITY"
-ROAD = "ROAD"
+SETTLEMENT: Final = "SETTLEMENT"
+CITY: Final = "CITY"
+ROAD: Final = "ROAD"
 
 
 class ActionPrompt(Enum):
@@ -86,20 +86,12 @@ class ActionType(Enum):
     END_TURN = "END_TURN"  # value is None
 
 
-def action_type_repr(self):
+def __repr__(self):
     return f"ActionType.{self.value}"
-
-
-ActionType.__repr__ = action_type_repr
-
-
-def action_repr(self):
-    return f"Action({self.color.value} {self.action_type.value} {self.value})"
 
 
 # TODO: Distinguish between Action and ActionLog?
 Action = namedtuple("Action", ["color", "action_type", "value"])
-Action.__repr__ = action_repr
 Action.__doc__ = """
 Main class to represent action. Should be immutable.
 

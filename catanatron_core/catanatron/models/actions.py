@@ -4,7 +4,7 @@ by current player). Main function is generate_playable_actions.
 """
 import operator as op
 from functools import reduce
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set, Tuple, Union
 
 from catanatron.models.decks import (
     CITY_COST_FREQDECK,
@@ -123,7 +123,7 @@ def monopoly_possibilities(color) -> List[Action]:
 
 
 def year_of_plenty_possibilities(color, freqdeck: List[int]) -> List[Action]:
-    options = set()
+    options: Set[Union[Tuple[FastResource, FastResource], Tuple[FastResource]]] = set()
     for i, first_card in enumerate(RESOURCES):
         for j in range(i, len(RESOURCES)):
             second_card = RESOURCES[j]  # doing it this way to not repeat

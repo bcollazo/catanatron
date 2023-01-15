@@ -5,7 +5,7 @@ Contains Game class which is a thin-wrapper around the State class.
 import uuid
 import random
 import sys
-from typing import Iterable, Union
+from typing import List, Union, Optional
 
 from catanatron.models.enums import Action, ActionPrompt, ActionType
 from catanatron.state import State, apply_action
@@ -88,17 +88,17 @@ class Game:
 
     def __init__(
         self,
-        players: Iterable[Player],
-        seed: int = None,
+        players: List[Player],
+        seed: Optional[int] = None,
         discard_limit: int = 7,
         vps_to_win: int = 10,
-        catan_map: CatanMap = None,
+        catan_map: Optional[CatanMap] = None,
         initialize: bool = True,
     ):
         """Creates a game (doesn't run it).
 
         Args:
-            players (Iterable[Player]): list of players, should be at most 4.
+            players (List[Player]): list of players, should be at most 4.
             seed (int, optional): Random seed to use (for reproducing games). Defaults to None.
             discard_limit (int, optional): Discard limit to use. Defaults to 7.
             vps_to_win (int, optional): Victory Points needed to win. Defaults to 10.
@@ -191,7 +191,7 @@ class Game:
         Returns:
             Game: Game copy.
         """
-        game_copy = Game([], None, None, initialize=False)
+        game_copy = Game(players=[], initialize=False)
         game_copy.seed = self.seed
         game_copy.id = self.id
         game_copy.vps_to_win = self.vps_to_win
