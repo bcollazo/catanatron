@@ -1,4 +1,4 @@
-import setuptools
+import setuptools  # type: ignore
 import os
 
 readme_path = os.path.abspath(os.path.join(__file__, "..", "..", "README.md"))
