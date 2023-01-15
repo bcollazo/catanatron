@@ -267,11 +267,11 @@ def yield_resources(board: Board, resource_freqdeck, number):
             if building is None:
                 continue
             elif building[1] == SETTLEMENT:
-                intented_payout[building[0]][resource] += 1
-                resource_totals[resource] += 1
+                intented_payout[building[0]][tile.resource] += 1
+                resource_totals[tile.resource] += 1
             elif building[1] == CITY:
-                intented_payout[building[0]][resource] += 2
-                resource_totals[resource] += 2
+                intented_payout[building[0]][tile.resource] += 2
+                resource_totals[tile.resource] += 2
 
     # for each resource, check enough in deck to yield.
     depleted = []
