@@ -74,6 +74,8 @@ class AlphaBetaPlayer(Player):
         # if game.state.num_turns > 10:
         #     render_debug_tree(node)
         #     breakpoint()
+        if result[0] is None:
+            return playable_actions[0]
         return result[0]
 
     def __repr__(self) -> str:
