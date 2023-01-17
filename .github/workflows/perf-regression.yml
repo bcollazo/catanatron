@@ -1,0 +1,53 @@
+
+# This workflow will compare the current branch with the main branch and evaluate for performance differences.
+
+name: Performance Regression Test
+
+on:
+  pull_request:
+    branches: master
+
+jobs:
+
+  build-python-and-test-performance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r dev-requirements.txt
+          pip install -e catanatron_core
+          pip install -e catanatron_gym
+          pip install -e catanatron_server
+          pip install -e catanatron_experimental
+
+      - name: Checkout PR and Master Branch
+        uses: actions/checkout@v2
+        with:
+          path: pr
+      - uses: actions/checkout@v2
+        with:
+          ref: master
+          path: master
+
+      - name: Run Benchmark on Master (baseline)
+        run: cd master && pytest tests/integration_tests/test_speed.py --benchmark-only --benchmark-json=benchmark.json
+      - name: Run Benchmark on PR
+        run: cd pr && pytest tests/integration_tests/test_speed.py --benchmark-only --benchmark-json=benchmark.json
+
+      - name: Compare Results
+        uses: openpgpjs/github-action-pull-request-benchmark@v1
+        with:
+          tool: 'pytest'
+          pr-benchmark-file-path: pr/benchmark.json
+          base-benchmark-file-path: master/benchmark.json
+          alert-threshold: '130%'
+          # Workflow will fail if `fail-threshold` is exceeded
+          fail-on-alert: true
+          fail-threshold: '150%'
