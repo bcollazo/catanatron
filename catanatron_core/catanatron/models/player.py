@@ -3,6 +3,8 @@ from enum import Enum
 
 
 class Color(Enum):
+    """Enum to represent the colors in the game"""
+
     RED = "RED"
     BLUE = "BLUE"
     ORANGE = "ORANGE"
@@ -18,6 +20,12 @@ class Player:
     """
 
     def __init__(self, color, is_bot=True):
+        """Initialize the player
+
+        Args:
+            color(Color): the color of the player
+            is_bot(bool): whether the player is controlled by the computer
+        """
         self.color = color
         self.is_bot = is_bot
 
@@ -40,11 +48,15 @@ class Player:
 
 
 class SimplePlayer(Player):
+    """Simple AI player that always takes the first action in the list of playable_actions"""
+
     def decide(self, game, playable_actions):
         return playable_actions[0]
 
 
 class HumanPlayer(Player):
+    """Human player that selects which action to take using standard input"""
+
     def decide(self, game, playable_actions):
         for i, action in enumerate(playable_actions):
             print(f"{i}: {action.action_type} {action.value}")
@@ -61,6 +73,8 @@ class HumanPlayer(Player):
 
 
 class RandomPlayer(Player):
+    """Random AI player that selects an action randomly from the list of playable_actions"""
+
     def decide(self, game, playable_actions):
         index = random.randrange(0, len(playable_actions))
         return playable_actions[index]
