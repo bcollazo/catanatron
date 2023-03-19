@@ -1,5 +1,5 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 
 from catanatron.game import Game
@@ -210,19 +210,30 @@ class CatanatronEnv(gym.Env):
 
         return observation, reward, done, info
 
-    def reset(self):
+    def reset(
+        self,
+        seed=None,
+        options=None,
+    ):
+        super().reset(seed=seed)
+
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
         self.game = Game(
-            players=self.players, catan_map=catan_map, vps_to_win=self.vps_to_win
+            players=self.players,
+            seed=seed,
+            catan_map=catan_map,
+            vps_to_win=self.vps_to_win,
         )
         self.invalid_actions_count = 0
 
         self._advance_until_p0_decision()
 
         observation = self._get_observation()
-        return observation
+        info = dict(valid_actions=self.get_valid_actions())
+
+        return observation, info
 
     def _get_observation(self):
         sample = create_sample(self.game, self.p0.color)

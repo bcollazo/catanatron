@@ -22,5 +22,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=["catanatron", "gym==0.21.0", "numpy"],
+    install_requires=["catanatron", "gymnasium", "numpy"],
 )

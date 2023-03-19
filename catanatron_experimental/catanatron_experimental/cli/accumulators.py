@@ -4,7 +4,6 @@ import json
 from collections import defaultdict
 
 import numpy as np
-import pandas as pd
 
 from catanatron.game import GameAccumulator, Game
 from catanatron.json import GameEncoder
@@ -195,6 +194,8 @@ class CsvDataAccumulator(GameAccumulator):
         self.data[action.color]["board_tensors"].append(flattened_tensor)
 
     def after(self, game):
+        import pandas as pd
+
         if game.winning_color() is None:
             return  # drop game
 
