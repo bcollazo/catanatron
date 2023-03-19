@@ -21,7 +21,7 @@ from catanatron.models.enums import (
 )
 
 
-def mantain_longest_road(state, previous_road_color, road_color, road_lengths):
+def maintain_longest_road(state, previous_road_color, road_color, road_lengths):
     for color, length in road_lengths.items():
         key = player_key(state, color)
         state.player_state[f"{key}_LONGEST_ROAD_LENGTH"] = length
@@ -40,7 +40,7 @@ def mantain_longest_road(state, previous_road_color, road_color, road_lengths):
             state.player_state[f"{loser_key}_ACTUAL_VICTORY_POINTS"] -= 2
 
 
-def mantain_largets_army(state, color, previous_army_color, previous_army_size):
+def maintain_largest_army(state, color, previous_army_color, previous_army_size):
     candidate_size = get_played_dev_cards(state, color, "KNIGHT")
     if candidate_size >= 3:
         if previous_army_color is None:
@@ -317,7 +317,7 @@ def play_dev_card(state, color, dev_card):
     state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = True
     state.player_state[f"{key}_PLAYED_{dev_card}"] += 1
     if dev_card == "KNIGHT":
-        mantain_largets_army(state, color, previous_army_color, previous_army_size)  # type: ignore
+        maintain_largest_army(state, color, previous_army_color, previous_army_size)  # type: ignore
 
 
 def player_clean_turn(state, color):

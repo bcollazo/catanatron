@@ -11,11 +11,6 @@ def app():
     # create the app with common test config
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
 
-    # create the database and load test data
-    with app.app_context():
-        db.init_app(app)
-        db.create_all()
-
     yield app
 
 
