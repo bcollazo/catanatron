@@ -44,7 +44,7 @@ from catanatron.state_functions import (
     build_road,
     build_settlement,
     buy_dev_card,
-    mantain_longest_road,
+    maintain_longest_road,
     play_dev_card,
     player_can_afford_dev_card,
     player_can_play_dev,
@@ -359,7 +359,7 @@ def apply_action(state: State, action: Action):
             state.resource_freqdeck = freqdeck_add(
                 state.resource_freqdeck, SETTLEMENT_COST_FREQDECK
             )  # replenish bank
-            mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+            maintain_longest_road(state, previous_road_color, road_color, road_lengths)
 
             # state.current_player_index stays the same
             # state.current_prompt stays as PLAY
@@ -396,7 +396,7 @@ def apply_action(state: State, action: Action):
             result = state.board.build_road(action.color, edge)
             previous_road_color, road_color, road_lengths = result
             build_road(state, action.color, edge, True)
-            mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+            maintain_longest_road(state, previous_road_color, road_color, road_lengths)
 
             state.free_roads_available -= 1
             if (
@@ -412,7 +412,7 @@ def apply_action(state: State, action: Action):
             result = state.board.build_road(action.color, edge)
             previous_road_color, road_color, road_lengths = result
             build_road(state, action.color, edge, False)
-            mantain_longest_road(state, previous_road_color, road_color, road_lengths)
+            maintain_longest_road(state, previous_road_color, road_color, road_lengths)
 
             # state.current_player_index stays the same
             # state.current_prompt stays as PLAY

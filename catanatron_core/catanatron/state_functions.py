@@ -21,7 +21,7 @@ from catanatron.models.enums import (
 )
 
 
-def mantain_longest_road(state, previous_road_color, road_color, road_lengths):
+def maintain_longest_road(state, previous_road_color, road_color, road_lengths):
     for color, length in road_lengths.items():
         key = player_key(state, color)
         state.player_state[f"{key}_LONGEST_ROAD_LENGTH"] = length
