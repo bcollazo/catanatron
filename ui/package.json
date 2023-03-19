@@ -20,6 +20,10 @@
     "react-zoom-pan-pinch": "^1.6.1",
     "sass": "^1.54.5"
   },
+  "engines" : { 
+    "npm" : ">=8.0.0 <9.0.0",
+    "node" : ">=16.0.0 <17.0.0"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
