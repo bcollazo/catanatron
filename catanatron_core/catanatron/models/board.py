@@ -46,7 +46,7 @@ class Board:
             to Color (if there is a road there). Contains inverted
             edges as well for ease of querying.
         connected_components (Dict[Color, List[Set[NodeId]]]): Cache
-            datastructure to speed up mantaining longest road computation.
+            datastructure to speed up maintaining longest road computation.
             To be queried by Color. Value is a list of node sets.
         board_buildable_ids (Set[NodeId]): Cache of buildable node ids in board.
         road_color (Color): Color of player with longest road.
