@@ -1,7 +1,7 @@
 import random
 
-import gym
-from gym.utils.env_checker import check_env
+import gymnasium as gym
+from gymnasium.utils.env_checker import check_env
 
 from catanatron_gym.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
@@ -28,7 +28,7 @@ def test_check_env():
 def test_gym():
     env = CatanatronEnv()
 
-    first_observation = env.reset()  # this forces advanced until p0...
+    first_observation, _ = env.reset()  # this forces advanced until p0...
     assert len(env.get_valid_actions()) >= 50  # first seat at most blocked 4 nodes
     assert get_p0_num_settlements(first_observation) == 0
 
@@ -43,7 +43,7 @@ def test_gym():
     assert second_observation[features.index("BANK_SHEEP")] == 19
     assert get_p0_num_settlements(second_observation) == 1
 
-    reset_obs = env.reset()
+    reset_obs, _ = env.reset()
     assert (reset_obs != second_observation).any()
     assert get_p0_num_settlements(reset_obs) == 0
 
@@ -52,7 +52,7 @@ def test_gym():
 
 def test_gym_registration_and_api_works():
     env = gym.make("catanatron_gym:catanatron-v0")
-    observation = env.reset()
+    observation, _ = env.reset()
     done = False
     reward = 0
     while not done:
@@ -66,7 +66,7 @@ def test_invalid_action_reward():
     env = gym.make(
         "catanatron_gym:catanatron-v0", config={"invalid_action_reward": -1234}
     )
-    first_obs = env.reset()
+    first_obs, _ = env.reset()
     invalid_action = next(filter(lambda i: i not in env.get_valid_actions(), range(1000)))  # type: ignore
     observation, reward, done, info = env.step(invalid_action)
     assert reward == -1234
@@ -85,7 +85,7 @@ def test_custom_reward():
     env = gym.make(
         "catanatron_gym:catanatron-v0", config={"reward_function": custom_reward}
     )
-    observation = env.reset()
+    observation, info = env.reset()
     action = random.choice(env.get_valid_actions())  # type: ignore
     observation, reward, done, info = env.step(action)
     assert reward == 123
@@ -93,7 +93,7 @@ def test_custom_reward():
 
 def test_custom_map():
     env = gym.make("catanatron_gym:catanatron-v0", config={"map_type": "MINI"})
-    observation = env.reset()
+    observation, info = env.reset()
     assert len(env.get_valid_actions()) < 50  # type: ignore
     assert len(observation) < 614
     # assert env.action_space.n == 260
@@ -110,7 +110,7 @@ def test_enemies():
             ]
         },
     )
-    observation = env.reset()
+    observation, info = env.reset()
     assert len(observation) == len(get_feature_ordering(4))
 
     done = False
@@ -130,6 +130,6 @@ def test_mixed_rep():
         "catanatron_gym:catanatron-v0",
         config={"representation": "mixed"},
     )
-    observation = env.reset()
+    observation, info = env.reset()
     assert "board" in observation
     assert "numeric" in observation

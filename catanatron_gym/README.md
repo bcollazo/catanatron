@@ -10,16 +10,16 @@ Make your training loop, ensuring to respect `env.get_valid_actions()`.
 
 ```python
 import random
-import gym
+import gymnasium as gym
 
 env = gym.make("catanatron_gym:catanatron-v0")
-observation = env.reset()
+observation, info = env.reset()
 for _ in range(1000):
   action = random.choice(env.get_valid_actions()) # your agent here (this takes random actions)
 
   observation, reward, done, info = env.step(action)
   if done:
-      observation = env.reset()
+      observation, info = env.reset()
 env.close()
 ```
 
@@ -34,7 +34,7 @@ You can access `env.game.state` and build your own "observation" (features) vect
 Catanatron works well with SB3, and better with the Maskable models of the [SB3 Contrib](https://stable-baselines3.readthedocs.io/en/master/guide/sb3_contrib.html) repo. Here a small example of how it may work.
 
 ```python
-import gym
+import gymnasium as gym
 import numpy as np
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from sb3_contrib.common.wrappers import ActionMasker
