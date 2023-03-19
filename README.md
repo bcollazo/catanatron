@@ -244,6 +244,8 @@ use `flask run`.
 python3.8 -m venv venv
 source ./venv/bin/activate
 pip install -r requirements.txt
+
+cd catanatron_server/catanatron_server
 flask run
 ```
 
