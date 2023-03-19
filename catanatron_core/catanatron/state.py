@@ -308,7 +308,7 @@ def apply_action(state: State, action: Action):
     """Main controller call. Follows redux-like pattern and
     routes the given action to the appropiate state-changing calls.
 
-    Responsible for mantaining:
+    Responsible for maintaining:
         .current_player_index, .current_turn_index,
         .current_prompt (and similars), .playable_actions.
 
