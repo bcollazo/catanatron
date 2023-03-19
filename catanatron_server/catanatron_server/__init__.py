@@ -25,8 +25,8 @@ def create_app(test_config=None):
     # ===== Initialize Database
     from catanatron_server.models import db
 
-    db.init_app(app)
     with app.app_context():
+        db.init_app(app)
         db.create_all()
 
     # ===== Initialize Routes
