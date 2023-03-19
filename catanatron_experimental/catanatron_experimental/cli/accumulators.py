@@ -3,7 +3,6 @@ import os
 import json
 from collections import defaultdict
 
-import tensorflow as tf
 import numpy as np
 import pandas as pd
 
@@ -181,6 +180,8 @@ class CsvDataAccumulator(GameAccumulator):
         )
 
     def step(self, game, action):
+        import tensorflow as tf  # lazy import tf so that catanatron simulator is usable without tf
+
         self.data[action.color]["samples"].append(create_sample(game, action.color))
         self.data[action.color]["actions"].append(
             [to_action_space(action), to_action_type_space(action)]
