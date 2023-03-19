@@ -64,7 +64,7 @@ class StateNode:
         actions = list_prunned_actions(self.game) if self.prunning else playable_actions
         for action in actions:
             outcomes = execute_spectrum(self.game, action)
-            for (state, proba) in outcomes:
+            for state, proba in outcomes:
                 children[action].append(
                     (StateNode(self.color, state, self, self.prunning), proba)
                 )
@@ -92,7 +92,7 @@ class StateNode:
 
     def action_children_expected_score(self, action):
         score = 0
-        for (child, proba) in self.children[action]:
+        for child, proba in self.children[action]:
             score += proba * (
                 child.wins / (child.visits + epsilon)
                 + EXP_C

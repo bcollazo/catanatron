@@ -12,6 +12,7 @@ NUM_WORKERS = multiprocessing.cpu_count()
 
 PLAYOUTS_BUDGET = 100
 
+
 # Single threaded NUM_PLAYOUTS=25 takes ~185.3893163204193 secs on initial placement
 #   10.498431205749512 secs to do initial road (3 playable actions)
 # Multithreaded, dividing the NUM_PLAYOUTS only (actions serially), takes ~52.22048330307007 secs

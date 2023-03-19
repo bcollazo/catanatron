@@ -257,7 +257,7 @@ def yield_resources(board: Board, resource_freqdeck, number):
         lambda: defaultdict(int)
     )
     resource_totals: Dict[FastResource, int] = defaultdict(int)
-    for (coordinate, tile) in board.map.land_tiles.items():
+    for coordinate, tile in board.map.land_tiles.items():
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield
 

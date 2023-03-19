@@ -104,7 +104,7 @@ def generate_playable_actions(state) -> List[Action]:
         # you should be able to accept for each of the "accepting players"
         actions = [Action(color, ActionType.CANCEL_TRADE, None)]
 
-        for (other_color, accepted) in zip(state.colors, state.acceptees):
+        for other_color, accepted in zip(state.colors, state.acceptees):
             if accepted:
                 actions.append(
                     Action(
@@ -202,7 +202,7 @@ def city_possibilities(state, color) -> List[Action]:
 
 def robber_possibilities(state, color) -> List[Action]:
     actions = []
-    for (coordinate, tile) in state.board.map.land_tiles.items():
+    for coordinate, tile in state.board.map.land_tiles.items():
         if coordinate == state.board.robber_coordinate:
             continue  # ignore. must move robber.
 
