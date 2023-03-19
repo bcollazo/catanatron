@@ -1,7 +1,6 @@
 import math
 import random
 
-import tensorflow as tf
 import numpy as np
 
 from tests.utils import advance_to_play_turn, build_initial_placements
@@ -363,8 +362,8 @@ def test_robber_plane_simple():
     robber_channel = 13
     tensor = create_board_tensor(game, players[0].color)
 
-    assert tf.math.reduce_sum(tensor[:, :, robber_channel]) == 6
-    assert tf.math.reduce_max(tensor[:, :, robber_channel]) == 1
+    assert np.sum(tensor[:, :, robber_channel]) == 6
+    assert np.max(tensor[:, :, robber_channel]) == 1
 
 
 def test_resource_proba_planes():
@@ -389,31 +388,25 @@ def test_resource_proba_planes():
     # Top left should be 0 for all resources. (water tile)
     for resource_channel in range(4, 9):
         top_left_tile = tensor[0:4, 0:2, resource_channel]
-        assert tf.math.reduce_all(tf.math.equal(top_left_tile, 0)).numpy()
+        assert np.all(np.equal(top_left_tile, 0))
 
     # Assert ten sheep left edge looks good
     sheep_channel = 10
     ten_sheep_left_edge = tensor[4, 0:3, sheep_channel]
     ten_proba = number_probability(10)
-    assert tf.math.reduce_sum(ten_sheep_left_edge) == ten_proba * 2  # 2 nodes
+    assert np.sum(ten_sheep_left_edge) == ten_proba * 2  # 2 nodes
 
     # assert 5 wood top node has sheep too.
     wood_channel = 8
     five_proba = number_probability(5)
     five_wood_top_node = tensor[4, 2]
-    assert tf.math.reduce_all(
-        tf.math.equal(five_wood_top_node[sheep_channel], ten_proba)
-    ).numpy()
-    assert tf.math.reduce_all(
-        tf.math.equal(five_wood_top_node[wood_channel], five_proba)
-    ).numpy()
+    assert np.all(np.equal(five_wood_top_node[sheep_channel], ten_proba))
+    assert np.all(np.equal(five_wood_top_node[wood_channel], five_proba))
 
     # assert wood node adds up
     total_proba = five_proba + number_probability(11) + number_probability(3)
     middle_wood_node = tensor[4, 4]
-    assert tf.math.reduce_all(
-        tf.math.equal(middle_wood_node[wood_channel], total_proba)
-    ).numpy()
+    assert np.all(np.equal(middle_wood_node[wood_channel], total_proba))
 
     # assert brick tile has 6 non-zero node as expected
     four_proba = number_probability(4)
@@ -443,10 +436,10 @@ def test_port_planes():
     tensor = create_board_tensor(game, players[0].color)
 
     # assert there are 18 port nodes (4 3:1 and 5 resource)
-    assert tf.math.reduce_sum(tensor[:, :, -6:]) == 2 * 9
+    assert np.sum(tensor[:, :, -6:]) == 2 * 9
 
     # assert that 3:1 ports there are 4 * 2 nodes on.
-    assert tf.math.reduce_sum(tensor[:, :, -1]) == 2 * 4
+    assert np.sum(tensor[:, :, -1]) == 2 * 4
 
 
 def test_robber_plane():
