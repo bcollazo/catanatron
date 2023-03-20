@@ -8,10 +8,16 @@ from catanatron.state_functions import (
 )
 from catanatron.game import Game, is_valid_trade
 from catanatron.state import (
+    apply_action,
     player_deck_replenish,
     player_num_resource_cards,
 )
+from catanatron.state_functions import player_key
+from catanatron.models.actions import (
+    generate_playable_actions
+)
 from catanatron.models.enums import (
+    BRICK,
     ORE,
     RESOURCES,
     ActionPrompt,
@@ -19,6 +25,7 @@ from catanatron.models.enums import (
     ActionType,
     Action,
     WHEAT,
+    WOOD,
     YEAR_OF_PLENTY,
     ROAD_BUILDING,
 )
@@ -335,6 +342,69 @@ def test_play_road_building(fake_roll_dice):
     game.play_tick()
     assert not game.state.is_road_building
     assert game.state.free_roads_available == 0
+
+
+def test_longest_road_steal():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    p0, p1 = game.state.players
+    p0_key = player_key(game.state, p0.color)
+    p1_key = player_key(game.state, p1.color)
+    board = game.state.board
+
+    # p0 has a road of length 4
+    board.build_settlement(p0.color, 6, True)
+    board.build_road(p0.color, (6, 7))
+    board.build_road(p0.color, (7, 8))
+    board.build_road(p0.color, (8, 9))
+    board.build_road(p0.color, (9, 10))
+    game.state.player_state[f'{p0_key}_VICTORY_POINTS'] = 1
+    game.state.player_state[f'{p0_key}_ACTUAL_VICTORY_POINTS'] = 1
+
+    # p1 has longest road of lenght 5
+    board.build_settlement(p1.color, 28, True)
+    board.build_road(p1.color, (27, 28))
+    board.build_road(p1.color, (28, 29))
+    board.build_road(p1.color, (29, 30))
+    board.build_road(p1.color, (30, 31))
+    board.build_road(p1.color, (31, 32))
+    game.state.player_state[f'{p1_key}_VICTORY_POINTS'] = 3
+    game.state.player_state[f'{p1_key}_ACTUAL_VICTORY_POINTS'] = 3
+    game.state.player_state[f'{p1_key}_HAS_ROAD'] = True
+
+    # Required to be able to apply actions other than rolling or initial build phase.
+    game.state.current_prompt = ActionPrompt.PLAY_TURN
+    game.state.is_initial_build_phase = False
+    game.state.player_state[f'{p0_key}_HAS_ROLLED'] = True
+    game.state.playable_actions = generate_playable_actions(game.state)
+
+    # Set up player0 to build two roads and steal longest road.
+    road1 = (10, 11)
+    road2 = (11, 12)
+    player_deck_replenish(game.state, p0.color, WOOD, 2)
+    player_deck_replenish(game.state, p0.color, BRICK, 2)
+
+    # Matching length of longest road does not steal longest road.
+    apply_action(game.state, Action(p0.color, ActionType.BUILD_ROAD, road1))
+    assert game.state.player_state[f'{p0_key}_LONGEST_ROAD_LENGTH'] == 5
+    assert game.state.player_state[f'{p0_key}_HAS_ROAD'] == False
+    assert game.state.player_state[f'{p0_key}_VICTORY_POINTS'] == 1
+    assert game.state.player_state[f'{p0_key}_ACTUAL_VICTORY_POINTS'] == 1
+    assert game.state.player_state[f'{p1_key}_LONGEST_ROAD_LENGTH'] == 5
+    assert game.state.player_state[f'{p1_key}_HAS_ROAD'] == True
+    assert game.state.player_state[f'{p1_key}_VICTORY_POINTS'] == 3
+    assert game.state.player_state[f'{p1_key}_ACTUAL_VICTORY_POINTS'] == 3
+
+    # Surpassing length of longest road steals longest road and VPs.
+    apply_action(game.state, Action(p0.color, ActionType.BUILD_ROAD, road2))
+    assert game.state.player_state[f'{p0_key}_LONGEST_ROAD_LENGTH'] == 6
+    assert game.state.player_state[f'{p0_key}_HAS_ROAD'] == True
+    assert game.state.player_state[f'{p0_key}_VICTORY_POINTS'] == 3
+    assert game.state.player_state[f'{p0_key}_ACTUAL_VICTORY_POINTS'] == 3
+    assert game.state.player_state[f'{p1_key}_LONGEST_ROAD_LENGTH'] == 5
+    assert game.state.player_state[f'{p1_key}_HAS_ROAD'] == False
+    assert game.state.player_state[f'{p1_key}_VICTORY_POINTS'] == 1
+    assert game.state.player_state[f'{p1_key}_ACTUAL_VICTORY_POINTS'] == 1
 
 
 def test_second_placement_takes_cards_from_bank():
