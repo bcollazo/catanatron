@@ -106,7 +106,7 @@ class Game:
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
         if initialize:
-            self.seed = seed or random.randrange(sys.maxsize)
+            self.seed = seed if seed is not None else random.randrange(sys.maxsize)
             random.seed(self.seed)
 
             self.id = str(uuid.uuid4())
