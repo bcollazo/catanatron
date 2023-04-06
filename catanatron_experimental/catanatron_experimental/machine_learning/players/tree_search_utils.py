@@ -15,6 +15,7 @@ from catanatron.state_functions import (
     get_player_buildings,
     get_dev_cards_in_hand,
     get_player_freqdeck,
+    get_enemy_colors,
 )
 from catanatron_gym.features import (
     build_production_features,
@@ -54,9 +55,7 @@ def execute_spectrum(game, action):
         # Get the possible deck from the perspective of the current player
         # by getting all face down cards
         current_deck = game.state.development_listdeck.copy()
-        for color in game.state.colors:
-            if color == action.color:
-                continue
+        for color in get_enemy_colors(game.state.colors, action.color):
             for card in DEVELOPMENT_CARDS:
                 number = get_dev_cards_in_hand(game.state, color, card)
                 current_deck += [card] * number
