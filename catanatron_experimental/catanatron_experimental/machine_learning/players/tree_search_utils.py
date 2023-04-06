@@ -88,20 +88,21 @@ def execute_spectrum(game, action):
             # Nothing to steal
             return execute_deterministic(game, action)
 
-        for i, card in enumerate(RESOURCES):
-            resource_count = opponent_hand[i]
-            if resource_count == 0:
-                # No point in calculating a 0% outcome
-                continue
-
+        for card in RESOURCES:
             option_action = Action(
                 action.color,
                 action.action_type,
                 (coordinate, robbed_color, card),
             )
             option_game = game.copy()
-            option_game.execute(option_action, validate_action=False)
-            results.append((option_game, resource_count / opponent_hand_size))
+            try:
+                option_game.execute(option_action, validate_action=False)
+            except Exception:
+                # ignore exceptions, since player might imagine impossible outcomes.
+                # ignoring means the value function of this node will be flattened,
+                # to the one before.
+                pass
+            results.append((option_game, 1 / 5.0))
         return results
     else:
         raise RuntimeError("Unknown ActionType " + str(action.action_type))
@@ -111,10 +112,6 @@ def expand_spectrum(game, actions):
     """Consumes game if playable_actions not specified"""
     children = defaultdict(list)
     for action in actions:
-        if action not in game.state.playable_actions:
-            # Can't meaningfully expand this
-            continue
-
         outprobas = execute_spectrum(game, action)
         children[action] = outprobas
     return children  # action => (game, proba)[]
