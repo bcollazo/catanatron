@@ -20,6 +20,6 @@ setuptools.setup(
         "flask_cors",
         "flask_sqlalchemy",
         "sqlalchemy",
-        "psycopg2",
+        "psycopg2-binary",
     ],
 )
