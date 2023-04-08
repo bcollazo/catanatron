@@ -63,7 +63,13 @@ def execute_spectrum(game, action):
         for card in set(current_deck):
             option_action = Action(action.color, action.action_type, card)
             option_game = game.copy()
-            option_game.execute(option_action, validate_action=False)
+            try:
+                option_game.execute(option_action, validate_action=False)
+            except Exception:
+                # ignore exceptions, since player might imagine impossible outcomes.
+                # ignoring means the value function of this node will be flattened,
+                # to the one before.
+                pass
             results.append((option_game, current_deck.count(card) / len(current_deck)))
         return results
     elif action.action_type == ActionType.ROLL:
