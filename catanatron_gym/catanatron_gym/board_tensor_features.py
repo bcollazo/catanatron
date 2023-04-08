@@ -155,7 +155,7 @@ def create_board_tensor(game: Game, p0_color: Color, channels_first=False):
     # set 5 node-resource probas
     resources = [i for i in RESOURCES]
     tile_map = get_tile_coordinate_map()
-    for (coordinate, tile) in game.state.board.map.land_tiles.items():
+    for coordinate, tile in game.state.board.map.land_tiles.items():
         if tile.resource is None:
             continue  # there is already a 3x5 zeros matrix there (everything started as a 0!).
 

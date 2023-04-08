@@ -25,11 +25,7 @@ cd catanatron/
 Create a virtual environment with Python3.8 or higher. Then:
 
 ```
-pip install -r dev-requirements.txt
-pip install -e catanatron_core
-pip install -e catanatron_server
-pip install -e catanatron_gym
-pip install -e catanatron_experimental
+pip install -r all-requirements.txt
 ```
 
 ## Usage
@@ -207,10 +203,16 @@ ptw --ignore=tests/integration_tests/ --nobeep
 
 ## Machine Learning
 
-Generate data (several GZIP CSVs of features) by running:
+Generate JSON files with complete information about games and decisions by running:
 
 ```
-catanatron-play --num=100 --outpath=my-data-path/
+catanatron-play --num=100 --output=my-data-path/ --json
+```
+
+Similarly (with Tensorflow installed) you can generate several GZIP CSVs of a basic set of features:
+
+```
+catanatron-play --num=100 --output=my-data-path/ --csv
 ```
 
 You can then use this data to build a machine learning model, and then
@@ -248,6 +250,8 @@ use `flask run`.
 python3.8 -m venv venv
 source ./venv/bin/activate
 pip install -r requirements.txt
+
+cd catanatron_server/catanatron_server
 flask run
 ```
 

@@ -26,6 +26,7 @@ SETTLEMENT_COST_FREQDECK = [1, 1, 1, 1, 0]
 CITY_COST_FREQDECK = [0, 0, 0, 2, 3]
 DEVELOPMENT_CARD_COST_FREQDECK = [0, 0, 1, 1, 1]
 
+
 # ===== ListDecks
 def starting_resource_bank():
     """Returns freqdeck of resource cards"""

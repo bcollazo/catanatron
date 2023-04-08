@@ -2,10 +2,6 @@ FROM python:3.8
 
 WORKDIR /app
 
-ENV FLASK_ENV=development
-ENV FLASK_APP=catanatron_server/catanatron_server
-ENV FLASK_RUN_HOST=0.0.0.0
-
 RUN pip install --upgrade pip
 
 COPY . .
@@ -15,5 +11,9 @@ RUN pip install -e catanatron_gym
 RUN pip install -e catanatron_experimental
 
 EXPOSE 5000
+
+ENV FLASK_DEBUG=1
+ENV FLASK_APP=catanatron_server/catanatron_server
+ENV FLASK_RUN_HOST=0.0.0.0
 
 CMD flask run
