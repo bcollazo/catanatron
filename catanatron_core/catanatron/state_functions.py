@@ -67,6 +67,10 @@ def player_key(state, color):
     return f"P{state.color_to_index[color]}"
 
 
+def get_enemy_colors(colors, player_color):
+    return filter(lambda c: c != player_color, colors)
+
+
 def get_actual_victory_points(state, color):
     key = player_key(state, color)
     return state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
