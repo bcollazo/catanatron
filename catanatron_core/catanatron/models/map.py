@@ -58,18 +58,17 @@ class LandTile:
         return self.id
 
 
+@dataclass
 class Port:
-    def __init__(
-        self, port_id, resource: Union[FastResource, None], direction, nodes, edges
-    ):
-        self.id = port_id
-        self.resource = resource  # None means its a 3:1 port.
-        self.direction = direction
-        self.nodes = nodes
-        self.edges = edges
+    id: int
+    resource: Union[FastResource, None]  # None means desert tile
+    direction: Direction
+    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
+    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
 
-    def __repr__(self):
-        return "Port:" + str(self.resource)
+    # The id is unique among the tiles, so we can use it as the hash.
+    def __hash__(self):
+        return self.id
 
 
 @dataclass(frozen=True)
