@@ -253,7 +253,7 @@ class CatanMap:
         self.port_nodes = init_port_nodes_cache(self.tiles)
 
         land_nodes_list = map(lambda t: set(t.nodes.values()), self.land_tiles.values())
-        self.land_nodes = frozenset(set.union(*land_nodes_list))
+        self.land_nodes = frozenset().union(*land_nodes_list)
 
         # TODO: Rename to self.node_to_tiles
         self.adjacent_tiles = init_adjacent_tiles(self.land_tiles)
