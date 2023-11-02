@@ -45,27 +45,17 @@ NodeId = int
 Coordinate = Tuple[int, int, int]
 
 
+@dataclass
 class LandTile:
-    def __init__(
-        self,
-        tile_id: int,
-        resource: Union[FastResource, None],
-        number: Union[int, None],
-        nodes: Dict[NodeRef, NodeId],
-        edges: Dict[EdgeRef, EdgeId],
-    ):
-        self.id = tile_id
+    id: int
+    resource: Union[FastResource, None]  # None means desert tile
+    number: Union[int, None]  # None if desert
+    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
+    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
 
-        self.resource = resource  # None means desert tile
-        self.number = number  # None if desert
-
-        self.nodes = nodes  # node_ref => node_id
-        self.edges = edges  # edge_ref => edge
-
-    def __repr__(self):
-        if self.resource is None:
-            return "Tile:Desert"
-        return f"Tile:{self.number}{self.resource}"
+    # The id is unique among the tiles, so we can use it as the hash.
+    def __hash__(self):
+        return self.id
 
 
 class Port:
