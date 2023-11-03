@@ -209,7 +209,7 @@ def robber_possibilities(state, color) -> List[Action]:
         # each tile can yield a (move-but-cant-steal) action or
         #   several (move-and-steal-from-x) actions.
         to_steal_from = set()  # set of player_indexs
-        for _, node_id in tile.nodes.items():
+        for node_id in tile.nodes.values():
             building = state.board.buildings.get(node_id, None)
             if building is not None:
                 candidate_color = building[0]
