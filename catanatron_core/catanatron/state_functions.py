@@ -44,24 +44,28 @@ def maintain_longest_road(state, previous_road_color, road_color, road_lengths):
 
 def maintain_largest_army(state, color, previous_army_color, previous_army_size):
     candidate_size = get_played_dev_cards(state, color, "KNIGHT")
-    if candidate_size >= 3:
-        if previous_army_color is None:
-            winner_key = player_key(state, color)
-            state.player_state[f"{winner_key}_HAS_ARMY"] = True
-            state.player_state[f"{winner_key}_VICTORY_POINTS"] += 2
-            state.player_state[f"{winner_key}_ACTUAL_VICTORY_POINTS"] += 2
-        elif previous_army_size < candidate_size and previous_army_color != color:
-            # switch, remove previous points and award to new king
-            winner_key = player_key(state, color)
-            state.player_state[f"{winner_key}_HAS_ARMY"] = True
-            state.player_state[f"{winner_key}_VICTORY_POINTS"] += 2
-            state.player_state[f"{winner_key}_ACTUAL_VICTORY_POINTS"] += 2
-            if previous_army_color is not None:
-                loser_key = player_key(state, previous_army_color)
-                state.player_state[f"{loser_key}_HAS_ARMY"] = False
-                state.player_state[f"{loser_key}_VICTORY_POINTS"] -= 2
-                state.player_state[f"{loser_key}_ACTUAL_VICTORY_POINTS"] -= 2
-        # else: someone else has army and we dont compete
+
+    # Skip if army is too small to be considered.
+    if candidate_size < 3:
+        return
+
+    if previous_army_color is None:
+        winner_key = player_key(state, color)
+        state.player_state[f"{winner_key}_HAS_ARMY"] = True
+        state.player_state[f"{winner_key}_VICTORY_POINTS"] += 2
+        state.player_state[f"{winner_key}_ACTUAL_VICTORY_POINTS"] += 2
+    elif previous_army_size < candidate_size and previous_army_color != color:
+        # switch, remove previous points and award to new king
+        winner_key = player_key(state, color)
+        state.player_state[f"{winner_key}_HAS_ARMY"] = True
+        state.player_state[f"{winner_key}_VICTORY_POINTS"] += 2
+        state.player_state[f"{winner_key}_ACTUAL_VICTORY_POINTS"] += 2
+
+        loser_key = player_key(state, previous_army_color)
+        state.player_state[f"{loser_key}_HAS_ARMY"] = False
+        state.player_state[f"{loser_key}_VICTORY_POINTS"] -= 2
+        state.player_state[f"{loser_key}_ACTUAL_VICTORY_POINTS"] -= 2
+    # else: someone else has army and we dont compete
 
 
 # ===== State Getters
