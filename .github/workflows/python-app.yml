@@ -38,7 +38,7 @@ jobs:
           pip install -e catanatron_experimental
       - name: Test dependency
         run: |
-          python -c "import catanatron_experimental"
+          python -c "from catanatron_experimental import SimulationAccumulator"
       - name: Lint with black
         run: |
           black catanatron_core --check
