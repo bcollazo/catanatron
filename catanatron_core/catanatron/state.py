@@ -261,7 +261,7 @@ def yield_resources(board: Board, resource_freqdeck, number):
         if tile.number != number or board.robber_coordinate == coordinate:
             continue  # doesn't yield
 
-        for _, node_id in tile.nodes.items():
+        for node_id in tile.nodes.values():
             building = board.buildings.get(node_id, None)
             assert tile.resource is not None
             if building is None:
