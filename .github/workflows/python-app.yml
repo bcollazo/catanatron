@@ -36,6 +36,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r all-requirements.txt
           pip install -e catanatron_experimental
+      - name: Test dependency
+        run: |
+          python -c "import catanatron_experimental"
       - name: Lint with black
         run: |
           black catanatron_core --check
