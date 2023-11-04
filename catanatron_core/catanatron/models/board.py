@@ -252,12 +252,12 @@ class Board:
 
         expandable = set()
 
-        # non-enemy-nodes in your connected components
+        # All nodes for this color.
+        # TODO(tonypr): Explore caching for 'expandable_nodes'?
+        # The 'expandable_nodes' set should only increase in size monotonically I think.
+        # We can take advantage of that.
         expandable_nodes = set()
-        for node_set in self.connected_components[color]:
-            for node in node_set:
-                if not self.is_enemy_node(node, color):
-                    expandable_nodes.add(node)
+        expandable_nodes = expandable_nodes.union(*self.connected_components[color])
 
         candidate_edges = self.buildable_subgraph.edges(expandable_nodes)
         for edge in candidate_edges:
