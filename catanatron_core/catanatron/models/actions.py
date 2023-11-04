@@ -192,16 +192,18 @@ def settlement_possibilities(state, color, initial_build_phase=False) -> List[Ac
 def city_possibilities(state, color) -> List[Action]:
     key = player_key(state, color)
 
-    has_money = player_resource_freqdeck_contains(state, color, CITY_COST_FREQDECK)
-    has_cities_available = state.player_state[f"{key}_CITIES_AVAILABLE"] > 0
-
-    if has_money and has_cities_available:
-        return [
-            Action(color, ActionType.BUILD_CITY, node_id)
-            for node_id in get_player_buildings(state, color, SETTLEMENT)
-        ]
-    else:
+    can_buy_city = player_resource_freqdeck_contains(state, color, CITY_COST_FREQDECK)
+    if not can_buy_city:
         return []
+
+    has_cities_available = state.player_state[f"{key}_CITIES_AVAILABLE"] > 0
+    if not has_cities_available:
+        return []
+
+    return [
+        Action(color, ActionType.BUILD_CITY, node_id)
+        for node_id in get_player_buildings(state, color, SETTLEMENT)
+    ]
 
 
 def robber_possibilities(state, color) -> List[Action]:
