@@ -123,9 +123,9 @@ class Board:
                     a = [n for n in edges[0] if n != node_id].pop()
                     c = [n for n in edges[1] if n != node_id].pop()
 
-                    # do bfs from a adding all encountered nodes
-                    a_nodeset = self.bfs_walk(a, edge_color)
-                    c_nodeset = self.bfs_walk(c, edge_color)
+                    # do dfs from a adding all encountered nodes
+                    a_nodeset = self.dfs_walk(a, edge_color)
+                    c_nodeset = self.dfs_walk(c, edge_color)
 
                     # split this components on here.
                     b_index = self._get_connected_component_index(node_id, edge_color)
@@ -152,7 +152,7 @@ class Board:
         self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
 
-    def bfs_walk(self, node_id, color):
+    def dfs_walk(self, node_id, color):
         """Generates set of nodes that are "connected" to given node.
 
         Args:
@@ -197,6 +197,7 @@ class Board:
         a, b = edge
         a_index = self._get_connected_component_index(a, color)
         b_index = self._get_connected_component_index(b, color)
+
         if a_index is None and b_index is not None and not self.is_enemy_node(a, color):
             self.connected_components[color][b_index].add(a)
             component = self.connected_components[color][b_index]
