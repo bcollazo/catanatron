@@ -338,8 +338,7 @@ class Board:
         return node_color is not None and node_color != color
 
     def is_enemy_road(self, edge, color):
-        edge_color = self.get_edge_color(edge)
-        return edge_color is not None and edge_color != color
+        return self.get_edge_color(edge) != color
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
@@ -353,14 +352,14 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
 
             able_to_navigate = False
             for neighbor_node in STATIC_GRAPH.neighbors(node):
-                edge_color = board.get_edge_color((node, neighbor_node))
-                if edge_color != color:
+                edge = tuple(sorted((node, neighbor_node)))
+
+                if board.is_enemy_road(edge, color):
                     continue
 
-                neighbor_color = board.get_node_color(neighbor_node)
-                if neighbor_color is not None and neighbor_color != color:
-                    continue  # enemy-owned, cant use this to navigate.
-                edge = tuple(sorted((node, neighbor_node)))
+                if board.is_enemy_node(neighbor_node, color):
+                    continue
+
                 if edge not in path_thus_far:
                     agenda.append((neighbor_node, path_thus_far + [edge]))
                     able_to_navigate = True
