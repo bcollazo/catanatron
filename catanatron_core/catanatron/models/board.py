@@ -362,7 +362,7 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
                     continue  # enemy-owned, cant use this to navigate.
                 edge = tuple(sorted((node, neighbor_node)))
                 if edge not in path_thus_far:
-                    agenda.insert(0, (neighbor_node, path_thus_far + [edge]))
+                    agenda.append((neighbor_node, path_thus_far + [edge]))
                     able_to_navigate = True
 
             if not able_to_navigate:  # then it is leaf node
