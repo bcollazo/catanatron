@@ -148,14 +148,18 @@ def year_of_plenty_possibilities(color, freqdeck: List[int]) -> List[Action]:
 def road_building_possibilities(state, color, check_money=True) -> List[Action]:
     key = player_key(state, color)
 
-    has_money = player_resource_freqdeck_contains(state, color, ROAD_COST_FREQDECK)
+    # Check if can't build any more roads.
     has_roads_available = state.player_state[f"{key}_ROADS_AVAILABLE"] > 0
-
-    if (not check_money or has_money) and has_roads_available:
-        buildable_edges = state.board.buildable_edges(color)
-        return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
-    else:
+    if not has_roads_available:
         return []
+
+    # Check if need to pay for roads but can't afford them.
+    has_money = player_resource_freqdeck_contains(state, color, ROAD_COST_FREQDECK)
+    if check_money and not has_money:
+        return []
+
+    buildable_edges = state.board.buildable_edges(color)
+    return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
 
 
 def settlement_possibilities(state, color, initial_build_phase=False) -> List[Action]:
