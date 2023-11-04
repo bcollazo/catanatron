@@ -274,9 +274,8 @@ class Board:
 
         resources = set()
         for resource, node_ids in self.map.port_nodes.items():
-            for node_id in node_ids:
-                if self.get_node_color(node_id) == color:
-                    resources.add(resource)
+            if any(self.is_friendly_node(node_id, color) for node_id in node_ids):
+                resources.add(resource)
 
         self.player_port_resources_cache[color] = resources
         return resources
@@ -340,6 +339,9 @@ class Board:
     def is_enemy_road(self, edge, color):
         edge_color = self.get_edge_color(edge)
         return edge_color is not None and self.get_edge_color(edge) != color
+
+    def is_friendly_node(self, node_id, color):
+        return self.get_node_color(node_id) == color
 
     def is_friendly_road(self, edge, color):
         return self.get_edge_color(edge) == color
