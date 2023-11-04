@@ -338,7 +338,11 @@ class Board:
         return node_color is not None and node_color != color
 
     def is_enemy_road(self, edge, color):
-        return self.get_edge_color(edge) != color
+        edge_color = self.get_edge_color(edge)
+        return edge_color is not None and self.get_edge_color(edge) != color
+
+    def is_friendly_road(self, edge, color):
+        return self.get_edge_color(edge) == color
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
@@ -354,9 +358,11 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
             for neighbor_node in STATIC_GRAPH.neighbors(node):
                 edge = tuple(sorted((node, neighbor_node)))
 
-                if board.is_enemy_road(edge, color):
+                # Must travel on a friendly road.
+                if not board.is_friendly_road(edge, color):
                     continue
 
+                # Can't expand past an enemy node.
                 if board.is_enemy_node(neighbor_node, color):
                     continue
 
