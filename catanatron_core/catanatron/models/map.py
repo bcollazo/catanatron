@@ -1,7 +1,6 @@
 import typing
 from dataclasses import dataclass
 import random
-from enum import Enum
 from collections import Counter, defaultdict
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
 
@@ -13,31 +12,13 @@ from catanatron.models.enums import (
     SHEEP,
     WHEAT,
     ORE,
+    EdgeRef,
+    NodeRef,
 )
 
 NUM_NODES = 54
 NUM_EDGES = 72
 NUM_TILES = 19
-
-
-# Given a tile, the reference to the node.
-class NodeRef(Enum):
-    NORTH = "NORTH"
-    NORTHEAST = "NORTHEAST"
-    SOUTHEAST = "SOUTHEAST"
-    SOUTH = "SOUTH"
-    SOUTHWEST = "SOUTHWEST"
-    NORTHWEST = "NORTHWEST"
-
-
-# References an edge from a tile.
-class EdgeRef(Enum):
-    EAST = "EAST"
-    SOUTHEAST = "SOUTHEAST"
-    SOUTHWEST = "SOUTHWEST"
-    WEST = "WEST"
-    NORTHWEST = "NORTHWEST"
-    NORTHEAST = "NORTHEAST"
 
 
 EdgeId = Tuple[int, int]
