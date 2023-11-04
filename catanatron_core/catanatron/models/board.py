@@ -193,30 +193,31 @@ class Board:
         self.roads[edge] = color
         self.roads[inverted_edge] = color
 
-        # Update self.connected_components accordingly. Maybe merge.
+        # Find connected components corresponding to edge nodes (buildings).
         a, b = edge
         a_index = self._get_connected_component_index(a, color)
         b_index = self._get_connected_component_index(b, color)
 
+        # Extend or merge components
         if a_index is None and not self.is_enemy_node(a, color):
-            self.connected_components[color][b_index].add(a)
             component = self.connected_components[color][b_index]
+            component.add(a)
         elif b_index is None and not self.is_enemy_node(b, color):
-            self.connected_components[color][a_index].add(b)
             component = self.connected_components[color][a_index]
+            component.add(b)
         elif a_index is not None and b_index is not None and a_index != b_index:
-            # merge
-            merged_component = self.connected_components[color][a_index].union(
-                self.connected_components[color][b_index]
+            # Merge both components into one and delete the other.
+            component = set.union(
+                self.connected_components[color][a_index],
+                self.connected_components[color][b_index],
             )
-            for index in sorted([a_index, b_index], reverse=True):
-                del self.connected_components[color][index]
-            self.connected_components[color].append(merged_component)
-            component = merged_component
-        else:  # both nodes in same component; got nothing to do (already added)
-            component = self.connected_components[color][
-                a_index if a_index is not None else b_index
-            ]
+            self.connected_components[color][a_index] = component
+            del self.connected_components[color][b_index]
+        else:
+            # In this case, a_index == b_index, which means that the edge
+            # is already part of one component. No actions needed.
+            chosen_index = a_index if a_index is not None else b_index
+            component = self.connected_components[color][chosen_index]
 
         # find longest path on component under question
         previous_road_color = self.road_color
