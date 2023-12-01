@@ -33,7 +33,7 @@ jobs:
           cache: "pip" # caching pip dependencies
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          pip install --upgrade pip setuptools wheel
           pip install -e catanatron_core
           pip install -e catanatron_gym
           pip install -e catanatron_server
@@ -55,7 +55,7 @@ jobs:
           cache: "pip" # caching pip dependencies
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          pip install --upgrade pip setuptools wheel
           pip install -r all-requirements.txt
       - name: Test
         run: |
