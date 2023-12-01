@@ -32,6 +32,7 @@ jobs:
           python-version: 3.11
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -e catanatron_core
           pip install -e catanatron_gym
           pip install -e catanatron_server
@@ -52,6 +53,7 @@ jobs:
           python-version: 3.11
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -r all-requirements.txt
       - name: Test
         run: |
@@ -86,6 +88,7 @@ jobs:
           python-version: 3.11
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -e catanatron_core
           pip install -e catanatron_gym
       - name: Inline test
