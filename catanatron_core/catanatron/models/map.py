@@ -290,15 +290,15 @@ def init_node_production(
     return node_production
 
 
-def get_node_counter_production(adjacent_tiles, node_id):
+def get_node_counter_production(
+    adjacent_tiles: Dict[int, List[LandTile]], node_id: NodeId
+):
     tiles = adjacent_tiles[node_id]
-    return Counter(
-        {
-            t.resource: number_probability(t.number)
-            for t in tiles
-            if t.resource is not None
-        }
-    )
+    production = defaultdict(float)
+    for tile in tiles:
+        if tile.resource is not None:
+            production[tile.resource] += number_probability(tile.number)
+    return Counter(production)
 
 
 def build_dice_probas():
