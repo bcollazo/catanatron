@@ -123,9 +123,9 @@ class Board:
                     a = [n for n in edges[0] if n != node_id].pop()
                     c = [n for n in edges[1] if n != node_id].pop()
 
-                    # do bfs from a adding all encountered nodes
-                    a_nodeset = self.bfs_walk(a, edge_color)
-                    c_nodeset = self.bfs_walk(c, edge_color)
+                    # do dfs from a adding all encountered nodes
+                    a_nodeset = self.dfs_walk(a, edge_color)
+                    c_nodeset = self.dfs_walk(c, edge_color)
 
                     # split this components on here.
                     b_index = self._get_connected_component_index(node_id, edge_color)
@@ -152,7 +152,7 @@ class Board:
         self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
 
-    def bfs_walk(self, node_id, color):
+    def dfs_walk(self, node_id, color):
         """Generates set of nodes that are "connected" to given node.
 
         Args:
@@ -193,31 +193,31 @@ class Board:
         self.roads[edge] = color
         self.roads[inverted_edge] = color
 
-        # Update self.connected_components accordingly. Maybe merge.
+        # Find connected components corresponding to edge nodes (buildings).
         a, b = edge
         a_index = self._get_connected_component_index(a, color)
         b_index = self._get_connected_component_index(b, color)
-        if a_index is None and b_index is not None and not self.is_enemy_node(a, color):
-            self.connected_components[color][b_index].add(a)
+
+        # Extend or merge components
+        if a_index is None and not self.is_enemy_node(a, color):
             component = self.connected_components[color][b_index]
-        elif (
-            a_index is not None and b_index is None and not self.is_enemy_node(b, color)
-        ):
-            self.connected_components[color][a_index].add(b)
+            component.add(a)
+        elif b_index is None and not self.is_enemy_node(b, color):
             component = self.connected_components[color][a_index]
+            component.add(b)
         elif a_index is not None and b_index is not None and a_index != b_index:
-            # merge
-            merged_component = self.connected_components[color][a_index].union(
-                self.connected_components[color][b_index]
+            # Merge both components into one and delete the other.
+            component = set.union(
+                self.connected_components[color][a_index],
+                self.connected_components[color][b_index],
             )
-            for index in sorted([a_index, b_index], reverse=True):
-                del self.connected_components[color][index]
-            self.connected_components[color].append(merged_component)
-            component = merged_component
-        else:  # both nodes in same component; got nothing to do (already added)
-            component = self.connected_components[color][
-                a_index if a_index is not None else b_index
-            ]
+            self.connected_components[color][a_index] = component
+            del self.connected_components[color][b_index]
+        else:
+            # In this case, a_index == b_index, which means that the edge
+            # is already part of one component. No actions needed.
+            chosen_index = a_index if a_index is not None else b_index
+            component = self.connected_components[color][chosen_index]
 
         # find longest path on component under question
         previous_road_color = self.road_color
@@ -252,21 +252,20 @@ class Board:
 
         expandable = set()
 
-        # non-enemy-nodes in your connected components
+        # All nodes for this color.
+        # TODO(tonypr): Explore caching for 'expandable_nodes'?
+        # The 'expandable_nodes' set should only increase in size monotonically I think.
+        # We can take advantage of that.
         expandable_nodes = set()
-        for node_set in self.connected_components[color]:
-            for node in node_set:
-                if not self.is_enemy_node(node, color):
-                    expandable_nodes.add(node)
+        expandable_nodes = expandable_nodes.union(*self.connected_components[color])
 
         candidate_edges = self.buildable_subgraph.edges(expandable_nodes)
         for edge in candidate_edges:
             if self.get_edge_color(edge) is None:
                 expandable.add(tuple(sorted(edge)))
 
-        buildable_edges_list = list(expandable)
-        self.buildable_edges_cache[color] = buildable_edges_list
-        return buildable_edges_list
+        self.buildable_edges_cache[color] = list(expandable)
+        return self.buildable_edges_cache[color]
 
     def get_player_port_resources(self, color):
         """Yields resources (None for 3:1) of ports owned by color"""
@@ -275,9 +274,8 @@ class Board:
 
         resources = set()
         for resource, node_ids in self.map.port_nodes.items():
-            for node_id in node_ids:
-                if self.get_node_color(node_id) == color:
-                    resources.add(resource)
+            if any(self.is_friendly_node(node_id, color) for node_id in node_ids):
+                resources.add(resource)
 
         self.player_port_resources_cache[color] = resources
         return resources
@@ -340,7 +338,13 @@ class Board:
 
     def is_enemy_road(self, edge, color):
         edge_color = self.get_edge_color(edge)
-        return edge_color is not None and edge_color != color
+        return edge_color is not None and self.get_edge_color(edge) != color
+
+    def is_friendly_node(self, node_id, color):
+        return self.get_node_color(node_id) == color
+
+    def is_friendly_road(self, edge, color):
+        return self.get_edge_color(edge) == color
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
@@ -354,16 +358,18 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
 
             able_to_navigate = False
             for neighbor_node in STATIC_GRAPH.neighbors(node):
-                edge_color = board.get_edge_color((node, neighbor_node))
-                if edge_color != color:
+                edge = tuple(sorted((node, neighbor_node)))
+
+                # Must travel on a friendly road.
+                if not board.is_friendly_road(edge, color):
                     continue
 
-                neighbor_color = board.get_node_color(neighbor_node)
-                if neighbor_color is not None and neighbor_color != color:
-                    continue  # enemy-owned, cant use this to navigate.
-                edge = tuple(sorted((node, neighbor_node)))
+                # Can't expand past an enemy node.
+                if board.is_enemy_node(neighbor_node, color):
+                    continue
+
                 if edge not in path_thus_far:
-                    agenda.insert(0, (neighbor_node, path_thus_far + [edge]))
+                    agenda.append((neighbor_node, path_thus_far + [edge]))
                     able_to_navigate = True
 
             if not able_to_navigate:  # then it is leaf node
