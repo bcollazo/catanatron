@@ -36,6 +36,26 @@ CITY: Final = "CITY"
 ROAD: Final = "ROAD"
 
 
+# Given a tile, the reference to the node.
+class NodeRef(Enum):
+    NORTH = "NORTH"
+    NORTHEAST = "NORTHEAST"
+    SOUTHEAST = "SOUTHEAST"
+    SOUTH = "SOUTH"
+    SOUTHWEST = "SOUTHWEST"
+    NORTHWEST = "NORTHWEST"
+
+
+# References an edge from a tile.
+class EdgeRef(Enum):
+    EAST = "EAST"
+    SOUTHEAST = "SOUTHEAST"
+    SOUTHWEST = "SOUTHWEST"
+    WEST = "WEST"
+    NORTHWEST = "NORTHWEST"
+    NORTHEAST = "NORTHEAST"
+
+
 class ActionPrompt(Enum):
     BUILD_INITIAL_SETTLEMENT = "BUILD_INITIAL_SETTLEMENT"
     BUILD_INITIAL_ROAD = "BUILD_INITIAL_ROAD"

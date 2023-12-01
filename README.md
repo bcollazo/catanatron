@@ -330,7 +330,7 @@ make upload-production PACKAGE=catanatron_gym
 
 ```
 sphinx-quickstart docs
-sphinx-apidoc -o docs/source catanatron
+sphinx-apidoc -o docs/source catanatron_core
 sphinx-build -b html docs/source/ docs/build/html
 ```
 
