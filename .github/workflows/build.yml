@@ -21,27 +21,6 @@ jobs:
         run: docker build . -f Dockerfile.web -t bcollazo/catanatron-server:latest
       # - name: Build the Paperspace Docker image
       #   run: docker build . -f Dockerfile.paperspace -t bcollazo/paperspace-rl
-  debug-python:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-          cache: "pip" # caching pip dependencies
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip setuptools wheel
-          pip install -e catanatron_core
-          pip install -e catanatron_gym
-          pip install -e catanatron_server
-          pip install -e catanatron_experimental
-      - name: Test
-        run: |
-          python -c "from catanatron import Player"
-          python -c "from catanatron_server import create_app"
 
   build-python:
     runs-on: ubuntu-latest
@@ -57,10 +36,6 @@ jobs:
         run: |
           pip install --upgrade pip setuptools wheel
           pip install -r all-requirements.txt
-      - name: Test
-        run: |
-          python -c "from catanatron import Player"
-          python -c "from catanatron_server import create_app"
       - name: Lint with black
         run: |
           black catanatron_core --check
@@ -91,7 +66,7 @@ jobs:
           cache: "pip" # caching pip dependencies
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          pip install --upgrade pip setuptools wheel
           pip install -e catanatron_core
           pip install -e catanatron_gym
       - name: Inline test
