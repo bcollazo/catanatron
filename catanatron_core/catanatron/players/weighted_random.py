@@ -23,5 +23,4 @@ class WeightedRandomPlayer(Player):
             weight = WEIGHTS_BY_ACTION_TYPE.get(action.action_type, 1)
             bloated_actions.extend([action] * weight)
 
-        index = random.randrange(0, len(bloated_actions))
-        return bloated_actions[index]
+        return random.choice(bloated_actions)

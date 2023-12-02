@@ -76,5 +76,4 @@ class RandomPlayer(Player):
     """Random AI player that selects an action randomly from the list of playable_actions"""
 
     def decide(self, game, playable_actions):
-        index = random.randrange(0, len(playable_actions))
-        return playable_actions[index]
+        return random.choice(playable_actions)

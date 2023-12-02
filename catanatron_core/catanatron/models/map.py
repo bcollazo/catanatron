@@ -1,7 +1,6 @@
 import typing
 from dataclasses import dataclass
 import random
-from enum import Enum
 from collections import Counter, defaultdict
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
 
@@ -13,6 +12,8 @@ from catanatron.models.enums import (
     SHEEP,
     WHEAT,
     ORE,
+    EdgeRef,
+    NodeRef,
 )
 
 NUM_NODES = 54
@@ -20,66 +21,35 @@ NUM_EDGES = 72
 NUM_TILES = 19
 
 
-# Given a tile, the reference to the node.
-class NodeRef(Enum):
-    NORTH = "NORTH"
-    NORTHEAST = "NORTHEAST"
-    SOUTHEAST = "SOUTHEAST"
-    SOUTH = "SOUTH"
-    SOUTHWEST = "SOUTHWEST"
-    NORTHWEST = "NORTHWEST"
-
-
-# References an edge from a tile.
-class EdgeRef(Enum):
-    EAST = "EAST"
-    SOUTHEAST = "SOUTHEAST"
-    SOUTHWEST = "SOUTHWEST"
-    WEST = "WEST"
-    NORTHWEST = "NORTHWEST"
-    NORTHEAST = "NORTHEAST"
-
-
 EdgeId = Tuple[int, int]
 NodeId = int
 Coordinate = Tuple[int, int, int]
 
 
+@dataclass
 class LandTile:
-    def __init__(
-        self,
-        tile_id: int,
-        resource: Union[FastResource, None],
-        number: Union[int, None],
-        nodes: Dict[NodeRef, NodeId],
-        edges: Dict[EdgeRef, EdgeId],
-    ):
-        self.id = tile_id
+    id: int
+    resource: Union[FastResource, None]  # None means desert tile
+    number: Union[int, None]  # None if desert
+    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
+    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
 
-        self.resource = resource  # None means desert tile
-        self.number = number  # None if desert
-
-        self.nodes = nodes  # node_ref => node_id
-        self.edges = edges  # edge_ref => edge
-
-    def __repr__(self):
-        if self.resource is None:
-            return "Tile:Desert"
-        return f"Tile:{self.number}{self.resource}"
+    # The id is unique among the tiles, so we can use it as the hash.
+    def __hash__(self):
+        return self.id
 
 
+@dataclass
 class Port:
-    def __init__(
-        self, port_id, resource: Union[FastResource, None], direction, nodes, edges
-    ):
-        self.id = port_id
-        self.resource = resource  # None means its a 3:1 port.
-        self.direction = direction
-        self.nodes = nodes
-        self.edges = edges
+    id: int
+    resource: Union[FastResource, None]  # None means desert tile
+    direction: Direction
+    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
+    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
 
-    def __repr__(self):
-        return "Port:" + str(self.resource)
+    # The id is unique among the tiles, so we can use it as the hash.
+    def __hash__(self):
+        return self.id
 
 
 @dataclass(frozen=True)
@@ -264,7 +234,7 @@ class CatanMap:
         self.port_nodes = init_port_nodes_cache(self.tiles)
 
         land_nodes_list = map(lambda t: set(t.nodes.values()), self.land_tiles.values())
-        self.land_nodes = frozenset(set.union(*land_nodes_list))
+        self.land_nodes = frozenset().union(*land_nodes_list)
 
         # TODO: Rename to self.node_to_tiles
         self.adjacent_tiles = init_adjacent_tiles(self.land_tiles)
@@ -320,15 +290,15 @@ def init_node_production(
     return node_production
 
 
-def get_node_counter_production(adjacent_tiles, node_id):
+def get_node_counter_production(
+    adjacent_tiles: Dict[int, List[LandTile]], node_id: NodeId
+):
     tiles = adjacent_tiles[node_id]
-    return Counter(
-        {
-            t.resource: number_probability(t.number)
-            for t in tiles
-            if t.resource is not None
-        }
-    )
+    production = defaultdict(float)
+    for tile in tiles:
+        if tile.resource is not None:
+            production[tile.resource] += number_probability(tile.number)
+    return Counter(production)
 
 
 def build_dice_probas():

@@ -203,10 +203,16 @@ ptw --ignore=tests/integration_tests/ --nobeep
 
 ## Machine Learning
 
-Generate data (several GZIP CSVs of features) by running:
+Generate JSON files with complete information about games and decisions by running:
 
 ```
-catanatron-play --num=100 --outpath=my-data-path/
+catanatron-play --num=100 --output=my-data-path/ --json
+```
+
+Similarly (with Tensorflow installed) you can generate several GZIP CSVs of a basic set of features:
+
+```
+catanatron-play --num=100 --output=my-data-path/ --csv
 ```
 
 You can then use this data to build a machine learning model, and then
@@ -324,7 +330,7 @@ make upload-production PACKAGE=catanatron_gym
 
 ```
 sphinx-quickstart docs
-sphinx-apidoc -o docs/source catanatron
+sphinx-apidoc -o docs/source catanatron_core
 sphinx-build -b html docs/source/ docs/build/html
 ```
 
