@@ -13,6 +13,7 @@ from catanatron_gym.features import (
     build_production_features,
     reachability_features,
     resource_hand_features,
+    road_triads,
 )
 
 TRANSLATE_VARIETY = 4  # i.e. each new resource is like 4 production points
@@ -34,23 +35,34 @@ DEFAULT_WEIGHTS = {
     "discard_penalty": -5,
     "hand_devs": 10,
     "army_size": 10.1,
+    # new features
+    "road_triads": 0,
+    "road_settlement_ratio": 0
+    # TODO: "early_game_longest_road": 5
 }
 
 # Change these to play around with new values
 CONTENDER_WEIGHTS = {
-    "public_vps": 300000000000001.94,
-    "production": 100000002.04188395,
-    "enemy_production": -99999998.03389844,
-    "num_tiles": 2.91440418,
-    "reachable_production_0": 2.03820085,
-    "reachable_production_1": 10002.018773150001,
-    "buildable_nodes": 1001.86278466,
-    "longest_road": 12.127388499999999,
-    "hand_synergy": 102.40606877,
-    "hand_resources": 2.43644327,
-    "discard_penalty": -3.00141993,
-    "hand_devs": 10.721669799999999,
-    "army_size": 12.93844622,
+    # Where to place. Note winning is best at all costs
+    "public_vps": 3e14,
+    "production": 1e8,
+    "enemy_production": -1e8,
+    "num_tiles": 1,
+    # Towards where to expand and when
+    "reachable_production_0": 0,
+    "reachable_production_1": 2e4,
+    "buildable_nodes": 1e3,
+    "longest_road": 10,
+    # Hand, when to hold and when to use.
+    "hand_synergy": 1e2,
+    "hand_resources": 1,
+    "discard_penalty": -5,
+    "hand_devs": 10,
+    "army_size": 10.1,
+    # new features
+    "road_triads": -1e3,
+    "road_settlement_ratio": -1
+    # TODO: "early_game_longest_road": 5
 }
 
 
@@ -102,6 +114,9 @@ def base_fn(params=DEFAULT_WEIGHTS):
             params["longest_road"] if num_buildable_nodes == 0 else 0.1
         )
 
+        num_triads = road_triads(game, p0_color)
+        # if have too many buildable nodes but with no houses, penalize...
+
         return float(
             game.state.player_state[f"{key}_VICTORY_POINTS"] * params["public_vps"]
             + production * params["production"]
@@ -116,6 +131,7 @@ def base_fn(params=DEFAULT_WEIGHTS):
             + longest_road_length * longest_road_factor
             + player_num_dev_cards(game.state, p0_color) * params["hand_devs"]
             + get_played_dev_cards(game.state, p0_color, "KNIGHT") * params["army_size"]
+            + num_triads * params["road_triads"]
         )
 
     return fn

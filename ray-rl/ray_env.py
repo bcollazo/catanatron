@@ -28,7 +28,7 @@ from ray_model import register_model
 
 
 base_path = os.path.expanduser("~/BryanCode/catanatron/logs")
-experiment_name = "PPO_selflearn_64xx6relu-3"
+experiment_name = "PPO_selflearn_128xx10relu"
 
 # ===== ENVIRONMENT
 class RayCatanatronEnv(gym.Env):

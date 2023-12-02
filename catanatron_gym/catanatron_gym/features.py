@@ -368,6 +368,30 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
     return features
 
 
+def road_triads(game: Game, p0_color: Color):
+    """
+    Road Triads are the amount of places where a player owns the three roads
+    of a given node. This should be weighted slightly negatively as it is
+    a proxy to not using roads to their full potential. Tho high achievable
+    resources should out-weight this.
+    """
+    # get all nodes in the connected components
+    node_sets = game.state.board.find_connected_components(p0_color)
+    candidate_node_ids = [node_id for node_set in node_sets for node_id in node_set]
+
+    # check if own all three nodes given static graph
+    triads = 0
+    for node_id in candidate_node_ids:
+        edges = STATIC_GRAPH.edges(node_id)
+        is_triad = all(
+            [game.state.board.get_edge_color(edge) == p0_color for edge in edges]
+        )
+        if is_triad:
+            triads += 1
+
+    return triads
+
+
 @functools.lru_cache(maxsize=1000)
 def count_production(nodes, catan_map):
     production = Counter()
@@ -447,6 +471,17 @@ def expansion_features(game: Game, p0_color: Color):
                 features[f"P{i}_{resource}_AT_DISTANCE_{int(distance)}"] = prod
 
     return features
+
+
+def road_harmony():
+    """
+    Road Harmony is defined at how well all built roads work together.
+    An example of this is how many (out of the ones built) could be
+    used to build a longest road.
+    """
+    # there are several connected components
+
+    pass
 
 
 def port_distance_features(game: Game, p0_color: Color):

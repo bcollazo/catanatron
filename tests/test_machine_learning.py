@@ -28,6 +28,7 @@ from catanatron_gym.features import (
     resource_hand_features,
     tile_features,
     graph_features,
+    road_triads,
 )
 from catanatron_gym.board_tensor_features import (
     create_board_tensor,
@@ -112,6 +113,36 @@ def test_expansion_features():
     assert features["P0_WHEAT_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource}_AT_DISTANCE_0"] == 0
     assert features[f"P0_{neighbor_tile_resource}_AT_DISTANCE_1"] > 0
+
+
+def test_road_triads():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+        SimplePlayer(Color.ORANGE),
+    ]
+    game = Game(players)
+    color = game.state.colors[0]
+    game.execute(Action(color, ActionType.BUILD_SETTLEMENT, 0))
+    game.execute(Action(color, ActionType.BUILD_ROAD, (0, 1)))
+
+    num_triads = road_triads(game, color)
+    assert num_triads == 0
+
+    game.execute(Action(color, ActionType.BUILD_ROAD, (0, 5)), False)
+    game.execute(Action(color, ActionType.BUILD_ROAD, (0, 20)), False)
+
+    num_triads = road_triads(game, color)
+    assert num_triads == 1
+
+    game.execute(Action(color, ActionType.BUILD_ROAD, (1, 6)), False)
+    num_triads = road_triads(game, color)
+    assert num_triads == 1
+
+    game.execute(Action(color, ActionType.BUILD_ROAD, (1, 2)), False)
+    num_triads = road_triads(game, color)
+    assert num_triads == 2
 
 
 def test_reachability_features():

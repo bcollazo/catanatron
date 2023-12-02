@@ -60,11 +60,11 @@ algo = (
         },
     )
     .training(
-        lr=1e-4,
+        lr=1e-5,
         model={
             "custom_model": "action_mask_model",
             "custom_model_config": {
-                "fcnet_hiddens": [64, 64, 64, 64, 64, 64],
+                "fcnet_hiddens": [128, 128, 128, 128, 128, 128, 128, 128, 128, 128],
                 "fcnet_activation": "relu",
             },
         },
@@ -79,7 +79,7 @@ algo = (
 checkpoint_path = "/Users/bcollazo/ray_results/PPO_ray_catanatron_env_2023-01-22_19-38-14wtmduchc/checkpoint_000096"
 checkpoint_path = "/Users/bcollazo/BryanCode/catanatron/logs/PPO_selflearn_64xx6relu/checkpoint_001000"
 checkpoint_path = "/Users/bcollazo/BryanCode/catanatron/logs/PPO_selflearn_64xx6relu-2/checkpoint_002000"
-# checkpoint_path = ""
+checkpoint_path = ""
 if checkpoint_path:
     print("LOADING PREVIOUSLY SAVED CHECKPOINT", checkpoint_path)
     # algo = Algorithm.from_checkpoint(checkpoint_path)

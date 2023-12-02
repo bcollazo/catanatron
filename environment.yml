@@ -1,0 +1,19 @@
+name: tf-metal-catan
+channels:
+  - apple
+  - conda-forge
+dependencies:
+  - python=3.9
+  - gym-all=0.21.0
+  - pip
+  - tensorflow-deps
+
+  ## uncommented for use with Jupyter
+  - ipykernel
+
+  ## PyPI packages
+  - pip:
+      - jupyterlab
+      - ray[rllib]
+      - tensorflow-macos
+      - tensorflow-metal
