@@ -4,11 +4,12 @@
 -e catanatron_experimental
 click==8.1.3
 cloudpickle==2.2.1
+Farama-Notifications==0.0.4
 Flask==2.2.3
 Flask-Cors==3.0.10
 Flask-SQLAlchemy==3.0.3
 gunicorn==20.1.0
-gymnasium==0.27.1
+gymnasium==0.29.1
 gymnasium-notices==0.0.1
 itsdangerous==2.1.2
 jax-jumpy==1.0.0
