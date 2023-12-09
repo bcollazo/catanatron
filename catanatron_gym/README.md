@@ -12,12 +12,13 @@ Make your training loop, ensuring to respect `env.get_valid_actions()`.
 import random
 import gymnasium as gym
 
-env = gym.make("catanatron_gym:catanatron-v0")
+env = gym.make("catanatron_gym:catanatron-v1")
 observation, info = env.reset()
 for _ in range(1000):
-  action = random.choice(env.get_valid_actions()) # your agent here (this takes random actions)
-
-  observation, reward, done, info = env.step(action)
+  # your agent here (this takes random actions)
+  action = random.choice(env.unwrapped.get_valid_actions())
+  observation, reward, terminated, truncated, info = env.step(action)
+  done = terminated or truncated
   if done:
       observation, info = env.reset()
 env.close()
@@ -49,7 +50,7 @@ def mask_fn(env) -> np.ndarray:
 
 
 # Init Environment and Model
-env = gym.make("catanatron_gym:catanatron-v0")
+env = gym.make("catanatron_gym:catanatron-v1")
 env = ActionMasker(env, mask_fn)  # Wrap to enable masking
 model = MaskablePPO(MaskableActorCriticPolicy, env, verbose=1)
 
@@ -78,7 +79,7 @@ def my_reward_function(game, p0_color):
 
 # 3-player catan on a "Mini" map (7 tiles) until 6 points.
 env = gym.make(
-    "catanatron_gym:catanatron-v0",
+    "catanatron_gym:catanatron-v1",
     config={
         "map_type": "MINI",
         "vps_to_win": 6,
