@@ -74,6 +74,7 @@ jobs:
           python -c "import gymnasium as gym; env = gym.make('catanatron_gym:catanatron-v0')"
       - name: Test README.md sample (and fail even on warnings)
         run: |
+          ls
           python -W error catanatron_gym/sample.py
 
   build-ui:
