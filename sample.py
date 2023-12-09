@@ -1,18 +1,14 @@
-from catanatron import Game, RandomPlayer, Color
+import random
+import gymnasium as gym
 
-from catanatron_experimental.my_player import MyPlayer
-from catanatron_server.utils import open_link
+env = gym.make("catanatron_gym:catanatron-v0")
+observation, info = env.reset()
+for _ in range(1000):
+    action = random.choice(
+        env.get_valid_actions()
+    )  # your agent here (this takes random actions)
 
-# Play a simple 4v4 game. Edit MyPlayer with your logic!
-players = [
-    MyPlayer(Color.RED),
-    RandomPlayer(Color.BLUE),
-    RandomPlayer(Color.WHITE),
-    RandomPlayer(Color.ORANGE),
-]
-game = Game(players)
-print(game.play())  # returns winning color
-
-# Ensure you have `docker-compose up` running
-#   in another terminal tab:
-open_link(game)  # opens game result in browser
+    observation, reward, done, info = env.step(action)
+    if done:
+        observation, info = env.reset()
+env.close()
