@@ -2,7 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
-from catanatron.game import Game
+from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
@@ -123,7 +123,7 @@ def simple_reward(game, p0_color):
 
 
 class CatanatronEnv(gym.Env):
-    metadata = {"render.modes": []}
+    metadata = {"render_modes": []}
 
     action_space = spaces.Discrete(ACTION_SPACE_SIZE)
     # TODO: This could be smaller (there are many binary features). float b.c. TILE0_PROBA
@@ -195,8 +195,13 @@ class CatanatronEnv(gym.Env):
                 winning_color is not None
                 or self.invalid_actions_count > self.max_invalid_actions
             )
+            terminated = winning_color is not None
+            truncated = (
+                self.invalid_actions_count > self.max_invalid_actions
+                or self.game.state.num_turns >= TURNS_LIMIT
+            )
             info = dict(valid_actions=self.get_valid_actions())
-            return observation, self.invalid_action_reward, done, info
+            return observation, self.invalid_action_reward, terminated, truncated, info
 
         self.game.execute(catan_action)
         self._advance_until_p0_decision()
@@ -205,10 +210,11 @@ class CatanatronEnv(gym.Env):
         info = dict(valid_actions=self.get_valid_actions())
 
         winning_color = self.game.winning_color()
-        done = winning_color is not None
+        terminated = winning_color is not None
+        truncated = self.game.state.num_turns >= TURNS_LIMIT
         reward = self.reward_function(self.game, self.p0.color)
 
-        return observation, reward, done, info
+        return observation, reward, terminated, truncated, info
 
     def reset(
         self,

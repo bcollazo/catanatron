@@ -71,7 +71,10 @@ jobs:
           pip install -e catanatron_gym
       - name: Inline test
         run: |
-          python -c "import gymnasium as gym; env = gym.make('catanatron_gym:catanatron-v0')"
+          python -c "import gymnasium as gym; env = gym.make('catanatron_gym:catanatron-v1')"
+      - name: Test README.md sample (and fail even on warnings)
+        run: |
+          python -W error catanatron_gym/sample.py
 
   build-ui:
     runs-on: ubuntu-latest
