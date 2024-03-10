@@ -1,0 +1,18 @@
+# conda env create -n my_tf_env -f tf-metal-arm64.yaml
+name: tf-metal
+channels:
+  - apple
+  - conda-forge
+dependencies:
+  - python=3.10 ## specify desired version
+  - pip
+  - tensorflow-deps
+
+  ## uncomment for use with Jupyter
+  ## - ipykernel
+
+  ## PyPI packages
+  - pip:
+      - tensorflow-macos==2.9
+      - tensorflow-metal==0.5 ## optional, but recommended
+      - torch
