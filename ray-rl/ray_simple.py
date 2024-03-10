@@ -99,8 +99,9 @@ ModelCatalog.register_custom_model("action_mask_model", ActionMaskModel)
 model_config = {
     "custom_model": "action_mask_model",
     # New format?
-    "fcnet_hiddens": [128, 128, 128, 128, 128, 128, 128, 128, 128, 128],
+    "fcnet_hiddens": [256, 256, 256, 256, 256],
     "fcnet_activation": "relu",
+    "vf_share_layers": False,
 }
 
 # Had to use TF, because Ray+PyTorch didn't seem to detect my M1 GPU:
@@ -111,14 +112,19 @@ config = (
     PPOConfig()
     .environment(env=ActionMaskEnv, env_config={"foo": "bar"})
     .framework(framework="tf", eager_tracing=True)
-    .training(lr=tune.grid_search([0.01, 0.001, 0.0001]), model=model_config)
+    .training(
+        gamma=tune.grid_search([0.99, 0.95, 0.9]),
+        lr=tune.grid_search([0.0001]),
+        model=model_config,
+        shuffle_sequences=True,
+    )
+    .rollouts(num_envs_per_worker=4)  # TODO?
     # Seems like defaults use the right thing! Use GPU and 6/8 CPUs which sounds good.
-    .rollouts(num_envs_per_worker=8)  # TODO?
 )
 
 tuner = tune.Tuner(
     "PPO",
-    run_config=train.RunConfig(stop={"episode_reward_mean": 0.6}),
+    run_config=train.RunConfig(stop={"episode_reward_mean": 0.9}),
     param_space=config,
 )
 
@@ -128,7 +134,9 @@ tuner.fit()
 TODO:
 - Simple environment (Check Vectorizable).
 - Action Masking. DONE.
-- Simple Network Architecture. DONE
+- Simple Network Architecture. DONE.
 - MultiAgent Environment
 - Network Architecture(?)
+
+- Was checking PPO config (vf-layers). added shuffle_sequences
 """
