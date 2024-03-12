@@ -49,6 +49,7 @@ from catanatron.state_functions import (
     player_can_afford_dev_card,
     player_can_play_dev,
     player_clean_turn,
+    player_check_is_winner,
     player_freqdeck_add,
     player_deck_draw,
     player_deck_random_draw,
@@ -122,6 +123,8 @@ class State:
         free_roads_available (int): Number of roads available left in Road Building
             phase.
         playable_actions (List[Action]): List of playable actions by current player.
+        vps_to_win (int): Number of VPS points needed to win.
+        winning_color (bool): If there is a winner, store the winner's color. Othewrise None.
     """
 
     def __init__(
@@ -129,6 +132,7 @@ class State:
         players: List[Player],
         catan_map=None,
         discard_limit=7,
+        vps_to_win=10,
         initialize=True,
     ):
         if initialize:
@@ -175,6 +179,8 @@ class State:
             self.acceptees = tuple(False for _ in self.colors)
 
             self.playable_actions = generate_playable_actions(self)
+            self.vps_to_win = vps_to_win
+            self.winning_color = None
 
     def current_player(self):
         """Helper for accessing Player instance who should decide next"""
@@ -227,6 +233,9 @@ class State:
         state_copy.acceptees = self.acceptees
 
         state_copy.playable_actions = self.playable_actions
+
+        state_copy.vps_to_win = self.vps_to_win
+        state_copy.winning_color = self.winning_color
         return state_copy
 
 
@@ -327,6 +336,7 @@ def apply_action(state: State, action: Action):
 
     if action.action_type == ActionType.END_TURN:
         player_clean_turn(state, action.color)
+        player_check_is_winner(state, action.color)
         advance_turn(state)
         state.current_prompt = ActionPrompt.PLAY_TURN
         state.playable_actions = generate_playable_actions(state)
