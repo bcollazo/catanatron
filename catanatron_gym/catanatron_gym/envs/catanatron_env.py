@@ -1,6 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+import logging
 
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
@@ -99,8 +100,11 @@ def from_action_space(action_int, playable_actions):
     for action in playable_actions:
         normalized = normalize_action(action)
         if normalized.action_type == action_type and normalized.value == value:
+            if catan_action != None:
+                logging.warning("More than 1 action match to hydrated!")
             catan_action = action
-            break  # return the first one
+            # break  # return the first one
+
     assert catan_action is not None
     return catan_action
 
@@ -127,7 +131,9 @@ class CatanatronEnv(gym.Env):
 
     action_space = spaces.Discrete(ACTION_SPACE_SIZE)
     # TODO: This could be smaller (there are many binary features). float b.c. TILE0_PROBA
-    observation_space = spaces.Box(low=0, high=HIGH, shape=(NUM_FEATURES,), dtype=float)
+    observation_space = spaces.Box(
+        low=0, high=HIGH, shape=(NUM_FEATURES,), dtype=np.float32
+    )
     reward_range = (-1, 1)
 
     def __init__(self, config=None):
@@ -154,13 +160,13 @@ class CatanatronEnv(gym.Env):
         if self.representation == "mixed":
             channels = get_channels(len(self.players))
             board_tensor_space = spaces.Box(
-                low=0, high=1, shape=(channels, 21, 11), dtype=float
+                low=0, high=1, shape=(channels, 21, 11), dtype=np.float32
             )
             self.numeric_features = [
                 f for f in self.features if not is_graph_feature(f)
             ]
             numeric_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=float
+                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=np.float32
             )
             mixed = spaces.Dict(
                 {
@@ -171,7 +177,7 @@ class CatanatronEnv(gym.Env):
             self.observation_space = mixed
         else:
             self.observation_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.features),), dtype=float
+                low=0, high=HIGH, shape=(len(self.features),), dtype=np.float32
             )
 
         self.reset()
@@ -247,10 +253,10 @@ class CatanatronEnv(gym.Env):
             board_tensor = create_board_tensor(
                 self.game, self.p0.color, channels_first=True
             )
-            numeric = np.array([float(sample[i]) for i in self.numeric_features])
+            numeric = np.array([np.float32(sample[i]) for i in self.numeric_features])
             return {"board": board_tensor, "numeric": numeric}
 
-        return np.array([float(sample[i]) for i in self.features])
+        return np.array([np.float32(sample[i]) for i in self.features])
 
     def _advance_until_p0_decision(self):
         while (

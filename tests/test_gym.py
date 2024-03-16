@@ -138,3 +138,59 @@ def test_mixed_rep():
     observation, info = env.reset()
     assert "board" in observation
     assert "numeric" in observation
+
+
+def test_resetting_game_reorders_players():
+    """In this particular seed sequence, two games is enough to see both orderings"""
+    env = CatanatronEnv()
+    env.reset(seed=42)
+    assert env.game.state.colors == (Color.BLUE, Color.RED)
+    env.reset()
+    assert env.game.state.colors == (Color.RED, Color.BLUE)
+
+
+from catanatron.state_functions import get_enemy_colors
+from catan_rayrl.catanmultiagentenv import CatanatronMultiAgentEnv
+
+
+def test_multiagent_env():
+    env = CatanatronMultiAgentEnv()
+    obs, infos = env.reset(seed=42, options={})
+    assert isinstance(obs, dict)
+    assert len(obs) == 1
+
+    (color, _) = obs.popitem()
+    action = random.choice(env.get_valid_actions())
+    enemy_colors = [c.value for c in env.game.state.colors if c.value != color]
+    assert len(enemy_colors) == 1
+    enemy_color = enemy_colors.pop()
+
+    # build first house
+    obs, rewards, terminateds, truncateds, infos = env.step(action_dict={color: action})
+    assert rewards == {color: 0}
+    # game should not terminate/truncate in first couple of turns
+    assert terminateds == {color: False, "__all__": False}
+    assert truncateds == {color: False}
+    # this dict contains all players
+    assert color in infos
+    assert "valid_actions" in infos[color]
+    assert enemy_color in infos
+
+    # playing invalid action should also have same structure
+    invalid_action = None
+    while invalid_action is None:
+        tmp = env.action_space.sample()
+        if tmp not in infos[color]["valid_actions"]:
+            invalid_action = tmp
+    obs, rewards, terminateds, truncateds, infos = env.step(
+        action_dict={color: invalid_action}
+    )
+    assert rewards == {color: -1}
+    # game should not terminate/truncate in an invalid action
+    assert terminateds == {color: False, "__all__": False}
+    assert truncateds == {color: False}
+    assert color in infos
+    assert "valid_actions" in infos[color]
+    assert enemy_color in infos
+
+    # next turn should be placing roads
