@@ -110,16 +110,20 @@ class ActionMaskModel(TFModelV2):
         self, obs_space, action_space, num_outputs, model_config, name, **kwargs
     ):
         orig_space = getattr(obs_space, "original_space", obs_space)
-        assert (
-            isinstance(orig_space, spaces.Dict)
-            and "action_mask" in orig_space.spaces
-            and "observations" in orig_space.spaces
-        )
+        orig_space.get("BLUE", orig_space.get("RED", orig_space))
+        simple_orig_space = orig_space.get("BLUE", orig_space.get("RED", orig_space))
+        if not (
+            isinstance(simple_orig_space, spaces.Dict)
+            and "action_mask" in simple_orig_space.spaces
+            and "observations" in simple_orig_space.spaces
+        ):
+            print(obs_space)
+            assert False
 
         super().__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.internal_model = FullyConnectedNetwork(
-            orig_space["observations"],
+            simple_orig_space["observations"],
             action_space,
             num_outputs,
             model_config,
@@ -128,6 +132,9 @@ class ActionMaskModel(TFModelV2):
 
     def forward(self, input_dict, state, seq_lens):
         # Extract the available actions tensor from the observation.
+        if "obs" not in input_dict or "action_mask" not in input_dict["obs"]:
+            print(input_dict)
+            assert False
         action_mask = input_dict["obs"]["action_mask"]
 
         # To visualize, network, put a breakpoint and run the following:
@@ -351,9 +358,6 @@ class CatanatronMultiAgentEnv(MultiAgentEnv):
         return list(map(to_action_space, self.game.state.playable_actions))
 
 
-WIN_RATE_THRESHOLD = 0.75
-
-
 class ValidRandomPolicy(Policy):
     """Hand-coded policy that returns random (but valid) actions."""
 
@@ -426,9 +430,6 @@ class ValidRandomPolicy(Policy):
         )
 
 
-MIN_TO_CHECK_SELF_TRAINING = 25
-
-
 class SelfPlayCallback(DefaultCallbacks):
     def __init__(self):
         super().__init__()
@@ -487,6 +488,12 @@ class SelfPlayCallback(DefaultCallbacks):
                     policy_id=new_pol_id,
                     policy_cls=type(main_policy),
                     policy_mapping_fn=policy_mapping_fn,
+                    observation_space=main_policy.observation_space,
+                    action_space=main_policy.action_space,
+                    # config=config,
+                    # policy_state=policy_state,
+                    # policies_to_train=policies_to_train,
+                    # module_spec=module_spec,
                 )
 
             # Set the weights of the new policy to the main policy.
@@ -547,13 +554,15 @@ def apply_self_learning(config):
 num_layers = [3, 10, 20]
 num_nodes = [64, 128, 256, 512]
 architectures = [[N] * L for N in num_nodes for L in num_layers]
-architectures = [[256] * 5]
+architectures = [[128] * 5]
 model_config = {
     "custom_model": "action_mask_model",
     "fcnet_hiddens": tune.grid_search(architectures),
     "fcnet_activation": "relu",
-    "vf_share_layers": False,
+    "vf_share_layers": True,
 }
+WIN_RATE_THRESHOLD = 0.7
+MIN_TO_CHECK_SELF_TRAINING = 25
 
 # Had to use TF, because Ray+PyTorch didn't seem to detect my M1 GPU:
 # https://discuss.ray.io/t/rllib-pytorch-and-mac-m1-gpus-no-available-node-types-can-fulfill-resource-request/6769/4
@@ -570,19 +579,26 @@ config = (
         shuffle_sequences=True,
         train_batch_size=20000,  # at least 20 episodes...
         sgd_minibatch_size=1024,
-        # vf_loss_coeff=tune.grid_search([0.001, 0.01, 1, 10, 100]),
+        vf_loss_coeff=tune.grid_search([0.001, 0.01, 1, 10, 100]),
     )
-    .rollouts(num_rollout_workers=0, num_envs_per_worker=10)
+    .rollouts(num_rollout_workers=4, num_envs_per_worker=1)
     .experimental(_disable_preprocessor_api=True)
     # Seems like defaults use the right thing! Use GPU and 6/8 CPUs which sounds good.
 )
 apply_self_learning(config)
-ray.init(num_cpus=0, local_mode=True)
+# ray.init(num_cpus=0, local_mode=True)
+
+RESUME = "/Users/bcollazo/ray_results/PPO_2024-03-17_12-18-57"
+RESUME = ""
+trainable = "PPO"
 tuner = tune.Tuner(
-    "PPO",
+    trainable,
     run_config=train.RunConfig(stop={"time_total_s": 2 * 60 * 60}),
     param_space=config,
 )
+if RESUME != "":
+    tuner.restore(path=RESUME, trainable=trainable)
+
 tuner.fit()
 
 """
@@ -590,8 +606,9 @@ TODO:
 - Simple environment. DONE.
 - Action Masking. DONE.
 - Simple Network Architecture. DONE.
-- MultiAgent Environment: https://github.com/ray-project/ray/blob/master/rllib/examples/self_play_with_open_spiel.py
+- MultiAgent Environment: https://github.com/ray-project/ray/blob/master/rllib/examples/self_play_with_open_spiel.py. DONE.
 - Network Architecture(?)
+- Scaling.
 
 - Was checking PPO config (vf-layers). added shuffle_sequences
 ray-rl/ray_simple.py:66: DeprecationWarning: `product` is deprecated as of NumPy 1.25.0, and will be removed in NumPy 2.0. Please use `prod` instead.
