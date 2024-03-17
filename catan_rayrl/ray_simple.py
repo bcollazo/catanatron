@@ -549,8 +549,6 @@ config = (
 
 mlflow_tracking_uri = "http://127.0.0.1:8080"
 
-hyperopt_search = HyperOptSearch(metric="episode_len_mean", mode="min")
-
 RESUME = "/Users/bcollazo/ray_results/PPO_2024-03-17_12-18-57"
 RESUME = ""
 trainable = "PPO"
@@ -570,7 +568,7 @@ tuner = tune.Tuner(
     tune_config=tune.TuneConfig(
         num_samples=10,
         scheduler=ASHAScheduler(metric="episode_len_mean", mode="min"),
-        search_alg=hyperopt_search,
+        search_alg=HyperOptSearch(metric="episode_len_mean", mode="min"),
     ),
     param_space=config,
 )
