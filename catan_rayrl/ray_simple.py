@@ -517,40 +517,6 @@ def policy_mapping_fn(agent_id, episode, worker, **kwargs):
     return "main" if agent_id == "BLUE" else "random"
 
 
-def apply_self_learning(config):
-    return (
-        config.callbacks(SelfPlayCallback)
-        .environment(env=CatanatronMultiAgentEnv, env_config={"foo": "bar"})
-        .multi_agent(
-            # Initial policy map: Random and PPO. This will be expanded
-            # to more policy snapshots taken from "main" against which "main"
-            # will then play (instead of "random"). This is done in the
-            # custom callback defined above (`SelfPlayCallback`).
-            policies={
-                # Our main policy, we'd like to optimize.
-                "main": PolicySpec(),
-                # An initial random opponent to play against.
-                "random": PolicySpec(policy_class=ValidRandomPolicy),
-            },
-            # Assign agent 0 and 1 randomly to the "main" policy or
-            # to the opponent ("random" at first). Make sure (via episode_id)
-            # that "main" always plays against "random" (and not against
-            # another "main").
-            policy_mapping_fn=policy_mapping_fn,
-            # Always just train the "main" policy.
-            policies_to_train=["main"],
-        )
-        .rl_module(
-            rl_module_spec=MultiAgentRLModuleSpec(
-                module_specs={
-                    "main": SingleAgentRLModuleSpec(),
-                    "random": SingleAgentRLModuleSpec(module_class=RandomRLModule),
-                }
-            ),
-        )
-    )
-
-
 num_layers = [3, 10, 20]
 num_nodes = [64, 128, 256, 512]
 architectures = [[N] * L for N in num_nodes for L in num_layers]
@@ -581,11 +547,21 @@ config = (
         sgd_minibatch_size=1024,
         vf_loss_coeff=tune.grid_search([0.001, 0.01, 1, 10, 100]),
     )
-    .rollouts(num_rollout_workers=4, num_envs_per_worker=1)
+    # .rollouts(num_rollout_workers=4, num_envs_per_worker=1)
     .experimental(_disable_preprocessor_api=True)
+    .callbacks(SelfPlayCallback)
+    .environment(env=CatanatronMultiAgentEnv, env_config={"foo": "bar"})
+    .multi_agent(
+        policies={
+            "main": PolicySpec(),
+            "random": PolicySpec(policy_class=ValidRandomPolicy),
+        },
+        policy_mapping_fn=policy_mapping_fn,
+        policies_to_train=["main"],  # Always just train the "main" policy.
+    )
     # Seems like defaults use the right thing! Use GPU and 6/8 CPUs which sounds good.
+    # .resources()
 )
-apply_self_learning(config)
 # ray.init(num_cpus=0, local_mode=True)
 
 RESUME = "/Users/bcollazo/ray_results/PPO_2024-03-17_12-18-57"
