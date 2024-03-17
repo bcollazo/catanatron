@@ -1,72 +1,52 @@
-import functools
+import random
+from typing import List, Optional, Union
+
+from ray.tune.search.hyperopt import HyperOptSearch
 import numpy as np
 import tensorflow as tf
+import tree  # pip install dm_tree
 from gymnasium import spaces
-import ray
 from ray import train, tune
-from ray.rllib.models import ModelCatalog
-from ray.rllib.models.tf.tf_modelv2 import TFModelV2
-from ray.rllib.models.tf.fcnet import FullyConnectedNetwork
+from ray.air.integrations.mlflow import MLflowLoggerCallback
+from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.utils.framework import try_import_tf
+from ray.rllib.algorithms.ppo.ppo_tf_policy import PPOTF2Policy
+from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
+
+# The new RLModule / Learner API
+from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from catanatron.game import Game, TURNS_LIMIT
-from catanatron.models.player import Color, Player, RandomPlayer
+from ray.rllib.examples.rl_module.random_rl_module import RandomRLModule
+from ray.rllib.models import ModelCatalog
+from ray.rllib.models.tf.fcnet import FullyConnectedNetwork
+from ray.rllib.models.tf.tf_modelv2 import TFModelV2
+
+# from ray.rllib.examples.policy.random_policy import RandomPolicy
+from ray.rllib.policy.policy import Policy, PolicySpec
+from ray.rllib.policy.sample_batch import SampleBatch
+from ray.rllib.utils.annotations import override
+from ray.rllib.utils.framework import try_import_tf
+from ray.rllib.utils.typing import ModelWeights, TensorStructType, TensorType
+from ray.tune.schedulers import ASHAScheduler
+
+from catanatron.game import TURNS_LIMIT, Game
 from catanatron.models.map import build_map
-from catanatron_gym.features import (
-    create_sample,
-    get_feature_ordering,
-)
+from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron_gym.board_tensor_features import (
     create_board_tensor,
     get_channels,
     is_graph_feature,
 )
 from catanatron_gym.envs.catanatron_env import (
-    CatanatronEnv,
     ACTION_SPACE_SIZE,
     HIGH,
     NUM_FEATURES,
+    CatanatronEnv,
+    from_action_space,
     simple_reward,
     to_action_space,
-    from_action_space,
 )
-from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron_gym.envs.catanatron_env import CatanatronEnv
-from catanatron_gym.features import (
-    create_sample,
-    get_feature_ordering,
-)
-from catanatron_gym.board_tensor_features import (
-    create_board_tensor,
-    get_channels,
-    is_graph_feature,
-)
-import numpy as np
-from gymnasium.spaces import Box
-import numpy as np
-import random
-import tree  # pip install dm_tree
-from typing import (
-    List,
-    Optional,
-    Union,
-)
-from ray.rllib.policy.policy import Policy
-from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.utils.annotations import override
-from ray.rllib.utils.typing import ModelWeights, TensorStructType, TensorType
-from ray.rllib.algorithms.callbacks import DefaultCallbacks
-
-# from ray.rllib.examples.policy.random_policy import RandomPolicy
-from ray.rllib.policy.policy import PolicySpec
-from ray.rllib.algorithms.ppo.ppo_tf_policy import PPOTF2Policy
-
-# The new RLModule / Learner API
-from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
-from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
-from ray.rllib.examples.rl_module.random_rl_module import RandomRLModule
-
+from catanatron_gym.features import create_sample, get_feature_ordering
 
 tf1, tf, tfv = try_import_tf()
 
@@ -517,16 +497,14 @@ def policy_mapping_fn(agent_id, episode, worker, **kwargs):
     return "main" if agent_id == "BLUE" else "random"
 
 
-num_layers = [3, 10, 20]
+num_layers = [5, 10, 20]
 num_nodes = [64, 128, 256, 512]
 architectures = [[N] * L for N in num_nodes for L in num_layers]
-architectures = [[128] * 5]
-model_config = {
-    "custom_model": "action_mask_model",
-    "fcnet_hiddens": tune.grid_search(architectures),
-    "fcnet_activation": "relu",
-    "vf_share_layers": True,
-}
+
+# num_layers = 10
+# num_nodes = 256
+# architectures = [[num_nodes] * num_layers]
+
 WIN_RATE_THRESHOLD = 0.7
 MIN_TO_CHECK_SELF_TRAINING = 25
 
@@ -539,13 +517,18 @@ config = (
     # .environment(env=ActionMaskEnv, env_config={"foo": "bar"})
     .framework(framework="tf2", eager_tracing=True)
     .training(
-        gamma=0.99,
-        lr=tune.grid_search([0.0001]),  # 0.00001 might be interesting as well
-        model=model_config,
+        gamma=tune.choice([0.99, 0.999, 0.9999]),
+        lr=tune.choice([0.0001, 0.00001]),
+        model={
+            "custom_model": "action_mask_model",
+            "fcnet_hiddens": tune.choice(architectures),
+            "fcnet_activation": "relu",
+            "vf_share_layers": True,
+        },
         shuffle_sequences=True,
         train_batch_size=20000,  # at least 20 episodes...
         sgd_minibatch_size=1024,
-        vf_loss_coeff=tune.grid_search([0.001, 0.01, 1, 10, 100]),
+        vf_loss_coeff=tune.choice([0.5, 1]),
     )
     # .rollouts(num_rollout_workers=4, num_envs_per_worker=1)
     .experimental(_disable_preprocessor_api=True)
@@ -564,18 +547,38 @@ config = (
 )
 # ray.init(num_cpus=0, local_mode=True)
 
+mlflow_tracking_uri = "http://127.0.0.1:8080"
+
+hyperopt_search = HyperOptSearch(metric="episode_len_mean", mode="min")
+
 RESUME = "/Users/bcollazo/ray_results/PPO_2024-03-17_12-18-57"
 RESUME = ""
 trainable = "PPO"
 tuner = tune.Tuner(
     trainable,
-    run_config=train.RunConfig(stop={"time_total_s": 2 * 60 * 60}),
+    run_config=train.RunConfig(
+        stop={"episode_len_mean": 300, "time_total_s": 30 * 60},
+        name="mlflow",
+        callbacks=[
+            MLflowLoggerCallback(
+                tracking_uri=mlflow_tracking_uri,
+                experiment_name=f"Catanatron",
+                save_artifact=True,
+            )
+        ],
+    ),
+    tune_config=tune.TuneConfig(
+        num_samples=10,
+        scheduler=ASHAScheduler(metric="episode_len_mean", mode="min"),
+        search_alg=hyperopt_search,
+    ),
     param_space=config,
 )
 if RESUME != "":
     tuner.restore(path=RESUME, trainable=trainable)
 
-tuner.fit()
+results = tuner.fit()
+breakpoint()
 
 """
 TODO:
@@ -583,8 +586,11 @@ TODO:
 - Action Masking. DONE.
 - Simple Network Architecture. DONE.
 - MultiAgent Environment: https://github.com/ray-project/ray/blob/master/rllib/examples/self_play_with_open_spiel.py. DONE.
-- Network Architecture(?)
-- Scaling.
+- Allow rep=mixed as param. Network Architecture(?). 
+- Check running from CLI.
+- Find stop criterion
+- Scale simple experiment in AWS.
+- Scale
 
 - Was checking PPO config (vf-layers). added shuffle_sequences
 ray-rl/ray_simple.py:66: DeprecationWarning: `product` is deprecated as of NumPy 1.25.0, and will be removed in NumPy 2.0. Please use `prod` instead.
