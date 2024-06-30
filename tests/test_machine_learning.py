@@ -9,7 +9,6 @@ from catanatron.models.enums import ORE, Action, ActionType, WHEAT, NodeRef
 from catanatron.models.board import Board, get_edges
 from catanatron.models.map import (
     BASE_MAP_TEMPLATE,
-    MINI_MAP_TEMPLATE,
     NUM_EDGES,
     NUM_NODES,
     CatanMap,
@@ -192,29 +191,6 @@ def test_tile_features():
     assert features[f"TILE0_PROBA"] == proba
 
 
-def test_tile_features_in_mini():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-    ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
-
-    features = tile_features(game, players[0].color)
-    haystack = "".join(features.keys())
-    assert "TILE7" not in haystack
-
-
-def test_port_features_in_mini():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-    ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
-
-    features = port_features(game, players[0].color)
-    assert len(features) == 0
-
-
 def test_graph_features():
     players = [
         SimplePlayer(Color.RED),
@@ -239,32 +215,6 @@ def test_graph_features():
     for edge in get_edges():
         assert str(edge) in haystack
     for node in range(NUM_NODES):
-        assert ("NODE" + str(node)) in haystack
-
-
-def test_graph_features_in_mini():
-    players = [
-        SimplePlayer(Color.RED),
-        SimplePlayer(Color.BLUE),
-    ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
-    p0_color = game.state.colors[0]
-    game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
-    game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
-
-    features = graph_features(game, p0_color)
-    assert features[f"NODE3_P0_SETTLEMENT"]
-    assert features[f"EDGE(2, 3)_P0_ROAD"]
-    assert not features[f"NODE3_P1_SETTLEMENT"]
-    assert not features[f"NODE0_P1_SETTLEMENT"]
-    # todo: CHANGE NUM_EDGES
-    assert len(features) == 24 * len(players) * 2 + 30 * len(players)
-    assert sum(features.values()) == 2
-
-    haystack = "".join(features.keys())
-    for edge in get_edges(game.state.board.map.land_nodes):
-        assert str(edge) in haystack
-    for node in range(24):
         assert ("NODE" + str(node)) in haystack
 
 

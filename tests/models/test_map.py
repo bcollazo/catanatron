@@ -1,7 +1,6 @@
 from catanatron import WOOD, BRICK
 from catanatron.models.map import (
     BASE_MAP_TEMPLATE,
-    MINI_MAP_TEMPLATE,
     CatanMap,
     LandTile,
     get_nodes_and_edges,
@@ -21,21 +20,6 @@ def test_node_production_of_same_resource_adjacent_tile():
     }
     result = get_node_counter_production(adjacent_tiles, 1)
     assert result["WOOD"] == DICE_PROBAS[12] + DICE_PROBAS[6] + DICE_PROBAS[8]
-
-
-def test_mini_map_can_be_created():
-    mini = CatanMap.from_template(MINI_MAP_TEMPLATE)
-    assert len(mini.land_tiles) == 7
-    assert len(mini.land_nodes) == 24
-    assert len(mini.tiles_by_id) == 7
-    assert len(mini.ports_by_id) == 0
-    assert len(mini.port_nodes) == 0
-    assert len(mini.adjacent_tiles) == 24
-    assert len(mini.node_production) == 24
-
-    resources = [i.resource for i in mini.land_tiles.values()]
-    assert any(isinstance(i, str) for i in resources)
-    assert any(i is None for i in resources)  # theres one desert
 
 
 def test_base_map_can_be_created():

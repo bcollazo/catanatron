@@ -95,14 +95,6 @@ def test_custom_reward():
     assert reward == 123
 
 
-def test_custom_map():
-    env = gym.make("catanatron_gym:catanatron-v1", config={"map_type": "MINI"})
-    observation, info = env.reset()
-    assert len(env.get_valid_actions()) < 50  # type: ignore
-    assert len(observation) < 614
-    # assert env.action_space.n == 260
-
-
 def test_enemies():
     env = gym.make(
         "catanatron_gym:catanatron-v1",

@@ -5,7 +5,10 @@ from catanatron.json import GameEncoder
 from catanatron.models.player import Color, SimplePlayer, RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron_gym.features import create_sample
-from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
+from catanatron_experimental.machine_learning.players.minimax import (
+    AlphaBetaPlayer,
+    SameTurnAlphaBetaPlayer,
+)
 
 RANDOM_SEED = 0
 
@@ -62,6 +65,7 @@ def test_simpleplayer_speed(benchmark):
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players, seed=RANDOM_SEED)
+
     def _play_game(game):
         for _ in range(100):
             game.play_tick()
@@ -78,6 +82,7 @@ def test_weightedrandom_speed(benchmark):
         WeightedRandomPlayer(Color.ORANGE),
     ]
     game = Game(players, seed=RANDOM_SEED)
+
     def _play_game(game):
         for _ in range(100):
             game.play_tick()
@@ -94,6 +99,7 @@ def test_alphabeta_speed(benchmark):
         AlphaBetaPlayer(Color.ORANGE),
     ]
     game = Game(players, seed=RANDOM_SEED)
+
     def _play_game(game):
         for _ in range(100):
             game.play_tick()
@@ -110,6 +116,7 @@ def test_same_turn_alphabeta_speed(benchmark):
         SameTurnAlphaBetaPlayer(Color.ORANGE),
     ]
     game = Game(players, seed=RANDOM_SEED)
+
     def _play_game(game):
         for _ in range(100):
             game.play_tick()

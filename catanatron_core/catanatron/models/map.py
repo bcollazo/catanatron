@@ -105,37 +105,6 @@ class MapTemplate:
     ]
 
 
-# Small 7-tile map, no ports.
-MINI_MAP_TEMPLATE = MapTemplate(
-    [3, 4, 5, 6, 8, 9, 10],
-    [],
-    [WOOD, None, BRICK, SHEEP, WHEAT, WHEAT, ORE],
-    {
-        # center
-        (0, 0, 0): LandTile,
-        # first layer
-        (1, -1, 0): LandTile,
-        (0, -1, 1): LandTile,
-        (-1, 0, 1): LandTile,
-        (-1, 1, 0): LandTile,
-        (0, 1, -1): LandTile,
-        (1, 0, -1): LandTile,
-        # second layer
-        (2, -2, 0): Water,
-        (1, -2, 1): Water,
-        (0, -2, 2): Water,
-        (-1, -1, 2): Water,
-        (-2, 0, 2): Water,
-        (-2, 1, 1): Water,
-        (-2, 2, 0): Water,
-        (-1, 2, -1): Water,
-        (0, 2, -2): Water,
-        (1, 1, -2): Water,
-        (2, 0, -2): Water,
-        (2, -1, -1): Water,
-    },
-)
-
 """Standard 4-player map"""
 BASE_MAP_TEMPLATE = MapTemplate(
     [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12],
@@ -553,10 +522,8 @@ TOURNAMENT_MAP_TILES = initialize_tiles(
 TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
 
 
-def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
+def build_map(map_type: Literal["BASE", "TOURNAMENT"]):
     if map_type == "TOURNAMENT":
         return TOURNAMENT_MAP  # this assumes map is read-only data struct
-    elif map_type == "MINI":
-        return CatanMap.from_template(MINI_MAP_TEMPLATE)
     else:
         return CatanMap.from_template(BASE_MAP_TEMPLATE)
