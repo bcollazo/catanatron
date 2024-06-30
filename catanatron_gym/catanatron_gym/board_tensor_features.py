@@ -10,7 +10,6 @@ from catanatron.models.enums import (
     CITY,
     ROAD,
 )
-from catanatron.models.coordinate_system import offset_to_cube
 from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.map import number_probability
 from catanatron_gym.features import get_feature_ordering, iter_players
@@ -105,6 +104,12 @@ def init_tile_coordinate_map():
     where i,j is top-left of 3x6 matrix and respect (WIDTH, HEIGHT) ordering
     """
     tile_map = {}
+
+    def offset_to_cube(offset):
+        x = offset[0] - (offset[1] - (offset[1] & 1)) / 2
+        z = offset[1]
+        y = -x - z
+        return (x, y, z)
 
     width_step = 4  # its really 5, but tiles overlap a column
     height_step = 2  # same here, height is 3, but they overlap a row

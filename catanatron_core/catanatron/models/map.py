@@ -1,10 +1,10 @@
 import typing
 from dataclasses import dataclass
 import random
+from enum import Enum
 from collections import Counter, defaultdict
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
 
-from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.enums import (
     FastResource,
     WOOD,
@@ -25,6 +25,26 @@ EdgeId = Tuple[int, int]
 NodeId = int
 Coordinate = Tuple[int, int, int]
 
+class Direction(Enum):
+    EAST = "EAST"
+    SOUTHEAST = "SOUTHEAST"
+    SOUTHWEST = "SOUTHWEST"
+    WEST = "WEST"
+    NORTHWEST = "NORTHWEST"
+    NORTHEAST = "NORTHEAST"
+
+# We'll be using Cube coordinates in https://math.stackexchange.com/questions/2254655/hexagon-grid-coordinate-system
+UNIT_VECTORS = {
+    # X-axis
+    Direction.NORTHEAST: (1, 0, -1),
+    Direction.SOUTHWEST: (-1, 0, 1),
+    # Y-axis
+    Direction.NORTHWEST: (0, 1, -1),
+    Direction.SOUTHEAST: (0, -1, 1),
+    # Z-axis
+    Direction.EAST: (1, -1, 0),
+    Direction.WEST: (-1, 1, 0),
+}
 
 @dataclass
 class LandTile:
@@ -401,6 +421,9 @@ def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):
         EdgeRef.NORTHWEST: None,
         EdgeRef.NORTHEAST: None,
     }
+
+    def add(acoord, bcoord):
+        return tuple(x + y for x, y in zip(acoord, bcoord))
 
     # Find pre-existing ones
     neighbor_tiles = [(add(coordinate, UNIT_VECTORS[d]), d) for d in Direction]
