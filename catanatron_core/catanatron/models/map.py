@@ -3,7 +3,18 @@ from dataclasses import dataclass
 import random
 from enum import Enum
 from collections import Counter, defaultdict
-from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
+from typing import (
+    Dict,
+    FrozenSet,
+    List,
+    Literal,
+    Mapping,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    Optional,
+)
 
 from catanatron.models.enums import (
     FastResource,
@@ -25,6 +36,7 @@ EdgeId = Tuple[int, int]
 NodeId = int
 Coordinate = Tuple[int, int, int]
 
+
 class Direction(Enum):
     EAST = "EAST"
     SOUTHEAST = "SOUTHEAST"
@@ -32,6 +44,7 @@ class Direction(Enum):
     WEST = "WEST"
     NORTHWEST = "NORTHWEST"
     NORTHEAST = "NORTHEAST"
+
 
 # We'll be using Cube coordinates in https://math.stackexchange.com/questions/2254655/hexagon-grid-coordinate-system
 UNIT_VECTORS = {
@@ -46,11 +59,12 @@ UNIT_VECTORS = {
     Direction.WEST: (-1, 1, 0),
 }
 
+
 @dataclass
 class LandTile:
     id: int
-    resource: Union[FastResource, None]  # None means desert tile
-    number: Union[int, None]  # None if desert
+    resource: Optional[FastResource]  # None means desert tile
+    number: Optional[int]  # None if desert
     nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
     edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
 
@@ -62,7 +76,7 @@ class LandTile:
 @dataclass
 class Port:
     id: int
-    resource: Union[FastResource, None]  # None means desert tile
+    resource: Optional[FastResource]  # None means desert tile
     direction: Direction
     nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
     edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
@@ -84,8 +98,8 @@ Tile = Union[LandTile, Port, Water]
 @dataclass(frozen=True)
 class MapTemplate:
     numbers: List[int]
-    port_resources: List[Union[FastResource, None]]
-    tile_resources: List[Union[FastResource, None]]
+    port_resources: List[Optional[FastResource]]
+    tile_resources: List[Optional[FastResource]]
     topology: Mapping[
         Coordinate, Union[Type[LandTile], Type[Water], Tuple[Type[Port], Direction]]
     ]
@@ -219,7 +233,7 @@ class CatanMap:
         self,
         tiles: Dict[Coordinate, Tile] = dict(),
         land_tiles: Dict[Coordinate, LandTile] = dict(),
-        port_nodes: Dict[Union[FastResource, None], Set[int]] = dict(),
+        port_nodes: Dict[Optional[FastResource], Set[int]] = dict(),
         land_nodes: FrozenSet[NodeId] = frozenset(),
         adjacent_tiles: Dict[int, List[LandTile]] = dict(),
         node_production: Dict[NodeId, Counter] = dict(),
@@ -269,14 +283,14 @@ class CatanMap:
 
 def init_port_nodes_cache(
     tiles: Dict[Coordinate, Tile]
-) -> Dict[Union[FastResource, None], Set[int]]:
+) -> Dict[Optional[FastResource], Set[int]]:
     """Initializes board.port_nodes cache.
 
     Args:
         tiles (Dict[Coordinate, Tile]): initialized tiles datastructure
 
     Returns:
-        Dict[Union[FastResource, None], Set[int]]: Mapping from FastResource to node_ids that
+        Dict[Optional[FastResource], Set[int]]: Mapping from FastResource to node_ids that
             enable port trading. None key represents 3:1 port.
     """
     port_nodes = defaultdict(set)

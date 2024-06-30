@@ -1,7 +1,7 @@
 import os
 import importlib.util
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal, Optional
 
 import click
 from rich.console import Console
@@ -193,7 +193,7 @@ def simulate(
 class OutputOptions:
     """Class to keep track of output CLI flags"""
 
-    output: Union[str, None] = None  # path to store files
+    output: Optional[str] = None  # path to store files
     csv: bool = False
     json: bool = False
     db: bool = False

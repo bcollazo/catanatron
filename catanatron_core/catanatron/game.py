@@ -5,7 +5,7 @@ Contains Game class which is a thin-wrapper around the State class.
 import uuid
 import random
 import sys
-from typing import List, Union, Optional
+from typing import List, Optional
 
 from catanatron.models.enums import Action, ActionPrompt, ActionType
 from catanatron.state import State, apply_action
@@ -167,11 +167,11 @@ class Game:
 
         return apply_action(self.state, action)
 
-    def winning_color(self) -> Union[Color, None]:
+    def winning_color(self) -> Optional[Color]:
         """Gets winning color
 
         Returns:
-            Union[Color, None]: Might be None if game truncated by TURNS_LIMIT
+            Optional[Color]: Might be None if game truncated by TURNS_LIMIT
         """
         result = None
         for color in self.state.colors:
