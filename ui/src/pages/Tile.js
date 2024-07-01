@@ -60,7 +60,7 @@ export default function Tile({ center, coordinate, tile, size }) {
     contents = (
       <NumberToken size={size}>
         <div>{tile.number}</div>
-        <div class="pips">{numberToPips(tile.number)}</div>
+        <div className="pips">{numberToPips(tile.number)}</div>
       </NumberToken>
     );
     resourceTile = {
