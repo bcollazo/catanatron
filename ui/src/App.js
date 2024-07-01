@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
-import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
+import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { blue, green } from "@material-ui/core/colors";
 import Fade from "@material-ui/core/Fade";
 
@@ -11,7 +11,7 @@ import { StateProvider } from "./store";
 
 import "./App.scss";
 
-const theme = createMuiTheme({
+const theme = createTheme({
   palette: {
     primary: {
       main: blue[900],
