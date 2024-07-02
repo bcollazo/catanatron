@@ -65,7 +65,7 @@ function buildEdgeActions(state) {
     buildInitialRoadActions.forEach((action) => {
       edgeActions[action[2]] = action;
     });
-  } else if (state.isBuildingRoad) {
+  } else if (state.isBuildingRoad || state.isRoadBuilding) {
     state.gameState.current_playable_actions
       .filter((action) => action[1] === "BUILD_ROAD")
       .forEach((action) => {

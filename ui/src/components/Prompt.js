@@ -56,6 +56,9 @@ export function humanizeAction(gameState, action) {
     case "PLAY_KNIGHT_CARD": {
       return `${player} PLAYED KNIGHT CARD`;
     }
+    case "PLAY_ROAD_BUILDING": {
+      return `${player} PLAYED ROAD BUILDING`
+    }
     case "PLAY_YEAR_OF_PLENTY": {
       return `${player} YEAR OF PLENTY ${action[2]}`;
     }

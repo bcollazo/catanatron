@@ -8,6 +8,8 @@ const initialState = {
   isBuildingSettlement: false,
   isBuildingCity: false,
   isLeftDrawerOpen: false,
+  isRoadBuilding: false,
+  freeRoadsAvailable: 0,
 };
 const store = createContext(initialState);
 const { Provider } = store;
@@ -25,6 +27,8 @@ const StateProvider = ({ children }) => {
           isBuildingRoad: false,
           isBuildingSettlement: false,
           isBuildingCity: false,
+          isRoadBuilding: state.isRoadBuilding && state.freeRoadsAvailable > 0,
+          freeRoadsAvailable: state.isRoadBuilding ? state.freeRoadsAvailable - 1 : 0,
         };
       case ACTIONS.SET_IS_BUILDING_ROAD:
         return { ...state, isBuildingRoad: true };
@@ -32,6 +36,12 @@ const StateProvider = ({ children }) => {
         return { ...state, isBuildingSettlement: true };
       case ACTIONS.SET_IS_BUILDING_CITY:
         return { ...state, isBuildingCity: true };
+      case ACTIONS.SET_IS_ROAD_BUILDING:
+        return {
+          ...state, 
+          isRoadBuilding: true, 
+          freeRoadsAvailable: 2 
+        };
       default:
         throw new Error("Unknown Reducer Action: " + action.type);
     }
