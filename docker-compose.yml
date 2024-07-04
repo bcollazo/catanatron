@@ -7,6 +7,11 @@ services:
       - POSTGRES_DB=catanatron_db
     ports:
       - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d postgresql://catanatron:victorypoint@db:5432/catanatron_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   server:
     image: bcollazo/catanatron-server:latest
     build:
@@ -21,7 +26,8 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - "db"
+      db:
+        condition: service_healthy
   react-ui:
     image: bcollazo/catanatron-react-ui:latest
     build: ./ui
