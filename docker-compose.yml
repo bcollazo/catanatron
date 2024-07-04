@@ -13,7 +13,6 @@ services:
       timeout: 5s
       retries: 5
   server:
-    image: bcollazo/catanatron-server:latest
     build:
       context: .
       dockerfile: Dockerfile.web
@@ -30,7 +29,6 @@ services:
       db:
         condition: service_healthy
   react-ui:
-    image: bcollazo/catanatron-react-ui:latest
     build: ./ui
     ports:
       - 3000:3000
