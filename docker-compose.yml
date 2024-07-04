@@ -23,6 +23,7 @@ services:
     ports:
       - 5000:5000
     stdin_open: true
+    restart: always
     volumes:
       - .:/app
     depends_on:
