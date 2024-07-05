@@ -65,6 +65,13 @@ function PlayButtons() {
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
   }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
+  const playKnightCard = useCallback(async () => {
+    const action = [humanColor, "PLAY_KNIGHT_CARD", null];
+    const gameState = await postAction(gameId, action);
+    dispatch({ type: ACTIONS.PLAY_KNIGHT_CARD });
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+    dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+  }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
   const useItems = [
     {
       label: "Monopoly",
@@ -82,6 +89,7 @@ function PlayButtons() {
     {
       label: "Knight",
       disabled: !playableDevCardTypes.has("PLAY_KNIGHT_CARD"),
+      onClick: playKnightCard,
     },
   ];
 

@@ -42,6 +42,8 @@ const StateProvider = ({ children }) => {
           isRoadBuilding: true, 
           freeRoadsAvailable: 2 
         };
+      case ACTIONS.PLAY_KNIGHT_CARD:
+        return { ...state }
       default:
         throw new Error("Unknown Reducer Action: " + action.type);
     }
