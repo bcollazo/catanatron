@@ -35,12 +35,14 @@ export default function Board({
   height,
   buildOnNodeClick,
   buildOnEdgeClick,
+  handleTileClick,
   nodeActions,
   edgeActions,
   replayMode,
   gameState,
   isMobile,
   show,
+  isMovingRobber,
 }) {
   // TODO: Keep in sync with CSS
   const containerHeight = height - 144 - 38 - 40;
@@ -58,6 +60,8 @@ export default function Board({
       coordinate={coordinate}
       tile={tile}
       size={size}
+      flashing={isMovingRobber}
+      onClick={() => handleTileClick(coordinate)}
     />
   ));
   const nodes = Object.values(gameState.nodes).map(

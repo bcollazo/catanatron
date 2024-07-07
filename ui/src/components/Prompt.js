@@ -16,7 +16,8 @@ function findTileById(gameState, tileId) {
 }
 
 function getTileString(tile) {
-  return `${tile.tile.number} ${tile.tile.resource}`;
+  const { number = "THE", resource = "DESERT" } = tile.tile;
+  return `${number} ${resource}`;
 }
 
 function getShortTileString(tileTile) {
@@ -65,7 +66,8 @@ export function humanizeAction(gameState, action) {
     case "MOVE_ROBBER": {
       const tile = findTileByCoordinate(gameState, action[2][0]);
       const tileString = getTileString(tile);
-      return `${player} ROBBED ${tileString} (STOLE ${action[2][2]})`;
+      const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : '';
+      return `${player} ROBBED ${tileString}${stolenResource}`;
     }
     case "MARITIME_TRADE": {
       const label = humanizeTradeAction(action);

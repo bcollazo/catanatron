@@ -10,6 +10,7 @@ const initialState = {
   isLeftDrawerOpen: false,
   isRoadBuilding: false,
   freeRoadsAvailable: 0,
+  isMovingRobber: false,
 };
 const store = createContext(initialState);
 const { Provider } = store;
@@ -29,6 +30,7 @@ const StateProvider = ({ children }) => {
           isBuildingCity: false,
           isRoadBuilding: state.isRoadBuilding && state.freeRoadsAvailable > 0,
           freeRoadsAvailable: state.isRoadBuilding ? state.freeRoadsAvailable - 1 : 0,
+          isMovingRobber: false,
         };
       case ACTIONS.SET_IS_BUILDING_ROAD:
         return { ...state, isBuildingRoad: true };
@@ -44,6 +46,8 @@ const StateProvider = ({ children }) => {
         };
       case ACTIONS.PLAY_KNIGHT_CARD:
         return { ...state }
+      case ACTIONS.SET_IS_MOVING_ROBBER:
+        return { ...state, isMovingRobber: true }
       default:
         throw new Error("Unknown Reducer Action: " + action.type);
     }

@@ -36,7 +36,7 @@ function DrawerContent({ gameState }) {
           .slice()
           .reverse()
           .map((action, i) => (
-            <div key={i} className={cn("action foreground", action)}>
+            <div key={i} className={cn("action foreground", action[0])}>
               {humanizeAction(gameState, action)}
             </div>
           ))}

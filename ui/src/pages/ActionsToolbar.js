@@ -51,7 +51,7 @@ function PlayButtons() {
     gameState.current_prompt === "PLAY_TURN" &&
     !gameState.player_state[`${key}_HAS_ROLLED`];
   const isDiscard = gameState.current_prompt === "DISCARD";
-  const isMove = gameState.current_prompt === "MOVE_ROBBER";
+  const isMoveRobber = gameState.current_prompt === "MOVE_ROBBER";
   const playableDevCardTypes = new Set(
     gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
@@ -153,6 +153,9 @@ function PlayButtons() {
     };
   });
 
+  const setIsMovingRobber = useCallback(() => {
+    dispatch({ type: ACTIONS.SET_IS_MOVING_ROBBER });
+  }, [dispatch]);
   const rollAction = carryOutAction([humanColor, "ROLL", null]);
   const proceedAction = carryOutAction();
   const endTurnAction = carryOutAction([humanColor, "END_TURN", null]);
@@ -190,12 +193,14 @@ function PlayButtons() {
         onClick={
           isRoll
             ? rollAction
-            : isDiscard || isMove
+            : isDiscard
             ? proceedAction
+            : isMoveRobber
+            ? setIsMovingRobber
             : endTurnAction
         }
       >
-        {isRoll ? "ROLL" : isDiscard ? "DISCARD" : isMove ? "ROB" : "END"}
+        {isRoll ? "ROLL" : isDiscard ? "DISCARD" : isMoveRobber ? "ROB" : "END"}
       </Button>
     </>
   );
