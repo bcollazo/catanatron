@@ -112,6 +112,7 @@ class Game:
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
             self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.state_index = 0
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
@@ -130,6 +131,7 @@ class Game:
             accumulator.before(self)
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
             self.play_tick(decide_fn=decide_fn, accumulators=accumulators)
+            self.state_index += 1
         for accumulator in accumulators:
             accumulator.after(self)
         return self.winning_color()

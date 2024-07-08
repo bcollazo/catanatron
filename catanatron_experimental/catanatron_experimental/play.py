@@ -29,7 +29,7 @@ from catanatron_experimental.cli.cli_players import (
 from catanatron_experimental.cli.accumulators import (
     JsonDataAccumulator,
     CsvDataAccumulator,
-    DatabaseAccumulator,
+    PickleAccumulator,
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
@@ -90,12 +90,11 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     "--csv", default=False, is_flag=True, help="Save game data in CSV format."
 )
 @click.option(
-    "--db",
+    "--pickle",
     default=False,
     is_flag=True,
     help="""
-        Save game in PGSQL database.
-        Expects docker-compose provided database to be up and running.
+        Save game states as local pickle files.
         This allows games to be watched.
         """,
 )
@@ -135,7 +134,7 @@ def simulate(
     output,
     json,
     csv,
-    db,
+    pickle,
     config_discard_limit,
     config_vps_to_win,
     config_map,
@@ -151,7 +150,7 @@ def simulate(
         catanatron-play --players=R,R,R,R --num=1000\n
         catanatron-play --players=W,W,R,R --num=50000 --output=data/ --csv\n
         catanatron-play --players=VP,F --num=10 --output=data/ --json\n
-        catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
+        catanatron-play --players=W,F,AB:3 --num=1 --csv --json --pickle --quiet
     """
     if code:
         abspath = os.path.abspath(code)
@@ -178,7 +177,7 @@ def simulate(
                 players.append(player)
                 break
 
-    output_options = OutputOptions(output, csv, json, db)
+    output_options = OutputOptions(output, csv, json, pickle)
     game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
         num,
@@ -196,7 +195,7 @@ class OutputOptions:
     output: Union[str, None] = None  # path to store files
     csv: bool = False
     json: bool = False
-    db: bool = False
+    pickle: bool = False
 
 
 @dataclass(frozen=True)
@@ -268,8 +267,8 @@ def play_batch(
         accumulators.append(CsvDataAccumulator(output_options.output))
     if output_options.output and output_options.json:
         accumulators.append(JsonDataAccumulator(output_options.output))
-    if output_options.db:
-        accumulators.append(DatabaseAccumulator())
+    if output_options.pickle:
+        accumulators.append(PickleAccumulator())
     for accumulator_class in CUSTOM_ACCUMULATORS:
         accumulators.append(accumulator_class(players=players, game_config=game_config))
 
@@ -292,7 +291,7 @@ def play_batch(
     for player in players:
         table.add_column(f"{player.color.value} VP", justify="right")
     table.add_column("WINNER")
-    if output_options.db:
+    if output_options.pickle:
         table.add_column("LINK", overflow="fold")
 
     with Progress(
@@ -326,7 +325,7 @@ def play_batch(
                     points = get_actual_victory_points(game.state, player.color)
                     row.append(str(points))
                 row.append(rich_color(winning_color))
-                if output_options.db:
+                if output_options.pickle:
                     row.append(accumulators[-1].link)
 
                 table.add_row(*row)

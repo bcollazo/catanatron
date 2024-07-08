@@ -15,8 +15,7 @@ from catanatron.state_functions import (
     get_player_buildings,
 )
 from catanatron.models.enums import VICTORY_POINT, SETTLEMENT, CITY
-from catanatron_server.models import database_session, upsert_game_state
-from catanatron_server.utils import ensure_link
+from catanatron_server.models import serialize_game_state, save_game_metadata
 from catanatron_experimental.utils import formatSecs
 from catanatron_experimental.machine_learning.utils import (
     get_discounted_return,
@@ -137,26 +136,18 @@ class StatisticsAccumulator(GameAccumulator):
         return sum(self.durations) / len(self.durations)
 
 
-class StepDatabaseAccumulator(GameAccumulator):
-    """
-    Saves a game state to database for each tick.
-    Slows game ~1s per tick.
-    """
+class PickleAccumulator(GameAccumulator):
+    """Saves each game state to local pickle file"""
+    def before(self, game_before):
+        serialize_game_state(game_before, game_before.state_index)
 
-    def before(self, game):
-        with database_session() as session:
-            upsert_game_state(game, session)
-
-    def step(self, game):
-        with database_session() as session:
-            upsert_game_state(game, session)
-
-
-class DatabaseAccumulator(GameAccumulator):
-    """Saves last game state to database"""
+    def step(self, game_before_action, action):
+        serialize_game_state(game_before_action, game_before_action.state_index)
 
     def after(self, game):
-        self.link = ensure_link(game)
+        serialize_game_state(game, game.state_index)
+        save_game_metadata(game)
+        self.link = f"http://localhost:3000/games/{game.id}/states/{game.state_index}"
 
 
 class JsonDataAccumulator(GameAccumulator):
