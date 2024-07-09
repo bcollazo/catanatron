@@ -41,7 +41,7 @@ def post_game_endpoint():
         "state_index": game.state_index
         })
 
-
+# get game state by uuid and state_index
 @bp.route("/games/<string:game_id>/states/<string:state_index>", methods=("GET",))
 def get_game_endpoint(game_id, state_index):
     state_index = None if state_index == "latest" else int(state_index)
@@ -59,7 +59,7 @@ def get_game_endpoint(game_id, state_index):
 @bp.route("/games/<string:game_id>/states/<string:state_index>/actions", methods=["POST"])
 def post_action_endpoint(game_id, state_index):
     state_index = None if state_index == "latest" else int(state_index)
-    
+
     game = load_game_state(game_id, state_index)
     if game is None:
         abort(404, description="Resource not found")
@@ -149,21 +149,6 @@ def get_info():
         "games_uuid": games_uuid
         })
 
-
-# get game state by uuid and state_index
-@bp.route(
-    "/games/<string:game_id>/states/<int:state_index>/info", methods=["GET"]
-)
-def get_one_game_state(game_id, state_index):
-    game_state = load_game_state(game_id, state_index)
-    if game_state is None:
-        abort(404, description="Resource not found")
-
-    return Response(
-        response=json.dumps(game_state, cls=GameEncoder),
-        status=200,
-        mimetype="application/json",
-    )
 
 # @app.route("/games/<string:game_id>/value-function", methods=["GET"])
 # def get_game_value_function(game_id):
