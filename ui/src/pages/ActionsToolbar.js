@@ -19,6 +19,7 @@ import Popper from "@material-ui/core/Popper";
 import MenuList from "@material-ui/core/MenuList";
 import SimCardIcon from "@material-ui/icons/SimCard";
 import { useParams } from "react-router";
+import {useHistory} from "react-router-dom";
 
 import { ResourceCards } from "../components/PlayerStateBox";
 import Prompt, { humanizeTradeAction } from "../components/Prompt";
@@ -192,6 +193,8 @@ export default function ActionsToolbar({
   replayMode,
 }) {
   const { state, dispatch } = useContext(store);
+  const { gameId, stateIndex } = useParams();
+  const history = useHistory();
 
   const openLeftDrawer = useCallback(() => {
     dispatch({
@@ -204,6 +207,19 @@ export default function ActionsToolbar({
     state.gameState.current_color
   );
   const humanColor = getHumanColor(state.gameState);
+
+  const loadPreviousState = async () => {
+    const totalStates = parseInt(state.gameMetadata.game_states_count);
+    const previousState = stateIndex === "latest" ? totalStates - 1 : parseInt(stateIndex) - 1; 
+    // navigate to previous state using router
+    history.push(`/games/${gameId}/states/${previousState}`);
+  };
+
+  const loadNextState = async () => {
+    const nextState = stateIndex === "latest" ? 0 : parseInt(stateIndex) + 1; 
+    // navigate to next state using router
+    history.push(`/games/${gameId}/states/${nextState}`);
+  };
   return (
     <>
       <div className="state-summary">
@@ -238,6 +254,19 @@ export default function ActionsToolbar({
 
         {/* <Button onClick={zoomIn}>Zoom In</Button>
       <Button onClick={zoomOut}>Zoom Out</Button> */}
+
+      <Button className="State-button" disabled={parseInt(stateIndex) == 0} onClick={loadPreviousState}>
+        Previous
+      </Button>
+      <Button className="State-button" disabled={state.gameState.winning_color} onClick={loadNextState}>
+        Next
+      </Button>
+
+      {/* text input for selecting gamestates */}
+      <input type="number" className="State-picker" value={parseInt(stateIndex)} onChange={(e) => {
+        // navigate to stateIndex using router
+        history.push(`/games/${gameId}/states/${e.target.value}`);
+      }}/> out of {state.gameMetadata?.game_states_count - 1}
       </div>
     </>
   );

@@ -3,6 +3,7 @@ import ACTIONS from "./actions";
 
 const initialState = {
   gameState: null,
+  gameMetadata: null,
   // UI
   isBuildingRoad: false,
   isBuildingSettlement: false,
@@ -26,6 +27,8 @@ const StateProvider = ({ children }) => {
           isBuildingSettlement: false,
           isBuildingCity: false,
         };
+      case ACTIONS.SET_GAME_METADATA:
+        return { ...state, gameMetadata: action.data };
       case ACTIONS.SET_IS_BUILDING_ROAD:
         return { ...state, isBuildingRoad: true };
       case ACTIONS.SET_IS_BUILDING_SETTLEMENT:

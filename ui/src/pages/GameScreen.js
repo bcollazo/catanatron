@@ -12,7 +12,7 @@ import "./GameScreen.scss";
 import LeftDrawer from "../components/LeftDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { getState, postAction } from "../utils/apiClient";
+import { getMetadata, getState, postAction } from "../utils/apiClient";
 import { dispatchSnackbar } from "../components/Snackbar";
 import { getHumanColor } from "../utils/stateUtils";
 
@@ -33,6 +33,11 @@ function GameScreen({ replayMode }) {
     (async () => {
       const gameState = await getState(gameId, stateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+    })();
+
+    (async () => {
+      const gameMetadata = await getMetadata(gameId);
+      dispatch({ type: ACTIONS.SET_GAME_METADATA, data: gameMetadata });
     })();
   }, [gameId, stateIndex, dispatch]);
 
