@@ -255,7 +255,7 @@ export default function ActionsToolbar({
         {/* <Button onClick={zoomIn}>Zoom In</Button>
       <Button onClick={zoomOut}>Zoom Out</Button> */}
 
-      <Button className="State-button" disabled={parseInt(stateIndex) == 0} onClick={loadPreviousState}>
+      <Button className="State-button" disabled={parseInt(stateIndex) === 0} onClick={loadPreviousState}>
         Previous
       </Button>
       <Button className="State-button" disabled={state.gameState.winning_color} onClick={loadNextState}>
