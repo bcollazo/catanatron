@@ -136,3 +136,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+game_states_pickle/

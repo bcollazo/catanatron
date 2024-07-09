@@ -95,11 +95,11 @@ To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install
 docker-compose up
 ```
 
-You can now use the `--db` flag to make the catanatron-play simulator save
-the game in the database for inspection via the web server.
+You can now use the `--pickle` flag to make the catanatron-play simulator save
+the game as local pickle files for inspection via the web server.
 
 ```
-catanatron-play --players=W,W,W,W --db --num=1
+catanatron-play --players=W,W,W,W --pickle --num=1
 ```
 
 NOTE: A great contribution would be to make the Web UI allow to step forwards and backwards in a game to inspect it (ala chess.com).
@@ -159,7 +159,7 @@ open_link(game)  # opens game in browser
 
 The code is divided in the following 5 components (folders):
 
-- **catanatron**: A pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see `setup.py`) and can be used as a Python package. See the documentation for the package here: https://catanatron.readthedocs.io/.
+- **catanatron**: A pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see `setup.py`) and can be used as a Python package. See the documentation for the package here: <https://catanatron.readthedocs.io/>.
 
 - **catanatron_server**: Contains a Flask web server in order to serve
   game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. It defaults to using an ephemeral in-memory sqlite database. Also pip-installable (not publised in PyPi however).
@@ -168,7 +168,7 @@ The code is divided in the following 5 components (folders):
 
 - **catantron_experimental**: A collection of unorganized scripts with contain many failed attempts at finding the best possible bot. Its ok to break these scripts. Its pip-installable. Exposes a `catanatron-play` command-line script that can be used to play games in bulk, create machine learning datasets of games, and more!
 
-- **ui**: A React web UI to render games. This is helpful for debugging the core implementation. We decided to use the browser as a randering engine (as opposed to the terminal or a desktop GUI) because of HTML/CSS's ubiquitousness and the ability to use modern animation libraries in the future (https://www.framer.com/motion/ or https://www.react-spring.io/).
+- **ui**: A React web UI to render games. This is helpful for debugging the core implementation. We decided to use the browser as a randering engine (as opposed to the terminal or a desktop GUI) because of HTML/CSS's ubiquitousness and the ability to use modern animation libraries in the future (<https://www.framer.com/motion/> or <https://www.react-spring.io/>).
 
 ## AI Bots Leaderboard
 
@@ -264,7 +264,7 @@ docker run -it -p 5000:5000 bcollazo/catanatron-server
 
 ### PostgreSQL Database
 
-Make sure you have `docker-compose` installed (https://docs.docker.com/compose/install/).
+Make sure you have `docker-compose` installed (<https://docs.docker.com/compose/install/>).
 
 ```
 docker-compose up

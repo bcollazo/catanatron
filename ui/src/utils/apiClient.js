@@ -14,6 +14,11 @@ export async function getState(gameId, stateIndex = "latest") {
   return response.data;
 }
 
+export async function getMetadata(gameId) {
+  const response = await axios.get(`${API_URL}/api/games/${gameId}/info`);
+  return response.data;
+}
+
 /** action=undefined means bot action */
 export async function postAction(gameId, action = undefined) {
   const response = await axios.post(

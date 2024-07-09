@@ -53,4 +53,41 @@ $btn-height: 60px;
       margin: 0;
     }
   }
+
+  .State-button {
+    background-color: white;
+    color: black;
+    border-radius: 5px;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: capitalize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 10px;
+    height: 40px;
+    &:hover {
+      background-color: gray;
+    }
+  }
+
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Firefox */
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  .State-picker {
+    width: 40px;
+    height: 20px;
+  }
 }

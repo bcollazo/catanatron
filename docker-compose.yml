@@ -1,23 +1,9 @@
 services:
-  db:
-    image: postgres
-    environment:
-      - POSTGRES_USER=catanatron
-      - POSTGRES_PASSWORD=victorypoint
-      - POSTGRES_DB=catanatron_db
-    ports:
-      - 5432:5432
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d postgresql://catanatron:victorypoint@db:5432/catanatron_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
   server:
     build:
       context: .
       dockerfile: Dockerfile.web
     environment:
-      - DATABASE_URL=postgresql://catanatron:victorypoint@db:5432/catanatron_db
       - PYTHONUNBUFFERED=1
     ports:
       - 5000:5000
@@ -25,9 +11,6 @@ services:
     restart: always
     volumes:
       - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
   react-ui:
     build: ./ui
     ports:
@@ -36,3 +19,5 @@ services:
     volumes:
       - /app/node_modules
       - ./ui:/app
+    environment:
+      CHOKIDAR_USEPOLLING: "true" # Required for hot reloading in Windows

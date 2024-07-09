@@ -1,87 +1,87 @@
 import os
 import json
 import pickle
-from contextlib import contextmanager
 
-from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session
-from flask_sqlalchemy import SQLAlchemy
+pickle_game_states_dir = "game_states_pickle"
 
-from catanatron.json import GameEncoder
+# retrieve uuid of all games
+def get_games_info():
+    # list all folders in game_states_pickle
+    games_uuid = [name for name in os.listdir(pickle_game_states_dir) if os.path.isdir(os.path.join(pickle_game_states_dir, name))]
+    # count number of folders in game_states_pickle
+    game_count = len(games_uuid)
 
-# Using approach from: https://stackoverflow.com/questions/41004540/using-sqlalchemy-models-in-and-out-of-flask/41014157
-metadata = MetaData()
-Base = declarative_base(metadata=metadata)
-
-
-class GameState(Base):
-    __tablename__ = "game_states"
-
-    id = Column(Integer, primary_key=True)
-    uuid = Column(String(64), nullable=False)
-    state_index = Column(Integer, nullable=False)
-    state = Column(String, nullable=False)
-    pickle_data = Column(LargeBinary, nullable=False)
-
-    # TODO: unique uuid and state_index
-
-    @staticmethod
-    def from_game(game):
-        state = json.dumps(game, cls=GameEncoder)
-        pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
-        return GameState(
-            uuid=game.id,
-            state_index=len(game.state.actions),
-            state=state,
-            pickle_data=pickle_data,
-        )
+    return game_count, games_uuid
 
 
-db = SQLAlchemy(metadata=metadata)
+def save_game_metadata(game):
+    pickle_game_dir = f"{pickle_game_states_dir}/{game.id}"
+
+    # create pickle directory if it doesn't exist
+    if not os.path.exists(pickle_game_dir):
+        os.makedirs(pickle_game_dir)
+
+    # save game metadata as a json file
+    with open(f"{pickle_game_dir}/metadata.json", "w") as f:
+        metadata = {
+            "id": game.id,
+            "players": [str(player.value) for player in game.state.colors],
+            "winner": str(game.winning_color()),
+            "game_states_count": game.state_index + 1
+        }
+        json.dump(metadata, f)
 
 
-@contextmanager
-def database_session():
-    """Can use like:
-    with database_session() as session:
-        game_states = session.query(GameState).all()
-    """
-    database_url = os.environ.get(
-        "DATABASE_URL",
-        "postgresql://catanatron:victorypoint@127.0.0.1:5432/catanatron_db",
-    )
-    engine = create_engine(database_url)
-    session = Session(engine)
-    try:
-        yield session
-    finally:
-        session.expunge_all()
-        session.close()
+# serialize and store game state using pickle
+def serialize_game_state(game, state_index):
+    pickle_game_dir = f"{pickle_game_states_dir}/{game.id}"
+    
+    # create pickle directory if it doesn't exist
+    if not os.path.exists(pickle_game_dir):
+        os.makedirs(pickle_game_dir)
+
+    # save pickle data to file
+    with open(f"{pickle_game_dir}/{state_index}.pickle", "wb") as f:
+        pickle.dump(game, f)
+    
+    # update metadata
+    save_game_metadata(game)
 
 
-def upsert_game_state(game, session_param=None):
-    game_state = GameState.from_game(game)
-    session = session_param or db.session
-    session.add(game_state)
-    session.commit()
-    return game_state
+# retrieve all game states of a game
+def get_game_metadata(game_id):
+    pickle_game_dir = f"{pickle_game_states_dir}/{game_id}"
+    
+    # check if game folder exists
+    if not os.path.exists(f"{pickle_game_dir}"):
+        return None
+
+    # read metadata.json file
+    with open(f"{pickle_game_dir}/metadata.json", "r") as f:
+        metadata = json.load(f)
+        return metadata
 
 
-def get_game_state(game_id, state_index=None):
+# load game state from pickle file
+def load_game_state(game_id, state_index):
+    pickle_game_dir = f"{pickle_game_states_dir}/{game_id}"
+
+    # check if game folder exists
+    if not os.path.exists(f"{pickle_game_dir}"):
+        return None
+
     if state_index is None:
-        result = (
-            db.session.query(GameState)
-            .filter_by(uuid=game_id)
-            .order_by(GameState.state_index.desc())
-            .first_or_404()
-        )
-    else:
-        result = (
-            db.session.query(GameState)
-            .filter_by(uuid=game_id, state_index=state_index)
-            .first_or_404()
-        )
-    db.session.commit()
-    game = pickle.loads(result.pickle_data)
+        metadata = get_game_metadata(game_id)
+        if metadata is None:
+            return None
+        game_states = metadata["game_states_count"]
+        state_index = game_states - 1
+
+    # check if file exists
+    if not os.path.exists(f"{pickle_game_dir}/{state_index}.pickle"):
+        return None
+
+    with open(f"{pickle_game_dir}/{state_index}.pickle", "rb") as f:
+        game = pickle.load(f)
+    
     return game
