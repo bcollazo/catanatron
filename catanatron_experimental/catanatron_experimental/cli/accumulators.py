@@ -146,7 +146,6 @@ class PickleAccumulator(GameAccumulator):
 
     def after(self, game):
         serialize_game_state(game, game.state_index)
-        save_game_metadata(game)
         self.link = f"http://localhost:3000/games/{game.id}/states/{game.state_index}"
 
 

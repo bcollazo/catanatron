@@ -58,6 +58,8 @@ def get_game_endpoint(game_id, state_index):
 
 @bp.route("/games/<string:game_id>/states/<string:state_index>/actions", methods=["POST"])
 def post_action_endpoint(game_id, state_index):
+    state_index = None if state_index == "latest" else int(state_index)
+    
     game = load_game_state(game_id, state_index)
     if game is None:
         abort(404, description="Resource not found")

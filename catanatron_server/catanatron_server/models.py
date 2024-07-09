@@ -13,18 +13,6 @@ def get_games_info():
 
     return game_count, games_uuid
 
-# serialize and store game state using pickle
-def serialize_game_state(game, state_index):
-    pickle_game_dir = f"{pickle_game_states_dir}/{game.id}"
-    
-    # create pickle directory if it doesn't exist
-    if not os.path.exists(pickle_game_dir):
-        os.makedirs(pickle_game_dir)
-
-    # save pickle data to file
-    with open(f"{pickle_game_dir}/{state_index}.pickle", "wb") as f:
-        pickle.dump(game, f)
-
 
 def save_game_metadata(game):
     pickle_game_dir = f"{pickle_game_states_dir}/{game.id}"
@@ -42,6 +30,22 @@ def save_game_metadata(game):
             "game_states_count": game.state_index + 1
         }
         json.dump(metadata, f)
+
+
+# serialize and store game state using pickle
+def serialize_game_state(game, state_index):
+    pickle_game_dir = f"{pickle_game_states_dir}/{game.id}"
+    
+    # create pickle directory if it doesn't exist
+    if not os.path.exists(pickle_game_dir):
+        os.makedirs(pickle_game_dir)
+
+    # save pickle data to file
+    with open(f"{pickle_game_dir}/{state_index}.pickle", "wb") as f:
+        pickle.dump(game, f)
+    
+    # update metadata
+    save_game_metadata(game)
 
 
 # retrieve all game states of a game
