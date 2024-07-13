@@ -57,6 +57,14 @@ function PlayButtons() {
       .filter((action) => action[1].startsWith("PLAY"))
       .map((action) => action[1])
   );
+  const humanColor = getHumanColor(state.gameState);
+  const setIsRoadBuilding = useCallback(async () => {
+    const action = [humanColor, "PLAY_ROAD_BUILDING", null];
+    const gameState = await postAction(gameId, action);
+    dispatch({ type: ACTIONS.SET_IS_ROAD_BUILDING });
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+    dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+  }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
   const useItems = [
     {
       label: "Monopoly",
@@ -69,6 +77,7 @@ function PlayButtons() {
     {
       label: "Road Building",
       disabled: !playableDevCardTypes.has("PLAY_ROAD_BUILDING"),
+      onClick: setIsRoadBuilding,
     },
     {
       label: "Knight",
@@ -86,7 +95,6 @@ function PlayButtons() {
           )
           .map((a) => a[1])
   );
-  const humanColor = getHumanColor(state.gameState);
   const buyDevCard = useCallback(async () => {
     const action = [humanColor, "BUY_DEVELOPMENT_CARD", null];
     const gameState = await postAction(gameId, action);
