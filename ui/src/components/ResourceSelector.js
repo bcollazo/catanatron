@@ -9,9 +9,14 @@ import {
 } from '@material-ui/core';
 import './ResourceSelector.scss';
 
-const ResourceSelector = ({ open, onClose, options, onSelect }) => {
+const ResourceSelector = ({ open, onClose, options, onSelect, mode }) => {
   const sortedOptions = React.useMemo(() => {
     const resourceOrder = ['WOOD', 'BRICK', 'SHEEP', 'WHEAT', 'ORE'];
+    
+    if (mode === 'monopoly') {
+      return resourceOrder;
+    }
+
     const hasDoubleOptions = options.some(option => option.length === 2);
     const filteredOptions = hasDoubleOptions ? options.filter(option => option.length === 2) : options;
 
@@ -26,7 +31,7 @@ const ResourceSelector = ({ open, onClose, options, onSelect }) => {
       }
       return a.length === 1 ? 1 : -1;
     });
-  }, [options]);
+  }, [options, mode]);
 
   const getResourceSpan = (resource) => (
     <span className={`resource-name ${resource.toLowerCase()}`}>{resource}</span>
@@ -34,7 +39,9 @@ const ResourceSelector = ({ open, onClose, options, onSelect }) => {
 
   return (
     <Dialog open={open} onClose={onClose} className="resource-selector" maxWidth="xs" fullWidth>
-      <DialogTitle>Select Resources</DialogTitle>
+      <DialogTitle>
+        {mode === 'monopoly' ? 'Select Resource to Monopolize' : 'Select Resources for Year of Plenty'}
+      </DialogTitle>
       <DialogContent>
         <div className="resource-grid">
           {sortedOptions.map((option, index) => (
@@ -45,9 +52,11 @@ const ResourceSelector = ({ open, onClose, options, onSelect }) => {
               onClick={() => onSelect(option)}
             >
               <Typography variant="body2">
-                {option.length === 1 
-                  ? <>{getResourceSpan(option[0])} x1</>
-                  : <>{getResourceSpan(option[0])}+{getResourceSpan(option[1])}</>
+                {mode === 'monopoly' 
+                  ? getResourceSpan(option)
+                  : option.length === 1 
+                    ? <>{getResourceSpan(option[0])} x1</>
+                    : <>{getResourceSpan(option[0])}+{getResourceSpan(option[1])}</>
                 }
               </Typography>
             </Button>

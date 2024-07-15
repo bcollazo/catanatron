@@ -47,7 +47,7 @@ function PlayButtons() {
     [enqueueSnackbar, closeSnackbar]
   );
 
-  const { gameState } = state;
+  const { gameState, isPlayingMonopoly, isPlayingYearOfPlenty } = state;
   const key = playerKey(gameState, gameState.current_color);
   const isRoll =
     gameState.current_prompt === "PLAY_TURN" &&
@@ -60,6 +60,9 @@ function PlayButtons() {
       .map((action) => action[1])
   );
   const humanColor = getHumanColor(state.gameState);
+  const setIsPlayingMonopoly = useCallback(() => {
+    dispatch({ type: ACTIONS.SET_IS_PLAYING_MONOPOLY });
+  }, [dispatch]);
   const getValidYearOfPlentyOptions = useCallback(() => {
     return state.gameState.current_playable_actions
       .filter(action => action[1] === "PLAY_YEAR_OF_PLENTY")
@@ -67,12 +70,20 @@ function PlayButtons() {
   }, [state.gameState.current_playable_actions]);  
   const handleResourceSelection = useCallback(async (selectedResources) => {
     setResourceSelectorOpen(false);
-    const action = [humanColor, "PLAY_YEAR_OF_PLENTY", selectedResources];
+    let action;
+    if (isPlayingMonopoly) {
+      action = [humanColor, "PLAY_MONOPOLY", selectedResources]
+    } else if (isPlayingYearOfPlenty) {
+      action = [humanColor, "PLAY_YEAR_OF_PLENTY", selectedResources];
+    } else {
+      console.error('Invalid resource selector mode');
+      return;
+    }
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
-  }, [gameId, humanColor, dispatch, enqueueSnackbar, closeSnackbar]);
-  const handleYearOfPlentySelection = useCallback(() => {
+  }, [gameId, humanColor, dispatch, enqueueSnackbar, closeSnackbar, isPlayingMonopoly, isPlayingYearOfPlenty]);
+  const handleOpenResourceSelector = useCallback(() => {
     setResourceSelectorOpen(true);
   }, []);
   const setIsPlayingYearOfPlenty = useCallback(() => {
@@ -88,7 +99,6 @@ function PlayButtons() {
   const playKnightCard = useCallback(async () => {
     const action = [humanColor, "PLAY_KNIGHT_CARD", null];
     const gameState = await postAction(gameId, action);
-    dispatch({ type: ACTIONS.PLAY_KNIGHT_CARD });
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
   }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
@@ -96,6 +106,7 @@ function PlayButtons() {
     {
       label: "Monopoly",
       disabled: !playableDevCardTypes.has("PLAY_MONOPOLY"),
+      onClick: setIsPlayingMonopoly,
     },
     {
       label: "Year of Plenty",
@@ -187,7 +198,7 @@ function PlayButtons() {
   return (
     <>
       <OptionsButton
-        disabled={playableDevCardTypes.size === 0 || state.isPlayingYearOfPlenty}
+        disabled={playableDevCardTypes.size === 0 || isPlayingYearOfPlenty}
         menuListId="use-menu-list"
         icon={<SimCardIcon />}
         items={useItems}
@@ -195,7 +206,7 @@ function PlayButtons() {
         Use
       </OptionsButton>
       <OptionsButton
-        disabled={buildActionTypes.size === 0 || state.isPlayingYearOfPlenty}
+        disabled={buildActionTypes.size === 0 || isPlayingYearOfPlenty}
         menuListId="build-menu-list"
         icon={<BuildIcon />}
         items={buildItems}
@@ -203,7 +214,7 @@ function PlayButtons() {
         Buy
       </OptionsButton>
       <OptionsButton
-        disabled={tradeItems.length === 0 || state.isPlayingYearOfPlenty}
+        disabled={tradeItems.length === 0 || isPlayingYearOfPlenty}
         menuListId="trade-menu-list"
         icon={<AccountBalanceIcon />}
         items={tradeItems}
@@ -222,8 +233,8 @@ function PlayButtons() {
             ? proceedAction
             : isMoveRobber
             ? setIsMovingRobber
-            : state.isPlayingYearOfPlenty
-            ? handleYearOfPlentySelection
+            : isPlayingYearOfPlenty || isPlayingMonopoly
+            ? handleOpenResourceSelector
             : endTurnAction
         }
       >
@@ -231,7 +242,7 @@ function PlayButtons() {
           isRoll ? "ROLL" : 
           isDiscard ? "DISCARD" : 
           isMoveRobber ? "ROB" : 
-          state.isPlayingYearOfPlenty ? "SELECT" : 
+          isPlayingYearOfPlenty || isPlayingMonopoly ? "SELECT" : 
           "END"
         }
       </Button>
@@ -239,10 +250,12 @@ function PlayButtons() {
         open={resourceSelectorOpen}
         onClose={() => {
           setResourceSelectorOpen(false);
-          dispatch({ type: ACTIONS.PLAY_YEAR_OF_PLENTY });
+          dispatch({ type: ACTIONS.CANCEL_MONOPOLY });
+          dispatch({ type: ACTIONS.CANCEL_YEAR_OF_PLENTY });
         }}
         options={getValidYearOfPlentyOptions()}
         onSelect={handleResourceSelection}
+        mode={isPlayingMonopoly ? 'monopoly' : 'yearOfPlenty'}
       />
     </>
   );
