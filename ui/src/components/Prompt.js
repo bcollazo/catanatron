@@ -61,7 +61,7 @@ export function humanizeAction(gameState, action) {
       return `${player} PLAYED ROAD BUILDING`
     }
     case "PLAY_YEAR_OF_PLENTY": {
-      return `${player} YEAR OF PLENTY ${action[2]}`;
+      return `${player} PLAYED YEAR OF PLENTY. CLAIMED ${action[2][0]} AND ${action[2][1]}`;
     }
     case "MOVE_ROBBER": {
       const tile = findTileByCoordinate(gameState, action[2][0]);

@@ -8,6 +8,7 @@ const initialState = {
   isBuildingSettlement: false,
   isBuildingCity: false,
   isLeftDrawerOpen: false,
+  isPlayingYearOfPlenty: false,
   isRoadBuilding: false,
   freeRoadsAvailable: 0,
   isMovingRobber: false,
@@ -30,6 +31,7 @@ const StateProvider = ({ children }) => {
           isBuildingCity: false,
           isRoadBuilding: state.isRoadBuilding && state.freeRoadsAvailable > 0,
           freeRoadsAvailable: state.isRoadBuilding ? state.freeRoadsAvailable - 1 : 0,
+          isPlayingYearOfPlenty: false,
           isMovingRobber: false,
         };
       case ACTIONS.SET_IS_BUILDING_ROAD:
@@ -38,7 +40,11 @@ const StateProvider = ({ children }) => {
         return { ...state, isBuildingSettlement: true };
       case ACTIONS.SET_IS_BUILDING_CITY:
         return { ...state, isBuildingCity: true };
-      case ACTIONS.SET_IS_ROAD_BUILDING:
+      case ACTIONS.SET_IS_PLAYING_YEAR_OF_PLENTY:
+        return { ...state, isPlayingYearOfPlenty: true }
+      case ACTIONS.PLAY_YEAR_OF_PLENTY:
+        return { ...state, isPlayingYearOfPlenty: false }
+      case ACTIONS.PLAY_ROAD_BUILDING:
         return {
           ...state, 
           isRoadBuilding: true, 

@@ -22,6 +22,7 @@ import { useParams } from "react-router";
 
 import { ResourceCards } from "../components/PlayerStateBox";
 import Prompt, { humanizeTradeAction } from "../components/Prompt";
+import ResourceSelector from "../components/ResourceSelector";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { getHumanColor, playerKey } from "../utils/stateUtils";
@@ -35,6 +36,7 @@ function PlayButtons() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const [resourceSelectorOpen, setResourceSelectorOpen] = useState(false);
 
   const carryOutAction = useCallback(
     memoize((action) => async () => {
@@ -58,10 +60,28 @@ function PlayButtons() {
       .map((action) => action[1])
   );
   const humanColor = getHumanColor(state.gameState);
-  const setIsRoadBuilding = useCallback(async () => {
+  const getValidYearOfPlentyOptions = useCallback(() => {
+    return state.gameState.current_playable_actions
+      .filter(action => action[1] === "PLAY_YEAR_OF_PLENTY")
+      .map(action => action[2]);
+  }, [state.gameState.current_playable_actions]);  
+  const handleResourceSelection = useCallback(async (selectedResources) => {
+    setResourceSelectorOpen(false);
+    const action = [humanColor, "PLAY_YEAR_OF_PLENTY", selectedResources];
+    const gameState = await postAction(gameId, action);
+    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+    dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+  }, [gameId, humanColor, dispatch, enqueueSnackbar, closeSnackbar]);
+  const handleYearOfPlentySelection = useCallback(() => {
+    setResourceSelectorOpen(true);
+  }, []);
+  const setIsPlayingYearOfPlenty = useCallback(() => {
+    dispatch({ type: ACTIONS.SET_IS_PLAYING_YEAR_OF_PLENTY });
+  }, [dispatch]);
+  const playRoadBuilding = useCallback(async () => {
     const action = [humanColor, "PLAY_ROAD_BUILDING", null];
     const gameState = await postAction(gameId, action);
-    dispatch({ type: ACTIONS.SET_IS_ROAD_BUILDING });
+    dispatch({ type: ACTIONS.PLAY_ROAD_BUILDING });
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
   }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
@@ -80,11 +100,12 @@ function PlayButtons() {
     {
       label: "Year of Plenty",
       disabled: !playableDevCardTypes.has("PLAY_YEAR_OF_PLENTY"),
+      onClick: setIsPlayingYearOfPlenty,
     },
     {
       label: "Road Building",
       disabled: !playableDevCardTypes.has("PLAY_ROAD_BUILDING"),
-      onClick: setIsRoadBuilding,
+      onClick: playRoadBuilding,
     },
     {
       label: "Knight",
@@ -144,14 +165,18 @@ function PlayButtons() {
   const tradeActions = state.gameState.current_playable_actions.filter(
     (action) => action[1] === "MARITIME_TRADE"
   );
-  const tradeItems = tradeActions.map((action) => {
-    const label = humanizeTradeAction(action);
-    return {
-      label: label,
-      disabled: false,
-      onClick: carryOutAction(action),
-    };
-  });
+  const tradeItems = React.useMemo(() => {
+    const items = tradeActions.map((action) => {
+      const label = humanizeTradeAction(action);
+      return {
+        label: label,
+        disabled: false,
+        onClick: carryOutAction(action),
+      };
+    });
+  
+    return items.sort((a, b) => a.label.localeCompare(b.label));
+  }, [tradeActions, carryOutAction]);
 
   const setIsMovingRobber = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_MOVING_ROBBER });
@@ -162,7 +187,7 @@ function PlayButtons() {
   return (
     <>
       <OptionsButton
-        disabled={playableDevCardTypes.size === 0}
+        disabled={playableDevCardTypes.size === 0 || state.isPlayingYearOfPlenty}
         menuListId="use-menu-list"
         icon={<SimCardIcon />}
         items={useItems}
@@ -170,7 +195,7 @@ function PlayButtons() {
         Use
       </OptionsButton>
       <OptionsButton
-        disabled={buildActionTypes.size === 0}
+        disabled={buildActionTypes.size === 0 || state.isPlayingYearOfPlenty}
         menuListId="build-menu-list"
         icon={<BuildIcon />}
         items={buildItems}
@@ -178,7 +203,7 @@ function PlayButtons() {
         Buy
       </OptionsButton>
       <OptionsButton
-        disabled={tradeItems.length === 0}
+        disabled={tradeItems.length === 0 || state.isPlayingYearOfPlenty}
         menuListId="trade-menu-list"
         icon={<AccountBalanceIcon />}
         items={tradeItems}
@@ -197,11 +222,28 @@ function PlayButtons() {
             ? proceedAction
             : isMoveRobber
             ? setIsMovingRobber
+            : state.isPlayingYearOfPlenty
+            ? handleYearOfPlentySelection
             : endTurnAction
         }
       >
-        {isRoll ? "ROLL" : isDiscard ? "DISCARD" : isMoveRobber ? "ROB" : "END"}
+        {
+          isRoll ? "ROLL" : 
+          isDiscard ? "DISCARD" : 
+          isMoveRobber ? "ROB" : 
+          state.isPlayingYearOfPlenty ? "SELECT" : 
+          "END"
+        }
       </Button>
+      <ResourceSelector
+        open={resourceSelectorOpen}
+        onClose={() => {
+          setResourceSelectorOpen(false);
+          dispatch({ type: ACTIONS.PLAY_YEAR_OF_PLENTY });
+        }}
+        options={getValidYearOfPlentyOptions()}
+        onSelect={handleResourceSelection}
+      />
     </>
   );
 }
