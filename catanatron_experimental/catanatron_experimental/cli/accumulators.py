@@ -15,7 +15,7 @@ from catanatron.state_functions import (
     get_player_buildings,
 )
 from catanatron.models.enums import VICTORY_POINT, SETTLEMENT, CITY
-from catanatron_server.models import database_session, upsert_game_state
+from catanatron_server.pickle import save_game_state_to_pickle
 from catanatron_server.utils import ensure_link
 from catanatron_experimental.utils import formatSecs
 from catanatron_experimental.machine_learning.utils import (
@@ -137,26 +137,27 @@ class StatisticsAccumulator(GameAccumulator):
         return sum(self.durations) / len(self.durations)
 
 
-class StepDatabaseAccumulator(GameAccumulator):
-    """
-    Saves a game state to database for each tick.
-    Slows game ~1s per tick.
-    """
-
-    def before(self, game):
-        with database_session() as session:
-            upsert_game_state(game, session)
-
-    def step(self, game):
-        with database_session() as session:
-            upsert_game_state(game, session)
-
-
 class DatabaseAccumulator(GameAccumulator):
     """Saves last game state to database"""
 
     def after(self, game):
         self.link = ensure_link(game)
+
+
+class PickleAccumulator(GameAccumulator):
+    """Saves each game state to local pickle file"""
+    def __init__(self, pickle_dir):
+        self.pickle_dir = pickle_dir
+
+    def before(self, game_before):
+        save_game_state_to_pickle(game_before, len(game_before.state.actions), self.pickle_dir)
+
+    def step(self, game_before_action, action):
+        save_game_state_to_pickle(game_before_action, len(game_before_action.state.actions), self.pickle_dir)
+
+    def after(self, game):
+        save_game_state_to_pickle(game, len(game.state.actions), self.pickle_dir)
+        self.link = f"http://localhost:3000/games/{game.id}/states/{len(game.state.actions)}"
 
 
 class JsonDataAccumulator(GameAccumulator):
