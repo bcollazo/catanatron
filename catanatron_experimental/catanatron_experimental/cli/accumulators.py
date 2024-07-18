@@ -146,18 +146,25 @@ class DatabaseAccumulator(GameAccumulator):
 
 class PickleAccumulator(GameAccumulator):
     """Saves each game state to local pickle file"""
+
     def __init__(self, pickle_dir):
         self.pickle_dir = pickle_dir
 
     def before(self, game_before):
-        save_game_state_to_pickle(game_before, len(game_before.state.actions), self.pickle_dir)
+        save_game_state_to_pickle(
+            game_before, len(game_before.state.actions), self.pickle_dir
+        )
 
     def step(self, game_before_action, action):
-        save_game_state_to_pickle(game_before_action, len(game_before_action.state.actions), self.pickle_dir)
+        save_game_state_to_pickle(
+            game_before_action, len(game_before_action.state.actions), self.pickle_dir
+        )
 
     def after(self, game):
         save_game_state_to_pickle(game, len(game.state.actions), self.pickle_dir)
-        self.link = f"http://localhost:3000/games/{game.id}/states/{len(game.state.actions)}"
+        self.link = (
+            f"http://localhost:3000/games/{game.id}/states/{len(game.state.actions)}"
+        )
 
 
 class JsonDataAccumulator(GameAccumulator):
