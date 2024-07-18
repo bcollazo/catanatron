@@ -11,11 +11,11 @@ from catanatron_server.models import database_session
 # serialize and store game state using db
 def save_game_state_to_db(game, session_param=None):
     game_state = GameState.from_game(game)
-    
+
     session = session_param or db.session
     session.add(game_state)
     session.commit()
-    
+
     return game_state
 
 
