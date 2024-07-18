@@ -2,26 +2,15 @@ import json
 
 from flask import Response, Blueprint, jsonify, abort, request
 
+from catanatron_server.utils import player_factory
 from catanatron_server.models import upsert_game_state, get_game_state
 from catanatron.json import GameEncoder, action_from_json
-from catanatron.models.player import Color, RandomPlayer
+from catanatron.models.player import Color
 from catanatron.game import Game
-from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
 from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
 
 
 bp = Blueprint("api", __name__, url_prefix="/api")
-
-
-def player_factory(player_key):
-    if player_key[0] == "CATANATRON":
-        return AlphaBetaPlayer(player_key[1], 2, True)
-    elif player_key[0] == "RANDOM":
-        return RandomPlayer(player_key[1])
-    elif player_key[0] == "HUMAN":
-        return ValueFunctionPlayer(player_key[1], is_bot=False)
-    else:
-        raise ValueError("Invalid player key")
 
 
 @bp.route("/games", methods=("POST",))
