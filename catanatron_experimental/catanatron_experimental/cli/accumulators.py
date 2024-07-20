@@ -15,8 +15,8 @@ from catanatron.state_functions import (
     get_player_buildings,
 )
 from catanatron.models.enums import VICTORY_POINT, SETTLEMENT, CITY
-from catanatron_server.models import database_session, upsert_game_state
-from catanatron_server.utils import ensure_link
+from catanatron_server.models import database_session
+from catanatron_server.utils import ensure_link, save_game_state_to_db
 from catanatron_experimental.utils import formatSecs
 from catanatron_experimental.machine_learning.utils import (
     get_discounted_return,
@@ -145,11 +145,11 @@ class StepDatabaseAccumulator(GameAccumulator):
 
     def before(self, game):
         with database_session() as session:
-            upsert_game_state(game, session)
+            save_game_state_to_db(game, session)
 
     def step(self, game):
         with database_session() as session:
-            upsert_game_state(game, session)
+            save_game_state_to_db(game, session)
 
 
 class DatabaseAccumulator(GameAccumulator):

@@ -58,30 +58,3 @@ def database_session():
     finally:
         session.expunge_all()
         session.close()
-
-
-def upsert_game_state(game, session_param=None):
-    game_state = GameState.from_game(game)
-    session = session_param or db.session
-    session.add(game_state)
-    session.commit()
-    return game_state
-
-
-def get_game_state(game_id, state_index=None):
-    if state_index is None:
-        result = (
-            db.session.query(GameState)
-            .filter_by(uuid=game_id)
-            .order_by(GameState.state_index.desc())
-            .first_or_404()
-        )
-    else:
-        result = (
-            db.session.query(GameState)
-            .filter_by(uuid=game_id, state_index=state_index)
-            .first_or_404()
-        )
-    db.session.commit()
-    game = pickle.loads(result.pickle_data)
-    return game
