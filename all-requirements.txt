@@ -30,7 +30,7 @@ mdurl==0.1.2
 mypy-extensions==1.0.0
 networkx==3.0
 numpy==1.24.2
-packaging==23.0
+packaging==24.1
 pandas==1.5.3
 pathspec==0.11.1
 platformdirs==3.1.1
