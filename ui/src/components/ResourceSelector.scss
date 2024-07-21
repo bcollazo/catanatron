@@ -43,28 +43,12 @@
     overflow: hidden;
     position: relative;
 
-    &:before {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      background: linear-gradient(45deg, #00f2ff, #0066ff);
-      z-index: -1;
-      filter: blur(3px);
-      opacity: 0;
-      transition: opacity 0.3s ease;
+    &:hover,
+    &:focus {
+      background-color: #222;
     }
 
-    &:hover {
-      transform: translateY(-1px);
-      &:before {
-        opacity: 0.3; // Further reduced opacity for even subtler glow
-      }
-    }
-
-    .wood { color: #009b00; } // Slightly less bright
+    .wood { color: #009b00; }
     .brick { color: #ff0000; }
     .wheat { color: #ba9202; }
     .sheep { color: #3eda58; }
@@ -72,7 +56,11 @@
 
     .resource-name {
       font-weight: bold;
-      text-shadow: none; // Removed text shadow
+    }
+
+    .plus {
+      color: #ffffff;
+      margin: 0 4px;
     }
   }
 

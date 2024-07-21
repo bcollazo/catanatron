@@ -55,8 +55,8 @@ const ResourceSelector = ({ open, onClose, options, onSelect, mode }) => {
                 {mode === 'monopoly' 
                   ? getResourceSpan(option)
                   : option.length === 1 
-                    ? <>{getResourceSpan(option[0])} x1</>
-                    : <>{getResourceSpan(option[0])}+{getResourceSpan(option[1])}</>
+                    ? <>{getResourceSpan(option[0])}<span className='plus'>x1</span></>
+                    : <>{getResourceSpan(option[0])}<span className='plus'>+</span>{getResourceSpan(option[1])}</>
                 }
               </Typography>
             </Button>

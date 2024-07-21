@@ -109,15 +109,18 @@ export default function ZoomableBoard({ replayMode }) {
     memoize((coordinate) => {
       console.log("Clicked Tile ", coordinate);
       if (state.isMovingRobber) {
-        const matchingAction = state.gameState.current_playable_actions.find(action =>
-          action[1] === "MOVE_ROBBER" &&
-          action[2][0].every((val, index) => val === coordinate[index])
+        // Find the "MOVE_ROBBER" action in current_playable_actions that 
+        // corresponds to the tile coordinate selected by the user
+        const matchingAction = state.gameState.current_playable_actions.find(
+          ([, action_type, [action_coordinate, ,]]) =>
+            action_type === "MOVE_ROBBER" &&
+            action_coordinate.every((val, index) => val === coordinate[index])
         );
         if (matchingAction) {
           postAction(gameId, matchingAction)
             .then(gameState => {
               dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-            })
+            });
         }
       }
     }),
