@@ -13,9 +13,7 @@ from catanatron.state import (
     player_num_resource_cards,
 )
 from catanatron.state_functions import player_key
-from catanatron.models.actions import (
-    generate_playable_actions
-)
+from catanatron.models.actions import generate_playable_actions
 from catanatron.models.enums import (
     BRICK,
     ORE,
@@ -358,8 +356,8 @@ def test_longest_road_steal():
     board.build_road(p0.color, (7, 8))
     board.build_road(p0.color, (8, 9))
     board.build_road(p0.color, (9, 10))
-    game.state.player_state[f'{p0_key}_VICTORY_POINTS'] = 1
-    game.state.player_state[f'{p0_key}_ACTUAL_VICTORY_POINTS'] = 1
+    game.state.player_state[f"{p0_key}_VICTORY_POINTS"] = 1
+    game.state.player_state[f"{p0_key}_ACTUAL_VICTORY_POINTS"] = 1
 
     # p1 has longest road of lenght 5
     board.build_settlement(p1.color, 28, True)
@@ -368,14 +366,14 @@ def test_longest_road_steal():
     board.build_road(p1.color, (29, 30))
     board.build_road(p1.color, (30, 31))
     board.build_road(p1.color, (31, 32))
-    game.state.player_state[f'{p1_key}_VICTORY_POINTS'] = 3
-    game.state.player_state[f'{p1_key}_ACTUAL_VICTORY_POINTS'] = 3
-    game.state.player_state[f'{p1_key}_HAS_ROAD'] = True
+    game.state.player_state[f"{p1_key}_VICTORY_POINTS"] = 3
+    game.state.player_state[f"{p1_key}_ACTUAL_VICTORY_POINTS"] = 3
+    game.state.player_state[f"{p1_key}_HAS_ROAD"] = True
 
     # Required to be able to apply actions other than rolling or initial build phase.
     game.state.current_prompt = ActionPrompt.PLAY_TURN
     game.state.is_initial_build_phase = False
-    game.state.player_state[f'{p0_key}_HAS_ROLLED'] = True
+    game.state.player_state[f"{p0_key}_HAS_ROLLED"] = True
     game.state.playable_actions = generate_playable_actions(game.state)
 
     # Set up player0 to build two roads and steal longest road.
@@ -386,25 +384,25 @@ def test_longest_road_steal():
 
     # Matching length of longest road does not steal longest road.
     apply_action(game.state, Action(p0.color, ActionType.BUILD_ROAD, road1))
-    assert game.state.player_state[f'{p0_key}_LONGEST_ROAD_LENGTH'] == 5
-    assert game.state.player_state[f'{p0_key}_HAS_ROAD'] == False
-    assert game.state.player_state[f'{p0_key}_VICTORY_POINTS'] == 1
-    assert game.state.player_state[f'{p0_key}_ACTUAL_VICTORY_POINTS'] == 1
-    assert game.state.player_state[f'{p1_key}_LONGEST_ROAD_LENGTH'] == 5
-    assert game.state.player_state[f'{p1_key}_HAS_ROAD'] == True
-    assert game.state.player_state[f'{p1_key}_VICTORY_POINTS'] == 3
-    assert game.state.player_state[f'{p1_key}_ACTUAL_VICTORY_POINTS'] == 3
+    assert game.state.player_state[f"{p0_key}_LONGEST_ROAD_LENGTH"] == 5
+    assert game.state.player_state[f"{p0_key}_HAS_ROAD"] == False
+    assert game.state.player_state[f"{p0_key}_VICTORY_POINTS"] == 1
+    assert game.state.player_state[f"{p0_key}_ACTUAL_VICTORY_POINTS"] == 1
+    assert game.state.player_state[f"{p1_key}_LONGEST_ROAD_LENGTH"] == 5
+    assert game.state.player_state[f"{p1_key}_HAS_ROAD"] == True
+    assert game.state.player_state[f"{p1_key}_VICTORY_POINTS"] == 3
+    assert game.state.player_state[f"{p1_key}_ACTUAL_VICTORY_POINTS"] == 3
 
     # Surpassing length of longest road steals longest road and VPs.
     apply_action(game.state, Action(p0.color, ActionType.BUILD_ROAD, road2))
-    assert game.state.player_state[f'{p0_key}_LONGEST_ROAD_LENGTH'] == 6
-    assert game.state.player_state[f'{p0_key}_HAS_ROAD'] == True
-    assert game.state.player_state[f'{p0_key}_VICTORY_POINTS'] == 3
-    assert game.state.player_state[f'{p0_key}_ACTUAL_VICTORY_POINTS'] == 3
-    assert game.state.player_state[f'{p1_key}_LONGEST_ROAD_LENGTH'] == 5
-    assert game.state.player_state[f'{p1_key}_HAS_ROAD'] == False
-    assert game.state.player_state[f'{p1_key}_VICTORY_POINTS'] == 1
-    assert game.state.player_state[f'{p1_key}_ACTUAL_VICTORY_POINTS'] == 1
+    assert game.state.player_state[f"{p0_key}_LONGEST_ROAD_LENGTH"] == 6
+    assert game.state.player_state[f"{p0_key}_HAS_ROAD"] == True
+    assert game.state.player_state[f"{p0_key}_VICTORY_POINTS"] == 3
+    assert game.state.player_state[f"{p0_key}_ACTUAL_VICTORY_POINTS"] == 3
+    assert game.state.player_state[f"{p1_key}_LONGEST_ROAD_LENGTH"] == 5
+    assert game.state.player_state[f"{p1_key}_HAS_ROAD"] == False
+    assert game.state.player_state[f"{p1_key}_VICTORY_POINTS"] == 1
+    assert game.state.player_state[f"{p1_key}_ACTUAL_VICTORY_POINTS"] == 1
 
 
 def test_second_placement_takes_cards_from_bank():

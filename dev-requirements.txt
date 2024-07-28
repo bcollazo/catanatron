@@ -39,7 +39,7 @@ networkx==2.6.3
 numpy==1.22.1
 oauthlib==3.2.1
 opt-einsum==3.3.0
-packaging==21.3
+packaging==24.1
 pandas==1.4.0
 pathspec==0.9.0
 platformdirs==2.4.1

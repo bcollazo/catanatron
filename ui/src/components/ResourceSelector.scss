@@ -1,0 +1,81 @@
+@import "../variables.scss";
+
+.resource-selector {
+  .MuiPaper-root {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    border-radius: 8px;
+    border: 1px solid #333;
+    box-shadow: 0 0 10px rgba(0, 150, 255, 0.05);
+  }
+
+  .MuiDialogTitle-root {
+    text-align: center;
+    background-color: #222;
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+  }
+
+  .MuiDialogContent-root {
+    padding: 20px;
+  }
+
+  .resource-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    
+    @media (max-width: $sm-breakpoint) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .resource-button {
+    height: 40px;
+    font-size: 0.9rem;
+    text-transform: none;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    border: 1px solid #444;
+    overflow: hidden;
+    position: relative;
+
+    &:hover,
+    &:focus {
+      background-color: #222;
+    }
+
+    .wood { color: #009b00; }
+    .brick { color: #ff0000; }
+    .wheat { color: #ba9202; }
+    .sheep { color: #3eda58; }
+    .ore { color: #b0b0b0; }
+
+    .resource-name {
+      font-weight: bold;
+    }
+
+    .plus {
+      color: #ffffff;
+      margin: 0 4px;
+    }
+  }
+
+  .MuiDialogActions-root {
+    background-color: #222;
+    padding: 12px 20px;
+    border-top: 1px solid #333;
+  }
+
+  .cancel-button {
+    color: #0099ff;
+    font-weight: bold;
+    
+    &:hover {
+      background-color: rgba(0, 153, 255, 0.1);
+    }
+  }
+}

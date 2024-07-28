@@ -16,7 +16,8 @@ function findTileById(gameState, tileId) {
 }
 
 function getTileString(tile) {
-  return `${tile.tile.number} ${tile.tile.resource}`;
+  const { number = "THE", resource = "DESERT" } = tile.tile;
+  return `${number} ${resource}`;
 }
 
 function getShortTileString(tileTile) {
@@ -59,13 +60,23 @@ export function humanizeAction(gameState, action) {
     case "PLAY_ROAD_BUILDING": {
       return `${player} PLAYED ROAD BUILDING`
     }
+    case "PLAY_MONOPOLY": {
+      return `${player} MONOPOLIZED ${action[2]}`;
+    }
     case "PLAY_YEAR_OF_PLENTY": {
-      return `${player} YEAR OF PLENTY ${action[2]}`;
+      const firstResource = action[2][0];
+      const secondResource = action[2][1];
+      if (secondResource) {
+        return `${player} PLAYED YEAR OF PLENTY. CLAIMED ${firstResource} AND ${secondResource}`;
+      } else {
+        return `${player} PLAYED YEAR OF PLENTY. CLAIMED ${firstResource}`;
+      }
     }
     case "MOVE_ROBBER": {
       const tile = findTileByCoordinate(gameState, action[2][0]);
       const tileString = getTileString(tile);
-      return `${player} ROBBED ${tileString} (STOLE ${action[2][2]})`;
+      const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : '';
+      return `${player} ROBBED ${tileString}${stolenResource}`;
     }
     case "MARITIME_TRADE": {
       const label = humanizeTradeAction(action);

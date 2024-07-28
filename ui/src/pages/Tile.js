@@ -11,11 +11,11 @@ import oreTile from "../assets/tile_ore.svg";
 import woolTile from "../assets/tile_sheep.svg";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
 
-export function NumberToken({ className, children, style, size }) {
+export function NumberToken({ className, children, style, size, flashing }) {
   return (
     <Paper
       elevation={3}
-      className={cn("number-token", className)}
+      className={cn("number-token", className, {flashing: flashing })}
       style={{
         "--base-size": `${size}px`, // this var can be overrided via `style` prop
         ...style,
@@ -48,7 +48,7 @@ const numberToPips = (number) => {
   }
 };
 
-export default function Tile({ center, coordinate, tile, size }) {
+export default function Tile({ center, coordinate, tile, size, onClick, flashing }) {
   const w = SQRT3 * size;
   const h = 2 * size;
   const [centerX, centerY] = center;
@@ -58,7 +58,10 @@ export default function Tile({ center, coordinate, tile, size }) {
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
     contents = (
-      <NumberToken size={size}>
+      <NumberToken 
+        size={size}
+        flashing={flashing}
+      >
         <div>{tile.number}</div>
         <div className="pips">{numberToPips(tile.number)}</div>
       </NumberToken>
@@ -144,6 +147,7 @@ export default function Tile({ center, coordinate, tile, size }) {
         backgroundImage: `url('${resourceTile}')`,
         backgroundSize: "contain",
       }}
+      onClick={onClick}
     >
       {contents}
     </div>

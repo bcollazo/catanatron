@@ -105,6 +105,27 @@ export default function ZoomableBoard({ replayMode }) {
     }),
     []
   );
+  const handleTileClick = useCallback(
+    memoize((coordinate) => {
+      console.log("Clicked Tile ", coordinate);
+      if (state.isMovingRobber) {
+        // Find the "MOVE_ROBBER" action in current_playable_actions that 
+        // corresponds to the tile coordinate selected by the user
+        const matchingAction = state.gameState.current_playable_actions.find(
+          ([, action_type, [action_coordinate, ,]]) =>
+            action_type === "MOVE_ROBBER" &&
+            action_coordinate.every((val, index) => val === coordinate[index])
+        );
+        if (matchingAction) {
+          postAction(gameId, matchingAction)
+            .then(gameState => {
+              dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+            });
+        }
+      }
+    }),
+    [state.isMovingRobber]
+  );
 
   const nodeActions = replayMode ? {} : buildNodeActions(state);
   const edgeActions = replayMode ? {} : buildEdgeActions(state);
@@ -138,12 +159,14 @@ export default function ZoomableBoard({ replayMode }) {
                 height={height}
                 buildOnNodeClick={buildOnNodeClick}
                 buildOnEdgeClick={buildOnEdgeClick}
+                handleTileClick={handleTileClick}
                 nodeActions={nodeActions}
                 edgeActions={edgeActions}
                 replayMode={replayMode}
                 show={show}
                 gameState={state.gameState}
                 isMobile={isMobile}
+                isMovingRobber={state.isMovingRobber}
               ></Board>
             </TransformComponent>
           </div>

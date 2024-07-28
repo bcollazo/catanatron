@@ -30,4 +30,6 @@ yarn-error.log*
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+.yarnrc.yml
+yarn.lock
 .pnp.*
