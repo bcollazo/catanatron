@@ -68,7 +68,8 @@ class MyPlayer(Player):
             env,
             learning_rate=self.learning_rate_schedule,
             clip_range=self.clip_range_schedule,
-            verbose=1
+            verbose=1,
+            device='cuda'  # Enable CUDA
         )
 
     def create_env(self, game):
