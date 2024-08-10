@@ -108,7 +108,7 @@ def register_player(code):
                 player_class,
             ),
         )
-
+        return player_class  # Return the class itself
     return decorator
 
 

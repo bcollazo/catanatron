@@ -24,12 +24,20 @@ class GameState(Base):
     state = Column(String, nullable=False)
     pickle_data = Column(LargeBinary, nullable=False)
 
-    # TODO: unique uuid and state_index
-
     @staticmethod
     def from_game(game):
+        print("Serializing game state...")
         state = json.dumps(game, cls=GameEncoder)
-        pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
+        try:
+            pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
+        except Exception as e:
+            print(f"Error pickling object: {e}")
+            for name, value in vars(game).items():
+                try:
+                    pickle.dumps(value, pickle.HIGHEST_PROTOCOL)
+                except Exception as sub_e:
+                    print(f"Cannot pickle attribute {name}: {sub_e}")
+            raise e
         return GameState(
             uuid=game.id,
             state_index=len(game.state.actions),
