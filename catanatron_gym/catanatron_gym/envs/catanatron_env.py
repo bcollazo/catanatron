@@ -216,11 +216,7 @@ class CatanatronEnv(gym.Env):
 
         return observation, reward, terminated, truncated, info
 
-    def reset(
-        self,
-        seed=None,
-        options=None,
-    ):
+    def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
         catan_map = build_map(self.map_type)
@@ -236,11 +232,10 @@ class CatanatronEnv(gym.Env):
 
         self._advance_until_p0_decision()
 
-        observation = self._get_observation()
+        obs = self._get_observation()
         info = dict(valid_actions=self.get_valid_actions())
-
-        return observation, info
-
+        return obs, info  # Return both observation and info
+    
     def _get_observation(self):
         sample = create_sample(self.game, self.p0.color)
         if self.representation == "mixed":
@@ -248,9 +243,11 @@ class CatanatronEnv(gym.Env):
                 self.game, self.p0.color, channels_first=True
             )
             numeric = np.array([float(sample[i]) for i in self.numeric_features])
-            return {"board": board_tensor, "numeric": numeric}
-
-        return np.array([float(sample[i]) for i in self.features])
+            return {
+                "board": board_tensor.astype(np.float32),
+                "numeric": numeric.astype(np.float32)
+            }
+        return np.array([float(sample[i]) for i in self.features], dtype=np.float32)
 
     def _advance_until_p0_decision(self):
         while (
