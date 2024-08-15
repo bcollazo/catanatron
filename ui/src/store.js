@@ -36,8 +36,8 @@ const StateProvider = ({ children }) => {
           isPlayingYearOfPlenty: false,
           isMovingRobber: false,
         };
-      case ACTIONS.SET_IS_BUILDING_ROAD:
-        return { ...state, isBuildingRoad: true };
+      case ACTIONS.TOGGLE_BUILDING_ROAD:
+        return { ...state, isBuildingRoad: !state.isBuildingRoad}
       case ACTIONS.SET_IS_BUILDING_SETTLEMENT:
         return { ...state, isBuildingSettlement: true };
       case ACTIONS.SET_IS_BUILDING_CITY:

@@ -147,8 +147,8 @@ function PlayButtons() {
   const setIsBuildingCity = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_BUILDING_CITY });
   }, [dispatch]);
-  const setIsBuildingRoad = useCallback(() => {
-    dispatch({ type: ACTIONS.SET_IS_BUILDING_ROAD });
+  const toggleBuildingRoad = useCallback(() => {
+    dispatch({ type: ACTIONS.TOGGLE_BUILDING_ROAD });
   }, [dispatch]);
   const buildItems = [
     {
@@ -169,7 +169,7 @@ function PlayButtons() {
     {
       label: "Road",
       disabled: !buildActionTypes.has("BUILD_ROAD"),
-      onClick: setIsBuildingRoad,
+      onClick: toggleBuildingRoad,
     },
   ];
 
