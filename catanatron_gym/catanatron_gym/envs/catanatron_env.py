@@ -91,18 +91,32 @@ def to_action_space(action):
 
 
 def from_action_space(action_int, playable_actions):
-    """maps action_int to catantron.models.actions.Action"""
-    # Get "catan_action" based on space action.
-    # i.e. Take first action in playable that matches ACTIONS_ARRAY blueprint
-    (action_type, value) = ACTIONS_ARRAY[action_int]
-    catan_action = None
-    for action in playable_actions:
-        normalized = normalize_action(action)
-        if normalized.action_type == action_type and normalized.value == value:
-            catan_action = action
-            break  # return the first one
-    assert catan_action is not None
-    return catan_action
+    try:
+        (action_type, value) = ACTIONS_ARRAY[action_int]
+        print(f"Trying to convert action_int {action_int} to {action_type}, {value}")
+
+        for action in playable_actions:
+            normalized = normalize_action(action)
+            
+            # Compare action types directly
+            action_type_match = (normalized.action_type == action_type)
+            
+            # Deep comparison for value
+            if isinstance(normalized.value, (tuple, list)) and isinstance(value, (tuple, list)):
+                value_match = all(nv == v for nv, v in zip(normalized.value, value))
+            else:
+                value_match = (normalized.value == value)
+            
+            if action_type_match and value_match:
+                print(f"Match found: action_type: {action_type}, value: {value}")
+                return action
+
+        # If no match is found
+        print(f"No match found for action_type: {action_type}, value: {value}")
+        raise ValueError(f"No matching playable action for {action_type}, {value}")
+    except Exception as e:
+        raise ValueError(f"Invalid action {action_int}: {str(e)}")
+
 
 
 FEATURES = get_feature_ordering(num_players=2)
@@ -121,6 +135,23 @@ def simple_reward(game, p0_color):
     else:
         return -1
 
+def vp_difference_reward(game, p0_color):
+    """
+    Calculate the reward as the difference in victory points between p0 (the AI player)
+    and the opponent player with the highest victory points.
+    """
+    from catanatron.state_functions import get_actual_victory_points
+
+    # Find the AI player's victory points
+    p0_vp = get_actual_victory_points(game.state, p0_color)
+    
+    # Find the opponent with the highest victory points
+    opponent_vp = max([get_actual_victory_points(game.state, player.color) for player in game.state.players if player.color != p0_color])
+    
+    # Reward is the difference in victory points
+    reward = p0_vp - opponent_vp
+    print(f"Reward: {reward}, p0_vp: {p0_vp}, opponent_vp: {opponent_vp}")
+    return reward
 
 class CatanatronEnv(gym.Env):
     metadata = {"render_modes": []}
@@ -133,7 +164,7 @@ class CatanatronEnv(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", simple_reward)
+        self.reward_function = self.config.get("reward_function", vp_difference_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
@@ -184,26 +215,28 @@ class CatanatronEnv(gym.Env):
         return list(map(to_action_space, self.game.state.playable_actions))
 
     def step(self, action):
+        print(f"Step called with action: {action}")
+        print(f"Valid actions: {self.get_valid_actions()}")
         try:
             catan_action = from_action_space(action, self.game.state.playable_actions)
         except Exception as e:
+            print(f"Error converting action: {e}")
             self.invalid_actions_count += 1
-
             observation = self._get_observation()
-            winning_color = self.game.winning_color()
-            done = (
-                winning_color is not None
-                or self.invalid_actions_count > self.max_invalid_actions
-            )
-            terminated = winning_color is not None
-            truncated = (
-                self.invalid_actions_count > self.max_invalid_actions
-                or self.game.state.num_turns >= TURNS_LIMIT
-            )
             info = dict(valid_actions=self.get_valid_actions())
-            return observation, self.invalid_action_reward, terminated, truncated, info
+            truncated = self.invalid_actions_count > self.max_invalid_actions
+            return observation, self.invalid_action_reward, False, truncated, info
 
-        self.game.execute(catan_action)
+        try:
+            self.game.execute(catan_action)
+        except Exception as e:
+            print(f"Error executing action: {e}")
+            self.invalid_actions_count += 1
+            observation = self._get_observation()
+            info = dict(valid_actions=self.get_valid_actions())
+            truncated = self.invalid_actions_count > self.max_invalid_actions
+            return observation, self.invalid_action_reward, False, truncated, info
+
         self._advance_until_p0_decision()
 
         observation = self._get_observation()
@@ -212,9 +245,29 @@ class CatanatronEnv(gym.Env):
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
+
         reward = self.reward_function(self.game, self.p0.color)
 
         return observation, reward, terminated, truncated, info
+    
+    def get_action_mask(self, playable_actions):
+      mask = np.zeros(self.action_space.n, dtype=bool)
+      for action in playable_actions:
+          action_int = to_action_space(action)
+          mask[action_int] = True
+
+      # Print out the move definition along with its True/False mask value
+      for idx, (action_type, value) in enumerate(ACTIONS_ARRAY):
+          move_definition = f"ActionType: {action_type}, Value: {value}"
+          mask_value = mask[idx]
+          # print(f"{mask_value} => Mask: {move_definition}")
+
+      return mask
+
+    
+    @property
+    def action_masks(self):
+        return self.get_action_mask(self.game.state.playable_actions)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)

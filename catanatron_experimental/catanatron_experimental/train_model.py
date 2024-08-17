@@ -13,91 +13,9 @@ from stable_baselines3.common.utils import get_linear_fn
 from catanatron.game import Game
 from catanatron.models.player import Color, RandomPlayer, Player
 from catanatron.models.actions import Action
-from catanatron_gym.envs.catanatron_env import CatanatronEnv
+from catanatron_gym.envs.catanatron_env import CatanatronEnv, to_action_space
 
-class MyPlayer(Player):
-    def __init__(self, color, model_path=None):
-        super().__init__(color)
-        self.model = None
-        self.env = None
-        self.learning_rate_schedule = get_linear_fn(3e-4, 3e-5, 1.0)
-        self.clip_range_schedule = get_linear_fn(0.2, 0.02, 1.0)
-        if model_path:
-            self.load(model_path)
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        state['model'] = None
-        state['env'] = None
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.model = None
-        self.env = None
-
-    def decide(self, game: Game, playable_actions: Iterable[Action]):
-        if self.model is None:
-            self.initialize_model(game)
-
-        if self.env is None or self.env.game is not game:
-            self.env = self.create_env(game)
-            obs, _ = self.env.reset()
-        else:
-            obs, _ = self.env.reset()
-
-        action_mask = self.get_action_mask(playable_actions, self.env.action_space.n)
-
-        action, _ = self.model.predict(obs, action_masks=action_mask, deterministic=True)
-        return list(playable_actions)[action]
-
-    def initialize_model(self, game):
-        self.env = self.create_env(game)
-        env = ActionMasker(self.env, self.mask_fn)
-
-        self.model = MaskablePPO(
-            "MlpPolicy",
-            env,
-            learning_rate=self.learning_rate_schedule,
-            clip_range=self.clip_range_schedule,
-            verbose=1
-        )
-
-    def create_env(self, game):
-        return CatanatronEnv(config={
-            "map_type": game.state.board.map.__class__.__name__,
-            "discard_limit": game.state.discard_limit,
-            "vps_to_win": game.vps_to_win,
-            "num_players": len(game.state.colors),
-            "player_colors": game.state.colors,
-            "catan_map": game.state.board.map,
-        })
-
-    def get_action_mask(self, playable_actions, action_space_n):
-        mask = np.zeros(action_space_n, dtype=bool)
-        for i, action in enumerate(playable_actions):
-            mask[i] = True
-        return mask
-
-    def mask_fn(self, env):
-        return self.get_action_mask(env.get_valid_actions(), env.action_space.n)
-
-    def train(self, total_timesteps=10000):
-        if self.model is None:
-            raise ValueError("Model not initialized. Call initialize_model first.")
-        self.model.learn(total_timesteps=total_timesteps)
-
-    def save(self, path):
-        if self.model is None:
-            raise ValueError("Model not initialized. Call initialize_model first.")
-        self.model.save(path)
-
-    def load(self, path):
-        dummy_game = Game([self, RandomPlayer(Color.BLUE), RandomPlayer(Color.WHITE), RandomPlayer(Color.ORANGE)])
-        env = self.create_env(dummy_game)
-        env = ActionMasker(env, self.mask_fn)
-        self.model = MaskablePPO.load(path, env=env)
-
+from my_player import MyPlayer
 class GameCallback(BaseCallback):
     def __init__(self, verbose=0):
         super(GameCallback, self).__init__(verbose)
@@ -155,15 +73,13 @@ def train_model(episodes, model_path=None, learning_rate=3e-4, eval_freq=10):
         obs, _ = env.reset()
         done = False
         episode_reward = 0
-        for _ in range(1000):  # Set a maximum number of steps per episode
+        while not done:
             action, _ = player.model.predict(obs, deterministic=False)
             obs, reward, terminated, truncated, info = env.step(action)
             episode_reward += reward
             done = terminated or truncated
-            if done:
-                break
 
-        print(f"Episode finished. Reward: {episode_reward}")
+        print(f"Episode finished. Total Reward: {episode_reward}")
 
         # Update the learning rate
         current_lr = lr_schedule(episode / episodes)
@@ -171,7 +87,7 @@ def train_model(episodes, model_path=None, learning_rate=3e-4, eval_freq=10):
 
         player.model.learn(total_timesteps=1, callback=callback, reset_num_timesteps=False)
 
-        if episode % 100 == 0:
+        if episode % 100 == 0 and episode != 0:
             player.model.save(f"model_checkpoint_{episode}.zip")
 
     save_path = model_path or "trained_model.zip"

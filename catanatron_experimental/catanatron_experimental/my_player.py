@@ -1,25 +1,17 @@
 from typing import Iterable
-from catanatron_experimental.cli.cli_players import register_player
-import numpy as np
-import gymnasium as gym
-from sb3_contrib import MaskablePPO
-from sb3_contrib.common.wrappers import ActionMasker
-
-from catanatron.game import Game
-from catanatron.models.actions import Action
-from catanatron.models.player import Player
-from catanatron_gym.envs.catanatron_env import CatanatronEnv
 import os
 import zipfile
 
-print("Defining MyPlayer...")
+import numpy as np
+from sb3_contrib import MaskablePPO
+from sb3_contrib.common.wrappers import ActionMasker
+from stable_baselines3.common.utils import get_linear_fn
 
-class LinearSchedule:
-    def __init__(self, initial_value: float):
-        self.initial_value = initial_value
-
-    def __call__(self, progress_remaining: float) -> float:
-        return progress_remaining * self.initial_value
+from catanatron.game import Game
+from catanatron.models.actions import Action
+from catanatron.models.player import Player, Color, RandomPlayer
+from catanatron_gym.envs.catanatron_env import CatanatronEnv, from_action_space, to_action_space
+from catanatron_experimental.cli.cli_players import register_player
 
 @register_player("MP")
 class MyPlayer(Player):
@@ -27,14 +19,13 @@ class MyPlayer(Player):
         super().__init__(color)
         self.model = None
         self.env = None
-        self.learning_rate_schedule = LinearSchedule(3e-4)
-        self.clip_range_schedule = LinearSchedule(0.2)
+        self.learning_rate_schedule = get_linear_fn(3e-4, 3e-5, 1.0)
+        self.clip_range_schedule = get_linear_fn(0.2, 0.02, 1.0)
         if model_path:
             self.load(model_path)
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        # Remove the model and env from the state as they are not pickleable
         state['model'] = None
         state['env'] = None
         return state
@@ -50,26 +41,34 @@ class MyPlayer(Player):
 
         if self.env is None or self.env.game is not game:
             self.env = self.create_env(game)
-            obs, _ = self.env.reset()  # Get initial observation
-        else:
             obs, _ = self.env.reset()
+        else:
+            obs = self.env._get_observation()
 
-        action_mask = self.get_action_mask(playable_actions, self.env.action_space.n)
+        action_mask = self.env.get_action_mask(playable_actions)
 
-        action, _ = self.model.predict(obs, action_masks=action_mask, deterministic=True)
-        return list(playable_actions)[action]
+        # Predict the action index based on the full action space
+        action_index, _ = self.model.predict(obs, action_masks=action_mask, deterministic=True)
+        # print(f"Predicted action index: {action_index}, Playable actions length: {len(playable_actions)}")
+
+        try:
+            # Convert the action index to an actual Action object using from_action_space
+            selected_action = from_action_space(action_index, playable_actions)
+            return selected_action
+        except ValueError as e:
+            print(f"Error: {e}. Defaulting to the first playable action. {playable_actions[0]}")
+            return list(playable_actions)[0]
 
     def initialize_model(self, game):
         self.env = self.create_env(game)
-        env = ActionMasker(self.env, self.mask_fn)
+        env = ActionMasker(self.env, self.action_mask_fn)
 
         self.model = MaskablePPO(
             "MlpPolicy",
             env,
             learning_rate=self.learning_rate_schedule,
             clip_range=self.clip_range_schedule,
-            verbose=1,
-            device='cuda'  # Enable CUDA
+            verbose=1
         )
 
     def create_env(self, game):
@@ -82,14 +81,12 @@ class MyPlayer(Player):
             "catan_map": game.state.board.map,
         })
 
-    def get_action_mask(self, playable_actions, action_space_n):
-        mask = np.zeros(action_space_n, dtype=bool)
-        for i, action in enumerate(playable_actions):
-            mask[i] = True
-        return mask
+    def action_mask_fn(self, env):
+        return env.action_masks
 
-    def mask_fn(self, env):
-        return self.get_action_mask(env.get_valid_actions(), env.action_space.n)
+    @property
+    def mask_fn(self):
+        return self.action_mask_fn
 
     def train(self, total_timesteps=10000):
         if self.model is None:
@@ -102,26 +99,7 @@ class MyPlayer(Player):
         self.model.save(path)
 
     def load(self, path):
-        if not path.endswith(".zip"):
-            path += ".zip"
-
-        if not os.path.exists(path) or not zipfile.is_zipfile(path):
-            # Initialize and save a model if it does not exist or is not valid
-            print(f"Creating a new model and saving to {path}")
-            dummy_game = Game([self, Player(None), Player(None), Player(None)])
-            self.initialize_model(dummy_game)
-            self.train(1000)  # Train for a small number of steps to create a valid model
-            self.save(path)
-            print(f"Created and saved new model to {path}")
-
-        if not zipfile.is_zipfile(path):
-            raise ValueError(f"Error: the file {path} wasn't a zip-file")
-
-        dummy_game = Game([self, Player(None), Player(None), Player(None)])
+        dummy_game = Game([self, RandomPlayer(Color.BLUE), RandomPlayer(Color.WHITE), RandomPlayer(Color.ORANGE)])
         env = self.create_env(dummy_game)
-        env = ActionMasker(env, self.mask_fn)
-        print(f"Loading model from {path}")
+        env = ActionMasker(env, self.action_mask_fn)
         self.model = MaskablePPO.load(path, env=env)
-        print(f"Loaded model from {path}")
-
-print(f"MyPlayer defined as: {MyPlayer}")
