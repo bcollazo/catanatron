@@ -56,7 +56,7 @@ def train_model(episodes, model_path=None, learning_rate=3e-4, eval_freq=10):
         
         if episode % eval_freq == 0:
             eval_reward = evaluate_model(player.model)
-            print(f"Evaluation reward: {eval_reward}")
+            # print(f"Evaluation reward: {eval_reward}")
 
         game = Game([player, RandomPlayer(Color.BLUE)])
         env = CatanatronEnv(config={
@@ -85,7 +85,7 @@ def train_model(episodes, model_path=None, learning_rate=3e-4, eval_freq=10):
         current_lr = lr_schedule(episode / episodes)
         player.model.learning_rate = current_lr
 
-        player.model.learn(total_timesteps=1, callback=callback, reset_num_timesteps=False)
+        player.model.learn(total_timesteps=100, callback=callback, reset_num_timesteps=False)
 
         if episode % 100 == 0 and episode != 0:
             player.model.save(f"model_checkpoint_{episode}.zip")
@@ -97,6 +97,7 @@ def train_model(episodes, model_path=None, learning_rate=3e-4, eval_freq=10):
     return callback.game_rewards
 
 def evaluate_model(model, num_games=10):
+    print("Starting model evaluation...")
     total_reward = 0
     for game_num in range(num_games):
         print(f"Evaluation game {game_num + 1}/{num_games}")
@@ -116,13 +117,13 @@ def evaluate_model(model, num_games=10):
         done = False
         episode_reward = 0
         step_count = 0
-        while not done and step_count < 1000:
-            print(f"Step {step_count}")
+        while not done and step_count < 10000:
+            # print(f"Step {step_count}")
             action_mask = env.action_masks()
-            print(f"Action mask shape: {action_mask.shape}, sum: {action_mask.sum()}")
+            # print(f"Action mask shape: {action_mask.shape}, sum: {action_mask.sum()}")
             try:
                 action, _ = model.predict(obs, action_masks=action_mask, deterministic=True)
-                print(f"Predicted action: {action}")
+                # print(f"Predicted action: {action}")
                 obs, reward, terminated, truncated, info = env.step(action)
                 episode_reward += reward
                 done = terminated or truncated

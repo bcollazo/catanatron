@@ -150,7 +150,7 @@ def vp_difference_reward(game, p0_color):
     
     # Reward is the difference in victory points
     reward = p0_vp - opponent_vp
-    print(f"Reward: {reward}, p0_vp: {p0_vp}, opponent_vp: {opponent_vp}")
+    # print(f"Reward: {reward}, p0_vp: {p0_vp}, opponent_vp: {opponent_vp}")
     return reward
 
 class CatanatronEnv(gym.Env):
@@ -215,8 +215,8 @@ class CatanatronEnv(gym.Env):
         return list(map(to_action_space, self.game.state.playable_actions))
 
     def step(self, action):
-        print(f"Step called with action: {action}")
-        print(f"Valid actions: {self.get_valid_actions()}")
+        # print(f"Step called with action: {action}")
+        # print(f"Valid actions: {self.get_valid_actions()}")
         try:
             catan_action = from_action_space(action, self.game.state.playable_actions)
         except Exception as e:
