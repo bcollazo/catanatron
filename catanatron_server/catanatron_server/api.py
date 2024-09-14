@@ -8,6 +8,7 @@ from catanatron.models.player import Color, RandomPlayer
 from catanatron.game import Game
 from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
 from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
+from catanatron_experimental.my_player import MyPlayer
 
 
 bp = Blueprint("api", __name__, url_prefix="/api")
@@ -18,6 +19,8 @@ def player_factory(player_key):
         return AlphaBetaPlayer(player_key[1], 2, True)
     elif player_key[0] == "RANDOM":
         return RandomPlayer(player_key[1])
+    elif player_key[0] == "MyPlayer":
+        return MyPlayer(player_key[1], "my_model.zip")
     elif player_key[0] == "HUMAN":
         return ValueFunctionPlayer(player_key[1], is_bot=False)
     else:

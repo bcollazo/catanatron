@@ -372,3 +372,10 @@ Other than that here is also a list of ideas:
   - Continue implementing actions from the UI (not all implemented).
   - Chess.com-like UI for watching game replays (with Play/Pause and Back/Forward).
   - A terminal UI? (for ease of debugging)
+
+
+conda activate catan
+
+catanatron-play --players=R,MP --num=100 --code=catanatron_experimental/catanatron_experimental/my_player.py
+
+python catanatron_experimental/catanatron_experimental/train_model.py --episodes 10 --model my_model

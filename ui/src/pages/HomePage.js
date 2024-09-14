@@ -45,6 +45,13 @@ export default function HomePage() {
             <Button
               variant="contained"
               color="secondary"
+              onClick={() => handleCreateGame(["MyPlayer", "RANDOM"])}
+            >
+              Watch PPO v Random
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
               onClick={() => handleCreateGame(["CATANATRON", "CATANATRON"])}
             >
               Watch Catanatron
