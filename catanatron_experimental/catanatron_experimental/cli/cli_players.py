@@ -22,6 +22,7 @@ from catanatron_experimental.machine_learning.players.minimax import (
 )
 from catanatron.players.search import VictoryPointPlayer
 from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
+from catanatron_experimental.machine_learning.players.ppo import PPOPlayer
 from catanatron_experimental.machine_learning.players.playouts import (
     GreedyPlayoutsPlayer,
 )
@@ -94,6 +95,12 @@ CLI_PLAYERS = [
         "SameTurnAlphaBetaPlayer",
         "AlphaBeta but searches only within turn",
         SameTurnAlphaBetaPlayer,
+    ),
+    CliPlayer(
+        "PPO",
+        "PPOPlayer",
+        "Proximal Policy Optimization reinforcement learning agent.",
+        PPOPlayer,
     ),
 ]
 
