@@ -30,6 +30,7 @@ from catanatron_experimental.cli.accumulators import (
     JsonDataAccumulator,
     CsvDataAccumulator,
     DatabaseAccumulator,
+    PickleAccumulator,
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
@@ -79,6 +80,17 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     "--output",
     default=None,
     help="Directory where to save game data.",
+)
+@click.option(
+    "--pickle",
+    default=False,
+    is_flag=True,
+    help="Save game states to local pickle files.",
+)
+@click.option(
+    "--pickle-output",
+    default="game_states_pickle",
+    help="Directory where to save pickle output.",
 )
 @click.option(
     "--json",
@@ -136,6 +148,8 @@ def simulate(
     json,
     csv,
     db,
+    pickle,
+    pickle_output,
     config_discard_limit,
     config_vps_to_win,
     config_map,
@@ -178,7 +192,7 @@ def simulate(
                 players.append(player)
                 break
 
-    output_options = OutputOptions(output, csv, json, db)
+    output_options = OutputOptions(output, csv, json, db, pickle, pickle_output)
     game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
         num,
@@ -197,6 +211,8 @@ class OutputOptions:
     csv: bool = False
     json: bool = False
     db: bool = False
+    pickle: bool = False
+    pickle_output: str = "game_states_pickle"
 
 
 @dataclass(frozen=True)
@@ -270,6 +286,9 @@ def play_batch(
         accumulators.append(JsonDataAccumulator(output_options.output))
     if output_options.db:
         accumulators.append(DatabaseAccumulator())
+    if output_options.pickle:
+        ensure_dir(output_options.pickle_output)
+        accumulators.append(PickleAccumulator(output_options.pickle_output))
     for accumulator_class in CUSTOM_ACCUMULATORS:
         accumulators.append(accumulator_class(players=players, game_config=game_config))
 
@@ -292,7 +311,7 @@ def play_batch(
     for player in players:
         table.add_column(f"{player.color.value} VP", justify="right")
     table.add_column("WINNER")
-    if output_options.db:
+    if output_options.db or output_options.pickle:
         table.add_column("LINK", overflow="fold")
 
     with Progress(
@@ -326,7 +345,7 @@ def play_batch(
                     points = get_actual_victory_points(game.state, player.color)
                     row.append(str(points))
                 row.append(rich_color(winning_color))
-                if output_options.db:
+                if output_options.db or output_options.pickle:
                     row.append(accumulators[-1].link)
 
                 table.add_row(*row)
