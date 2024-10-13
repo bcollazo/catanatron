@@ -8,7 +8,7 @@ pub enum Resource {
     Ore,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DevCard {
     Knight,
     YearOfPlenty,

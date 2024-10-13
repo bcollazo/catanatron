@@ -1,20 +1,20 @@
-use super::enums::Resource;
+use crate::enums::{DevCard, Resource};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Deck {
+pub struct ResourceDeck {
     freqdeck: u32, // Store resource counts using 32 bits. Each resource gets 6 bits.
 }
 
-impl Deck {
+impl ResourceDeck {
     /// Static constructor: Constructs a deck with all resources set to 0.
     pub fn new() -> Self {
-        Deck { freqdeck: 0 }
+        ResourceDeck { freqdeck: 0 }
     }
 
     // Read operations =====
     /// Counts the number of a specific resource in the deck.
     pub fn count(&self, card: Resource) -> u32 {
-        let shift = Deck::resource_shift(card);
+        let shift = ResourceDeck::resource_shift(card);
         (self.freqdeck >> shift) & 0b111111 // Extract 6 bits (max count 63)
     }
 
@@ -40,8 +40,8 @@ impl Deck {
     }
 
     /// Adds two frequency decks together element-wise.
-    pub fn add(&self, other: &Deck) -> Deck {
-        let mut result = Deck::new();
+    pub fn add(&self, other: &ResourceDeck) -> ResourceDeck {
+        let mut result = ResourceDeck::new();
         for card in [
             Resource::Wood,
             Resource::Brick,
@@ -56,8 +56,8 @@ impl Deck {
     }
 
     /// Subtracts one frequency deck from another element-wise.
-    pub fn subtract(&self, other: &Deck) -> Deck {
-        let mut result = Deck::new();
+    pub fn subtract(&self, other: &ResourceDeck) -> ResourceDeck {
+        let mut result = ResourceDeck::new();
         for card in [
             Resource::Wood,
             Resource::Brick,
@@ -72,7 +72,7 @@ impl Deck {
     }
 
     /// Checks if one frequency deck contains all the resources of another deck.
-    pub fn contains(&self, other: &Deck) -> bool {
+    pub fn contains(&self, other: &ResourceDeck) -> bool {
         for card in [
             Resource::Wood,
             Resource::Brick,
@@ -88,8 +88,8 @@ impl Deck {
     }
 
     /// Creates a frequency deck from a list of resources.
-    pub fn from_listdeck(listdeck: &[Resource]) -> Deck {
-        let mut deck = Deck::new();
+    pub fn from_listdeck(listdeck: &[Resource]) -> ResourceDeck {
+        let mut deck = ResourceDeck::new();
         for &resource in listdeck {
             deck.replenish(1, resource);
         }
@@ -109,14 +109,14 @@ impl Deck {
 
     /// Sets the count of the specified resource using bitwise operations.
     fn set_resource_count(&mut self, card: Resource, count: u32) {
-        let shift = Deck::resource_shift(card);
+        let shift = ResourceDeck::resource_shift(card);
         self.freqdeck &= !(0b111111 << shift); // Clear the bits for the resource
         self.freqdeck |= (count & 0b111111) << shift; // Set the new count
     }
 
     /// Static constructor: Constructs a deck with [19, 19, 19, 19, 19] resources.
     pub fn starting_resource_bank() -> Self {
-        Deck::from_counts([19, 19, 19, 19, 19])
+        ResourceDeck::from_counts([19, 19, 19, 19, 19])
     }
 
     /// Constructs a deck from a list of resource counts
@@ -131,7 +131,7 @@ impl Deck {
             freqdeck |= count << (i * 6); // Shift the count to its correct position in the bitfield
         }
 
-        Deck { freqdeck }
+        ResourceDeck { freqdeck }
     }
 
     pub fn total_cards(&self) -> u32 {
@@ -152,6 +152,108 @@ impl Deck {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct DevCardDeck {
+    listdeck: Vec<DevCard>,
+}
+
+impl DevCardDeck {
+    /// Static constructor: Constructs a deck with all development cards set to 0.
+    pub fn new() -> Self {
+        DevCardDeck {
+            listdeck: Vec::new(),
+        }
+    }
+
+    pub fn starting_deck() -> Self {
+        let mut listdeck = Vec::new();
+        listdeck.extend(vec![DevCard::Knight; 14]);
+        listdeck.extend(vec![DevCard::YearOfPlenty; 2]);
+        listdeck.extend(vec![DevCard::RoadBuilding; 2]);
+        listdeck.extend(vec![DevCard::Monopoly; 2]);
+        listdeck.extend(vec![DevCard::VictoryPoint; 5]);
+        DevCardDeck { listdeck }
+    }
+
+    /// Draws a specific number of a given development card from the deck.
+    pub fn draw(&mut self, amount: u32, card: DevCard) {
+        let mut count = amount;
+        let mut i = 0;
+        while count > 0 && i < self.listdeck.len() {
+            if self.listdeck[i] == card {
+                self.listdeck.remove(i);
+                count -= 1;
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// Replenishes the deck with a specific number of a given development card.
+    pub fn replenish(&mut self, amount: u32, card: DevCard) {
+        for _ in 0..amount {
+            self.listdeck.push(card);
+        }
+    }
+
+    /// Counts the number of a specific development card in the deck.
+    pub fn count(&self, card: DevCard) -> u32 {
+        self.listdeck.iter().filter(|&&c| c == card).count() as u32
+    }
+
+    /// Returns the total number of development cards in the deck.
+    pub fn total_cards(&self) -> u32 {
+        self.listdeck.len() as u32
+    }
+
+    /// Creates a development card deck from a list of development cards.
+    pub fn from_listdeck(listdeck: &[DevCard]) -> DevCardDeck {
+        let mut deck = DevCardDeck::new();
+        for &card in listdeck {
+            deck.replenish(1, card);
+        }
+        deck
+    }
+
+    /// Checks if the deck can draw a specific number of a given development card.
+    pub fn can_draw(&self, amount: u32, card: DevCard) -> bool {
+        let count = self.count(card);
+        count >= amount
+    }
+
+    /// Adds two development card decks together element-wise.
+    pub fn add(&self, other: &DevCardDeck) -> DevCardDeck {
+        let mut result = DevCardDeck::new();
+        for card in [
+            DevCard::Knight,
+            DevCard::VictoryPoint,
+            DevCard::RoadBuilding,
+            DevCard::YearOfPlenty,
+            DevCard::Monopoly,
+        ] {
+            let total = self.count(card) + other.count(card);
+            result.replenish(total, card);
+        }
+        result
+    }
+
+    /// Subtracts one development card deck from another
+    pub fn subtract(&self, other: &DevCardDeck) -> DevCardDeck {
+        let mut result = DevCardDeck::new();
+        for card in [
+            DevCard::Knight,
+            DevCard::VictoryPoint,
+            DevCard::RoadBuilding,
+            DevCard::YearOfPlenty,
+            DevCard::Monopoly,
+        ] {
+            let diff = self.count(card).saturating_sub(other.count(card));
+            result.replenish(diff, card);
+        }
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,21 +261,21 @@ mod tests {
     #[test]
     fn test_resource_freqdeck_init() {
         // Test that the starting resource bank is initialized correctly
-        let deck = Deck::starting_resource_bank();
+        let deck = ResourceDeck::starting_resource_bank();
         assert_eq!(deck.count(Resource::Wood), 19);
     }
 
     #[test]
     fn test_resource_freqdeck_can_draw() {
         // Test the `can_draw` function
-        let deck = Deck::starting_resource_bank();
+        let deck = ResourceDeck::starting_resource_bank();
         assert!(deck.can_draw(10, Resource::Brick)); // Should be able to draw 10 bricks
         assert!(!deck.can_draw(20, Resource::Brick)); // Should not be able to draw 20 bricks
     }
 
     #[test]
     fn test_resource_freqdeck_integration() {
-        let mut deck = Deck::starting_resource_bank();
+        let mut deck = ResourceDeck::starting_resource_bank();
 
         // Test the initial count and total of all resources
         assert_eq!(deck.count(Resource::Wood), 19);
@@ -192,5 +294,70 @@ mod tests {
         deck.replenish(5, Resource::Wheat);
         assert_eq!(deck.count(Resource::Wheat), 14); // After replenishing 5, there should be 14 Wheat
         assert_eq!(deck.total_cards(), 19 * 5 - 10 + 5); // Total sum of resources should be 90
+    }
+
+    #[test]
+    fn test_can_add() {
+        let mut a = ResourceDeck::new();
+        let mut b = ResourceDeck::new();
+
+        a.replenish(10, Resource::Ore);
+        b.replenish(1, Resource::Ore);
+
+        assert_eq!(a.count(Resource::Ore), 10);
+        assert_eq!(b.count(Resource::Ore), 1);
+
+        b = b.add(&a);
+        assert_eq!(a.count(Resource::Ore), 10);
+        assert_eq!(b.count(Resource::Ore), 11);
+    }
+
+    #[test]
+    fn test_can_subtract() {
+        let mut a = ResourceDeck::new();
+        let mut b = ResourceDeck::new();
+
+        a.replenish(13, Resource::Sheep);
+        b.replenish(4, Resource::Sheep);
+
+        assert_eq!(a.count(Resource::Sheep), 13);
+        assert_eq!(b.count(Resource::Sheep), 4);
+
+        b.replenish(11, Resource::Sheep); // now has 15
+        b = b.subtract(&a);
+        assert_eq!(a.count(Resource::Sheep), 13);
+        assert_eq!(b.count(Resource::Sheep), 2);
+    }
+
+    #[test]
+    fn test_from_array() {
+        let a = ResourceDeck::from_listdeck(&[Resource::Brick, Resource::Brick, Resource::Wood]);
+        assert_eq!(a.total_cards(), 3);
+        assert_eq!(a.count(Resource::Brick), 2);
+        assert_eq!(a.count(Resource::Wood), 1);
+    }
+
+    #[test]
+    fn test_devcard_freqdeck_init() {
+        let deck = DevCardDeck::starting_deck();
+        assert_eq!(deck.count(DevCard::Knight), 14);
+        assert_eq!(deck.count(DevCard::VictoryPoint), 5);
+        assert_eq!(deck.total_cards(), 25);
+    }
+
+    #[test]
+    fn test_devcard_can_draw() {
+        let deck = DevCardDeck::starting_deck();
+        assert!(deck.can_draw(10, DevCard::Knight));
+        assert!(!deck.can_draw(15, DevCard::Knight));
+    }
+
+    #[test]
+    fn test_devcard_draw() {
+        let mut deck = DevCardDeck::starting_deck();
+        assert_eq!(deck.count(DevCard::Knight), 14);
+        deck.draw(5, DevCard::Knight);
+        assert_eq!(deck.count(DevCard::Knight), 9);
+        assert_eq!(deck.total_cards(), 25 - 5);
     }
 }

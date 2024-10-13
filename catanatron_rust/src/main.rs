@@ -9,7 +9,7 @@ fn main() {
     // Benchmark deck operations
     println!("Starting benchmark of Deck operations...");
     let start = Instant::now();
-    let mut deck = decks::Deck::starting_resource_bank();
+    let mut deck = decks::ResourceDeck::starting_resource_bank();
     for _ in 0..1_000_000 {
         if deck.can_draw(2, enums::Resource::Wood) {
             deck.draw(2, enums::Resource::Wood);
