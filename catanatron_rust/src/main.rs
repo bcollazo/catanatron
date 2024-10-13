@@ -4,6 +4,7 @@ use enums::Resource;
 
 mod decks;
 mod enums;
+mod state;
 
 fn main() {
     // Benchmark deck operations
@@ -20,4 +21,7 @@ fn main() {
     let duration = start.elapsed();
     println!("Time taken for 1,000,000 deck operations: {:?}", duration);
     println!("Total cards in deck: {}", deck.total_cards());
+
+    let vector = state::initialize_state_vector(2);
+    println!("Vector length: {}", vector.len());
 }
