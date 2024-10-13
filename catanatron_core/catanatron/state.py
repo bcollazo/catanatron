@@ -66,14 +66,14 @@ from catanatron.models.enums import FastResource
 # Create Player State blueprint
 PLAYER_INITIAL_STATE = {
     "VICTORY_POINTS": 0,
-    "ROADS_AVAILABLE": 15,
-    "SETTLEMENTS_AVAILABLE": 5,
-    "CITIES_AVAILABLE": 4,
+    # de-normalized features (for performance and ease of creating feature vectors)
     "HAS_ROAD": False,
     "HAS_ARMY": False,
     "HAS_ROLLED": False,
     "HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN": False,
-    # de-normalized features (for performance since we think they are good features)
+    "ROADS_AVAILABLE": 15,
+    "SETTLEMENTS_AVAILABLE": 5,
+    "CITIES_AVAILABLE": 4,
     "ACTUAL_VICTORY_POINTS": 0,
     "LONGEST_ROAD_LENGTH": 0,
 }
