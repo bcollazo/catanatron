@@ -4,6 +4,7 @@ from catanatron.models.map import (
     MINI_MAP_TEMPLATE,
     CatanMap,
     LandTile,
+    NodeRef,
     get_nodes_and_edges,
     get_node_counter_production,
     DICE_PROBAS,
@@ -25,6 +26,7 @@ def test_node_production_of_same_resource_adjacent_tile():
 
 def test_mini_map_can_be_created():
     mini = CatanMap.from_template(MINI_MAP_TEMPLATE)
+    assert mini.tiles[(0, 0, 0)].nodes[NodeRef.NORTH] == 0
     assert len(mini.land_tiles) == 7
     assert len(mini.land_nodes) == 24
     assert len(mini.tiles_by_id) == 7
