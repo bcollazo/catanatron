@@ -1,6 +1,5 @@
-use std::time::Instant;
-
 use enums::Resource;
+use std::time::Instant;
 
 mod decks;
 mod enums;
@@ -21,6 +20,32 @@ fn main() {
     let duration = start.elapsed();
     println!("Time taken for 1,000,000 deck operations: {:?}", duration);
     println!("Total cards in deck: {}", deck.total_cards());
+
+    // Benchmark copy operations
+    println!("Starting benchmark of Deck operations...");
+    let start = Instant::now();
+    let vector = vec![0u8; 600];
+    let mut copied_vector = vector.clone();
+    for i in 0..1_000_000 {
+        let index = i % 600;
+        copied_vector[index] = index as u8;
+    }
+    let duration = start.elapsed();
+    println!("Time taken for 1,000,000 copy operations: {:?}", duration);
+    println!("Copy Results: {:?}, {:?}", vector, copied_vector);
+
+    // Benchmark array copy operations
+    println!("Starting benchmark of Array operations...");
+    let start = Instant::now();
+    let array = [0u8; 1200];
+    let mut copied_array = array;
+    for i in 0..1_000_000 {
+        let index = i % 1200;
+        copied_array[index] = index as u8;
+    }
+    let duration = start.elapsed();
+    println!("Time taken for 1,000,000 array operations: {:?}", duration);
+    println!("Copy Results: {:?}, {:?}", array, copied_array);
 
     let vector = state::initialize_state_vector(2);
     println!("Vector length: {}", vector.len());
