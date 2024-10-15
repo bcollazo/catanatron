@@ -115,6 +115,7 @@ class State:
         current_turn_index (int): index per colors array of player whose turn is it.
         current_prompt (ActionPrompt): DEPRECATED. Not needed; use is_initial_build_phase,
             is_moving_knight, etc... instead.
+        is_initial_build_phase (bool): If current player is building initial settlements
         is_discarding (bool): If current player needs to discard.
         is_moving_knight (bool): If current player needs to move robber.
         is_road_building (bool): If current player needs to build free roads per Road
