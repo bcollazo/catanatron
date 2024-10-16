@@ -7,9 +7,11 @@ from tests.utils import advance_to_play_turn, build_initial_placements
 from catanatron.state import player_deck_replenish
 from catanatron.models.enums import ORE, Action, ActionType, WHEAT, NodeRef
 from catanatron.models.board import Board, get_edges
-from catanatron.models.map import (
+from catanatron.models.map_template import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
+)
+from catanatron.models.map import (
     NUM_EDGES,
     NUM_NODES,
     CatanMap,

@@ -4,7 +4,8 @@ import numpy as np
 
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
+from catanatron.models.map_template import BASE_MAP_TEMPLATE, LandTile
+from catanatron.models.map import NUM_NODES, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
 from catanatron_gym.features import (
