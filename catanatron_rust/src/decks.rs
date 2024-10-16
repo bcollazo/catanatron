@@ -152,9 +152,19 @@ impl ResourceDeck {
     }
 }
 
+pub fn starting_dev_listdeck() -> [u8; 25] {
+    let mut listdeck: [u8; 25] = [0; 25];
+    listdeck[0..14].copy_from_slice(&[DevCard::Knight as u8; 14]);
+    listdeck[14..16].copy_from_slice(&[DevCard::YearOfPlenty as u8; 2]);
+    listdeck[16..18].copy_from_slice(&[DevCard::RoadBuilding as u8; 2]);
+    listdeck[18..20].copy_from_slice(&[DevCard::Monopoly as u8; 2]);
+    listdeck[20..25].copy_from_slice(&[DevCard::VictoryPoint as u8; 5]);
+    listdeck
+}
+
 #[derive(Debug, Clone)]
 pub struct DevCardDeck {
-    listdeck: Vec<DevCard>,
+    pub listdeck: Vec<DevCard>,
 }
 
 impl DevCardDeck {

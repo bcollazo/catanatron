@@ -1,4 +1,13 @@
-// Use enums for literal string types
+#[derive(Debug, Clone, Copy)]
+pub enum Color {
+    Red,
+    Blue,
+    Orange,
+    White,
+}
+
+pub const COLORS: [Color; 4] = [Color::Red, Color::Blue, Color::Orange, Color::White];
+
 #[derive(Debug, Clone, Copy)]
 pub enum Resource {
     Wood,

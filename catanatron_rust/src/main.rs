@@ -47,6 +47,9 @@ fn main() {
     println!("Time taken for 1,000,000 array operations: {:?}", duration);
     println!("Copy Results: {:?}, {:?}", array, copied_array);
 
-    let vector = state::initialize_state_vector(2);
-    println!("Vector length: {}", vector.len());
+    let size = state::get_state_array_size(2);
+    println!("Vector length: {}", size);
+
+    let vector = state::initialize_state();
+    println!("Vector: {:?}", vector);
 }
