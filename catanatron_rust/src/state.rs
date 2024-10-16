@@ -92,6 +92,7 @@ pub fn initialize_state() -> Vec<u8> {
     vector[3] = 19;
     vector[4] = 19;
     // Initialize Bank Development Cards
+    // TODO: Shuffle
     let listdeck = starting_dev_listdeck();
     vector[5..30].copy_from_slice(&listdeck);
     // Initialize Game Controls
@@ -168,6 +169,7 @@ mod tests {
 
     #[test]
     fn test_initialize_state() {
-        initialize_state();
+        let state = initialize_state();
+        assert_eq!(state.len(), 301);
     }
 }
