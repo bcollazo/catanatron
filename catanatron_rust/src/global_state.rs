@@ -5,13 +5,14 @@ use crate::{
     map_template::{MapTemplate, TileSlot},
 };
 
+#[derive(Debug)]
 pub struct GlobalState {
     mini_map_template: MapTemplate,
     base_map_template: MapTemplate,
 }
 
 impl GlobalState {
-    fn new() -> Self {
+    pub fn new() -> Self {
         // Mini Map Template
         let mut topology = HashMap::new();
         // center

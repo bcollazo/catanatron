@@ -1,6 +1,7 @@
 use crate::enums::Resource;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub enum TileSlot {
     Land,
     Water,
@@ -16,6 +17,7 @@ pub enum TileSlot {
 
 type Coordinate = (i8, i8, i8);
 
+#[derive(Debug)]
 pub struct MapTemplate {
     pub(crate) numbers: Vec<i8>,
     pub(crate) ports: Vec<Option<Resource>>,

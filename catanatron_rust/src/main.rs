@@ -1,9 +1,8 @@
-use enums::Resource;
+use catanatron_rust::decks;
+use catanatron_rust::enums::Resource;
+use catanatron_rust::global_state;
+use catanatron_rust::state;
 use std::time::Instant;
-
-mod decks;
-mod enums;
-mod state;
 
 fn main() {
     // Benchmark deck operations
@@ -11,8 +10,8 @@ fn main() {
     let start = Instant::now();
     let mut deck = decks::ResourceDeck::starting_resource_bank();
     for _ in 0..1_000_000 {
-        if deck.can_draw(2, enums::Resource::Wood) {
-            deck.draw(2, enums::Resource::Wood);
+        if deck.can_draw(2, Resource::Wood) {
+            deck.draw(2, Resource::Wood);
             deck.replenish(1, Resource::Wood); // Replenish after drawing to keep the count consistent
             deck.replenish(1, Resource::Wood); // Replenish after drawing to keep the count consistent
         }
@@ -46,6 +45,9 @@ fn main() {
     let duration = start.elapsed();
     println!("Time taken for 1,000,000 array operations: {:?}", duration);
     println!("Copy Results: {:?}, {:?}", array, copied_array);
+
+    let global_state = global_state::GlobalState::new();
+    println!("Global State: {:?}", global_state);
 
     let size = state::get_state_array_size(2);
     println!("Vector length: {}", size);
