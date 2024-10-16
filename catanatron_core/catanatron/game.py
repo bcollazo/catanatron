@@ -10,7 +10,7 @@ from typing import List, Union, Optional
 from catanatron.models.enums import Action, ActionPrompt, ActionType
 from catanatron.state import State, apply_action
 from catanatron.state_functions import player_key, player_has_rolled
-from catanatron.models.map import CatanMap
+from catanatron.models.map import MapInstance
 from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...
@@ -92,7 +92,7 @@ class Game:
         seed: Optional[int] = None,
         discard_limit: int = 7,
         vps_to_win: int = 10,
-        catan_map: Optional[CatanMap] = None,
+        map_instance: Optional[MapInstance] = None,
         initialize: bool = True,
     ):
         """Creates a game (doesn't run it).
@@ -102,7 +102,7 @@ class Game:
             seed (int, optional): Random seed to use (for reproducing games). Defaults to None.
             discard_limit (int, optional): Discard limit to use. Defaults to 7.
             vps_to_win (int, optional): Victory Points needed to win. Defaults to 10.
-            catan_map (CatanMap, optional): Map to use. Defaults to None.
+            map_instance (MapInstance, optional): Map to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
         if initialize:
@@ -111,7 +111,7 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
-            self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.state = State(players, map_instance, discard_limit=discard_limit)
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.

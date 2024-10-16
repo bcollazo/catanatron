@@ -7,7 +7,7 @@ import pickle
 from collections import defaultdict
 from typing import Any, List, Tuple, Dict, Iterable
 
-from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
+from catanatron.models.map import BASE_MAP_TEMPLATE, MapInstance
 from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -128,14 +128,16 @@ class State:
     def __init__(
         self,
         players: List[Player],
-        catan_map=None,
+        map_instance=None,
         discard_limit=7,
         initialize=True,
     ):
         if initialize:
             self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
-            self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
+            self.board = Board(
+                map_instance or MapInstance.from_template(BASE_MAP_TEMPLATE)
+            )
             self.discard_limit = discard_limit
 
             # feature-ready dictionary

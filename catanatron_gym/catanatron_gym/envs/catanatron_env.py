@@ -224,13 +224,13 @@ class CatanatronEnv(gym.Env):
     ):
         super().reset(seed=seed)
 
-        catan_map = build_map(self.map_type)
+        map_instance = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
         self.game = Game(
             players=self.players,
             seed=seed,
-            catan_map=catan_map,
+            map_instance=map_instance,
             vps_to_win=self.vps_to_win,
         )
         self.invalid_actions_count = 0

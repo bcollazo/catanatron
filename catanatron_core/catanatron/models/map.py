@@ -33,7 +33,7 @@ NUM_EDGES = 72
 NUM_TILES = 19
 
 
-class CatanMap:
+class MapInstance:
     """Represents a randomly initialized map."""
 
     def __init__(
@@ -60,11 +60,11 @@ class CatanMap:
     def from_template(map_template: MapTemplate):
         tiles = initialize_tiles(map_template)
 
-        return CatanMap.from_tiles(tiles)
+        return MapInstance.from_tiles(tiles)
 
     @staticmethod
     def from_tiles(tiles: Dict[Coordinate, Tile]):
-        self = CatanMap()
+        self = MapInstance()
         self.tiles = tiles
 
         self.land_tiles = {
@@ -354,13 +354,13 @@ TOURNAMENT_MAP_TILES = initialize_tiles(
         None,
     ],
 )
-TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
+TOURNAMENT_MAP = MapInstance.from_tiles(TOURNAMENT_MAP_TILES)
 
 
 def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
     if map_type == "TOURNAMENT":
         return TOURNAMENT_MAP  # this assumes map is read-only data struct
     elif map_type == "MINI":
-        return CatanMap.from_template(MINI_MAP_TEMPLATE)
+        return MapInstance.from_template(MINI_MAP_TEMPLATE)
     else:
-        return CatanMap.from_template(BASE_MAP_TEMPLATE)
+        return MapInstance.from_template(BASE_MAP_TEMPLATE)
