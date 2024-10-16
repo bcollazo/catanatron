@@ -5,7 +5,7 @@ Classes to encode/decode catanatron classes to JSON format.
 import json
 from enum import Enum
 
-from catanatron.models.map import Water, Port, LandTile
+from catanatron.models.map_instance import Water, Port, LandTile
 from catanatron.game import Game
 from catanatron.models.player import Color
 from catanatron.models.enums import RESOURCES, Action, ActionType

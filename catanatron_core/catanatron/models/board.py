@@ -7,7 +7,7 @@ import functools
 import networkx as nx  # type: ignore
 
 from catanatron.models.player import Color
-from catanatron.models.map import (
+from catanatron.models.map_instance import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
     NUM_NODES,

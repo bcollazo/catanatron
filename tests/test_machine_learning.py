@@ -11,13 +11,13 @@ from catanatron.models.map_template import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
 )
-from catanatron.models.map import (
+from catanatron.models.map_instance import (
     NUM_EDGES,
     NUM_NODES,
     MapInstance,
 )
 from catanatron.game import Game
-from catanatron.models.map import number_probability
+from catanatron.models.map_instance import number_probability
 from catanatron.models.player import SimplePlayer, Color
 from catanatron_gym.features import (
     create_sample,

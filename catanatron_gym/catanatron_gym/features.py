@@ -12,7 +12,7 @@ from catanatron.state_functions import (
     player_num_resource_cards,
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
-from catanatron.models.map import NUM_TILES, MapInstance, build_map
+from catanatron.models.map_instance import NUM_TILES, MapInstance, build_map
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -24,7 +24,7 @@ from catanatron.models.enums import (
     VICTORY_POINT,
 )
 from catanatron.game import Game
-from catanatron.models.map import number_probability
+from catanatron.models.map_instance import number_probability
 
 
 # ===== Helpers

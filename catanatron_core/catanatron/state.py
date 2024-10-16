@@ -7,7 +7,7 @@ import pickle
 from collections import defaultdict
 from typing import Any, List, Tuple, Dict, Iterable
 
-from catanatron.models.map import BASE_MAP_TEMPLATE, MapInstance
+from catanatron.models.map_instance import BASE_MAP_TEMPLATE, MapInstance
 from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,

@@ -1,5 +1,5 @@
 from catanatron import WOOD, BRICK
-from catanatron.models.map import (
+from catanatron.models.map_instance import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
     MapInstance,

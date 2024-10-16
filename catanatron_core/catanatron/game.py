@@ -10,7 +10,7 @@ from typing import List, Union, Optional
 from catanatron.models.enums import Action, ActionPrompt, ActionType
 from catanatron.state import State, apply_action
 from catanatron.state_functions import player_key, player_has_rolled
-from catanatron.models.map import MapInstance
+from catanatron.models.map_instance import MapInstance
 from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...

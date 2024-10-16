@@ -1,6 +1,6 @@
 import pytest
 
-from catanatron.models.map import MINI_MAP_TEMPLATE, MapInstance
+from catanatron.models.map_instance import MINI_MAP_TEMPLATE, MapInstance
 from catanatron.models.enums import RESOURCES
 from catanatron.models.board import Board, get_node_distances
 from catanatron.models.player import Color

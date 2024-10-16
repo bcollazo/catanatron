@@ -15,7 +15,7 @@ from rich.text import Text
 
 from catanatron.game import Game
 from catanatron.models.player import Color
-from catanatron.models.map import build_map
+from catanatron.models.map_instance import build_map
 from catanatron.state_functions import get_actual_victory_points
 
 # try to suppress TF output before any potentially tf-importing modules
