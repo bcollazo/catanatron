@@ -1,26 +1,32 @@
-use crate::enums::Resource;
-use std::collections::HashMap;
+use crate::{enums::Resource, ordered_hashmap::OrderedHashMap};
 
-#[derive(Debug)]
+// Define a new struct to wrap the tuple
+pub type Coordinate = (i8, i8, i8);
+
+// Method to add two coordinates
+pub fn add_coordinates(a: Coordinate, b: Coordinate) -> Coordinate {
+    (a.0 + b.0, a.1 + b.1, a.2 + b.2)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TileSlot {
     Land,
     Water,
     NWPort,
-    NPort,
     NEPort,
     EPort,
     SEPort,
-    SPort,
     SWPort,
     WPort,
 }
-
-type Coordinate = (i8, i8, i8);
 
 #[derive(Debug)]
 pub struct MapTemplate {
     pub(crate) numbers: Vec<i8>,
     pub(crate) ports: Vec<Option<Resource>>,
     pub(crate) tiles: Vec<Option<Resource>>,
-    pub(crate) topology: HashMap<Coordinate, TileSlot>,
+
+    // Ordered, so that when map is built, we keep the same node-id, edge-id, and tile-id.
+    //  that original catanatron uses.
+    pub(crate) topology: OrderedHashMap<Coordinate, TileSlot>,
 }

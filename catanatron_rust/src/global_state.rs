@@ -1,20 +1,19 @@
-use std::collections::HashMap;
-
 use crate::{
     enums::Resource,
     map_template::{MapTemplate, TileSlot},
+    ordered_hashmap::OrderedHashMap,
 };
 
 #[derive(Debug)]
 pub struct GlobalState {
-    mini_map_template: MapTemplate,
-    base_map_template: MapTemplate,
+    pub mini_map_template: MapTemplate,
+    pub base_map_template: MapTemplate,
 }
 
 impl GlobalState {
     pub fn new() -> Self {
         // Mini Map Template
-        let mut topology = HashMap::new();
+        let mut topology = OrderedHashMap::new();
         // center
         topology.insert((0, 0, 0), TileSlot::Land);
         // first layer
@@ -52,7 +51,7 @@ impl GlobalState {
             topology,
         };
         // Base Map Template
-        let mut topology = HashMap::new();
+        let mut topology = OrderedHashMap::new();
         // center
         topology.insert((0, 0, 0), TileSlot::Land);
         // first layer
