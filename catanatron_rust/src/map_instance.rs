@@ -112,8 +112,18 @@ pub enum Tile {
 
 #[derive(Debug)]
 pub struct MapInstance {
-    pub tiles: HashMap<Coordinate, Tile>,
-    pub land_tiles: HashMap<Coordinate, LandTile>,
+    tiles: HashMap<Coordinate, Tile>,
+    land_tiles: HashMap<Coordinate, LandTile>,
+}
+
+impl MapInstance {
+    pub fn get_tile(&self, coordinate: Coordinate) -> Option<&Tile> {
+        self.tiles.get(&coordinate)
+    }
+
+    pub fn get_land_tile(&self, coordinate: Coordinate) -> Option<&LandTile> {
+        self.land_tiles.get(&coordinate)
+    }
 }
 
 impl MapInstance {
@@ -432,8 +442,8 @@ mod tests {
             }))
         );
         assert_eq!(
-            map_instance.tiles.get(&(1, -1, 0)),
-            Some(&Tile::Land(LandTile {
+            map_instance.land_tiles.get(&(1, -1, 0)),
+            Some(&LandTile {
                 hexagon: Hexagon {
                     nodes: HashMap::from([
                         (NodeRef::North, 6),
@@ -454,7 +464,7 @@ mod tests {
                 },
                 resource: Some(Resource::Ore),
                 number: Some(9)
-            }))
+            })
         );
 
         // Spot-check several node ids

@@ -57,6 +57,9 @@ fn main() {
     println!("Vector: {:?}", vector);
 
     let map_instance = MapInstance::new(&global_state.base_map_template, 0);
-    println!("Map Instance Tiles: {:?}", map_instance.tiles);
-    println!("Map Instance Land Tiles: {:?}", map_instance.land_tiles);
+    println!("Map Instance Tiles: {:?}", map_instance.get_tile((0, 0, 0)));
+    println!(
+        "Map Instance Land Tiles: {:?}",
+        map_instance.get_land_tile((1, 0, -1))
+    );
 }
