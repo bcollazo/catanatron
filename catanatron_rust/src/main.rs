@@ -1,6 +1,7 @@
 use catanatron_rust::decks;
 use catanatron_rust::enums::Resource;
 use catanatron_rust::global_state;
+use catanatron_rust::map_instance::MapInstance;
 use catanatron_rust::state;
 use std::time::Instant;
 
@@ -54,4 +55,8 @@ fn main() {
 
     let vector = state::initialize_state();
     println!("Vector: {:?}", vector);
+
+    let map_instance = MapInstance::new(&global_state.base_map_template, 0);
+    println!("Map Instance Tiles: {:?}", map_instance.tiles);
+    println!("Map Instance Land Tiles: {:?}", map_instance.land_tiles);
 }
