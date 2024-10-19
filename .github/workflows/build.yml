@@ -88,3 +88,28 @@ jobs:
         working-directory: ./ui
       - run: npm run build
         working-directory: ./ui
+
+  build-rust:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      # Verify cargo run, test, and run benchmarks
+      - name: Run `cargo run`
+        run: cargo run
+      - name: Run `cargo run --release`
+        run: cargo run --release
+      - name: Run `cargo test`
+        run: cargo test --verbose
+      - name: Run `cargo test --release`
+        run: cargo test --release --verbose
+      - name: Run `cargo bench`
+        run: cargo bench
