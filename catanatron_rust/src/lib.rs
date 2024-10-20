@@ -5,6 +5,7 @@ pub mod game;
 pub mod global_state;
 pub mod map_instance;
 pub mod map_template;
+pub mod move_generation;
 mod ordered_hashmap;
 pub mod player;
 pub mod state;

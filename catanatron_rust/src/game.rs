@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use crate::enums::GameConfiguration;
+use crate::move_generation::generate_playable_actions;
 use crate::player::Player;
-use crate::state::{initialize_state, seating_order_slice, State};
-use crate::state_functions::{get_current_color, winner};
+use crate::state::{initialize_state, State};
+use crate::state_functions::{apply_action, get_current_color, winner};
 
 pub fn play_game(config: GameConfiguration, players: HashMap<u8, Box<dyn Player>>) -> Option<u8> {
     println!("Playing game with configuration: {:?}", config);
@@ -23,10 +24,6 @@ fn play_tick(
 ) {
     println!("Playing config {:?}", config);
     println!("Playing turn {:?}", state);
-    println!(
-        "Seating order: {:?}",
-        &state[seating_order_slice(config.num_players as usize)].to_vec()
-    );
     let current_color = get_current_color(config, state);
     let current_player = players.get(&current_color).unwrap();
 
@@ -38,15 +35,6 @@ fn play_tick(
     );
 
     apply_action(config, state, action);
-}
-
-// TODO: Type with Action
-fn generate_playable_actions(config: &GameConfiguration, state: &State) -> Vec<u64> {
-    vec![0]
-}
-
-fn apply_action(config: &GameConfiguration, state: &mut State, action: u64) {
-    println!("Applying action {:?}", action);
 }
 
 #[cfg(test)]

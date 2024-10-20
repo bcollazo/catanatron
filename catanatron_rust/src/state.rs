@@ -81,8 +81,13 @@ pub fn actual_victory_points_index(num_players: u8, color: u8) -> usize {
     PLAYER_STATE_START_INDEX + num_players as usize + color as usize * 15
 }
 pub const DEV_BANK_PTR_INDEX: usize = 30;
-pub const CURRENT_PLAYER_INDEX: usize = 31;
-pub const CURRENT_TURN_INDEX: usize = 32;
+pub const CURRENT_TICK_SEAT_INDEX: usize = 31;
+pub const CURRENT_TURN_SEAT_INDEX: usize = 32;
+pub const IS_INITIAL_BUILD_PHASE_INDEX: usize = 33;
+pub const HAS_PLAYED_DEV_CARD: usize = 34;
+pub const HAS_ROLLED_INDEX: usize = 35;
+pub const IS_DISCARDING_INDEX: usize = 36;
+pub const IS_MOVING_ROBBER_INDEX: usize = 37;
 
 /// This is a compact representation of the omnipotent state of the game.
 /// Fairly close to a bitboard, but not quite. Its a vector of integers.
@@ -118,13 +123,13 @@ pub fn initialize_state() -> Vec<u8> {
     // May be worth storing a pointer to the top of the deck
     vector[DEV_BANK_PTR_INDEX] = 0;
     // Initialize Game Controls
-    vector[CURRENT_PLAYER_INDEX] = 0;
-    vector[CURRENT_TURN_INDEX] = 0;
-    vector[33] = 1; // Is_Initial_Build_Phase
-    vector[34] = 0; // Has_Played_Development_Card
-    vector[35] = 0; // Has_Rolled
-    vector[36] = 0; // Is_Discarding
-    vector[37] = 0; // Is_Moving_Robber
+    vector[CURRENT_TICK_SEAT_INDEX] = 0;
+    vector[CURRENT_TURN_SEAT_INDEX] = 0;
+    vector[IS_INITIAL_BUILD_PHASE_INDEX] = 1; // Is_Initial_Build_Phase
+    vector[HAS_PLAYED_DEV_CARD] = 0; // Has_Played_Development_Card
+    vector[HAS_ROLLED_INDEX] = 0; // Has_Rolled
+    vector[IS_DISCARDING_INDEX] = 0; // Is_Discarding
+    vector[IS_MOVING_ROBBER_INDEX] = 0; // Is_Moving_Robber
     vector[38] = 0; // Is_Building_Road
     vector[39] = 2; // Free_Roads_Available
 

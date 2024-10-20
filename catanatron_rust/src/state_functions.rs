@@ -1,10 +1,50 @@
-use crate::enums::GameConfiguration;
-use crate::state::{actual_victory_points_index, seating_order_slice, State, CURRENT_PLAYER_INDEX};
+use crate::enums::{ActionPrompt, GameConfiguration};
+use crate::state::{
+    actual_victory_points_index, seating_order_slice, State, CURRENT_TICK_SEAT_INDEX,
+    IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
+};
+
+// ===== Read-only functions =====
+pub fn is_initial_build_phase(state: &State) -> bool {
+    state[IS_INITIAL_BUILD_PHASE_INDEX] == 1
+}
+
+pub fn is_moving_robber(state: &State) -> bool {
+    state[IS_MOVING_ROBBER_INDEX] == 1
+}
+
+pub fn is_discarding(state: &State) -> bool {
+    state[IS_DISCARDING_INDEX] == 1
+}
 
 pub fn get_current_color(config: &GameConfiguration, state: &State) -> u8 {
-    let current_player_index = state[CURRENT_PLAYER_INDEX];
-    let color_seating_order = &state[seating_order_slice(config.num_players as usize)];
-    color_seating_order[current_player_index as usize]
+    let seating_order = get_seating_order(config, state);
+    let current_tick_seat = state[CURRENT_TICK_SEAT_INDEX];
+    seating_order[current_tick_seat as usize]
+}
+
+/// Returns a slice of Colors in the order of seating
+/// e.g. [2, 1, 0, 3] if Orange goes first, then Blue, then Red, and then White
+fn get_seating_order<'a>(config: &GameConfiguration, state: &'a [u8]) -> &'a [u8] {
+    &state[seating_order_slice(config.num_players as usize)]
+}
+
+pub fn get_action_prompt(config: &GameConfiguration, state: &State) -> ActionPrompt {
+    if is_initial_build_phase(state) {
+        let num_things_built = 0;
+        if num_things_built == 2 * config.num_players {
+            return ActionPrompt::PlayTurn;
+        } else if num_things_built % 2 == 0 {
+            return ActionPrompt::BuildInitialSettlement;
+        } else {
+            return ActionPrompt::BuildInitialRoad;
+        }
+    } else if is_moving_robber(state) {
+        return ActionPrompt::MoveRobber;
+    } else if is_discarding(state) {
+        return ActionPrompt::Discard;
+    } // TODO: Implement Trading Prompts (DecideTrade, DecideAcceptees)
+    ActionPrompt::PlayTurn
 }
 
 pub fn winner(config: &GameConfiguration, state: &State) -> Option<u8> {
@@ -16,4 +56,9 @@ pub fn winner(config: &GameConfiguration, state: &State) -> Option<u8> {
         return Some(current_color);
     }
     None
+}
+
+// ===== Mutable functions =====
+pub fn apply_action(config: &GameConfiguration, state: &mut State, action: u64) {
+    println!("Applying action {:?} {:?} {:?}", config, state, action);
 }
