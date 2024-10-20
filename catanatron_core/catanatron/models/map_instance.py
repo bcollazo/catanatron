@@ -80,9 +80,11 @@ class MapInstance:
         # TODO: Rename to self.node_to_tiles
         self.adjacent_tiles = init_adjacent_tiles(self.land_tiles)
         self.node_production = init_node_production(self.adjacent_tiles)
+        # TODO: Deprecate in favor of using self.land_tiles or some static enumeration over Coordinates
         self.tiles_by_id = {
             t.id: t for t in self.tiles.values() if isinstance(t, LandTile)
         }
+        # TODO: Deprecate in favor of using self.land_tiles or some static enumeration over Coordinates
         self.ports_by_id = {p.id: p for p in self.tiles.values() if isinstance(p, Port)}
 
         return self
