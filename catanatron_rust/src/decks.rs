@@ -5,6 +5,12 @@ pub struct ResourceDeck {
     freqdeck: u32, // Store resource counts using 32 bits. Each resource gets 6 bits.
 }
 
+impl Default for ResourceDeck {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ResourceDeck {
     /// Static constructor: Constructs a deck with all resources set to 0.
     pub fn new() -> Self {
@@ -165,6 +171,12 @@ pub fn starting_dev_listdeck() -> [u8; 25] {
 #[derive(Debug, Clone)]
 pub struct DevCardDeck {
     pub listdeck: Vec<DevCard>,
+}
+
+impl Default for DevCardDeck {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DevCardDeck {

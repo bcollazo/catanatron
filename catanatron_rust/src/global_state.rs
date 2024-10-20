@@ -10,6 +10,12 @@ pub struct GlobalState {
     pub base_map_template: MapTemplate,
 }
 
+impl Default for GlobalState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GlobalState {
     pub fn new() -> Self {
         // Mini Map Template

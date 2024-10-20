@@ -154,7 +154,7 @@ impl MapInstance {
 
             if tile_slot == TileSlot::Land {
                 let resource = shuffled_tiles.pop().unwrap();
-                if resource == None {
+                if resource.is_none() {
                     let land_tile = LandTile {
                         hexagon: hexagon.clone(),
                         resource,
@@ -322,20 +322,20 @@ fn get_nodes_edges(
 
     // Insert New Nodes and Edges
     for noderef in NODE_REFS {
-        if !nodes.contains_key(&noderef) {
-            nodes.insert(noderef, node_autoinc);
+        if let std::collections::hash_map::Entry::Vacant(e) = nodes.entry(noderef) {
+            e.insert(node_autoinc);
             node_autoinc += 1;
         }
     }
     for edgeref in EDGE_REFS {
-        let (a_noderef, b_noderef) = get_noderefs(edgeref);
-        if !edges.contains_key(&edgeref) {
+        edges.entry(edgeref).or_insert_with(|| {
+            let (a_noderef, b_noderef) = get_noderefs(edgeref);
             let edge_nodes = (
                 *nodes.get(&a_noderef).unwrap(),
                 *nodes.get(&b_noderef).unwrap(),
             );
-            edges.insert(edgeref, edge_nodes);
-        }
+            edge_nodes
+        });
     }
 
     (nodes, edges, node_autoinc)
