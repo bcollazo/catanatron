@@ -105,9 +105,11 @@ pub const IS_MOVING_ROBBER_INDEX: usize = 37;
 /// TODO: This is not the only Data Structure to do rollouts.
 /// We recommend additional caches and aux data structures for
 ///  faster rollouts. This one is compact optimized for copying.
-pub fn initialize_state() -> Vec<u8> {
-    let num_players: usize = 2;
-    let size = get_state_array_size(num_players);
+/// TODO: Accept a seed for deterministic tests
+pub fn initialize_state(num_players: u8) -> Vec<u8> {
+    let n = num_players as usize;
+
+    let size = get_state_array_size(n);
     let mut vector = vec![0; size];
     // Initialize Bank
     vector[0] = 19;
@@ -152,14 +154,10 @@ pub fn initialize_state() -> Vec<u8> {
 
     // Initialize Players
     // Shuffle player indices
-    let mut color_seating_order = COLORS[0..num_players]
-        .iter()
-        .map(|&x| x as u8)
-        .collect::<Vec<u8>>();
+    let mut color_seating_order = COLORS[0..n].iter().map(|&x| x as u8).collect::<Vec<u8>>();
     color_seating_order.shuffle(&mut rand::thread_rng());
-    vector[player_state_start..player_state_start + num_players]
-        .copy_from_slice(&color_seating_order);
-    player_state_start += num_players;
+    vector[player_state_start..player_state_start + n].copy_from_slice(&color_seating_order);
+    player_state_start += n;
     for _ in 0..num_players {
         // Player<i>_Victory_Points (Number <= 12). i is in order of COLORS
         vector[player_state_start] = 0; // victory points
@@ -203,7 +201,7 @@ mod tests {
 
     #[test]
     fn test_initialize_state() {
-        let state = initialize_state();
+        let state = initialize_state(2);
         assert_eq!(state.len(), 301);
     }
 

@@ -12,7 +12,7 @@ fn test_integration() {
     }
     assert_eq!(deck.total_cards(), 95);
 
-    let vector = state_vector::initialize_state();
+    let vector = state_vector::initialize_state(2);
     let size = state_vector::get_state_array_size(2);
     assert_eq!(size, vector.len());
 }

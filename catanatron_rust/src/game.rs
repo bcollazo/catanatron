@@ -8,7 +8,7 @@ use crate::state_vector::{initialize_state, StateVector};
 
 pub fn play_game(config: GameConfiguration, players: HashMap<u8, Box<dyn Player>>) -> Option<u8> {
     println!("Playing game with configuration: {:?}", config);
-    let mut state = initialize_state();
+    let mut state = initialize_state(config.num_players);
     let mut num_turns = 0;
     while winner(&config, &state).is_none() && num_turns < config.max_turns {
         play_tick(&config, &players, &mut state);
@@ -54,6 +54,8 @@ mod tests {
         let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();
         players.insert(0, Box::new(RandomPlayer {}));
         players.insert(1, Box::new(RandomPlayer {}));
+        players.insert(2, Box::new(RandomPlayer {}));
+        players.insert(3, Box::new(RandomPlayer {}));
 
         let result = play_game(config, players);
         assert_eq!(result, None);

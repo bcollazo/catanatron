@@ -56,7 +56,7 @@ fn main() {
     let size = state_vector::get_state_array_size(2);
     println!("Vector length: {}", size);
 
-    let vector = state_vector::initialize_state();
+    let vector = state_vector::initialize_state(4);
     println!("Vector: {:?}", vector);
 
     let map_instance = MapInstance::new(&global_state.base_map_template, 0);
