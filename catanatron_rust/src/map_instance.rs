@@ -222,19 +222,19 @@ impl MapInstance {
         let mut adjacent_land_tiles: HashMap<NodeId, Vec<LandTile>> = HashMap::new();
         let mut node_production: HashMap<NodeId, HashMap<Resource, f64>> = HashMap::new();
 
-        for (coordinate, tile) in tiles.iter() {
+        for (&coordinate, tile) in tiles.iter() {
             if let Tile::Land(land_tile) = tile {
-                land_tiles.insert(coordinate.clone(), land_tile.clone());
+                land_tiles.insert(coordinate, land_tile.clone());
                 let is_desert = land_tile.resource.is_none();
                 land_tile.hexagon.nodes.values().for_each(|&node_id| {
                     land_nodes.insert(node_id);
                     adjacent_land_tiles
                         .entry(node_id)
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(land_tile.clone());
 
                     // maybe add this tile's production to the node's production
-                    let production = node_production.entry(node_id).or_insert_with(HashMap::new);
+                    let production = node_production.entry(node_id).or_default();
                     if is_desert {
                         return;
                     }
