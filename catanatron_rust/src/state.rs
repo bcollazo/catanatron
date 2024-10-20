@@ -147,7 +147,7 @@ pub fn initialize_state() -> Vec<u8> {
 
     // Initialize Players
     // Shuffle player indices
-    let mut color_seating_order = COLORS[0..num_players as usize]
+    let mut color_seating_order = COLORS[0..num_players]
         .iter()
         .map(|&x| x as u8)
         .collect::<Vec<u8>>();
