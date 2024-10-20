@@ -3,14 +3,16 @@ use rand::seq::SliceRandom;
 
 use crate::enums::COLORS;
 
+pub type State = Vec<u8>;
+
 /// This is in theory not needed since we use a vector and we can
 /// .push() to it. But since we made it, leaving in here in case
 /// we want to switch to an array implementation and it serves
 /// as documentation of the state vector.
-pub fn get_state_array_size(_num_players: u8) -> usize {
+pub fn get_state_array_size(num_players: usize) -> usize {
     // TODO: Is configuration part of state?
     // TODO: Hardcoded for BASE_MAP
-    let n = _num_players as usize;
+    let n = num_players;
     let num_nodes = 54;
     let num_edges = 72;
     let num_tiles = 19;
@@ -65,6 +67,23 @@ pub fn get_state_array_size(_num_players: u8) -> usize {
     size
 }
 
+pub fn bank_resource_index(resource: u8) -> usize {
+    if resource > 4 {
+        panic!("Invalid resource index");
+    }
+    resource as usize
+}
+const PLAYER_STATE_START_INDEX: usize = 268;
+pub fn seating_order_slice(num_players: usize) -> std::ops::Range<usize> {
+    PLAYER_STATE_START_INDEX..PLAYER_STATE_START_INDEX + num_players
+}
+pub fn actual_victory_points_index(num_players: u8, color: u8) -> usize {
+    PLAYER_STATE_START_INDEX + num_players as usize + color as usize * 15
+}
+pub const DEV_BANK_PTR_INDEX: usize = 30;
+pub const CURRENT_PLAYER_INDEX: usize = 31;
+pub const CURRENT_TURN_INDEX: usize = 32;
+
 /// This is a compact representation of the omnipotent state of the game.
 /// Fairly close to a bitboard, but not quite. Its a vector of integers.
 ///
@@ -82,7 +101,7 @@ pub fn get_state_array_size(_num_players: u8) -> usize {
 /// We recommend additional caches and aux data structures for
 ///  faster rollouts. This one is compact optimized for copying.
 pub fn initialize_state() -> Vec<u8> {
-    let num_players = 2;
+    let num_players: usize = 2;
     let size = get_state_array_size(num_players);
     let mut vector = vec![0; size];
     // Initialize Bank
@@ -93,22 +112,25 @@ pub fn initialize_state() -> Vec<u8> {
     vector[4] = 19;
     // Initialize Bank Development Cards
     // TODO: Shuffle
-    let listdeck = starting_dev_listdeck();
+    let mut listdeck = starting_dev_listdeck();
+    listdeck.shuffle(&mut rand::thread_rng());
     vector[5..30].copy_from_slice(&listdeck);
+    // May be worth storing a pointer to the top of the deck
+    vector[DEV_BANK_PTR_INDEX] = 0;
     // Initialize Game Controls
-    vector[30] = 0; // Current_Player_Index
-    vector[31] = 0; // Current_Turn_Index
-    vector[32] = 1; // Is_Initial_Build_Phase
-    vector[33] = 0; // Has_Played_Development_Card
-    vector[34] = 0; // Has_Rolled
-    vector[35] = 0; // Is_Discarding
-    vector[36] = 0; // Is_Moving_Robber
-    vector[37] = 0; // Is_Building_Road
-    vector[38] = 2; // Free_Roads_Available
+    vector[CURRENT_PLAYER_INDEX] = 0;
+    vector[CURRENT_TURN_INDEX] = 0;
+    vector[33] = 1; // Is_Initial_Build_Phase
+    vector[34] = 0; // Has_Played_Development_Card
+    vector[35] = 0; // Has_Rolled
+    vector[36] = 0; // Is_Discarding
+    vector[37] = 0; // Is_Moving_Robber
+    vector[38] = 0; // Is_Building_Road
+    vector[39] = 2; // Free_Roads_Available
 
     // Extra (u8::MAX is used to indicate no player)
-    vector[39] = u8::MAX; // Longest_Road_Player_Index
-    vector[40] = u8::MAX; // Largest_Army_Player_Index
+    vector[40] = u8::MAX; // Longest_Road_Player_Index
+    vector[41] = u8::MAX; // Largest_Army_Player_Index
 
     // Board
     // TODO: Generate map from template
@@ -120,15 +142,21 @@ pub fn initialize_state() -> Vec<u8> {
     // size += num_nodes; // Node<i>_Owner (Player Index | -1 < n + 1)
     // size += num_nodes; // Node<i>_Settlement/City (1=Settlement, 2=City, 0=Nothing)
     // size += num_ports; // Port<i>_Resource (Resource Index <= 5)
+    vector[267] = 11; // temporary mark
+    let mut player_state_start = PLAYER_STATE_START_INDEX;
 
     // Initialize Players
     // Shuffle player indices
-    let mut player_indices = COLORS.iter().map(|&x| x as u8).collect::<Vec<u8>>();
-    player_indices.shuffle(&mut rand::thread_rng());
-    vector[267..267 + player_indices.len()].copy_from_slice(&player_indices);
-    let mut player_state_start = 267 + player_indices.len();
+    let mut color_seating_order = COLORS[0..num_players as usize]
+        .iter()
+        .map(|&x| x as u8)
+        .collect::<Vec<u8>>();
+    color_seating_order.shuffle(&mut rand::thread_rng());
+    vector[player_state_start..player_state_start + num_players]
+        .copy_from_slice(&color_seating_order);
+    player_state_start += num_players;
     for _ in 0..num_players {
-        // Player<i>_Victory_Points (Number <= 12)
+        // Player<i>_Victory_Points (Number <= 12). i is in order of COLORS
         vector[player_state_start] = 0; // victory points
 
         // Player<i>_<resource>_In_Hand (Number <= 19)
@@ -159,11 +187,12 @@ pub fn initialize_state() -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::enums::Color;
 
     #[test]
     fn test_initialize_state_vector() {
         let n: usize = 2;
-        let result = get_state_array_size(n as u8);
+        let result = get_state_array_size(n);
         assert_eq!(result, 301);
     }
 
@@ -171,5 +200,21 @@ mod tests {
     fn test_initialize_state() {
         let state = initialize_state();
         assert_eq!(state.len(), 301);
+    }
+
+    #[test]
+    fn test_colors_slice() {
+        let result = seating_order_slice(4);
+        assert_eq!(result, 268..272);
+    }
+
+    #[test]
+    fn test_indexing() {
+        let num_players = 2;
+        let result = actual_victory_points_index(num_players, Color::Red as u8);
+        assert_eq!(result, 270);
+
+        let result = actual_victory_points_index(num_players, Color::Blue as u8);
+        assert_eq!(result, 270 + 15);
     }
 }

@@ -1,9 +1,9 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Color {
-    Red,
-    Blue,
-    Orange,
-    White,
+    Red = 0,
+    Blue = 1,
+    Orange = 2,
+    White = 3,
 }
 
 pub const COLORS: [Color; 4] = [Color::Red, Color::Blue, Color::Orange, Color::White];
@@ -33,7 +33,6 @@ pub enum BuildingType {
     Road,
 }
 
-// References for nodes and edges on the game board
 #[derive(Debug, Clone, Copy)]
 pub enum NodeRef {
     North,
@@ -85,6 +84,23 @@ pub enum ActionType {
     ConfirmTrade,       // 11-tuple. First 10 like OfferTrade, last is color of accepting player.
     CancelTrade,        // None
     EndTurn,            // None
+}
+
+#[derive(Debug)]
+pub enum MapType {
+    Mini,
+    Base,
+    Tournament,
+}
+
+// TODO: Make immutable and read-only
+#[derive(Debug)]
+pub struct GameConfiguration {
+    pub dicard_limit: u8,
+    pub vps_to_win: u8,
+    pub map_type: MapType,
+    pub num_players: u8,
+    pub max_turns: u32,
 }
 
 // Struct for Action (similar to namedtuple in Python)

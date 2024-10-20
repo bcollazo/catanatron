@@ -1,8 +1,11 @@
 use catanatron_rust::decks;
-use catanatron_rust::enums::Resource;
+use catanatron_rust::enums::{Color, GameConfiguration, MapType, Resource, COLORS};
+use catanatron_rust::game::play_game;
 use catanatron_rust::global_state;
 use catanatron_rust::map_instance::MapInstance;
+use catanatron_rust::player::{Player, RandomPlayer};
 use catanatron_rust::state;
+use std::collections::HashMap;
 use std::time::Instant;
 
 fn main() {
@@ -62,4 +65,21 @@ fn main() {
         "Map Instance Land Tiles: {:?}",
         map_instance.get_land_tile((1, 0, -1))
     );
+
+    println!("Colors slice: {:?}", state::seating_order_slice(4));
+    println!("Colors {:?}", COLORS);
+
+    let config = GameConfiguration {
+        dicard_limit: 7,
+        vps_to_win: 10,
+        map_type: MapType::Base,
+        num_players: 2,
+        max_turns: 10,
+    };
+    let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();
+    players.insert(Color::Red as u8, Box::new(RandomPlayer {}));
+    players.insert(Color::Blue as u8, Box::new(RandomPlayer {}));
+
+    let result = play_game(config, players);
+    println!("Game result: {:?}", result);
 }
