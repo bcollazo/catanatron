@@ -105,26 +105,24 @@ jobs:
       - name: Run `cargo fmt`
         run: cargo fmt -- --check
         working-directory: catanatron_rust
+      - name: Run `cargo clippy`
+        run: cargo clippy -- -D warnings
+        working-directory: catanatron_rust
 
-      # TODO: Enable when passing:
-      # - name: Run `cargo clippy`
-      #   run: cargo clippy -- -D warnings
-      #   working-directory: catanatron_rust
-
-      # Verify cargo run, test, and run benchmarks
       - name: Run `cargo run`
         run: cargo run
         working-directory: catanatron_rust
-
       - name: Run `cargo run --release`
         run: cargo run --release
         working-directory: catanatron_rust
+
       - name: Run `cargo test`
         run: cargo test --verbose
         working-directory: catanatron_rust
       - name: Run `cargo test --release`
         run: cargo test --release --verbose
         working-directory: catanatron_rust
+
       - name: Run `cargo bench`
         run: cargo bench
         working-directory: catanatron_rust
