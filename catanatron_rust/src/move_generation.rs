@@ -4,11 +4,11 @@ use crate::enums::ActionPrompt;
 use crate::{
     actions::Action,
     enums::GameConfiguration,
-    state::State,
+    state::StateVector,
     state_functions::{get_action_prompt, get_current_color},
 };
 
-pub fn generate_playable_actions(config: &GameConfiguration, state: &State) -> Vec<Action> {
+pub fn generate_playable_actions(config: &GameConfiguration, state: &StateVector) -> Vec<Action> {
     println!("Generating playable actions");
     let current_color = get_current_color(config, state);
     let action_prompt = get_action_prompt(config, state);
@@ -28,7 +28,7 @@ pub fn generate_playable_actions(config: &GameConfiguration, state: &State) -> V
 
 pub fn settlement_possibilities(
     config: &GameConfiguration,
-    state: &State,
+    state: &StateVector,
     color: u8,
     is_initial_build_phase: bool,
 ) -> Vec<Action> {

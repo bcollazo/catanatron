@@ -1,23 +1,23 @@
 use crate::enums::{ActionPrompt, GameConfiguration};
 use crate::state::{
-    actual_victory_points_index, seating_order_slice, State, CURRENT_TICK_SEAT_INDEX,
+    actual_victory_points_index, seating_order_slice, StateVector, CURRENT_TICK_SEAT_INDEX,
     IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
 };
 
 // ===== Read-only functions =====
-pub fn is_initial_build_phase(state: &State) -> bool {
+pub fn is_initial_build_phase(state: &StateVector) -> bool {
     state[IS_INITIAL_BUILD_PHASE_INDEX] == 1
 }
 
-pub fn is_moving_robber(state: &State) -> bool {
+pub fn is_moving_robber(state: &StateVector) -> bool {
     state[IS_MOVING_ROBBER_INDEX] == 1
 }
 
-pub fn is_discarding(state: &State) -> bool {
+pub fn is_discarding(state: &StateVector) -> bool {
     state[IS_DISCARDING_INDEX] == 1
 }
 
-pub fn get_current_color(config: &GameConfiguration, state: &State) -> u8 {
+pub fn get_current_color(config: &GameConfiguration, state: &StateVector) -> u8 {
     let seating_order = get_seating_order(config, state);
     let current_tick_seat = state[CURRENT_TICK_SEAT_INDEX];
     seating_order[current_tick_seat as usize]
@@ -29,7 +29,7 @@ fn get_seating_order<'a>(config: &GameConfiguration, state: &'a [u8]) -> &'a [u8
     &state[seating_order_slice(config.num_players as usize)]
 }
 
-pub fn get_action_prompt(config: &GameConfiguration, state: &State) -> ActionPrompt {
+pub fn get_action_prompt(config: &GameConfiguration, state: &StateVector) -> ActionPrompt {
     if is_initial_build_phase(state) {
         let num_things_built = 0;
         if num_things_built == 2 * config.num_players {
@@ -47,7 +47,7 @@ pub fn get_action_prompt(config: &GameConfiguration, state: &State) -> ActionPro
     ActionPrompt::PlayTurn
 }
 
-pub fn winner(config: &GameConfiguration, state: &State) -> Option<u8> {
+pub fn winner(config: &GameConfiguration, state: &StateVector) -> Option<u8> {
     let current_color = get_current_color(config, state);
 
     let actual_victory_points =
@@ -59,6 +59,6 @@ pub fn winner(config: &GameConfiguration, state: &State) -> Option<u8> {
 }
 
 // ===== Mutable functions =====
-pub fn apply_action(config: &GameConfiguration, state: &mut State, action: u64) {
+pub fn apply_action(config: &GameConfiguration, state: &mut StateVector, action: u64) {
     println!("Applying action {:?} {:?} {:?}", config, state, action);
 }

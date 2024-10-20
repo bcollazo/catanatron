@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 
 use crate::enums::COLORS;
 
-pub type State = Vec<u8>;
+pub type StateVector = Vec<u8>;
 
 /// This is in theory not needed since we use a vector and we can
 /// .push() to it. But since we made it, leaving in here in case

@@ -1,16 +1,16 @@
 use rand::Rng;
 
 use crate::actions::Action;
-use crate::state::State;
+use crate::state::StateVector;
 
 pub trait Player {
-    fn decide(&self, state: &State, playable_actions: &[Action]) -> u64;
+    fn decide(&self, state: &StateVector, playable_actions: &[Action]) -> u64;
 }
 
 pub struct RandomPlayer {}
 
 impl Player for RandomPlayer {
-    fn decide(&self, _state: &State, playable_actions: &[Action]) -> u64 {
+    fn decide(&self, _state: &StateVector, playable_actions: &[Action]) -> u64 {
         let mut rng = rand::thread_rng();
         let index = rng.gen_range(0..playable_actions.len());
         playable_actions[index]

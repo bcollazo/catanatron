@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::enums::GameConfiguration;
 use crate::move_generation::generate_playable_actions;
 use crate::player::Player;
-use crate::state::{initialize_state, State};
+use crate::state::{initialize_state, StateVector};
 use crate::state_functions::{apply_action, get_current_color, winner};
 
 pub fn play_game(config: GameConfiguration, players: HashMap<u8, Box<dyn Player>>) -> Option<u8> {
@@ -20,7 +20,7 @@ pub fn play_game(config: GameConfiguration, players: HashMap<u8, Box<dyn Player>
 fn play_tick(
     config: &GameConfiguration,
     players: &HashMap<u8, Box<dyn Player>>,
-    state: &mut State,
+    state: &mut StateVector,
 ) {
     println!("Playing config {:?}", config);
     println!("Playing turn {:?}", state);
