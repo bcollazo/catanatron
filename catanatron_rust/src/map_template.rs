@@ -22,7 +22,7 @@ pub enum TileSlot {
 
 #[derive(Debug)]
 pub struct MapTemplate {
-    pub(crate) numbers: Vec<i8>,
+    pub(crate) numbers: Vec<u8>,
     pub(crate) ports: Vec<Option<Resource>>,
     pub(crate) tiles: Vec<Option<Resource>>,
 

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     enums::Resource,
     map_template::{MapTemplate, TileSlot},
@@ -8,6 +10,24 @@ use crate::{
 pub struct GlobalState {
     pub mini_map_template: MapTemplate,
     pub base_map_template: MapTemplate,
+    // TODO: Make a hard-coded static constant
+    // {2: 0.027777777777777776, 3: 0.05555555555555555, 4: 0.08333333333333333, 5: 0.1111111111111111, 6: 0.1388888888888889, 7: 0.16666666666666669, 8: 0.1388888888888889, 9: 0.1111111111111111, 10: 0.08333333333333333, 11: 0.05555555555555555, 12: 0.027777777777777776}
+    pub dice_probas: HashMap<u8, f64>,
+}
+
+fn build_dice_probas() -> HashMap<u8, f64> {
+    let mut probas: HashMap<u8, f64> = HashMap::new();
+
+    // Iterate over two dice rolls
+    for i in 1..=6 {
+        for j in 1..=6 {
+            let sum = i + j;
+            let counter = probas.entry(sum).or_insert(0.0);
+            *counter += 1.0 / 36.0;
+        }
+    }
+
+    probas
 }
 
 impl Default for GlobalState {
@@ -145,9 +165,12 @@ impl GlobalState {
             topology,
         };
 
+        let dice_probas = build_dice_probas();
+
         Self {
             mini_map_template,
             base_map_template,
+            dice_probas,
         }
     }
 }

@@ -1,12 +1,12 @@
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, SeedableRng};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 use crate::enums::Resource;
 use crate::map_template::{add_coordinates, Coordinate, MapTemplate, TileSlot};
 
-type NodeId = u8;
+pub type NodeId = u8;
 type EdgeId = (NodeId, NodeId);
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
@@ -88,7 +88,7 @@ pub struct Hexagon {
 pub struct LandTile {
     pub(crate) hexagon: Hexagon,
     pub(crate) resource: Option<Resource>,
-    pub(crate) number: Option<i8>,
+    pub(crate) number: Option<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -114,9 +114,21 @@ pub enum Tile {
 pub struct MapInstance {
     tiles: HashMap<Coordinate, Tile>,
     land_tiles: HashMap<Coordinate, LandTile>,
+    port_nodes: HashSet<NodeId>,
+    land_nodes: HashSet<NodeId>,
+    adjacent_land_tiles: HashMap<NodeId, Vec<LandTile>>,
+    node_production: HashMap<NodeId, HashMap<Resource, f64>>,
 }
 
 impl MapInstance {
+    pub fn get_tiles(&self) -> &HashMap<Coordinate, Tile> {
+        &self.tiles
+    }
+
+    pub fn get_land_tiles(&self) -> &HashMap<Coordinate, LandTile> {
+        &self.land_tiles
+    }
+
     pub fn get_tile(&self, coordinate: Coordinate) -> Option<&Tile> {
         self.tiles.get(&coordinate)
     }
@@ -127,9 +139,9 @@ impl MapInstance {
 }
 
 impl MapInstance {
-    pub fn new(map_template: &MapTemplate, seed: u64) -> Self {
+    pub fn new(map_template: &MapTemplate, dice_probas: HashMap<u8, f64>, seed: u64) -> Self {
         let tiles = Self::initialize_tiles(map_template, seed);
-        Self::from_tiles(tiles)
+        Self::from_tiles(tiles, dice_probas)
     }
 
     fn initialize_tiles(map_template: &MapTemplate, seed: u64) -> HashMap<Coordinate, Tile> {
@@ -199,20 +211,61 @@ impl MapInstance {
         tiles
     }
 
-    fn from_tiles(tiles: HashMap<Coordinate, Tile>) -> Self {
-        let land_tiles: HashMap<Coordinate, LandTile> = tiles
-            .clone()
-            .into_iter()
-            .filter_map(|(coordinate, tile)| {
-                if let Tile::Land(land_tile) = tile {
-                    Some((coordinate, land_tile))
-                } else {
-                    None
-                }
-            })
-            .collect();
+    fn from_tiles(tiles: HashMap<Coordinate, Tile>, dice_probas: HashMap<u8, f64>) -> Self {
+        let mut land_tiles: HashMap<Coordinate, LandTile> = HashMap::new();
+        let mut port_nodes: HashSet<NodeId> = HashSet::new();
+        let mut land_nodes: HashSet<NodeId> = HashSet::new();
+        let mut adjacent_land_tiles: HashMap<NodeId, Vec<LandTile>> = HashMap::new();
+        let mut node_production: HashMap<NodeId, HashMap<Resource, f64>> = HashMap::new();
 
-        Self { tiles, land_tiles }
+        for (coordinate, tile) in tiles.iter() {
+            if let Tile::Land(land_tile) = tile {
+                land_tiles.insert(coordinate.clone(), land_tile.clone());
+                let is_desert = land_tile.resource.is_none();
+                land_tile.hexagon.nodes.values().for_each(|&node_id| {
+                    land_nodes.insert(node_id);
+                    adjacent_land_tiles
+                        .entry(node_id)
+                        .or_insert_with(Vec::new)
+                        .push(land_tile.clone());
+
+                    // maybe add this tile's production to the node's production
+                    let production = node_production.entry(node_id).or_insert_with(HashMap::new);
+                    if is_desert {
+                        return;
+                    }
+                    let resource = land_tile.resource.unwrap();
+                    let number = land_tile.number.unwrap();
+                    let proba = dice_probas.get(&number).unwrap();
+                    production.entry(resource).or_insert(0.0);
+                    *production.get_mut(&resource).unwrap() += proba;
+                });
+            } else if let Tile::Port(port_tile) = tile {
+                let (a_noderef, b_noderef) = get_noderefs_from_port_direction(port_tile.direction);
+                port_nodes.insert(*port_tile.hexagon.nodes.get(&a_noderef).unwrap());
+                port_nodes.insert(*port_tile.hexagon.nodes.get(&b_noderef).unwrap());
+            }
+        }
+
+        Self {
+            tiles,
+            land_tiles,
+            port_nodes,
+            land_nodes,
+            adjacent_land_tiles,
+            node_production,
+        }
+    }
+}
+
+fn get_noderefs_from_port_direction(direction: Direction) -> (NodeRef, NodeRef) {
+    match direction {
+        Direction::East => (NodeRef::NorthEast, NodeRef::SouthEast),
+        Direction::SouthEast => (NodeRef::SouthEast, NodeRef::South),
+        Direction::SouthWest => (NodeRef::South, NodeRef::SouthWest),
+        Direction::West => (NodeRef::SouthWest, NodeRef::NorthWest),
+        Direction::NorthWest => (NodeRef::NorthWest, NodeRef::North),
+        Direction::NorthEast => (NodeRef::North, NodeRef::NorthEast),
     }
 }
 
@@ -389,6 +442,9 @@ mod tests {
         assert_eq!(autoinc2, 10);
     }
 
+    // TODO: Test production at a node that has two of the same tiles next to each other.
+    // See https://github.com/bcollazo/catanatron/issues/263.
+
     fn assert_node_value(
         map_instance: &MapInstance,
         coordinates: Coordinate,
@@ -407,13 +463,78 @@ mod tests {
         );
     }
 
+    fn assert_land_tile(
+        map_instance: &MapInstance,
+        coordinates: Coordinate,
+        resource: Option<Resource>,
+        number: Option<u8>,
+    ) {
+        let land_tile = map_instance.get_land_tile(coordinates).unwrap();
+        assert_eq!(land_tile.resource, resource);
+        assert_eq!(land_tile.number, number);
+    }
+
+    #[test]
+    fn test_map_mini() {
+        let global_state = GlobalState::new();
+        let map_instance =
+            MapInstance::new(&global_state.mini_map_template, global_state.dice_probas, 0);
+
+        assert_eq!(map_instance.tiles.len(), 19);
+        assert_eq!(map_instance.land_tiles.len(), 7);
+        assert_eq!(map_instance.land_nodes.len(), 24);
+        assert_eq!(map_instance.port_nodes.len(), 0);
+        assert_eq!(map_instance.adjacent_land_tiles.len(), 24);
+        assert_eq!(map_instance.node_production.len(), 24);
+
+        // Test adjacent_tiles
+        let adjacent_tiles = map_instance.adjacent_land_tiles.get(&0).unwrap();
+        assert_eq!(adjacent_tiles.len(), 3);
+        assert_land_tile(&map_instance, (0, 0, 0), Some(Resource::Ore), Some(9));
+        assert_land_tile(&map_instance, (1, 0, -1), Some(Resource::Wheat), Some(4));
+        assert_land_tile(&map_instance, (0, 1, -1), Some(Resource::Brick), Some(5));
+        // Assert there is a 9 ore in adjacent_tiles
+        assert!(adjacent_tiles
+            .iter()
+            .any(|tile| { tile.resource == Some(Resource::Ore) && tile.number == Some(9) }));
+        // Spot-check two more nodes
+        assert_eq!(map_instance.adjacent_land_tiles.get(&14).unwrap().len(), 1);
+        assert_eq!(map_instance.adjacent_land_tiles.get(&16).unwrap().len(), 2);
+
+        // Test node production
+        let node_production = map_instance.node_production.get(&0).unwrap();
+        assert_eq!(
+            node_production.get(&Resource::Ore),
+            Some(&0.1111111111111111)
+        );
+        assert_eq!(
+            node_production.get(&Resource::Wheat),
+            Some(&0.08333333333333333)
+        );
+        assert_eq!(
+            node_production.get(&Resource::Brick),
+            Some(&0.1111111111111111)
+        );
+
+        // Spot-check several node ids
+        assert_node_value(&map_instance, (0, 0, 0), NodeRef::North, 0);
+        assert_node_value(&map_instance, (0, 0, 0), NodeRef::NorthEast, 1);
+        assert_node_value(&map_instance, (1, -1, 0), NodeRef::SouthEast, 8);
+        assert_node_value(&map_instance, (1, 0, -1), NodeRef::North, 22);
+        assert_node_value(&map_instance, (-1, 0, 1), NodeRef::South, 13);
+    }
+
     #[test]
     fn test_map_instance() {
         let global_state = GlobalState::new();
-        let map_instance = MapInstance::new(&global_state.base_map_template, 0);
+        let map_instance =
+            MapInstance::new(&global_state.base_map_template, global_state.dice_probas, 0);
 
         assert_eq!(map_instance.tiles.len(), 37);
         assert_eq!(map_instance.land_tiles.len(), 19);
+        assert_eq!(map_instance.land_nodes.len(), 54);
+        assert_eq!(map_instance.port_nodes.len(), 18);
+        assert_eq!(map_instance.adjacent_land_tiles.len(), 54);
 
         // Assert tile at 0,0,0 is Land with right resource and number
         assert_eq!(

@@ -8,7 +8,7 @@ pub enum Color {
 
 pub const COLORS: [Color; 4] = [Color::Red, Color::Blue, Color::Orange, Color::White];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Resource {
     Wood,
     Brick,
