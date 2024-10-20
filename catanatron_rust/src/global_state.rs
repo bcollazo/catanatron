@@ -23,7 +23,7 @@ impl GlobalState {
         // center
         topology.insert((0, 0, 0), TileSlot::Land);
         // first layer
-        topology.insert((-1, -1, 0), TileSlot::Land);
+        topology.insert((1, -1, 0), TileSlot::Land);
         topology.insert((0, -1, 1), TileSlot::Land);
         topology.insert((-1, 0, 1), TileSlot::Land);
         topology.insert((-1, 1, 0), TileSlot::Land);
