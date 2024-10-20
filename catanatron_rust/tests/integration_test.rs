@@ -1,6 +1,6 @@
 use catanatron_rust::decks;
 use catanatron_rust::enums::Resource;
-use catanatron_rust::state;
+use catanatron_rust::state_vector;
 
 #[test]
 fn test_integration() {
@@ -12,7 +12,7 @@ fn test_integration() {
     }
     assert_eq!(deck.total_cards(), 95);
 
-    let vector = state::initialize_state();
-    let size = state::get_state_array_size(2);
+    let vector = state_vector::initialize_state();
+    let size = state_vector::get_state_array_size(2);
     assert_eq!(size, vector.len());
 }

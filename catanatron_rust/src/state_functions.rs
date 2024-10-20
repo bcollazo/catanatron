@@ -1,5 +1,5 @@
 use crate::enums::{ActionPrompt, GameConfiguration};
-use crate::state::{
+use crate::state_vector::{
     actual_victory_points_index, seating_order_slice, StateVector, CURRENT_TICK_SEAT_INDEX,
     IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
 };

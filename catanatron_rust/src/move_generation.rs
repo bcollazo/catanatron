@@ -4,8 +4,8 @@ use crate::enums::ActionPrompt;
 use crate::{
     actions::Action,
     enums::GameConfiguration,
-    state::StateVector,
     state_functions::{get_action_prompt, get_current_color},
+    state_vector::StateVector,
 };
 
 pub fn generate_playable_actions(config: &GameConfiguration, state: &StateVector) -> Vec<Action> {

@@ -1,7 +1,7 @@
 use rand::Rng;
 
 use crate::actions::Action;
-use crate::state::StateVector;
+use crate::state_vector::StateVector;
 
 pub trait Player {
     fn decide(&self, state: &StateVector, playable_actions: &[Action]) -> u64;

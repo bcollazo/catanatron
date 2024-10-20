@@ -4,7 +4,7 @@ use catanatron_rust::game::play_game;
 use catanatron_rust::global_state;
 use catanatron_rust::map_instance::MapInstance;
 use catanatron_rust::player::{Player, RandomPlayer};
-use catanatron_rust::state;
+use catanatron_rust::state_vector;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -53,10 +53,10 @@ fn main() {
     let global_state = global_state::GlobalState::new();
     println!("Global State: {:?}", global_state);
 
-    let size = state::get_state_array_size(2);
+    let size = state_vector::get_state_array_size(2);
     println!("Vector length: {}", size);
 
-    let vector = state::initialize_state();
+    let vector = state_vector::initialize_state();
     println!("Vector: {:?}", vector);
 
     let map_instance = MapInstance::new(&global_state.base_map_template, 0);
@@ -66,7 +66,7 @@ fn main() {
         map_instance.get_land_tile((1, 0, -1))
     );
 
-    println!("Colors slice: {:?}", state::seating_order_slice(4));
+    println!("Colors slice: {:?}", state_vector::seating_order_slice(4));
     println!("Colors {:?}", COLORS);
 
     let config = GameConfiguration {

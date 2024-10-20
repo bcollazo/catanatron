@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::enums::GameConfiguration;
 use crate::move_generation::generate_playable_actions;
 use crate::player::Player;
-use crate::state::{initialize_state, StateVector};
 use crate::state_functions::{apply_action, get_current_color, winner};
+use crate::state_vector::{initialize_state, StateVector};
 
 pub fn play_game(config: GameConfiguration, players: HashMap<u8, Box<dyn Player>>) -> Option<u8> {
     println!("Playing game with configuration: {:?}", config);
