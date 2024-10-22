@@ -293,86 +293,91 @@ fn get_nodes_edges(
         if hexagons.contains_key(&neighbor_coordinate) {
             let neighbor_hexagon = hexagons.get(&neighbor_coordinate).unwrap();
 
-            if neighbor_direction == Direction::East {
-                nodes.insert(
-                    NodeRef::NorthEast,
-                    *neighbor_hexagon.nodes.get(&NodeRef::NorthWest).unwrap(),
-                );
-                nodes.insert(
-                    NodeRef::SouthEast,
-                    *neighbor_hexagon.nodes.get(&NodeRef::SouthWest).unwrap(),
-                );
-                edges.insert(
-                    EdgeRef::East,
-                    *neighbor_hexagon.edges.get(&EdgeRef::West).unwrap(),
-                );
-            } else if neighbor_direction == Direction::SouthEast {
-                nodes.insert(
-                    NodeRef::South,
-                    *neighbor_hexagon.nodes.get(&NodeRef::NorthWest).unwrap(),
-                );
-                nodes.insert(
-                    NodeRef::SouthEast,
-                    *neighbor_hexagon.nodes.get(&NodeRef::North).unwrap(),
-                );
-                edges.insert(
-                    EdgeRef::SouthEast,
-                    *neighbor_hexagon.edges.get(&EdgeRef::NorthWest).unwrap(),
-                );
-            } else if neighbor_direction == Direction::SouthWest {
-                nodes.insert(
-                    NodeRef::South,
-                    *neighbor_hexagon.nodes.get(&NodeRef::NorthEast).unwrap(),
-                );
-                nodes.insert(
-                    NodeRef::SouthWest,
-                    *neighbor_hexagon.nodes.get(&NodeRef::North).unwrap(),
-                );
-                edges.insert(
-                    EdgeRef::SouthWest,
-                    *neighbor_hexagon.edges.get(&EdgeRef::NorthEast).unwrap(),
-                );
-            } else if neighbor_direction == Direction::West {
-                nodes.insert(
-                    NodeRef::NorthWest,
-                    *neighbor_hexagon.nodes.get(&NodeRef::NorthEast).unwrap(),
-                );
-                nodes.insert(
-                    NodeRef::SouthWest,
-                    *neighbor_hexagon.nodes.get(&NodeRef::SouthEast).unwrap(),
-                );
-                edges.insert(
-                    EdgeRef::West,
-                    *neighbor_hexagon.edges.get(&EdgeRef::East).unwrap(),
-                );
-            } else if neighbor_direction == Direction::NorthWest {
-                nodes.insert(
-                    NodeRef::North,
-                    *neighbor_hexagon.nodes.get(&NodeRef::SouthEast).unwrap(),
-                );
-                nodes.insert(
-                    NodeRef::NorthWest,
-                    *neighbor_hexagon.nodes.get(&NodeRef::South).unwrap(),
-                );
-                edges.insert(
-                    EdgeRef::NorthWest,
-                    *neighbor_hexagon.edges.get(&EdgeRef::SouthEast).unwrap(),
-                );
-            } else if neighbor_direction == Direction::NorthEast {
-                nodes.insert(
-                    NodeRef::North,
-                    *neighbor_hexagon.nodes.get(&NodeRef::SouthWest).unwrap(),
-                );
-                nodes.insert(
-                    NodeRef::NorthEast,
-                    *neighbor_hexagon.nodes.get(&NodeRef::South).unwrap(),
-                );
-                edges.insert(
-                    EdgeRef::NorthEast,
-                    *neighbor_hexagon.edges.get(&EdgeRef::SouthWest).unwrap(),
-                );
-            } else {
-                panic!("Something went wrong");
+            match neighbor_direction {
+                Direction::East => {
+                    nodes.insert(
+                        NodeRef::NorthEast,
+                        *neighbor_hexagon.nodes.get(&NodeRef::NorthWest).unwrap(),
+                    );
+                    nodes.insert(
+                        NodeRef::SouthEast,
+                        *neighbor_hexagon.nodes.get(&NodeRef::SouthWest).unwrap(),
+                    );
+                    edges.insert(
+                        EdgeRef::East,
+                        *neighbor_hexagon.edges.get(&EdgeRef::West).unwrap(),
+                    );
+                }
+                Direction::SouthEast => {
+                    nodes.insert(
+                        NodeRef::South,
+                        *neighbor_hexagon.nodes.get(&NodeRef::NorthWest).unwrap(),
+                    );
+                    nodes.insert(
+                        NodeRef::SouthEast,
+                        *neighbor_hexagon.nodes.get(&NodeRef::North).unwrap(),
+                    );
+                    edges.insert(
+                        EdgeRef::SouthEast,
+                        *neighbor_hexagon.edges.get(&EdgeRef::NorthWest).unwrap(),
+                    );
+                }
+                Direction::SouthWest => {
+                    nodes.insert(
+                        NodeRef::South,
+                        *neighbor_hexagon.nodes.get(&NodeRef::NorthEast).unwrap(),
+                    );
+                    nodes.insert(
+                        NodeRef::SouthWest,
+                        *neighbor_hexagon.nodes.get(&NodeRef::North).unwrap(),
+                    );
+                    edges.insert(
+                        EdgeRef::SouthWest,
+                        *neighbor_hexagon.edges.get(&EdgeRef::NorthEast).unwrap(),
+                    );
+                }
+                Direction::West => {
+                    nodes.insert(
+                        NodeRef::NorthWest,
+                        *neighbor_hexagon.nodes.get(&NodeRef::NorthEast).unwrap(),
+                    );
+                    nodes.insert(
+                        NodeRef::SouthWest,
+                        *neighbor_hexagon.nodes.get(&NodeRef::SouthEast).unwrap(),
+                    );
+                    edges.insert(
+                        EdgeRef::West,
+                        *neighbor_hexagon.edges.get(&EdgeRef::East).unwrap(),
+                    );
+                }
+                Direction::NorthWest => {
+                    nodes.insert(
+                        NodeRef::North,
+                        *neighbor_hexagon.nodes.get(&NodeRef::SouthEast).unwrap(),
+                    );
+                    nodes.insert(
+                        NodeRef::NorthWest,
+                        *neighbor_hexagon.nodes.get(&NodeRef::South).unwrap(),
+                    );
+                    edges.insert(
+                        EdgeRef::NorthWest,
+                        *neighbor_hexagon.edges.get(&EdgeRef::SouthEast).unwrap(),
+                    );
+                }
+                Direction::NorthEast => {
+                    nodes.insert(
+                        NodeRef::North,
+                        *neighbor_hexagon.nodes.get(&NodeRef::SouthWest).unwrap(),
+                    );
+                    nodes.insert(
+                        NodeRef::NorthEast,
+                        *neighbor_hexagon.nodes.get(&NodeRef::South).unwrap(),
+                    );
+                    edges.insert(
+                        EdgeRef::NorthEast,
+                        *neighbor_hexagon.edges.get(&EdgeRef::SouthWest).unwrap(),
+                    );
+                }
             }
         }
     }
