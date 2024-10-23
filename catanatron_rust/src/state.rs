@@ -25,6 +25,8 @@ pub(crate) struct State {
     longest_road_length: u8,
 }
 
+mod move_generation;
+
 impl State {
     pub fn new(config: Rc<GameConfiguration>, map_instance: Rc<MapInstance>) -> Self {
         let vector = initialize_state(config.num_players);
@@ -41,14 +43,6 @@ impl State {
             longest_road_color,
             longest_road_length,
         }
-    }
-
-    // ===== Config Getters =====
-    pub fn get_num_players(&self) -> u8 {
-        self.config.num_players
-    }
-    pub fn get_num_players_usize(&self) -> usize {
-        self.config.num_players as usize
     }
 
     // ===== Getters =====

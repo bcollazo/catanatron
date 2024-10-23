@@ -1,3 +1,5 @@
+use crate::map_instance::NodeId;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Color {
     Red = 0,
@@ -64,26 +66,26 @@ pub enum ActionPrompt {
     DecideAcceptees,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum ActionType {
-    Roll,               // None. Log instead sets it to (int, int) rolled.
-    MoveRobber,         // value is (coordinate, Color|None). Log has extra element of card stolen.
-    Discard,            // value is None|Resource[].
-    BuildRoad,          // value is edge_id
-    BuildSettlement,    // value is node_id
-    BuildCity,          // value is node_id
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Action {
+    Roll(Color),                 // None. Log instead sets it to (int, int) rolled.
+    MoveRobber(Color), // value is (coordinate, Color|None). Log has extra element of card stolen.
+    Discard(Color),    // value is None|Resource[].
+    BuildRoad(Color),  // value is edge_id
+    BuildSettlement(u8, NodeId), // value is node_id
+    BuildCity,         // value is node_id
     BuyDevelopmentCard, // value is None. Log value is card.
-    PlayKnightCard,     // value is None
-    PlayYearOfPlenty,   // value is (Resource, Resource)
-    PlayMonopoly,       // value is Resource
-    PlayRoadBuilding,   // value is None
-    MaritimeTrade,      // 5-resource tuple, last is resource asked.
-    OfferTrade,         // 10-resource tuple, first 5 is offered, last 5 is receiving.
-    AcceptTrade,        // 10-resource tuple.
-    RejectTrade,        // None
-    ConfirmTrade,       // 11-tuple. First 10 like OfferTrade, last is color of accepting player.
-    CancelTrade,        // None
-    EndTurn,            // None
+    PlayKnightCard,    // value is None
+    PlayYearOfPlenty,  // value is (Resource, Resource)
+    PlayMonopoly,      // value is Resource
+    PlayRoadBuilding,  // value is None
+    MaritimeTrade,     // 5-resource tuple, last is resource asked.
+    OfferTrade,        // 10-resource tuple, first 5 is offered, last 5 is receiving.
+    AcceptTrade,       // 10-resource tuple.
+    RejectTrade,       // None
+    ConfirmTrade,      // 11-tuple. First 10 like OfferTrade, last is color of accepting player.
+    CancelTrade,       // None
+    EndTurn,           // None
 }
 
 #[derive(Debug)]
@@ -101,23 +103,4 @@ pub struct GameConfiguration {
     pub map_type: MapType,
     pub num_players: u8,
     pub max_turns: u32,
-}
-
-// Struct for Action (similar to namedtuple in Python)
-#[derive(Debug, Clone)]
-pub struct Action {
-    pub color: String,
-    pub action_type: ActionType,
-    // TODO: Not sure if this should be a String
-    pub value: Option<String>, // Use Option<T> for fields that could be None
-}
-
-impl Action {
-    pub fn new(color: String, action_type: ActionType, value: Option<String>) -> Self {
-        Action {
-            color,
-            action_type,
-            value,
-        }
-    }
 }

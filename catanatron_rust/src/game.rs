@@ -4,7 +4,6 @@ use std::rc::Rc;
 use crate::enums::GameConfiguration;
 use crate::global_state::GlobalState;
 use crate::map_instance::MapInstance;
-use crate::move_generation::generate_playable_actions;
 use crate::player::Player;
 use crate::state::State;
 use crate::state_functions::apply_action;
@@ -35,7 +34,7 @@ fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) {
     let current_color = state.get_current_color();
     let current_player = players.get(&current_color).unwrap();
 
-    let playable_actions = generate_playable_actions(state);
+    let playable_actions = state.generate_playable_actions();
     let action = current_player.decide(state, &playable_actions);
     println!(
         "Player {:?} decided to play action {:?}",
