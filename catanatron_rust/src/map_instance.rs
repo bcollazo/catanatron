@@ -143,7 +143,7 @@ impl MapInstance {
 }
 
 impl MapInstance {
-    pub fn new(map_template: &MapTemplate, dice_probas: HashMap<u8, f64>, seed: u64) -> Self {
+    pub fn new(map_template: &MapTemplate, dice_probas: &HashMap<u8, f64>, seed: u64) -> Self {
         let tiles = Self::initialize_tiles(map_template, seed);
         Self::from_tiles(tiles, dice_probas)
     }
@@ -215,7 +215,7 @@ impl MapInstance {
         tiles
     }
 
-    fn from_tiles(tiles: HashMap<Coordinate, Tile>, dice_probas: HashMap<u8, f64>) -> Self {
+    fn from_tiles(tiles: HashMap<Coordinate, Tile>, dice_probas: &HashMap<u8, f64>) -> Self {
         let mut land_tiles: HashMap<Coordinate, LandTile> = HashMap::new();
         let mut port_nodes: HashSet<NodeId> = HashSet::new();
         let mut land_nodes: HashSet<NodeId> = HashSet::new();
@@ -481,8 +481,11 @@ mod tests {
     #[test]
     fn test_map_mini() {
         let global_state = GlobalState::new();
-        let map_instance =
-            MapInstance::new(&global_state.mini_map_template, global_state.dice_probas, 0);
+        let map_instance = MapInstance::new(
+            &global_state.mini_map_template,
+            &global_state.dice_probas,
+            0,
+        );
 
         assert_eq!(map_instance.tiles.len(), 19);
         assert_eq!(map_instance.land_tiles.len(), 7);
@@ -531,8 +534,11 @@ mod tests {
     #[test]
     fn test_map_instance() {
         let global_state = GlobalState::new();
-        let map_instance =
-            MapInstance::new(&global_state.base_map_template, global_state.dice_probas, 0);
+        let map_instance = MapInstance::new(
+            &global_state.base_map_template,
+            &global_state.dice_probas,
+            0,
+        );
 
         assert_eq!(map_instance.tiles.len(), 37);
         assert_eq!(map_instance.land_tiles.len(), 19);

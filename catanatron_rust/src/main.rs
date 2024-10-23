@@ -59,8 +59,11 @@ fn main() {
     let vector = state_vector::initialize_state(4);
     println!("Vector: {:?}", vector);
 
-    let map_instance =
-        MapInstance::new(&global_state.base_map_template, global_state.dice_probas, 0);
+    let map_instance = MapInstance::new(
+        &global_state.base_map_template,
+        &global_state.dice_probas,
+        0,
+    );
     println!("Map Instance Tiles: {:?}", map_instance.get_tile((0, 0, 0)));
     println!(
         "Map Instance Land Tiles: {:?}",
@@ -81,6 +84,6 @@ fn main() {
     players.insert(Color::Red as u8, Box::new(RandomPlayer {}));
     players.insert(Color::Blue as u8, Box::new(RandomPlayer {}));
 
-    let result = play_game(config, players);
+    let result = play_game(global_state, config, players);
     println!("Game result: {:?}", result);
 }

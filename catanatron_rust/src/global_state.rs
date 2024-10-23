@@ -10,8 +10,6 @@ use crate::{
 pub struct GlobalState {
     pub mini_map_template: MapTemplate,
     pub base_map_template: MapTemplate,
-    // TODO: Make a hard-coded static constant
-    // {2: 0.027777777777777776, 3: 0.05555555555555555, 4: 0.08333333333333333, 5: 0.1111111111111111, 6: 0.1388888888888889, 7: 0.16666666666666669, 8: 0.1388888888888889, 9: 0.1111111111111111, 10: 0.08333333333333333, 11: 0.05555555555555555, 12: 0.027777777777777776}
     pub dice_probas: HashMap<u8, f64>,
 }
 
