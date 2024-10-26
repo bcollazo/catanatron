@@ -20,7 +20,7 @@ impl State {
             let component = HashSet::from([node_id]);
             self.connected_components
                 .entry(color)
-                .or_insert(Vec::new())
+                .or_default()
                 .push(component);
         } else {
             todo!();
@@ -36,7 +36,7 @@ impl State {
 
         let is_initial_build_phase = self.is_initial_build_phase();
         if !is_initial_build_phase {
-            freqdeck_sub(&mut self.get_mut_player_hand(color), SETTLEMENT_COST);
+            freqdeck_sub(self.get_mut_player_hand(color), SETTLEMENT_COST);
             freqdeck_add(&mut self.vector[BANK_RESOURCE_SLICE], SETTLEMENT_COST);
         }
     }

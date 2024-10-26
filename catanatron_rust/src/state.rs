@@ -195,8 +195,8 @@ mod tests {
     fn test_initial_build_phase() {
         let state = setup_state();
 
-        assert_eq!(state.is_initial_build_phase(), true);
-        assert_eq!(state.is_moving_robber(), false);
-        assert_eq!(state.is_discarding(), false);
+        assert!(state.is_initial_build_phase());
+        assert!(!state.is_moving_robber());
+        assert!(!state.is_discarding());
     }
 }

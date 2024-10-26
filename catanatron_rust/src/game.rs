@@ -91,7 +91,7 @@ mod tests {
 
         assert_eq!(state.generate_playable_actions().len(), 54);
         play_tick(&players, &mut state);
-        assert_eq!(state.is_initial_build_phase(), true);
+        assert!(state.is_initial_build_phase());
         assert_eq!(state.generate_playable_actions().len(), 3);
     }
 }
