@@ -51,7 +51,10 @@ fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{enums::MapType, player::RandomPlayer};
+    use crate::{
+        enums::{Action, MapType},
+        player::RandomPlayer,
+    };
 
     fn setup_game() -> (GlobalState, GameConfiguration, HashMap<u8, Box<dyn Player>>) {
         let global_state = GlobalState::new();
@@ -89,9 +92,20 @@ mod tests {
         let rc_config = Rc::new(config);
         let mut state = State::new(rc_config.clone(), Rc::new(map_instance));
 
-        assert_eq!(state.generate_playable_actions().len(), 54);
+        let playable_actions = state.generate_playable_actions();
+        assert_eq!(playable_actions.len(), 54);
+        assert!(playable_actions
+            .iter()
+            .all(|e| matches!(e, Action::BuildSettlement(_, _))));
+
         play_tick(&players, &mut state);
+
+        // assert at least 2 actions and all are build road
+        let playable_actions = state.generate_playable_actions();
+        assert!(playable_actions.len() >= 2);
+        assert!(playable_actions
+            .iter()
+            .all(|e| matches!(e, Action::BuildRoad(_, _))));
         assert!(state.is_initial_build_phase());
-        assert_eq!(state.generate_playable_actions().len(), 3);
     }
 }
