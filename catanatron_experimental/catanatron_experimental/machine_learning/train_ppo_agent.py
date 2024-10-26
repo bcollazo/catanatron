@@ -1,9 +1,13 @@
 import math
 import os
+import random
 os.environ["WANDB_DISABLE_SYMLINKS"] = "True"
 from typing import Any
 import atexit
+import time
+import multiprocessing
 
+from functools import partial
 import gymnasium as gym
 import torch as th
 import numpy as np
@@ -11,6 +15,8 @@ from stable_baselines3.common.callbacks import (
     CheckpointCallback,
     CallbackList,
 )
+from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import VecMonitor
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
@@ -23,41 +29,11 @@ from catanatron_experimental.machine_learning.players.value import (
     ValueFunctionPlayer,
 )
 from catanatron.models.player import RandomPlayer
-from catanatron.state_functions import get_actual_victory_points
+
+# Import shared functions from the separate module
+from reward_functions import partial_rewards, mask_fn
 
 LOAD = False
-
-def mask_fn(env) -> np.ndarray:
-    valid_actions = env.unwrapped.get_valid_actions()
-    mask = np.zeros(env.action_space.n, dtype=np.float64)
-    mask[valid_actions] = 1
-    return np.array([bool(i) for i in mask])
-
-def build_partial_rewards(vps_to_win):
-    def partial_rewards(game, p0_color):
-        winning_color = game.winning_color()
-        if winning_color is None:
-            return 0
-
-        total = 0
-        if p0_color == winning_color:
-            total += 0.20
-        else:
-            total -= 0.20
-        enemy_vps = [
-            get_actual_victory_points(game.state, color)
-            for color in game.state.colors
-            if color != p0_color
-        ]
-        enemy_avg_vp = sum(enemy_vps) / len(enemy_vps)
-        my_vps = get_actual_victory_points(game.state, p0_color)
-        vp_diff = (my_vps - enemy_avg_vp) / (vps_to_win - 1)
-
-        total += 0.80 * vp_diff
-        print(f"my_vps = {my_vps} enemy_avg_vp = {enemy_avg_vp} partial_rewards = {total}")
-        return total
-
-    return partial_rewards
 
 def learning_rate_schedule(initial_lr, final_lr):
     def lr_schedule(progress_remaining):
@@ -65,24 +41,49 @@ def learning_rate_schedule(initial_lr, final_lr):
     return lr_schedule
 
 def main():
+    # Remove the set_start_method from here
+
     # ===== Params:
-    total_timesteps = 10_000_000
-    cnn_arch = [64, 64, 32]
-    net_arch = [dict(vf=[512, 256, 128], pi=[512, 256, 128])]
-    activation_fn = th.nn.Tanh
+    # With 100,000,000 timesteps, training took 4.97 days
+    total_timesteps = 100_000_000
+    cnn_arch = [64, 128, 256, 512]
+    net_arch = [dict(
+        vf=[4096, 4096, 2048, 2048, 1024, 1024, 512, 512, 256],
+        pi=[4096, 4096, 2048, 2048, 1024, 1024, 512, 512, 256]
+    )]
+    activation_fn = th.nn.LeakyReLU
     initial_lr = 1e-4
-    final_lr = 1e-5
-    ent_coef = 0.1
+    final_lr = 1e-6
+    ent_coef = 0.01
     vps_to_win = 10
     env_name = "catanatron_gym:catanatron-v1"
     map_type = "BASE"
     enemies = [ValueFunctionPlayer(Color.RED)]
-    reward_function = build_partial_rewards(vps_to_win)
+    reward_function = partial(partial_rewards, vps_to_win=vps_to_win)
+    reward_function.__name__ = partial_rewards.__name__
     representation = "mixed"
-    batch_size = 8192
-    gamma = 0.98
+    # batch_size = 64
+    gamma = 0.99
     normalized = False
     selfplay = False
+    seed = 42
+
+    n_envs = 8
+    n_steps = 256
+    batch_size = n_envs * n_steps
+    n_epochs = 10
+
+    assert (n_envs * n_steps) % batch_size == 0, "batch_size must divide n_envs * n_steps"
+
+    start_time = time.time()
+
+    # Set random seeds for reproducibility
+    random.seed(seed)
+    np.random.seed(seed)
+    th.manual_seed(seed)
+    th.cuda.manual_seed_all(seed)
+    th.backends.cudnn.deterministic = True
+    th.backends.cudnn.benchmark = False
 
     # Create learning rate schedule
     lr_schedule = learning_rate_schedule(initial_lr, final_lr)
@@ -123,6 +124,10 @@ def main():
         "cnn_arch": cnn_arch,
         "selfplay": selfplay,
         "experiment_name": experiment_name,
+        "n_envs": n_envs,
+        "n_steps": n_steps,
+        "n_epochs": n_epochs,
+        "seed": seed,
     }
     run = wandb.init(
         project="catanatron",
@@ -135,19 +140,27 @@ def main():
 
     atexit.register(print_name)
 
-    # Init Environment and Model
-    env = gym.make(
-        env_name,
-        config={
-            "map_type": map_type,
-            "vps_to_win": vps_to_win,
-            "enemies": enemies,
-            "reward_function": reward_function,
-            "representation": representation,
-            "normalized": True,
-        },
-    )
-    env = ActionMasker(env, mask_fn)  # Wrap to enable masking
+    # Define the environment creation function
+    def make_env(rank, seed=0):
+        def _init():
+            env = gym.make(
+                env_name,
+                config={
+                    "map_type": map_type,
+                    "vps_to_win": vps_to_win,
+                    "enemies": enemies,
+                    "reward_function": reward_function,
+                    "representation": representation,
+                    "normalized": True,
+                },
+            )
+            env = ActionMasker(env, mask_fn)
+            return env
+        return _init
+
+    # Create the vectorized environment
+    env = SubprocVecEnv([make_env(i, seed) for i in range(n_envs)])
+    env = VecMonitor(env)
 
     # Print the observation space to verify its type
     print("Observation Space:", env.observation_space)
@@ -155,10 +168,16 @@ def main():
     print(f"Using device: {device}")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(script_dir, 'model.zip')
+    model_path = os.path.join(script_dir, 'model')  # Removed '.zip'
     try:
         model = MaskablePPO.load(model_path, env, device=device)
-        print("Loaded", "model.zip")
+        # Override the training configuration from the previously trained model
+        model.gamma = gamma
+        model.ent_coef = ent_coef
+        model.learning_rate = lr_schedule
+        model.batch_size = batch_size
+        model._setup_lr_schedule()
+        print("Loaded", "model")
     except Exception as e:
         print(f"Failed to load the model from {model_path}: {e}")
         print("Creating a new model.")
@@ -173,13 +192,16 @@ def main():
             MaskableActorCriticPolicy,
             env,
             gamma=gamma,
+            n_steps=n_steps,
             batch_size=batch_size,
+            n_epochs=n_epochs,
             policy_kwargs=policy_kwargs,
             learning_rate=lr_schedule,
             ent_coef=ent_coef,
             verbose=1,
             tensorboard_log="./logs/mppo_tensorboard/" + experiment_name,
-            device=device
+            device=device,
+            seed=seed
         )
 
     # Save a checkpoint every 100,000 steps
@@ -189,7 +211,7 @@ def main():
     checkpoint_callback = CheckpointCallback(
         save_freq=100_000, save_path="./logs/", name_prefix=experiment_name
     )
-    callback = CallbackList([checkpoint_callback])#, wandb_callback])
+    callback = CallbackList([checkpoint_callback])  # , wandb_callback])
 
     if selfplay:
         selfplay_iterations = 10
@@ -203,8 +225,14 @@ def main():
         model.learn(total_timesteps=total_timesteps, callback=callback)
         model.save(model_path)
 
+        elapsed_time = time.time() - start_time
+        timesteps_per_second = total_timesteps / elapsed_time
+        print(f"Training completed in {elapsed_time:.2f} seconds.")
+        print(f"Timesteps per second = {timesteps_per_second:.2f}")
+
     model.save(model_path)
     run.finish()
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method('spawn')
     main()
