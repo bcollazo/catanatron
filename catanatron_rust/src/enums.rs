@@ -1,4 +1,4 @@
-use crate::map_instance::NodeId;
+use crate::map_instance::{EdgeId, NodeId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Color {
@@ -71,7 +71,7 @@ pub enum Action {
     Roll(Color),                 // None. Log instead sets it to (int, int) rolled.
     MoveRobber(Color), // value is (coordinate, Color|None). Log has extra element of card stolen.
     Discard(Color),    // value is None|Resource[].
-    BuildRoad(Color),  // value is edge_id
+    BuildRoad(u8, EdgeId), // value is edge_id
     BuildSettlement(u8, NodeId), // value is node_id
     BuildCity,         // value is node_id
     BuyDevelopmentCard, // value is None. Log value is card.

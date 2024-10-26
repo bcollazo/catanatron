@@ -7,7 +7,7 @@ use crate::enums::Resource;
 use crate::map_template::{add_coordinates, Coordinate, MapTemplate, TileSlot};
 
 pub type NodeId = u8;
-type EdgeId = (NodeId, NodeId);
+pub type EdgeId = (NodeId, NodeId);
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub enum NodeRef {
@@ -115,9 +115,23 @@ pub struct MapInstance {
     tiles: HashMap<Coordinate, Tile>,
     land_tiles: HashMap<Coordinate, LandTile>,
     port_nodes: HashSet<NodeId>,
-    land_nodes: HashSet<NodeId>,
     adjacent_land_tiles: HashMap<NodeId, Vec<LandTile>>,
     node_production: HashMap<NodeId, HashMap<Resource, f64>>,
+
+    // TODO: Since this doesn't change per map_instance but per template, move
+    //  these to MapTemplate.
+    // Decided to not use Petgraph for now, since needs seem to be:
+    // - Lookup node neighbors of a node
+    // - Lookup edges of a node
+    // - Lookup list of land edges
+    // - Pairwise distances between nodes
+    // - Shortest path between nodes
+    // - BFS capabilities
+    // all which doesn't sound too bad to implement.
+    land_nodes: HashSet<NodeId>,
+    land_edges: HashSet<EdgeId>,
+    node_neighbors: HashMap<NodeId, Vec<NodeId>>,
+    edge_neighbors: HashMap<NodeId, Vec<EdgeId>>,
 }
 
 impl MapInstance {
@@ -139,6 +153,14 @@ impl MapInstance {
 
     pub fn get_land_tile(&self, coordinate: Coordinate) -> Option<&LandTile> {
         self.land_tiles.get(&coordinate)
+    }
+
+    pub fn get_neighbor_nodes(&self, node_id: NodeId) -> Vec<NodeId> {
+        self.node_neighbors.get(&node_id).unwrap().clone()
+    }
+
+    pub fn get_neighbor_edges(&self, node_id: NodeId) -> Vec<EdgeId> {
+        self.edge_neighbors.get(&node_id).unwrap().clone()
     }
 }
 
@@ -218,9 +240,13 @@ impl MapInstance {
     fn from_tiles(tiles: HashMap<Coordinate, Tile>, dice_probas: &HashMap<u8, f64>) -> Self {
         let mut land_tiles: HashMap<Coordinate, LandTile> = HashMap::new();
         let mut port_nodes: HashSet<NodeId> = HashSet::new();
-        let mut land_nodes: HashSet<NodeId> = HashSet::new();
         let mut adjacent_land_tiles: HashMap<NodeId, Vec<LandTile>> = HashMap::new();
         let mut node_production: HashMap<NodeId, HashMap<Resource, f64>> = HashMap::new();
+
+        let mut land_nodes: HashSet<NodeId> = HashSet::new();
+        let mut land_edges: HashSet<EdgeId> = HashSet::new();
+        let mut node_neighbors: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+        let mut edge_neighbors: HashMap<NodeId, Vec<EdgeId>> = HashMap::new();
 
         for (&coordinate, tile) in tiles.iter() {
             if let Tile::Land(land_tile) = tile {
@@ -244,6 +270,14 @@ impl MapInstance {
                     production.entry(resource).or_insert(0.0);
                     *production.get_mut(&resource).unwrap() += proba;
                 });
+
+                land_tile.hexagon.edges.values().for_each(|&edge_id| {
+                    land_edges.insert(edge_id);
+                    node_neighbors.entry(edge_id.0).or_default().push(edge_id.1);
+                    node_neighbors.entry(edge_id.1).or_default().push(edge_id.0);
+                    edge_neighbors.entry(edge_id.0).or_default().push(edge_id);
+                    edge_neighbors.entry(edge_id.1).or_default().push(edge_id);
+                });
             } else if let Tile::Port(port_tile) = tile {
                 let (a_noderef, b_noderef) = get_noderefs_from_port_direction(port_tile.direction);
                 port_nodes.insert(*port_tile.hexagon.nodes.get(&a_noderef).unwrap());
@@ -255,9 +289,13 @@ impl MapInstance {
             tiles,
             land_tiles,
             port_nodes,
-            land_nodes,
             adjacent_land_tiles,
             node_production,
+
+            land_nodes,
+            land_edges,
+            node_neighbors,
+            edge_neighbors,
         }
     }
 }

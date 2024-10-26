@@ -1,3 +1,4 @@
+pub mod deck_slices;
 pub mod decks;
 pub mod enums;
 pub mod game;
@@ -7,5 +8,4 @@ pub mod map_template;
 mod ordered_hashmap;
 pub mod player;
 pub mod state;
-pub mod state_functions;
 pub mod state_vector;

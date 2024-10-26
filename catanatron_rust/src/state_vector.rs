@@ -1,4 +1,4 @@
-use crate::decks::starting_dev_listdeck;
+use crate::{decks::starting_dev_listdeck, map_instance::MapInstance};
 use rand::seq::SliceRandom;
 
 use crate::enums::COLORS;
@@ -73,6 +73,7 @@ pub fn bank_resource_index(resource: u8) -> usize {
     }
     resource as usize
 }
+pub const BANK_RESOURCE_SLICE: std::ops::Range<usize> = 0..5;
 const PLAYER_STATE_START_INDEX: usize = 268;
 pub fn seating_order_slice(num_players: usize) -> std::ops::Range<usize> {
     PLAYER_STATE_START_INDEX..PLAYER_STATE_START_INDEX + num_players
@@ -88,6 +89,12 @@ pub const HAS_PLAYED_DEV_CARD: usize = 34;
 pub const HAS_ROLLED_INDEX: usize = 35;
 pub const IS_DISCARDING_INDEX: usize = 36;
 pub const IS_MOVING_ROBBER_INDEX: usize = 37;
+
+pub const ROBBER_TILE_INDEX: usize = 42;
+pub fn player_hand_slice(color: u8) -> std::ops::Range<usize> {
+    let start = PLAYER_STATE_START_INDEX + 1 + (color as usize * 15);
+    start..start + 5
+}
 
 /// This is a compact representation of the omnipotent state of the game.
 /// Fairly close to a bitboard, but not quite. Its a vector of integers.
@@ -141,15 +148,8 @@ pub fn initialize_state(num_players: u8) -> Vec<u8> {
 
     // Board
     // TODO: Generate map from template
-    // vector[41] = 0;
-    // size += 1; // Robber_Tile (Tile Index < num_tiles)
-    // size += num_tiles; // Tile<i>_Resource (Resource Index <= 5)
-    // size += num_tiles; // Tile<i>_Number (Number <= 12)
-    // size += num_edges; // Edge<i>_Owner (Player Index | -1 < n + 1)
-    // size += num_nodes; // Node<i>_Owner (Player Index | -1 < n + 1)
-    // size += num_nodes; // Node<i>_Settlement/City (1=Settlement, 2=City, 0=Nothing)
-    // size += num_ports; // Port<i>_Resource (Resource Index <= 5)
-    vector[267] = 11; // temporary mark
+    vector[ROBBER_TILE_INDEX] = 0; // Robber_Tile
+
     let mut player_state_start = PLAYER_STATE_START_INDEX;
 
     // Initialize Players
