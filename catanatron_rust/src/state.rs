@@ -9,8 +9,8 @@ use crate::{
     map_instance::{EdgeId, MapInstance, NodeId},
     state_vector::{
         actual_victory_points_index, initialize_state, player_hand_slice, seating_order_slice,
-        StateVector, CURRENT_TICK_SEAT_INDEX, IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX,
-        IS_MOVING_ROBBER_INDEX,
+        StateVector, CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX, IS_DISCARDING_INDEX,
+        IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
     },
 };
 
@@ -106,9 +106,18 @@ impl State {
         self.vector[IS_DISCARDING_INDEX] == 1
     }
 
+    fn is_road_building(&self) -> bool {
+        self.vector[IS_INITIAL_BUILD_PHASE_INDEX] == 1
+            && self.vector[FREE_ROADS_AVAILABLE_INDEX] == 1
+    }
+
+    pub fn get_current_tick_seat(&self) -> u8 {
+        self.vector[CURRENT_TICK_SEAT_INDEX]
+    }
+
     pub fn get_current_color(&self) -> u8 {
         let seating_order = self.get_seating_order();
-        let current_tick_seat = self.vector[CURRENT_TICK_SEAT_INDEX];
+        let current_tick_seat = self.get_current_tick_seat();
         seating_order[current_tick_seat as usize]
     }
 
@@ -120,7 +129,7 @@ impl State {
 
     pub fn get_action_prompt(&self) -> ActionPrompt {
         if self.is_initial_build_phase() {
-            let num_things_built = self.buildings.len();
+            let num_things_built = self.buildings.len() + self.roads.len() / 2;
             if num_things_built == 2 * self.config.num_players as usize {
                 return ActionPrompt::PlayTurn;
             } else if num_things_built % 2 == 0 {
@@ -161,8 +170,6 @@ impl State {
     // ===== Board Getters =====
     // TODO: Potentially cache this implementation
     pub fn board_buildable_edges(&self, color: u8) -> Vec<EdgeId> {
-        println!("Building buildable edges {:?}", color);
-
         let color_components = self.connected_components.get(&color).unwrap();
         let expandable_nodes: Vec<NodeId> = color_components
             .iter()
@@ -180,6 +187,32 @@ impl State {
             }
         }
         buildable.into_iter().collect()
+    }
+
+    fn get_connected_component_index(&self, color: u8, a: u8) -> Option<usize> {
+        let components = self.connected_components.get(&color).unwrap();
+        for (i, component) in components.iter().enumerate() {
+            if component.contains(&a) {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    fn is_enemy_node(&self, color: u8, a: u8) -> bool {
+        let node_color = self.get_node_color(a);
+        match node_color {
+            None => false,
+            Some(node_color) => node_color != color,
+        }
+    }
+
+    fn get_node_color(&self, a: u8) -> Option<u8> {
+        match self.buildings.get(&a) {
+            Some(Building::Settlement(color)) => Some(*color),
+            Some(Building::City(color)) => Some(*color),
+            None => None,
+        }
     }
 }
 

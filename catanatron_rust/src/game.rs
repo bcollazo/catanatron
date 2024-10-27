@@ -36,8 +36,7 @@ fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) {
     let playable_actions = state.generate_playable_actions();
     println!(
         "Player {:?} has {:?} playable actions",
-        current_color,
-        playable_actions.len()
+        current_color, playable_actions
     );
     let action = current_player.decide(state, &playable_actions);
     println!(
@@ -63,7 +62,7 @@ mod tests {
             vps_to_win: 10,
             map_type: MapType::Base,
             num_players: 4,
-            max_turns: 100,
+            max_turns: 8, // TODO: Change!
         };
         let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();
         players.insert(0, Box::new(RandomPlayer {}));
@@ -92,11 +91,17 @@ mod tests {
         let rc_config = Rc::new(config);
         let mut state = State::new(rc_config.clone(), Rc::new(map_instance));
 
+        let first_player = state.get_current_color();
+
         let playable_actions = state.generate_playable_actions();
         assert_eq!(playable_actions.len(), 54);
-        assert!(playable_actions
-            .iter()
-            .all(|e| matches!(e, Action::BuildSettlement(_, _))));
+        assert!(playable_actions.iter().all(|e| {
+            if let Action::BuildSettlement(player, _) = e {
+                *player == first_player
+            } else {
+                false
+            }
+        }));
 
         play_tick(&players, &mut state);
 
@@ -107,5 +112,14 @@ mod tests {
             .iter()
             .all(|e| matches!(e, Action::BuildRoad(_, _))));
         assert!(state.is_initial_build_phase());
+
+        play_tick(&players, &mut state);
+
+        // assert at 50 actions and all are build settlement
+        let playable_actions = state.generate_playable_actions();
+        assert_eq!(playable_actions.len(), 50);
+        assert!(playable_actions
+            .iter()
+            .all(|e| matches!(e, Action::BuildSettlement(_, _))));
     }
 }

@@ -89,6 +89,8 @@ pub const HAS_PLAYED_DEV_CARD: usize = 34;
 pub const HAS_ROLLED_INDEX: usize = 35;
 pub const IS_DISCARDING_INDEX: usize = 36;
 pub const IS_MOVING_ROBBER_INDEX: usize = 37;
+pub const IS_BUILDING_ROAD_INDEX: usize = 38;
+pub const FREE_ROADS_AVAILABLE_INDEX: usize = 39;
 
 pub const ROBBER_TILE_INDEX: usize = 42;
 pub fn player_hand_slice(color: u8) -> std::ops::Range<usize> {
@@ -139,8 +141,8 @@ pub fn initialize_state(num_players: u8) -> Vec<u8> {
     vector[HAS_ROLLED_INDEX] = 0; // Has_Rolled
     vector[IS_DISCARDING_INDEX] = 0; // Is_Discarding
     vector[IS_MOVING_ROBBER_INDEX] = 0; // Is_Moving_Robber
-    vector[38] = 0; // Is_Building_Road
-    vector[39] = 2; // Free_Roads_Available
+    vector[IS_BUILDING_ROAD_INDEX] = 0; // Is_Building_Road
+    vector[FREE_ROADS_AVAILABLE_INDEX] = 2; // Free_Roads_Available
 
     // Extra (u8::MAX is used to indicate no player)
     vector[40] = u8::MAX; // Longest_Road_Player_Index
