@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Building {
     Settlement(u8), // Color
     City(u8),       // Color
@@ -126,11 +126,14 @@ impl State {
         &self.vector[player_hand_slice(color)]
     }
 
+    pub fn get_actual_victory_points(&self, color: u8) -> u8 {
+        self.vector[actual_victory_points_index(self.config.num_players, color)]
+    }
+
     pub fn winner(&self) -> Option<u8> {
         let current_color = self.get_current_color();
 
-        let actual_victory_points =
-            self.vector[actual_victory_points_index(self.config.num_players, current_color)];
+        let actual_victory_points = self.get_actual_victory_points(current_color);
         if actual_victory_points >= self.config.vps_to_win {
             return Some(current_color);
         }

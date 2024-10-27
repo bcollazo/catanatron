@@ -54,3 +54,53 @@ impl State {
         println!("Applying action {:?}", action);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use super::*;
+    use crate::{
+        enums::{GameConfiguration, MapType},
+        global_state::GlobalState,
+        map_instance::MapInstance,
+    };
+
+    fn setup_state() -> State {
+        let global_state = GlobalState::new();
+        let config = GameConfiguration {
+            dicard_limit: 7,
+            vps_to_win: 10,
+            map_type: MapType::Base,
+            num_players: 2,
+            max_turns: 10,
+        };
+        let map_instance = MapInstance::new(
+            &global_state.base_map_template,
+            &global_state.dice_probas,
+            0,
+        );
+        State::new(Rc::new(config), Rc::new(map_instance))
+    }
+
+    #[test]
+    fn test_build_settlement() {
+        let mut state = setup_state();
+        let color = state.get_current_color();
+        assert_eq!(state.buildings.get(&0), None);
+        assert_eq!(state.board_buildable_ids.len(), 54);
+        assert_eq!(state.get_actual_victory_points(color), 0);
+
+        let node_id = 0;
+        state.build_settlement(color, node_id);
+
+        assert_eq!(
+            state.buildings.get(&node_id),
+            Some(&Building::Settlement(color))
+        );
+        assert_eq!(state.board_buildable_ids.len(), 50);
+        assert_eq!(state.get_actual_victory_points(color), 1);
+    }
+
+    // TODO: Assert build_settlement spends player resources
+}
