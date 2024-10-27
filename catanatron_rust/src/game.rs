@@ -56,13 +56,15 @@ mod tests {
         player::RandomPlayer,
     };
 
-    fn setup_game() -> (GlobalState, GameConfiguration, HashMap<u8, Box<dyn Player>>) {
+    fn setup_game(
+        num_players: u8,
+    ) -> (GlobalState, GameConfiguration, HashMap<u8, Box<dyn Player>>) {
         let global_state = GlobalState::new();
         let config = GameConfiguration {
             dicard_limit: 7,
             vps_to_win: 10,
             map_type: MapType::Base,
-            num_players: 4,
+            num_players: num_players,
             max_ticks: 8, // TODO: Change!
         };
         let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();
@@ -75,15 +77,15 @@ mod tests {
 
     #[test]
     fn test_game_creation() {
-        let (global_state, config, players) = setup_game();
+        let (global_state, config, players) = setup_game(4);
 
         let result = play_game(global_state, config, players);
         assert_eq!(result, None);
     }
 
     #[test]
-    fn test_initial_build_phase() {
-        let (global_state, config, players) = setup_game();
+    fn test_initial_build_phase_four_player() {
+        let (global_state, config, players) = setup_game(4);
         let map_instance = MapInstance::new(
             &global_state.base_map_template,
             &global_state.dice_probas,
@@ -158,6 +160,31 @@ mod tests {
         assert!(matches!(state.get_action_prompt(), ActionPrompt::PlayTurn));
 
         // TODO: Assert players have money of their second house
+    }
+
+    #[test]
+    fn test_initial_build_phase_two_player() {
+        let (global_state, config, players) = setup_game(2);
+        let map_instance = MapInstance::new(
+            &global_state.base_map_template,
+            &global_state.dice_probas,
+            0,
+        );
+        let rc_config = Rc::new(config);
+        let mut state = State::new(rc_config.clone(), Rc::new(map_instance));
+
+        let seating_order = state.get_seating_order();
+        let first_player = seating_order[0];
+
+        for _ in 0..8 {
+            assert!(state.is_initial_build_phase());
+            play_tick(&players, &mut state);
+        }
+
+        // Assert that the initial build phase is over and its the first player's turn
+        assert!(!state.is_initial_build_phase());
+        assert_eq!(state.get_current_color(), first_player);
+        assert!(matches!(state.get_action_prompt(), ActionPrompt::PlayTurn));
     }
 
     fn assert_all_build_settlements(playable_actions: Vec<Action>, player: u8) {
