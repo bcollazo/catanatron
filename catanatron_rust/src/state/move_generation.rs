@@ -58,33 +58,11 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     use super::*;
-    use crate::enums::{GameConfiguration, MapType};
-    use crate::global_state::GlobalState;
-    use crate::map_instance::MapInstance;
-
-    fn setup_state() -> State {
-        let global_state = GlobalState::new();
-        let config = GameConfiguration {
-            dicard_limit: 7,
-            vps_to_win: 10,
-            map_type: MapType::Base,
-            num_players: 2,
-            max_turns: 10,
-        };
-        let map_instance = MapInstance::new(
-            &global_state.base_map_template,
-            &global_state.dice_probas,
-            0,
-        );
-        State::new(Rc::new(config), Rc::new(map_instance))
-    }
 
     #[test]
     fn test_move_generation() {
-        let state = setup_state();
+        let state = State::new_base();
         let actions = state.generate_playable_actions();
         assert_eq!(actions.len(), 54);
         assert!(matches!(actions[0], Action::BuildSettlement(_, _)));
@@ -92,20 +70,7 @@ mod tests {
 
     #[test]
     fn test_settlement_possibilities() {
-        let global_state = GlobalState::new();
-        let config = GameConfiguration {
-            dicard_limit: 7,
-            vps_to_win: 10,
-            map_type: MapType::Base,
-            num_players: 2,
-            max_turns: 10,
-        };
-        let map_instance = MapInstance::new(
-            &global_state.base_map_template,
-            &global_state.dice_probas,
-            0,
-        );
-        let state = State::new(Rc::new(config), Rc::new(map_instance));
+        let state = State::new_base();
 
         let initial_build_phase_actions = state.settlement_possibilities(0, true);
         assert_eq!(initial_build_phase_actions.len(), 54);

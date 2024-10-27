@@ -4,7 +4,8 @@ use std::{
 };
 
 use crate::{
-    enums::{ActionPrompt, GameConfiguration},
+    enums::{ActionPrompt, GameConfiguration, MapType},
+    global_state::GlobalState,
     map_instance::{EdgeId, MapInstance, NodeId},
     state_vector::{
         actual_victory_points_index, initialize_state, player_hand_slice, seating_order_slice,
@@ -65,6 +66,23 @@ impl State {
             longest_road_color,
             longest_road_length,
         }
+    }
+
+    pub fn new_base() -> Self {
+        let global_state = GlobalState::new();
+        let config = GameConfiguration {
+            dicard_limit: 7,
+            vps_to_win: 10,
+            map_type: MapType::Base,
+            num_players: 4,
+            max_turns: 10,
+        };
+        let map_instance = MapInstance::new(
+            &global_state.base_map_template,
+            &global_state.dice_probas,
+            0,
+        );
+        State::new(Rc::new(config), Rc::new(map_instance))
     }
 
     fn get_num_players(&self) -> u8 {
@@ -168,35 +186,17 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{enums::MapType, global_state::GlobalState};
-
-    fn setup_state() -> State {
-        let global_state = GlobalState::new();
-        let config = GameConfiguration {
-            dicard_limit: 7,
-            vps_to_win: 10,
-            map_type: MapType::Base,
-            num_players: 2,
-            max_turns: 10,
-        };
-        let map_instance = MapInstance::new(
-            &global_state.base_map_template,
-            &global_state.dice_probas,
-            0,
-        );
-        State::new(Rc::new(config), Rc::new(map_instance))
-    }
 
     #[test]
     fn test_state_creation() {
-        let state = setup_state();
+        let state = State::new_base();
 
         assert_eq!(state.longest_road_color, None);
     }
 
     #[test]
     fn test_initial_build_phase() {
-        let state = setup_state();
+        let state = State::new_base();
 
         assert!(state.is_initial_build_phase());
         assert!(!state.is_moving_robber());
