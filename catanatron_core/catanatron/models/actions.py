@@ -2,6 +2,7 @@
 Move-generation functions (these return a list of actions that can be taken 
 by current player). Main function is generate_playable_actions.
 """
+
 import operator as op
 from functools import reduce
 from typing import Any, Dict, List, Set, Tuple, Union
@@ -51,43 +52,7 @@ def generate_playable_actions(state) -> List[Action]:
     elif action_prompt == ActionPrompt.MOVE_ROBBER:
         return robber_possibilities(state, color)
     elif action_prompt == ActionPrompt.PLAY_TURN:
-        if state.is_road_building:
-            actions = road_building_possibilities(state, color, False)
-        elif not player_has_rolled(state, color):
-            actions = [Action(color, ActionType.ROLL, None)]
-            if player_can_play_dev(state, color, "KNIGHT"):
-                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
-        else:
-            actions = [Action(color, ActionType.END_TURN, None)]
-            actions.extend(road_building_possibilities(state, color))
-            actions.extend(settlement_possibilities(state, color))
-            actions.extend(city_possibilities(state, color))
-
-            can_buy_dev_card = (
-                player_can_afford_dev_card(state, color)
-                and len(state.development_listdeck) > 0
-            )
-            if can_buy_dev_card:
-                actions.append(Action(color, ActionType.BUY_DEVELOPMENT_CARD, None))
-
-            # Play Dev Cards
-            if player_can_play_dev(state, color, "YEAR_OF_PLENTY"):
-                actions.extend(
-                    year_of_plenty_possibilities(color, state.resource_freqdeck)
-                )
-            if player_can_play_dev(state, color, "MONOPOLY"):
-                actions.extend(monopoly_possibilities(color))
-            if player_can_play_dev(state, color, "KNIGHT"):
-                actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
-            if (
-                player_can_play_dev(state, color, "ROAD_BUILDING")
-                and len(road_building_possibilities(state, color, False)) > 0
-            ):
-                actions.append(Action(color, ActionType.PLAY_ROAD_BUILDING, None))
-
-            # Trade
-            actions.extend(maritime_trade_possibilities(state, color))
-        return actions
+        return play_turn_possibilities(state, color)
     elif action_prompt == ActionPrompt.DISCARD:
         return discard_possibilities(color)
     elif action_prompt == ActionPrompt.DECIDE_TRADE:
@@ -237,6 +202,44 @@ def robber_possibilities(state, color) -> List[Action]:
                     )
                 )
 
+    return actions
+
+
+def play_turn_possibilities(state, color) -> List[Action]:
+    if state.is_road_building:
+        actions = road_building_possibilities(state, color, False)
+    elif not player_has_rolled(state, color):
+        actions = [Action(color, ActionType.ROLL, None)]
+        if player_can_play_dev(state, color, "KNIGHT"):
+            actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
+    else:
+        actions = [Action(color, ActionType.END_TURN, None)]
+        actions.extend(road_building_possibilities(state, color))
+        actions.extend(settlement_possibilities(state, color))
+        actions.extend(city_possibilities(state, color))
+
+        can_buy_dev_card = (
+            player_can_afford_dev_card(state, color)
+            and len(state.development_listdeck) > 0
+        )
+        if can_buy_dev_card:
+            actions.append(Action(color, ActionType.BUY_DEVELOPMENT_CARD, None))
+
+        # Play Dev Cards
+        if player_can_play_dev(state, color, "YEAR_OF_PLENTY"):
+            actions.extend(year_of_plenty_possibilities(color, state.resource_freqdeck))
+        if player_can_play_dev(state, color, "MONOPOLY"):
+            actions.extend(monopoly_possibilities(color))
+        if player_can_play_dev(state, color, "KNIGHT"):
+            actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
+        if (
+            player_can_play_dev(state, color, "ROAD_BUILDING")
+            and len(road_building_possibilities(state, color, False)) > 0
+        ):
+            actions.append(Action(color, ActionType.PLAY_ROAD_BUILDING, None))
+
+        # Trade
+        actions.extend(maritime_trade_possibilities(state, color))
     return actions
 
 
