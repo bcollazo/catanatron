@@ -130,7 +130,7 @@ impl State {
     pub fn get_action_prompt(&self) -> ActionPrompt {
         if self.is_initial_build_phase() {
             let num_things_built = self.buildings.len() + self.roads.len() / 2;
-            if num_things_built == 2 * self.config.num_players as usize {
+            if num_things_built == 4 * self.config.num_players as usize {
                 return ActionPrompt::PlayTurn;
             } else if num_things_built % 2 == 0 {
                 return ActionPrompt::BuildInitialSettlement;

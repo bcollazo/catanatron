@@ -78,7 +78,7 @@ fn main() {
         vps_to_win: 10,
         map_type: MapType::Base,
         num_players: 2,
-        max_ticks: 4,
+        max_ticks: 8,
     };
     let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();
     players.insert(Color::Red as u8, Box::new(RandomPlayer {}));

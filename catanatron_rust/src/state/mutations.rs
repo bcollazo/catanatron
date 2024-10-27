@@ -77,13 +77,13 @@ impl State {
             let num_settlements = self.buildings.len();
             let num_players = self.config.num_players as usize;
             let going_forward = num_settlements < num_players;
-            let at_midpoint = num_settlements == 2 * num_players;
+            let at_midpoint = num_settlements == num_players;
 
             if going_forward {
                 self.advance_turn(1);
             } else if at_midpoint {
                 // do nothing, generate prompt should take care
-            } else if num_settlements % num_players == 0 {
+            } else if num_settlements == 2 * num_players {
                 // just change prompt without advancing turn (since last to place is first to roll)
                 self.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
             } else {
