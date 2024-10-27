@@ -75,7 +75,7 @@ impl State {
             vps_to_win: 10,
             map_type: MapType::Base,
             num_players: 4,
-            max_turns: 10,
+            max_ticks: 10,
         };
         let map_instance = MapInstance::new(
             &global_state.base_map_template,

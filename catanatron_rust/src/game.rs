@@ -20,11 +20,11 @@ pub fn play_game(
     let rc_config = Rc::new(config);
     println!("Playing game with configuration: {:?}", rc_config);
     let mut state = State::new(rc_config.clone(), Rc::new(map_instance));
-    let mut num_turns = 0;
-    while state.winner().is_none() && num_turns < rc_config.max_turns {
-        println!("Playing turn {:?}", num_turns);
+    let mut num_ticks = 0;
+    while state.winner().is_none() && num_ticks < rc_config.max_ticks {
+        println!("Playing turn {:?}", num_ticks);
         play_tick(&players, &mut state);
-        num_turns += 1;
+        num_ticks += 1;
     }
     state.winner()
 }
@@ -62,7 +62,7 @@ mod tests {
             vps_to_win: 10,
             map_type: MapType::Base,
             num_players: 4,
-            max_turns: 8, // TODO: Change!
+            max_ticks: 8, // TODO: Change!
         };
         let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();
         players.insert(0, Box::new(RandomPlayer {}));

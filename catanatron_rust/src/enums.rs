@@ -102,5 +102,5 @@ pub struct GameConfiguration {
     pub vps_to_win: u8,
     pub map_type: MapType,
     pub num_players: u8,
-    pub max_turns: u32,
+    pub max_ticks: u32,
 }
