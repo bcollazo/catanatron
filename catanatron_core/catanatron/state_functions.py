@@ -225,9 +225,17 @@ def player_resource_freqdeck_contains(state, color, freqdeck):
 
 def player_can_play_dev(state, color, dev_card):
     key = player_key(state, color)
+
+    cards_in_hand = state.player_state[f"{key}_{dev_card}_IN_HAND"]
+    cards_purchased_this_turn = state.player_state[
+        f"{key}_{dev_card}_PURCHASED_THIS_TURN"
+    ]
+    playable_cards = cards_in_hand - cards_purchased_this_turn
+
     return (
         not state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
-        and state.player_state[f"{key}_{dev_card}_IN_HAND"] >= 1
+        # Must have at least 1 card that wasn't purchased this turn
+        and playable_cards > 0
     )
 
 
@@ -259,6 +267,9 @@ def buy_dev_card(state, color, dev_card):
     state.player_state[f"{key}_{dev_card}_IN_HAND"] += 1
     if dev_card == VICTORY_POINT:
         state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] += 1
+    else:
+        # Mark as purchased this turn
+        state.player_state[f"{key}_{dev_card}_PURCHASED_THIS_TURN"] += 1
 
     state.player_state[f"{key}_SHEEP_IN_HAND"] -= 1
     state.player_state[f"{key}_WHEAT_IN_HAND"] -= 1
@@ -334,3 +345,8 @@ def player_clean_turn(state, color):
     key = player_key(state, color)
     state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = False
     state.player_state[f"{key}_HAS_ROLLED"] = False
+    # Reset all purchased-this-turn counters
+    state.player_state[f"{key}_KNIGHT_PURCHASED_THIS_TURN"] = 0
+    state.player_state[f"{key}_MONOPOLY_PURCHASED_THIS_TURN"] = 0
+    state.player_state[f"{key}_YEAR_OF_PLENTY_PURCHASED_THIS_TURN"] = 0
+    state.player_state[f"{key}_ROAD_BUILDING_PURCHASED_THIS_TURN"] = 0
