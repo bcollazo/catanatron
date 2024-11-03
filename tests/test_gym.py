@@ -126,7 +126,7 @@ def test_enemies():
 
     # Virtually impossible for a Random bot to beat Value Function Player
     assert env.game.winning_color() == Color.RED  # type: ignore
-    assert reward - 1
+    assert reward == -1
     env.close()
 
 

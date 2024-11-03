@@ -298,25 +298,24 @@ def inner_maritime_trade_possibilities(hand_freqdeck, bank_freqdeck, port_resour
     trade_offers = set()
 
     # Get lowest rate per resource
-    rates: Dict[FastResource, int] = {WOOD: 4, BRICK: 4, SHEEP: 4, WHEAT: 4, ORE: 4}
+    rates = {res: 4 for res in RESOURCES}
     if None in port_resources:
-        rates = {WOOD: 3, BRICK: 3, SHEEP: 3, WHEAT: 3, ORE: 3}
+        rates = {res: 3 for res in RESOURCES}
     for resource in port_resources:
-        if resource != None:
+        if resource is not None:
             rates[resource] = 2
 
-    # For resource in hand
-    for index, resource in enumerate(RESOURCES):
-        amount = hand_freqdeck[index]
-        if amount >= rates[resource]:
-            resource_out: List[Any] = [resource] * rates[resource]
-            resource_out += [None] * (4 - rates[resource])
-            for j_resource in RESOURCES:
-                if (
-                    resource != j_resource
-                    and freqdeck_count(bank_freqdeck, j_resource) > 0
-                ):
-                    trade_offer = tuple(resource_out + [j_resource])
-                    trade_offers.add(trade_offer)
+    # For each resource in hand
+    for give_idx, amount in enumerate(hand_freqdeck):
+        rate = rates[RESOURCES[give_idx]]
+        if amount >= rate:
+            # Try trading for each other resource the bank has
+            for receive_idx, bank_amount in enumerate(bank_freqdeck):
+                if receive_idx != give_idx and bank_amount > 0:
+                    # Create concatenated freqdeck [give_5 + receive_5]
+                    freqdeck = [0] * 10
+                    freqdeck[give_idx] = rate
+                    freqdeck[5 + receive_idx] = 1
+                    trade_offers.add(tuple(freqdeck))
 
     return trade_offers

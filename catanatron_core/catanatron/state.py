@@ -589,19 +589,24 @@ def apply_action(state: State, action: Action):
         state.current_prompt = ActionPrompt.PLAY_TURN
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.MARITIME_TRADE:
-        trade_offer = action.value
-        offering = freqdeck_from_listdeck(
-            filter(lambda r: r is not None, trade_offer[:-1])
-        )
-        asking = freqdeck_from_listdeck(trade_offer[-1:])
-        if not player_resource_freqdeck_contains(state, action.color, offering):
+        # action.value is now a 10-length tuple of integers [give_5 + receive_5]
+        giving_freqdeck = list(action.value[:5])  # First 5 are resources given
+        receiving_freqdeck = list(action.value[5:])  # Last 5 are resources received
+
+        # Validate player has resources
+        if not player_resource_freqdeck_contains(state, action.color, giving_freqdeck):
             raise ValueError("Trying to trade without money")
-        if not freqdeck_contains(state.resource_freqdeck, asking):
-            raise ValueError("Bank doenst have those cards")
-        player_freqdeck_subtract(state, action.color, offering)
-        state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, offering)
-        player_freqdeck_add(state, action.color, asking)
-        state.resource_freqdeck = freqdeck_subtract(state.resource_freqdeck, asking)
+        # Validate bank has resources
+        if not freqdeck_contains(state.resource_freqdeck, receiving_freqdeck):
+            raise ValueError("Bank doesn't have those cards")
+
+        # Execute trade
+        player_freqdeck_subtract(state, action.color, giving_freqdeck)
+        state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, giving_freqdeck)
+        player_freqdeck_add(state, action.color, receiving_freqdeck)
+        state.resource_freqdeck = freqdeck_subtract(
+            state.resource_freqdeck, receiving_freqdeck
+        )
 
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.PLAY_TURN
