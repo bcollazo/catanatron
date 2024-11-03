@@ -90,8 +90,29 @@ export function humanizeAction(gameState, action) {
 }
 
 export function humanizeTradeAction(action) {
-  const out = action[2].slice(0, 4).filter((resource) => resource !== null);
-  return `${out.length} ${out[0]} => ${action[2][4]}`;
+  const freqdeck = action[2];
+  const RESOURCES = ['WOOD', 'BRICK', 'SHEEP', 'WHEAT', 'ORE'];
+
+  const resourcesGiven = [];
+  const resourcesReceived = [];
+
+  // Parse resources given (indices 0-4)
+  for (let i = 0; i < 5; i++) {
+    const amount = freqdeck[i];
+    if (amount > 0) {
+      resourcesGiven.push(`${amount} ${RESOURCES[i]}`);
+    }
+  }
+
+  // Parse resources received (indices 5-9)
+  for (let i = 5; i < 10; i++) {
+    const amount = freqdeck[i];
+    if (amount > 0) {
+      resourcesReceived.push(`${amount} ${RESOURCES[i - 5]}`);
+    }
+  }
+
+  return `${resourcesGiven.join(', ')} => ${resourcesReceived.join(', ')}`;
 }
 
 function humanizePrompt(current_prompt) {
