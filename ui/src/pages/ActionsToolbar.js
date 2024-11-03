@@ -227,22 +227,22 @@ function PlayButtons() {
         color="primary"
         startIcon={<NavigateNextIcon />}
         onClick={
-          isRoll
-            ? rollAction
-            : isDiscard
+          isDiscard
             ? proceedAction
             : isMoveRobber
             ? setIsMovingRobber
             : isPlayingYearOfPlenty || isPlayingMonopoly
             ? handleOpenResourceSelector
+            : isRoll
+            ? rollAction
             : endTurnAction
         }
       >
         {
-          isRoll ? "ROLL" : 
           isDiscard ? "DISCARD" : 
           isMoveRobber ? "ROB" : 
           isPlayingYearOfPlenty || isPlayingMonopoly ? "SELECT" : 
+          isRoll ? "ROLL" : 
           "END"
         }
       </Button>
