@@ -55,8 +55,17 @@ def generate_playable_actions(state) -> List[Action]:
             actions = road_building_possibilities(state, color, False)
         elif not player_has_rolled(state, color):
             actions = [Action(color, ActionType.ROLL, None)]
+            # Allow playing any dev card before rolling
             if player_can_play_dev(state, color, "KNIGHT"):
                 actions.append(Action(color, ActionType.PLAY_KNIGHT_CARD, None))
+            if player_can_play_dev(state, color, "YEAR_OF_PLENTY"):
+                actions.extend(
+                    year_of_plenty_possibilities(color, state.resource_freqdeck)
+                )
+            if player_can_play_dev(state, color, "MONOPOLY"):
+                actions.extend(monopoly_possibilities(color))
+            if player_can_play_dev(state, color, "ROAD_BUILDING"):
+                actions.append(Action(color, ActionType.PLAY_ROAD_BUILDING, None))
         else:
             actions = [Action(color, ActionType.END_TURN, None)]
             actions.extend(road_building_possibilities(state, color))
