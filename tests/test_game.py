@@ -327,10 +327,7 @@ def test_play_road_building(fake_roll_dice):
     ):
         game.play_tick()
 
-    # roll not a 7
-    fake_roll_dice.return_value = (1, 2)
-    game.play_tick()  # roll
-
+    # Play Road Building before rolling
     game.execute(Action(p0.color, ActionType.PLAY_ROAD_BUILDING, None))
     assert game.state.is_road_building
     assert game.state.free_roads_available == 2
