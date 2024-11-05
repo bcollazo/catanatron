@@ -47,7 +47,7 @@ function PlayButtons() {
     [enqueueSnackbar, closeSnackbar]
   );
 
-  const { gameState, isPlayingMonopoly, isPlayingYearOfPlenty } = state;
+  const { gameState, isPlayingMonopoly, isPlayingYearOfPlenty, isRoadBuilding } = state;
   const key = playerKey(gameState, gameState.current_color);
   const isRoll =
     gameState.current_prompt === "PLAY_TURN" &&
@@ -198,7 +198,7 @@ function PlayButtons() {
   return (
     <>
       <OptionsButton
-        disabled={playableDevCardTypes.size === 0 || isPlayingYearOfPlenty}
+        disabled={playableDevCardTypes.size === 0 || isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding}
         menuListId="use-menu-list"
         icon={<SimCardIcon />}
         items={useItems}
@@ -206,7 +206,7 @@ function PlayButtons() {
         Use
       </OptionsButton>
       <OptionsButton
-        disabled={buildActionTypes.size === 0 || isPlayingYearOfPlenty}
+        disabled={buildActionTypes.size === 0 || isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding}
         menuListId="build-menu-list"
         icon={<BuildIcon />}
         items={buildItems}
@@ -214,7 +214,7 @@ function PlayButtons() {
         Buy
       </OptionsButton>
       <OptionsButton
-        disabled={tradeItems.length === 0 || isPlayingYearOfPlenty}
+        disabled={tradeItems.length === 0 || isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding}
         menuListId="trade-menu-list"
         icon={<AccountBalanceIcon />}
         items={tradeItems}
@@ -222,7 +222,7 @@ function PlayButtons() {
         Trade
       </OptionsButton>
       <Button
-        disabled={gameState.is_initial_build_phase}
+        disabled={gameState.is_initial_build_phase || isRoadBuilding}
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}
