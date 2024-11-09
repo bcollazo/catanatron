@@ -22,3 +22,24 @@ export async function postAction(gameId, action = undefined) {
   );
   return response.data;
 }
+
+export async function postMctsAnalysis(gameState) {
+  try {
+    const response = await fetch('/api/mcts-analysis', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(gameState)
+    });
+    
+    if (!response.ok) {
+      throw new Error('MCTS analysis request failed');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error in MCTS analysis:', error);
+    throw error;
+  }
+}

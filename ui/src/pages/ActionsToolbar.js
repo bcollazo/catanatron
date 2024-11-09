@@ -8,6 +8,7 @@ import React, {
 import memoize from "fast-memoize";
 import { Button, Hidden } from "@material-ui/core";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import ChevronRightIcon from "@material-ui/icons/ChevronRight";
 import AccountBalanceIcon from "@material-ui/icons/AccountBalance";
 import BuildIcon from "@material-ui/icons/Build";
 import NavigateNextIcon from "@material-ui/icons/NavigateNext";
@@ -276,6 +277,13 @@ export default function ActionsToolbar({
     });
   }, [dispatch]);
 
+  const openRightDrawer = useCallback(() => {
+    dispatch({
+      type: ACTIONS.SET_RIGHT_DRAWER_OPENED,
+      data: true,
+    });
+  }, [dispatch]);
+
   const botsTurn = state.gameState.bot_colors.includes(
     state.gameState.current_color
   );
@@ -286,6 +294,11 @@ export default function ActionsToolbar({
         <Hidden mdUp>
           <Button className="open-drawer-btn" onClick={openLeftDrawer}>
             <ChevronLeftIcon />
+          </Button>
+        </Hidden>
+        <Hidden lgUp>
+          <Button className="open-drawer-btn" onClick={openRightDrawer}>
+            <ChevronRightIcon />
           </Button>
         </Hidden>
         {humanColor && (

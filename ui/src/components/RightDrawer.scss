@@ -1,0 +1,51 @@
+@import "../variables.scss";
+
+$dark-divider: rgb(0 0 0 / 80%);
+
+.right-drawer {
+  .MuiDrawer-paper {
+    width: 280px;
+    background: $dark-gray;
+    color: white;
+  }
+
+  .analysis-box {
+    padding: 16px;
+
+    h3 {
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+
+    .loading-indicator {
+      text-align: center;
+      padding: 16px;
+      color: rgba(255, 255, 255, 0.7);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .probability-bars {
+      .probability-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        margin: 4px 0;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.05);
+
+        &.red { color: #ef4444; }
+        &.blue { color: #3b82f6; }
+        &.white { color: #ffffff; }
+        &.orange { color: #f97316; }
+
+        .probability-value {
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
