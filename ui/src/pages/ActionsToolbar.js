@@ -296,17 +296,17 @@ export default function ActionsToolbar({
             <ChevronLeftIcon />
           </Button>
         </Hidden>
-        <Hidden lgUp>
-          <Button className="open-drawer-btn" onClick={openRightDrawer}>
-            <ChevronRightIcon />
-          </Button>
-        </Hidden>
         {humanColor && (
           <ResourceCards
             playerState={state.gameState.player_state}
             playerKey={playerKey(state.gameState, humanColor)}
           />
         )}
+        <Hidden lgUp>
+          <Button className="open-drawer-btn" onClick={openRightDrawer} style={{ marginLeft: 'auto' }}>
+            <ChevronRightIcon />
+          </Button>
+        </Hidden>
       </div>
       <div className="actions-toolbar">
         {!(botsTurn || state.gameState.winning_color) && !replayMode && (
