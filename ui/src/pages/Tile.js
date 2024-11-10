@@ -109,7 +109,6 @@ export default function Tile({ center, coordinate, tile, size, onClick, flashing
             backgroundSize: "contain",
             width: 52,
             backgroundRepeat: "no-repeat",
-            transform: `scale(1.1)`
           }}
         >
           3:1
