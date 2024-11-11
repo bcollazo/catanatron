@@ -1,64 +1,82 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Drawer, Hidden, SwipeableDrawer, CircularProgress } from "@material-ui/core";
+import React, { useCallback, useContext, useState } from "react";
+import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
+import Divider from "@material-ui/core/Divider";
+import Drawer from "@material-ui/core/Drawer";
+import { Hidden, CircularProgress, Button } from "@material-ui/core";
+import AssessmentIcon from "@material-ui/icons/Assessment";
+import { getMctsAnalysis } from "../utils/apiClient";
+import { useParams } from "react-router";
+
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { postMctsAnalysis } from "../utils/apiClient";
-import { getHumanColor, isPlayersTurn } from "../utils/stateUtils";
 
 import "./RightDrawer.scss";
 
-function AnalysisContent({ gameState }) {
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const humanColor = getHumanColor(gameState);
-  const isHumanTurn = isPlayersTurn(gameState);
+function DrawerContent() {
+  const { gameId } = useParams();
+  const { state } = useContext(store);
+  const [mctsResults, setMctsResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Reset analysis when game state changes
-    setAnalysisResult(null);
+  const handleAnalyzeClick = async () => {
+    if (!gameId || !state.gameState || state.gameState.winning_color) return;
     
-    // Only analyze when it's human's turn and valid moves exist
-    if (isHumanTurn && gameState.current_playable_actions.length > 0) {
-      setIsLoading(true);
-      postMctsAnalysis(gameState)
-        .then(result => {
-          setAnalysisResult(result);
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error("MCTS Analysis failed:", error);
-          setIsLoading(false);
-        });
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getMctsAnalysis(gameId);
+      if (result.success) {
+        setMctsResults(result.probabilities);
+      } else {
+        setError(result.error || "Analysis failed");
+      }
+    } catch (err) {
+      console.error("MCTS Analysis failed:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  }, [gameState, isHumanTurn]);
+  };
 
   return (
     <div className="analysis-box">
       <div className="analysis-header">
-        <h3>Move Analysis</h3>
+        <h3>Win Probability Analysis</h3>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleAnalyzeClick}
+          disabled={loading || state.gameState?.winning_color}
+          startIcon={loading ? <CircularProgress size={20} /> : <AssessmentIcon />}
+        >
+          {loading ? "Analyzing..." : "Analyze"}
+        </Button>
       </div>
-      
-      {isLoading ? (
-        <div className="loading-indicator">
-          <CircularProgress size={24} />
-          <p>Analyzing moves...</p>
+
+      {error && (
+        <div className="error-message">
+          {error}
         </div>
-      ) : analysisResult ? (
+      )}
+
+      {mctsResults && !loading && !error && (
         <div className="probability-bars">
-          {Object.entries(analysisResult).map(([color, probability]) => (
+          {Object.entries(mctsResults).map(([color, probability]) => (
             <div key={color} className={`probability-row ${color.toLowerCase()}`}>
-              <span>{color}</span>
-              <span className="probability-value">
-                {(probability * 100).toFixed(1)}%
+              <span className="player-color">{color}</span>
+              <span className="probability-bar">
+                <div 
+                  className="bar-fill" 
+                  style={{ width: `${probability}%` }}
+                />
               </span>
+              <span className="probability-value">{probability}%</span>
             </div>
           ))}
         </div>
-      ) : (
-        <div className="no-analysis">
-          {isHumanTurn ? "Waiting for analysis..." : "Waiting for your turn..."}
-        </div>
       )}
+      <Divider />
     </div>
   );
 }
@@ -67,13 +85,35 @@ export default function RightDrawer() {
   const { state, dispatch } = useContext(store);
   const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  const closeRightDrawer = () => {
-    dispatch({ type: ACTIONS.SET_RIGHT_DRAWER_OPENED, data: false });
-  };
+  const openRightDrawer = useCallback(
+    (event) => {
+      if (
+        event &&
+        event.type === "keydown" &&
+        (event.key === "Tab" || event.key === "Shift")
+      ) {
+        return;
+      }
 
-  const openRightDrawer = () => {
-    dispatch({ type: ACTIONS.SET_RIGHT_DRAWER_OPENED, data: true });
-  };
+      dispatch({ type: ACTIONS.SET_RIGHT_DRAWER_OPENED, data: true });
+    },
+    [dispatch]
+  );
+
+  const closeRightDrawer = useCallback(
+    (event) => {
+      if (
+        event &&
+        event.type === "keydown" &&
+        (event.key === "Tab" || event.key === "Shift")
+      ) {
+        return;
+      }
+
+      dispatch({ type: ACTIONS.SET_RIGHT_DRAWER_OPENED, data: false });
+    },
+    [dispatch]
+  );
 
   return (
     <>
@@ -86,18 +126,19 @@ export default function RightDrawer() {
           onOpen={openRightDrawer}
           disableBackdropTransition={!iOS}
           disableDiscovery={iOS}
+          onKeyDown={closeRightDrawer}
         >
-          <AnalysisContent gameState={state.gameState} />
+          <DrawerContent />
         </SwipeableDrawer>
       </Hidden>
       <Hidden mdDown implementation="css">
-        <Drawer
-          className="right-drawer"
-          anchor="right"
-          variant="permanent"
+        <Drawer 
+          className="right-drawer" 
+          anchor="right" 
+          variant="permanent" 
           open
         >
-          <AnalysisContent gameState={state.gameState} />
+          <DrawerContent />
         </Drawer>
       </Hidden>
     </>
