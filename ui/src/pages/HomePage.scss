@@ -7,14 +7,17 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  min-height: 100vh;
 
   h1 {
     color: white;
     font-size: 2.5rem;
-    margin-bottom: 0px;
+    margin-bottom: 30px;
   }
   ul {
     color: white;
+    margin-top: 0px;
+    margin-bottom: 3px;
   }
 
   .switchable {
@@ -22,9 +25,41 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
 
     button {
       margin-bottom: $sm-gutter;
     }
+  }
+
+  .player-count-selector {
+    margin: 0 0 16px 0;
+    text-align: center;
+
+    .player-count-buttons {
+      .player-count-button {
+        width: 116px;
+        height: 35px;
+        font-size: 1rem;
+        color: white !important;
+        margin: 0 4px;
+        transition: background-color 0.3s;
+        background-color: $dark-gray !important;
+    
+        &:hover {
+          background-color: darken($dark-gray, 10%) !important;
+        }
+    
+        &.selected {
+          background-color: #0d47a1 !important;
+          color: white !important;
+    
+          &:hover {
+            background-color: darken(#0d47a1, 1%) !important;
+          }
+        }
+      }
+    }
+    
   }
 }

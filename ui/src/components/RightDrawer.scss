@@ -52,7 +52,7 @@ $dark-divider: rgb(0 0 0 / 80%);
         &.orange { color: $orange; }
     
         .player-color {
-          min-width: 50px;
+          min-width: 63px;
         }
     
         .probability-bar {
@@ -77,7 +77,7 @@ $dark-divider: rgb(0 0 0 / 80%);
     
         .probability-value {
           font-weight: 500;
-          min-width: 40px;
+          min-width: 43px;
           text-align: right;
         }
       }
