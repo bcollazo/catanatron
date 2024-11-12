@@ -3,6 +3,7 @@ import pytest
 from catanatron.state import State, apply_action
 from catanatron.state_functions import (
     get_dev_cards_in_hand,
+    player_clean_turn,
     player_freqdeck_add,
     player_deck_replenish,
     player_num_dev_cards,
@@ -122,6 +123,10 @@ def test_play_year_of_plenty_gives_player_resources():
     player_to_act = players[0]
     player_deck_replenish(state, player_to_act.color, YEAR_OF_PLENTY, 1)
 
+    # Simulate end of turn which updates the OWNED_AT_START flags
+    player_clean_turn(state, player_to_act.color)
+
+    # Now try to play the card (as if it's next turn)
     action_to_execute = Action(
         player_to_act.color, ActionType.PLAY_YEAR_OF_PLENTY, [ORE, WHEAT]
     )
@@ -151,6 +156,10 @@ def test_play_monopoly_player_steals_cards():
     player_deck_replenish(state, player_to_steal_from_2.color, ORE, 2)
     player_deck_replenish(state, player_to_steal_from_2.color, WHEAT, 1)
 
+    # Simulate end of turn which updates the OWNED_AT_START flags
+    player_clean_turn(state, player_to_act.color)
+
+    # Now try to play the card (as if it's next turn)
     action_to_execute = Action(player_to_act.color, ActionType.PLAY_MONOPOLY, ORE)
     apply_action(state, action_to_execute)
 
@@ -170,8 +179,14 @@ def test_can_only_play_one_dev_card_per_turn():
     ]
     state = State(players)
 
-    player_deck_replenish(state, players[0].color, YEAR_OF_PLENTY, 2)
-    action = Action(players[0].color, ActionType.PLAY_YEAR_OF_PLENTY, 2 * [BRICK])
+    player_to_act = players[0]
+    player_deck_replenish(state, player_to_act.color, YEAR_OF_PLENTY, 2)
+
+    # Simulate end of turn which updates the OWNED_AT_START flags
+    player_clean_turn(state, player_to_act.color)
+
+    # Now try to play the card (as if it's next turn)
+    action = Action(player_to_act.color, ActionType.PLAY_YEAR_OF_PLENTY, 2 * [BRICK])
     apply_action(state, action)
     with pytest.raises(ValueError):  # shouldnt be able to play two dev cards
         apply_action(state, action)

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 from catanatron.state_functions import (
     get_actual_victory_points,
     get_player_freqdeck,
+    player_clean_turn,
     player_has_rolled,
 )
 from catanatron.game import Game, is_valid_trade
@@ -321,15 +322,14 @@ def test_play_road_building(fake_roll_dice):
     p0 = game.state.players[0]
     player_deck_replenish(game.state, p0.color, ROAD_BUILDING)
 
+    # Simulate end of turn which updates the OWNED_AT_START flags
+    player_clean_turn(game.state, p0.color)
+
     # play initial phase
     while not any(
         a.action_type == ActionType.ROLL for a in game.state.playable_actions
     ):
         game.play_tick()
-
-    # roll not a 7
-    fake_roll_dice.return_value = (1, 2)
-    game.play_tick()  # roll
 
     game.execute(Action(p0.color, ActionType.PLAY_ROAD_BUILDING, None))
     assert game.state.is_road_building
