@@ -6,14 +6,38 @@ import { createGame } from "../utils/apiClient";
 
 import "./HomePage.scss";
 
+// Enum of Type of Game Mode
+const GameMode = Object.freeze({
+  HUMAN_VS_CATANATRON: "HUMAN_VS_CATANATRON",
+  RANDOM_BOTS: "RANDOM_BOTS",
+  CATANATRON_BOTS: "CATANATRON_BOTS",
+});
+
+function getPlayers(gameMode, numPlayers) {
+  switch (gameMode) {
+    case GameMode.HUMAN_VS_CATANATRON:
+      const players = ["HUMAN"];
+      for (let i = 1; i < numPlayers; i++) {
+        players.push("CATANATRON");
+      }
+      return players;
+    case GameMode.RANDOM_BOTS:
+      return Array(numPlayers).fill("RANDOM");
+    case GameMode.CATANATRON_BOTS:
+      return Array(numPlayers).fill("CATANATRON");
+    default:
+      throw new Error("Invalid Game Mode");
+  }
+}
+
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [numPlayers, setNumPlayers] = useState(2);
   const history = useHistory();
 
-  const handleCreateGame = async (getPlayers) => {
+  const handleCreateGame = async (gameMode) => {
     setLoading(true);
-    const players = getPlayers(numPlayers);
+    const players = getPlayers(gameMode, numPlayers);
     const gameId = await createGame(players);
     setLoading(false);
     history.push("/games/" + gameId);
@@ -50,39 +74,21 @@ export default function HomePage() {
             <Button
               variant="contained"
               color="primary"
-              onClick={() => {
-                handleCreateGame((numPlayers) => {
-                  const players = ["HUMAN"];
-                  for (let i = 1; i < numPlayers; i++) {
-                    players.push("CATANATRON");
-                  }
-                  return players;
-                });
-              }}
+              onClick={() => handleCreateGame(GameMode.HUMAN_VS_CATANATRON)}
             >
               Play against Catanatron
             </Button>
             <Button
               variant="contained"
               color="secondary"
-              onClick={() => {
-                handleCreateGame((numPlayers) => {
-                  const players = Array(numPlayers).fill("RANDOM");
-                  return players;
-                });
-              }}
+              onClick={() => handleCreateGame(GameMode.RANDOM_BOTS)}
             >
               Watch Random Bots
             </Button>
             <Button
               variant="contained"
               color="secondary"
-              onClick={() => {
-                handleCreateGame((numPlayers) => {
-                  const players = Array(numPlayers).fill("CATANATRON");
-                  return players;
-                });
-              }}
+              onClick={() => handleCreateGame(GameMode.CATANATRON_BOTS)}
             >
               Watch Catanatron
             </Button>
