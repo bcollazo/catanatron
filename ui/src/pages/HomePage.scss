@@ -38,28 +38,27 @@
 
     .player-count-buttons {
       .player-count-button {
-        width: 116px;
+        width: 130px;
         height: 35px;
         font-size: 1rem;
         color: white !important;
         margin: 0 4px;
         transition: background-color 0.3s;
         background-color: $dark-gray !important;
-    
+
         &:hover {
           background-color: darken($dark-gray, 10%) !important;
         }
-    
+
         &.selected {
           background-color: #0d47a1 !important;
           color: white !important;
-    
+
           &:hover {
             background-color: darken(#0d47a1, 1%) !important;
           }
         }
       }
     }
-    
   }
 }
