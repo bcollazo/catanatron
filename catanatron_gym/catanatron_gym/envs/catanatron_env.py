@@ -20,14 +20,59 @@ from catanatron_gym.board_tensor_features import (
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
 TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == LandTile]
+
+
+def generate_trade_actions():
+    """Generates all possible maritime trade actions in freqdeck format"""
+    trade_actions = []
+
+    # 4:1 trades
+    for give_resource in RESOURCES:
+        give_idx = RESOURCES.index(give_resource)
+        for receive_resource in RESOURCES:
+            if give_resource != receive_resource:
+                receive_idx = RESOURCES.index(receive_resource)
+                # Create 10-length freqdeck [giving_5 + receiving_5]
+                freqdeck = [0] * 10
+                freqdeck[give_idx] = 4  # Give 4 resources
+                freqdeck[5 + receive_idx] = 1  # Receive 1 resource
+                trade_actions.append((ActionType.MARITIME_TRADE, tuple(freqdeck)))
+
+    # 3:1 port trades
+    for give_resource in RESOURCES:
+        give_idx = RESOURCES.index(give_resource)
+        for receive_resource in RESOURCES:
+            if give_resource != receive_resource:
+                receive_idx = RESOURCES.index(receive_resource)
+                freqdeck = [0] * 10
+                freqdeck[give_idx] = 3  # Give 3 resources
+                freqdeck[5 + receive_idx] = 1  # Receive 1 resource
+                trade_actions.append((ActionType.MARITIME_TRADE, tuple(freqdeck)))
+
+    # 2:1 port trades
+    for give_resource in RESOURCES:
+        give_idx = RESOURCES.index(give_resource)
+        for receive_resource in RESOURCES:
+            if give_resource != receive_resource:
+                receive_idx = RESOURCES.index(receive_resource)
+                freqdeck = [0] * 10
+                freqdeck[give_idx] = 2  # Give 2 resources
+                freqdeck[5 + receive_idx] = 1  # Receive 1 resource
+                trade_actions.append((ActionType.MARITIME_TRADE, tuple(freqdeck)))
+
+    return trade_actions
+
+
 ACTIONS_ARRAY = [
     (ActionType.ROLL, None),
-    # TODO: One for each tile (and abuse 1v1 setting).
+    # Move robber actions
     *[(ActionType.MOVE_ROBBER, tile) for tile in TILE_COORDINATES],
     (ActionType.DISCARD, None),
+    # Build actions
     *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
     *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
     *[(ActionType.BUILD_CITY, node_id) for node_id in range(NUM_NODES)],
+    # Development card actions
     (ActionType.BUY_DEVELOPMENT_CARD, None),
     (ActionType.PLAY_KNIGHT_CARD, None),
     *[
@@ -38,27 +83,8 @@ ACTIONS_ARRAY = [
     *[(ActionType.PLAY_YEAR_OF_PLENTY, (first_card,)) for first_card in RESOURCES],
     (ActionType.PLAY_ROAD_BUILDING, None),
     *[(ActionType.PLAY_MONOPOLY, r) for r in RESOURCES],
-    # 4:1 with bank
-    *[
-        (ActionType.MARITIME_TRADE, tuple(4 * [i] + [j]))
-        for i in RESOURCES
-        for j in RESOURCES
-        if i != j
-    ],
-    # 3:1 with port
-    *[
-        (ActionType.MARITIME_TRADE, tuple(3 * [i] + [None, j]))  # type: ignore
-        for i in RESOURCES
-        for j in RESOURCES
-        if i != j
-    ],
-    # 2:1 with port
-    *[
-        (ActionType.MARITIME_TRADE, tuple(2 * [i] + [None, None, j]))  # type: ignore
-        for i in RESOURCES
-        for j in RESOURCES
-        if i != j
-    ],
+    # Maritime trade actions
+    *generate_trade_actions(),
     (ActionType.END_TURN, None),
 ]
 ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
@@ -70,6 +96,7 @@ def to_action_type_space(action):
 
 
 def normalize_action(action):
+    """Normalize action value to ensure it can be found in ACTIONS_ARRAY"""
     normalized = action
     if normalized.action_type == ActionType.ROLL:
         return Action(action.color, action.action_type, None)

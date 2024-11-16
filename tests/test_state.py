@@ -77,11 +77,21 @@ def test_trade_execution():
     state = State(players)
 
     player_deck_replenish(state, players[0].color, BRICK, 4)
-    trade_offer = tuple([BRICK] * 4 + [ORE])
-    action = Action(players[0].color, ActionType.MARITIME_TRADE, trade_offer)
+
+    # Create trade freqdeck
+    brick_idx = RESOURCES.index(BRICK)
+    ore_idx = RESOURCES.index(ORE)
+    give_freqdeck = [0] * 5
+    receive_freqdeck = [0] * 5
+    give_freqdeck[brick_idx] = 4  # Give 4 BRICK
+    receive_freqdeck[ore_idx] = 1  # Get 1 ORE
+    trade_freqdeck = tuple(give_freqdeck + receive_freqdeck)
+
+    action = Action(players[0].color, ActionType.MARITIME_TRADE, trade_freqdeck)
     apply_action(state, action)
 
-    assert player_num_resource_cards(state, players[0].color) == 1
+    assert player_num_resource_cards(state, players[0].color, BRICK) == 0
+    assert player_num_resource_cards(state, players[0].color, ORE) == 1
     assert sum(state.resource_freqdeck) == 19 * 5 + 4 - 1
 
 
