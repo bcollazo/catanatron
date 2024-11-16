@@ -9,6 +9,7 @@ import grainTile from "../assets/tile_wheat.svg";
 import lumberTile from "../assets/tile_wood.svg";
 import oreTile from "../assets/tile_ore.svg";
 import woolTile from "../assets/tile_sheep.svg";
+import maritimeTile from "../assets/tile_maritime.svg";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
 
 export function NumberToken({ className, children, style, size, flashing }) {
@@ -103,6 +104,11 @@ export default function Tile({ center, coordinate, tile, size, onClick, flashing
           style={{
             left: x,
             top: y,
+            backgroundImage: `url('${maritimeTile}')`,
+            height: 60,
+            backgroundSize: "contain",
+            width: 52,
+            backgroundRepeat: "no-repeat",
           }}
         >
           3:1

@@ -23,6 +23,8 @@ $dark-divider: rgb(0 0 0 / 80%);
     // To ensure always clipped towards bottom
     display: flex;
     flex-direction: column-reverse;
+    scrollbar-width: thin;
+    scrollbar-color: #454545 $dark-gray;
     .action {
       padding: $sm-gutter;
     }

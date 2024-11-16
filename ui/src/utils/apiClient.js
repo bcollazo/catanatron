@@ -22,3 +22,32 @@ export async function postAction(gameId, action = undefined) {
   );
   return response.data;
 }
+
+export async function getMctsAnalysis(gameId, stateIndex = 'latest') {
+  try {
+    console.log('Getting MCTS analysis for:', {
+      gameId,
+      stateIndex,
+      url: `${API_URL}/api/games/${gameId}/states/${stateIndex}/mcts-analysis`
+    });
+
+    if (!gameId) {
+      throw new Error('No gameId provided to getMctsAnalysis');
+    }
+
+    const response = await axios.get(
+      `${API_URL}/api/games/${gameId}/states/${stateIndex}/mcts-analysis`
+    );
+    
+    console.log('MCTS analysis response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('MCTS analysis error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      stack: error.stack
+    });
+    throw error;
+  }
+}

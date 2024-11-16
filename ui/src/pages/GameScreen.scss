@@ -44,13 +44,12 @@ h6.MuiTypography-h6 {
 
 main {
   .logo {
-    margin: 20px 20px 0 20px;
+    margin: 5px 20px 0 20px;
     text-align: center;
   }
 
   background: $black;
   color: white;
-
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -85,7 +84,6 @@ main {
   .board {
     position: relative;
     opacity: 0;
-
     height: 100%;
     width: 100%;
   }
@@ -94,8 +92,22 @@ main {
   }
 }
 
+// Medium screens - Left drawer permanent
 @media (min-width: $md-breakpoint) {
   main {
     padding-left: 280px;
+    .board-container {
+      margin-right: 0;
+    }
+  }
+}
+
+// Large screens - Both drawers permanent
+@media (min-width: $lg-breakpoint) {
+  main {
+    padding-left: 0px;
+    .board-container {
+      margin-left: 140px;
+    }
   }
 }
