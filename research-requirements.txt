@@ -1,0 +1,17 @@
+# Only required to train/run the Players using PyTorch (i.e. PPOPlayer)
+keras==2.13.1
+sb3_contrib==2.3.0
+stable_baselines3==2.3.2
+sympy==1.13.1
+tensorboard==2.13.0
+tensorboard-data-server==0.7.2
+tensorflow==2.13.0
+tensorflow-estimator==2.13.0
+tensorflow-intel==2.13.0
+tensorflow-io-gcs-filesystem==0.31.0
+termcolor==2.4.0
+tomli==2.0.1
+torch==2.4.1
+torchaudio==2.4.1
+torchvision==0.19.1
+wandb==0.18.1
