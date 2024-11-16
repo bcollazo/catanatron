@@ -228,6 +228,7 @@ def player_can_play_dev(state, color, dev_card):
     return (
         not state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
         and state.player_state[f"{key}_{dev_card}_IN_HAND"] >= 1
+        and state.player_state[f"{key}_{dev_card}_OWNED_AT_START"]
     )
 
 
@@ -334,3 +335,16 @@ def player_clean_turn(state, color):
     key = player_key(state, color)
     state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = False
     state.player_state[f"{key}_HAS_ROLLED"] = False
+    # Dev cards owned this turn will be playable next turn
+    state.player_state[f"{key}_KNIGHT_OWNED_AT_START"] = (
+        state.player_state[f"{key}_KNIGHT_IN_HAND"] > 0
+    )
+    state.player_state[f"{key}_MONOPOLY_OWNED_AT_START"] = (
+        state.player_state[f"{key}_MONOPOLY_IN_HAND"] > 0
+    )
+    state.player_state[f"{key}_YEAR_OF_PLENTY_OWNED_AT_START"] = (
+        state.player_state[f"{key}_YEAR_OF_PLENTY_IN_HAND"] > 0
+    )
+    state.player_state[f"{key}_ROAD_BUILDING_OWNED_AT_START"] = (
+        state.player_state[f"{key}_ROAD_BUILDING_IN_HAND"] > 0
+    )
