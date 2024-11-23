@@ -7,19 +7,19 @@ import functools
 import networkx as nx  # type: ignore
 
 from catanatron.models.player import Color
-from catanatron.models.map import (
+from catanatron.models.map_instance import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
     NUM_NODES,
-    CatanMap,
+    MapInstance,
     NodeId,
 )
 from catanatron.models.enums import FastBuildingType, SETTLEMENT, CITY
 
 
 # Used to find relationships between nodes and edges
-base_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
-mini_map = CatanMap.from_template(MINI_MAP_TEMPLATE)
+base_map = MapInstance.from_template(BASE_MAP_TEMPLATE)
+mini_map = MapInstance.from_template(MINI_MAP_TEMPLATE)
 STATIC_GRAPH = nx.Graph()
 for tile in base_map.tiles.values():
     STATIC_GRAPH.add_nodes_from(tile.nodes.values())
@@ -54,12 +54,12 @@ class Board:
         robber_coordinate (Coordinate): Coordinate where robber is.
     """
 
-    def __init__(self, catan_map=None, initialize=True):
+    def __init__(self, map_instance=None, initialize=True):
         self.buildable_subgraph: Any = None
         self.buildable_edges_cache = {}
         self.player_port_resources_cache = {}
         if initialize:
-            self.map: CatanMap = catan_map or CatanMap.from_template(
+            self.map: MapInstance = map_instance or MapInstance.from_template(
                 BASE_MAP_TEMPLATE
             )  # Static State (no need to copy)
 

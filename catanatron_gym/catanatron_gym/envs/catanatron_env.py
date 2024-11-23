@@ -4,7 +4,8 @@ import numpy as np
 
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
+from catanatron.models.map_template import BASE_MAP_TEMPLATE, LandTile
+from catanatron.models.map_instance import NUM_NODES, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
 from catanatron_gym.features import (
@@ -223,13 +224,13 @@ class CatanatronEnv(gym.Env):
     ):
         super().reset(seed=seed)
 
-        catan_map = build_map(self.map_type)
+        map_instance = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
         self.game = Game(
             players=self.players,
             seed=seed,
-            catan_map=catan_map,
+            map_instance=map_instance,
             vps_to_win=self.vps_to_win,
         )
         self.invalid_actions_count = 0

@@ -88,3 +88,41 @@ jobs:
         working-directory: ./ui
       - run: npm run build
         working-directory: ./ui
+
+  build-rust:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Run `cargo fmt`
+        run: cargo fmt -- --check
+        working-directory: catanatron_rust
+      - name: Run `cargo clippy`
+        run: cargo clippy -- -D warnings
+        working-directory: catanatron_rust
+
+      - name: Run `cargo run`
+        run: cargo run
+        working-directory: catanatron_rust
+      - name: Run `cargo run --release`
+        run: cargo run --release
+        working-directory: catanatron_rust
+
+      - name: Run `cargo test`
+        run: cargo test --verbose
+        working-directory: catanatron_rust
+      - name: Run `cargo test --release`
+        run: cargo test --release --verbose
+        working-directory: catanatron_rust
+
+      - name: Run `cargo bench`
+        run: cargo bench
+        working-directory: catanatron_rust

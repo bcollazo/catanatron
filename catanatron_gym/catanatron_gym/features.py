@@ -12,7 +12,7 @@ from catanatron.state_functions import (
     player_num_resource_cards,
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
-from catanatron.models.map import NUM_TILES, CatanMap, build_map
+from catanatron.models.map_instance import NUM_TILES, MapInstance, build_map
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -24,7 +24,7 @@ from catanatron.models.enums import (
     VICTORY_POINT,
 )
 from catanatron.game import Game
-from catanatron.models.map import number_probability
+from catanatron.models.map_instance import number_probability
 
 
 # ===== Helpers
@@ -126,12 +126,12 @@ def resource_hand_features(game: Game, p0_color: Color):
 
 
 @functools.lru_cache(NUM_TILES * 2)  # one for each robber, and acount for Minimap
-def map_tile_features(catan_map: CatanMap, robber_coordinate):
+def map_tile_features(map_instance: MapInstance, robber_coordinate):
     # Returns list of functions that take a game and output a feature.
     # build features like tile0_is_wood, tile0_is_wheat, ..., tile0_proba, tile0_hasrobber
     features = {}
 
-    for tile_id, tile in catan_map.tiles_by_id.items():
+    for tile_id, tile in map_instance.tiles_by_id.items():
         for resource in RESOURCES:
             features[f"TILE{tile_id}_IS_{resource}"] = tile.resource == resource
         features[f"TILE{tile_id}_IS_DESERT"] = tile.resource == None
@@ -139,7 +139,7 @@ def map_tile_features(catan_map: CatanMap, robber_coordinate):
             0 if tile.resource is None else number_probability(tile.number)
         )
         features[f"TILE{tile_id}_HAS_ROBBER"] = (
-            catan_map.tiles[robber_coordinate] == tile
+            map_instance.tiles[robber_coordinate] == tile
         )
     return features
 
@@ -151,9 +151,9 @@ def tile_features(game: Game, p0_color: Color):
 
 
 @functools.lru_cache(1)
-def map_port_features(catan_map):
+def map_port_features(map_instance):
     features = {}
-    for port_id, port in catan_map.ports_by_id.items():
+    for port_id, port in map_instance.ports_by_id.items():
         for resource in RESOURCES:
             features[f"PORT{port_id}_IS_{resource}"] = port.resource == resource
         features[f"PORT{port_id}_IS_THREE_TO_ONE"] = port.resource is None
@@ -166,13 +166,13 @@ def port_features(game, p0_color):
 
 
 @functools.lru_cache(4)
-def initialize_graph_features_template(num_players, catan_map: CatanMap):
+def initialize_graph_features_template(num_players, map_instance: MapInstance):
     features = {}
     for i in range(num_players):
-        for node_id in range(len(catan_map.land_nodes)):
+        for node_id in range(len(map_instance.land_nodes)):
             for building in [SETTLEMENT, CITY]:
                 features[f"NODE{node_id}_P{i}_{building}"] = False
-        for edge in get_edges(catan_map.land_nodes):
+        for edge in get_edges(map_instance.land_nodes):
             features[f"EDGE{edge}_P{i}_ROAD"] = False
     return features
 
@@ -239,8 +239,8 @@ def build_production_features(consider_robber):
 
 
 @functools.lru_cache(maxsize=1000)
-def get_node_production(catan_map, node_id, resource):
-    tiles = catan_map.adjacent_tiles[node_id]
+def get_node_production(map_instance, node_id, resource):
+    tiles = map_instance.adjacent_tiles[node_id]
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 
@@ -369,10 +369,10 @@ def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES
 
 
 @functools.lru_cache(maxsize=1000)
-def count_production(nodes, catan_map):
+def count_production(nodes, map_instance):
     production = Counter()
     for node_id in nodes:
-        production += catan_map.node_production[node_id]
+        production += map_instance.node_production[node_id]
     return production
 
 
@@ -534,6 +534,6 @@ def get_feature_ordering(
         SimplePlayer(Color.ORANGE),
     ]
     players = players[:num_players]
-    game = Game(players, catan_map=build_map(map_type))
+    game = Game(players, map_instance=build_map(map_type))
     sample = create_sample(game, players[0].color)
     return sorted(sample.keys())

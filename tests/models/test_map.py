@@ -1,9 +1,10 @@
 from catanatron import WOOD, BRICK
-from catanatron.models.map import (
+from catanatron.models.map_instance import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
-    CatanMap,
+    MapInstance,
     LandTile,
+    NodeRef,
     get_nodes_and_edges,
     get_node_counter_production,
     DICE_PROBAS,
@@ -24,7 +25,8 @@ def test_node_production_of_same_resource_adjacent_tile():
 
 
 def test_mini_map_can_be_created():
-    mini = CatanMap.from_template(MINI_MAP_TEMPLATE)
+    mini = MapInstance.from_template(MINI_MAP_TEMPLATE)
+    assert mini.tiles[(0, 0, 0)].nodes[NodeRef.NORTH] == 0
     assert len(mini.land_tiles) == 7
     assert len(mini.land_nodes) == 24
     assert len(mini.tiles_by_id) == 7
@@ -39,9 +41,9 @@ def test_mini_map_can_be_created():
 
 
 def test_base_map_can_be_created():
-    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
-    assert len(catan_map.land_tiles) == 19
-    assert len(catan_map.node_production) == 54
+    map_instance = MapInstance.from_template(BASE_MAP_TEMPLATE)
+    assert len(map_instance.land_tiles) == 19
+    assert len(map_instance.node_production) == 54
 
 
 def test_get_nodes_and_edges_on_empty_board():
