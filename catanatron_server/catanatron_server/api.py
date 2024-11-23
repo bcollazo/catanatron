@@ -1,4 +1,6 @@
 import json
+import logging
+import traceback
 
 from flask import Response, Blueprint, jsonify, abort, request
 
@@ -8,7 +10,7 @@ from catanatron.models.player import Color, RandomPlayer
 from catanatron.game import Game
 from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
 from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
-
+from catanatron_experimental.analysis.mcts_analysis import GameAnalyzer
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -93,6 +95,52 @@ def stress_test_endpoint():
         status=200,
         mimetype="application/json",
     )
+
+
+@bp.route(
+    "/games/<string:game_id>/states/<string:state_index>/mcts-analysis", methods=["GET"]
+)
+def mcts_analysis_endpoint(game_id, state_index):
+    """Get MCTS analysis for specific game state."""
+    logging.info(f"MCTS analysis request for game {game_id} at state {state_index}")
+
+    try:
+        # Convert 'latest' to None for consistency with get_game_state
+        state_index = None if state_index == "latest" else int(state_index)
+
+        game = get_game_state(game_id, state_index)
+        if game is None:
+            logging.error(f"Game/state not found: {game_id}/{state_index}")
+            abort(404, description="Game state not found")
+
+        analyzer = GameAnalyzer(num_simulations=100)
+        probabilities = analyzer.analyze_win_probabilities(game)
+
+        logging.info(f"Analysis successful. Probabilities: {probabilities}")
+        return Response(
+            response=json.dumps(
+                {
+                    "success": True,
+                    "probabilities": probabilities,
+                    "state_index": state_index
+                    if state_index is not None
+                    else len(game.state.actions),
+                }
+            ),
+            status=200,
+            mimetype="application/json",
+        )
+
+    except Exception as e:
+        logging.error(f"Error in MCTS analysis endpoint: {str(e)}")
+        logging.error(traceback.format_exc())
+        return Response(
+            response=json.dumps(
+                {"success": False, "error": str(e), "trace": traceback.format_exc()}
+            ),
+            status=500,
+            mimetype="application/json",
+        )
 
 
 # ===== Debugging Routes

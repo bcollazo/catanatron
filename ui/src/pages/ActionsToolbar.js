@@ -8,6 +8,7 @@ import React, {
 import memoize from "fast-memoize";
 import { Button, Hidden } from "@material-ui/core";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import ChevronRightIcon from "@material-ui/icons/ChevronRight";
 import AccountBalanceIcon from "@material-ui/icons/AccountBalance";
 import BuildIcon from "@material-ui/icons/Build";
 import NavigateNextIcon from "@material-ui/icons/NavigateNext";
@@ -47,13 +48,14 @@ function PlayButtons() {
     [enqueueSnackbar, closeSnackbar]
   );
 
-  const { gameState, isPlayingMonopoly, isPlayingYearOfPlenty } = state;
+  const { gameState, isPlayingMonopoly, isPlayingYearOfPlenty, isRoadBuilding } = state;
   const key = playerKey(gameState, gameState.current_color);
   const isRoll =
     gameState.current_prompt === "PLAY_TURN" &&
     !gameState.player_state[`${key}_HAS_ROLLED`];
   const isDiscard = gameState.current_prompt === "DISCARD";
   const isMoveRobber = gameState.current_prompt === "MOVE_ROBBER";
+  const isPlayingDevCard = isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding;
   const playableDevCardTypes = new Set(
     gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
@@ -198,7 +200,7 @@ function PlayButtons() {
   return (
     <>
       <OptionsButton
-        disabled={playableDevCardTypes.size === 0 || isPlayingYearOfPlenty}
+        disabled={playableDevCardTypes.size === 0 || isPlayingDevCard}
         menuListId="use-menu-list"
         icon={<SimCardIcon />}
         items={useItems}
@@ -206,7 +208,7 @@ function PlayButtons() {
         Use
       </OptionsButton>
       <OptionsButton
-        disabled={buildActionTypes.size === 0 || isPlayingYearOfPlenty}
+        disabled={buildActionTypes.size === 0 || isPlayingDevCard}
         menuListId="build-menu-list"
         icon={<BuildIcon />}
         items={buildItems}
@@ -214,7 +216,7 @@ function PlayButtons() {
         Buy
       </OptionsButton>
       <OptionsButton
-        disabled={tradeItems.length === 0 || isPlayingYearOfPlenty}
+        disabled={tradeItems.length === 0 || isPlayingDevCard}
         menuListId="trade-menu-list"
         icon={<AccountBalanceIcon />}
         items={tradeItems}
@@ -222,27 +224,27 @@ function PlayButtons() {
         Trade
       </OptionsButton>
       <Button
-        disabled={gameState.is_initial_build_phase}
+        disabled={gameState.is_initial_build_phase || isRoadBuilding}
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}
         onClick={
-          isRoll
-            ? rollAction
-            : isDiscard
+          isDiscard
             ? proceedAction
             : isMoveRobber
             ? setIsMovingRobber
             : isPlayingYearOfPlenty || isPlayingMonopoly
             ? handleOpenResourceSelector
+            : isRoll
+            ? rollAction
             : endTurnAction
         }
       >
         {
-          isRoll ? "ROLL" : 
           isDiscard ? "DISCARD" : 
           isMoveRobber ? "ROB" : 
           isPlayingYearOfPlenty || isPlayingMonopoly ? "SELECT" : 
+          isRoll ? "ROLL" : 
           "END"
         }
       </Button>
@@ -276,6 +278,13 @@ export default function ActionsToolbar({
     });
   }, [dispatch]);
 
+  const openRightDrawer = useCallback(() => {
+    dispatch({
+      type: ACTIONS.SET_RIGHT_DRAWER_OPENED,
+      data: true,
+    });
+  }, [dispatch]);
+
   const botsTurn = state.gameState.bot_colors.includes(
     state.gameState.current_color
   );
@@ -294,6 +303,11 @@ export default function ActionsToolbar({
             playerKey={playerKey(state.gameState, humanColor)}
           />
         )}
+        <Hidden lgUp>
+          <Button className="open-drawer-btn" onClick={openRightDrawer} style={{ marginLeft: 'auto' }}>
+            <ChevronRightIcon />
+          </Button>
+        </Hidden>
       </div>
       <div className="actions-toolbar">
         {!(botsTurn || state.gameState.winning_color) && !replayMode && (

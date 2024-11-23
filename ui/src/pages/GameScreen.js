@@ -10,6 +10,7 @@ import ActionsToolbar from "./ActionsToolbar";
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import "./GameScreen.scss";
 import LeftDrawer from "../components/LeftDrawer";
+import RightDrawer from "../components/RightDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { getState, postAction } from "../utils/apiClient";
@@ -90,6 +91,7 @@ function GameScreen({ replayMode }) {
       <ZoomableBoard replayMode={replayMode} />
       <ActionsToolbar isBotThinking={isBotThinking} replayMode={replayMode} />
       <LeftDrawer />
+      <RightDrawer />
     </main>
   );
 }

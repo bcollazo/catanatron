@@ -8,6 +8,7 @@ const initialState = {
   isBuildingSettlement: false,
   isBuildingCity: false,
   isLeftDrawerOpen: false,
+  isRightDrawerOpen: false,
   isPlayingMonopoly: false,
   isPlayingYearOfPlenty: false,
   isRoadBuilding: false,
@@ -22,6 +23,8 @@ const StateProvider = ({ children }) => {
     switch (action.type) {
       case ACTIONS.SET_LEFT_DRAWER_OPENED:
         return { ...state, isLeftDrawerOpen: action.data };
+      case ACTIONS.SET_RIGHT_DRAWER_OPENED:
+          return {...state, isRightDrawerOpen: action.data };
       case ACTIONS.SET_GAME_STATE:
         return {
           ...state,
