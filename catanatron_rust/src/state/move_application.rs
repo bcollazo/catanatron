@@ -14,6 +14,22 @@ use crate::{
 use super::State;
 
 impl State {
+    pub fn apply_action(&mut self, action: Action) {
+        match action {
+            Action::BuildSettlement(color, node_id) => {
+                self.build_settlement(color, node_id);
+            }
+            Action::BuildRoad(color, edge_id) => {
+                self.build_road(color, edge_id);
+            }
+            _ => {
+                panic!("Action not implemented: {:?}", action);
+            }
+        }
+
+        println!("Applying action {:?}", action);
+    }
+
     pub fn add_victory_points(&mut self, color: u8, points: u8) {
         let n = self.get_num_players();
         self.vector[actual_victory_points_index(n, color)] += points;
@@ -143,22 +159,6 @@ impl State {
         }
 
         // TODO: Return previous road
-    }
-
-    pub fn apply_action(&mut self, action: Action) {
-        match action {
-            Action::BuildSettlement(color, node_id) => {
-                self.build_settlement(color, node_id);
-            }
-            Action::BuildRoad(color, edge_id) => {
-                self.build_road(color, edge_id);
-            }
-            _ => {
-                panic!("Action not implemented: {:?}", action);
-            }
-        }
-
-        println!("Applying action {:?}", action);
     }
 }
 
