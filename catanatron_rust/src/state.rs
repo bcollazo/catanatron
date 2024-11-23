@@ -41,8 +41,8 @@ pub struct State {
     longest_road_length: u8,
 }
 
+mod move_application;
 mod move_generation;
-mod mutations;
 
 impl State {
     pub fn new(config: Rc<GameConfiguration>, map_instance: Rc<MapInstance>) -> Self {
