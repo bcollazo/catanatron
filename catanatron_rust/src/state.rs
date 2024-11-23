@@ -16,13 +16,13 @@ use crate::{
 };
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-enum Building {
+pub enum Building {
     Settlement(u8, NodeId), // Color, NodeId
     City(u8, NodeId),       // Color, NodeId
 }
 
 #[derive(Debug)]
-pub(crate) struct State {
+pub struct State {
     // These two are immutable
     config: Rc<GameConfiguration>,
     map_instance: Rc<MapInstance>,
@@ -91,10 +91,6 @@ impl State {
 
     fn get_num_players(&self) -> u8 {
         self.config.num_players
-    }
-
-    fn get_num_players_usize(&self) -> usize {
-        self.get_num_players() as usize
     }
 
     // ===== Getters =====
@@ -250,8 +246,8 @@ impl State {
 
     fn get_node_color(&self, a: u8) -> Option<u8> {
         match self.buildings.get(&a) {
-            Some(Building::Settlement(color, a)) => Some(*color),
-            Some(Building::City(color, a)) => Some(*color),
+            Some(Building::Settlement(color, _)) => Some(*color),
+            Some(Building::City(color, _)) => Some(*color),
             None => None,
         }
     }
