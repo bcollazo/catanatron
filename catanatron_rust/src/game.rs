@@ -65,7 +65,7 @@ mod tests {
             dicard_limit: 7,
             vps_to_win: 10,
             map_type: MapType::Base,
-            num_players: num_players,
+            num_players,
             max_ticks: 8, // TODO: Change!
         };
         let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();

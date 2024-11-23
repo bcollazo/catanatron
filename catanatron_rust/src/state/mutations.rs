@@ -119,7 +119,7 @@ impl State {
                 .get_mut(a_index.unwrap())
                 .unwrap();
             component.insert(b); // extend said component by 1 more node
-        } else if !a_index.is_none() && !b_index.is_none() && a_index != b_index {
+        } else if a_index.is_some() && b_index.is_some() && a_index != b_index {
             // Merge components into one and delete the other
             let a_component = self
                 .connected_components

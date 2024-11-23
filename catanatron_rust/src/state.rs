@@ -254,10 +254,7 @@ impl State {
 
     fn edge_contains(&self, edge: EdgeId, a: u8) -> bool {
         let (node1, node2) = edge;
-        // println!("Checking if edge {:?} {:?} contains {:?}", node1, node2, a);
-        let result = node1 == a || node2 == a;
-        // println!("Result: {:?}", result);
-        result
+        node1 == a || node2 == a
     }
 }
 
