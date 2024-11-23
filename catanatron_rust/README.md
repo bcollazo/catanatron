@@ -77,3 +77,26 @@ Additional Responsabilities
 - Incrementally Mantain Longest Road (Color + Count)
 - Buildable Subgraph for quick Answering Buildable Edges
 - Connected Components (this is to, when plowing happens, be able to count by just max(len) pieces after updating data structure). Otherwise we would have to re-BFS all roads.
+
+# TODO:
+
+- Build tests for move_generation.rs
+- Build tests for initial_build_phase
+- Ensure Victory Points are counted correctly
+
+  - Count Largest Army
+  - Count Longest Road
+
+- Implement move_application for Roll
+- Implement move_application for MoveRobber
+- Implement move_application for Discard
+- Implement move_application for EndTurn
+
+- Implement move_application for BuildCity
+
+- Implement move_application for Buy DevelopmentCard
+- Implement move_application for Play Knight
+- Implement move_application for Play YOP
+- Implement move_application for Play Mono
+- Implement move_application for Play RB
+- Implement move_application for MaritimeTrade
