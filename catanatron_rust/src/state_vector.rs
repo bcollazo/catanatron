@@ -97,6 +97,10 @@ pub fn player_hand_slice(color: u8) -> std::ops::Range<usize> {
     let start = PLAYER_STATE_START_INDEX + 1 + (color as usize * 15);
     start..start + 5
 }
+pub fn player_devhand_slice(color: u8) -> std::ops::Range<usize> {
+    let start = PLAYER_STATE_START_INDEX + 6 + (color as usize * 15);
+    start..start + 5
+}
 
 /// This is a compact representation of the omnipotent state of the game.
 /// Fairly close to a bitboard, but not quite. Its a vector of integers.

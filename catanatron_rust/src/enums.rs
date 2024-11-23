@@ -1,4 +1,8 @@
-use crate::map_instance::{EdgeId, NodeId};
+use crate::{
+    deck_slices::FreqDeck,
+    map_instance::{EdgeId, NodeId},
+    map_template::Coordinate,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Color {
@@ -68,24 +72,28 @@ pub enum ActionPrompt {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Action {
-    Roll(Color),                 // None. Log instead sets it to (int, int) rolled.
-    MoveRobber(Color), // value is (coordinate, Color|None). Log has extra element of card stolen.
-    Discard(Color),    // value is None|Resource[].
-    BuildRoad(u8, EdgeId), // value is edge_id
-    BuildSettlement(u8, NodeId), // value is node_id
-    BuildCity,         // value is node_id
-    BuyDevelopmentCard, // value is None. Log value is card.
-    PlayKnightCard,    // value is None
-    PlayYearOfPlenty,  // value is (Resource, Resource)
-    PlayMonopoly,      // value is Resource
-    PlayRoadBuilding,  // value is None
-    MaritimeTrade,     // 5-resource tuple, last is resource asked.
-    OfferTrade,        // 10-resource tuple, first 5 is offered, last 5 is receiving.
-    AcceptTrade,       // 10-resource tuple.
-    RejectTrade,       // None
-    ConfirmTrade,      // 11-tuple. First 10 like OfferTrade, last is color of accepting player.
-    CancelTrade,       // None
-    EndTurn,           // None
+    // The first value in all these is the color of the player.
+    Roll(u8), // None. Log instead sets it to (int, int) rolled.
+    MoveRobber(u8, Coordinate, Option<u8>), //  Log has extra element of card stolen.
+    Discard(u8), // value is None|Resource[].
+    BuildRoad(u8, EdgeId),
+    BuildSettlement(u8, NodeId),
+    BuildCity(u8, NodeId),
+    BuyDevelopmentCard(u8), // value is None. Log value is card.
+    PlayKnight(u8),
+    PlayYearOfPlenty(u8, (Option<u8>, Option<u8>)),
+    PlayMonopoly(u8, u8), // value is Resource
+    PlayRoadBuilding(u8),
+
+    // First element of tuples is in, last is out.
+    MaritimeTrade(u8, (FreqDeck, u8)),
+    OfferTrade(u8, (FreqDeck, FreqDeck)),
+    AcceptTrade(u8, (FreqDeck, FreqDeck)),
+    RejectTrade(u8),
+    ConfirmTrade(u8, (FreqDeck, FreqDeck, u8)), // 11-tuple. First 10 like OfferTrade, last is color of accepting player.
+    CancelTrade(u8),
+
+    EndTurn(u8), // None
 }
 
 #[derive(Debug)]

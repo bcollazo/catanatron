@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::enums::GameConfiguration;
+use crate::enums::{Action, GameConfiguration};
 use crate::global_state::GlobalState;
 use crate::map_instance::MapInstance;
 use crate::player::Player;
@@ -30,7 +30,7 @@ pub fn play_game(
     state.winner()
 }
 
-fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) {
+fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) -> Action {
     let current_color = state.get_current_color();
     let current_player = players.get(&current_color).unwrap();
 
@@ -46,6 +46,7 @@ fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) {
     );
 
     state.apply_action(action);
+    action
 }
 
 #[cfg(test)]
@@ -144,11 +145,28 @@ mod tests {
         play_tick(&players, &mut state); // fourth player road
         play_tick(&players, &mut state); // third player settlement 2
         play_tick(&players, &mut state); // third player road
-        play_tick(&players, &mut state);
+        let second_player_second_settlement_action = play_tick(&players, &mut state);
+        let second_player_second_node_id;
+        if let Action::BuildSettlement(player, node_id) = second_player_second_settlement_action {
+            assert_eq!(player, second_player);
+            second_player_second_node_id = node_id;
+        } else {
+            panic!("Expected Action::BuildSettlement");
+        }
+        println!("{}", second_player_second_node_id);
 
         // second player road 2
         let playable_actions = state.generate_playable_actions();
-        assert_all_build_roads(playable_actions, second_player);
+        assert_all_build_roads(playable_actions.clone(), second_player);
+        // assert playable_actions are connected to the last settlement
+        assert!(playable_actions.iter().all(|e| {
+            if let Action::BuildRoad(_, edge_id) = e {
+                second_player_second_node_id == edge_id.0
+                    || second_player_second_node_id == edge_id.1
+            } else {
+                false
+            }
+        }));
         play_tick(&players, &mut state);
 
         play_tick(&players, &mut state); // first player settlement 2

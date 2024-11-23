@@ -29,7 +29,12 @@ impl State {
     }
 
     pub fn build_settlement(&mut self, color: u8, node_id: u8) {
-        self.buildings.insert(node_id, Building::Settlement(color));
+        self.buildings
+            .insert(node_id, Building::Settlement(color, node_id));
+        self.buildings_by_color
+            .entry(color)
+            .or_default()
+            .push(Building::Settlement(color, node_id));
 
         let is_free = self.is_initial_build_phase();
         if !is_free {
@@ -174,7 +179,7 @@ mod tests {
 
         assert_eq!(
             state.buildings.get(&node_id),
-            Some(&Building::Settlement(color))
+            Some(&Building::Settlement(color, node_id))
         );
         assert_eq!(state.board_buildable_ids.len(), 50);
         assert_eq!(state.get_actual_victory_points(color), 1);

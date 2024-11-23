@@ -8,16 +8,17 @@ use crate::{
     global_state::GlobalState,
     map_instance::{EdgeId, MapInstance, NodeId},
     state_vector::{
-        actual_victory_points_index, initialize_state, player_hand_slice, seating_order_slice,
-        StateVector, CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX, IS_DISCARDING_INDEX,
-        IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
+        actual_victory_points_index, initialize_state, player_devhand_slice, player_hand_slice,
+        seating_order_slice, StateVector, CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX,
+        HAS_PLAYED_DEV_CARD, HAS_ROLLED_INDEX, IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX,
+        IS_MOVING_ROBBER_INDEX,
     },
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Building {
-    Settlement(u8), // Color
-    City(u8),       // Color
+    Settlement(u8, NodeId), // Color, NodeId
+    City(u8, NodeId),       // Color, NodeId
 }
 
 #[derive(Debug)]
@@ -32,8 +33,9 @@ pub(crate) struct State {
     // These are caches for speeding up game state calculations
     board_buildable_ids: HashSet<NodeId>,
     buildings: HashMap<NodeId, Building>,
-    roads: HashMap<EdgeId, u8>, // (Node1, Node2) -> Color
-    roads_by_color: Vec<u8>,    // Color -> Count
+    buildings_by_color: HashMap<u8, Vec<Building>>, // Color -> Buildings
+    roads: HashMap<EdgeId, u8>,                     // (Node1, Node2) -> Color
+    roads_by_color: Vec<u8>,                        // Color -> Count
     connected_components: HashMap<u8, Vec<HashSet<NodeId>>>,
     longest_road_color: Option<u8>,
     longest_road_length: u8,
@@ -48,6 +50,7 @@ impl State {
 
         let board_buildable_ids = map_instance.land_nodes().clone();
         let buildings = HashMap::new();
+        let buildings_by_color = HashMap::new();
         let roads = HashMap::new();
         let roads_by_color = vec![0; config.num_players as usize];
         let connected_components = HashMap::new();
@@ -60,6 +63,7 @@ impl State {
             vector,
             board_buildable_ids,
             buildings,
+            buildings_by_color,
             roads,
             roads_by_color,
             connected_components,
@@ -111,6 +115,12 @@ impl State {
             && self.vector[FREE_ROADS_AVAILABLE_INDEX] == 1
     }
 
+    /// Returns a slice of Colors in the order of seating
+    /// e.g. [2, 1, 0, 3] if Orange goes first, then Blue, then Red, and then White
+    pub fn get_seating_order(&self) -> &[u8] {
+        &self.vector[seating_order_slice(self.config.num_players as usize)]
+    }
+
     pub fn get_current_tick_seat(&self) -> u8 {
         self.vector[CURRENT_TICK_SEAT_INDEX]
     }
@@ -121,10 +131,16 @@ impl State {
         seating_order[current_tick_seat as usize]
     }
 
-    /// Returns a slice of Colors in the order of seating
-    /// e.g. [2, 1, 0, 3] if Orange goes first, then Blue, then Red, and then White
-    pub fn get_seating_order(&self) -> &[u8] {
-        &self.vector[seating_order_slice(self.config.num_players as usize)]
+    pub fn current_player_rolled(&self) -> bool {
+        self.vector[HAS_ROLLED_INDEX] == 1
+    }
+
+    pub fn can_play_dev(&self, dev_card: u8) -> bool {
+        let color = self.get_current_color();
+        let dev_card_index = dev_card as usize;
+        let has_one = self.vector[player_devhand_slice(color)][dev_card_index] > 0;
+        let has_played_in_turn = self.vector[HAS_PLAYED_DEV_CARD] == 1;
+        has_one && !has_played_in_turn
     }
 
     pub fn get_action_prompt(&self) -> ActionPrompt {
@@ -145,16 +161,13 @@ impl State {
         ActionPrompt::PlayTurn
     }
 
+    // TODO: Maybe move to mutations(?)
     pub fn get_mut_player_hand(&mut self, color: u8) -> &mut [u8] {
         &mut self.vector[player_hand_slice(color)]
     }
 
     pub fn get_player_hand(&self, color: u8) -> &[u8] {
         &self.vector[player_hand_slice(color)]
-    }
-
-    pub fn get_actual_victory_points(&self, color: u8) -> u8 {
-        self.vector[actual_victory_points_index(self.config.num_players, color)]
     }
 
     pub fn winner(&self) -> Option<u8> {
@@ -167,7 +180,35 @@ impl State {
         None
     }
 
+    pub fn get_actual_victory_points(&self, color: u8) -> u8 {
+        self.vector[actual_victory_points_index(self.config.num_players, color)]
+    }
+
     // ===== Board Getters =====
+    pub fn get_cities(&self, color: u8) -> Vec<Building> {
+        let buildings = self.buildings_by_color.get(&color);
+        match buildings {
+            Some(buildings) => buildings
+                .iter()
+                .filter(|building| matches!(building, Building::City(_, _)))
+                .cloned()
+                .collect(),
+            None => vec![],
+        }
+    }
+
+    pub fn get_settlements(&self, color: u8) -> Vec<Building> {
+        let buildings = self.buildings_by_color.get(&color);
+        match buildings {
+            Some(buildings) => buildings
+                .iter()
+                .filter(|building| matches!(building, Building::Settlement(_, _)))
+                .cloned()
+                .collect(),
+            None => vec![],
+        }
+    }
+
     // TODO: Potentially cache this implementation
     pub fn board_buildable_edges(&self, color: u8) -> Vec<EdgeId> {
         let color_components = self.connected_components.get(&color).unwrap();
@@ -209,10 +250,18 @@ impl State {
 
     fn get_node_color(&self, a: u8) -> Option<u8> {
         match self.buildings.get(&a) {
-            Some(Building::Settlement(color)) => Some(*color),
-            Some(Building::City(color)) => Some(*color),
+            Some(Building::Settlement(color, a)) => Some(*color),
+            Some(Building::City(color, a)) => Some(*color),
             None => None,
         }
+    }
+
+    fn edge_contains(&self, edge: EdgeId, a: u8) -> bool {
+        let (node1, node2) = edge;
+        // println!("Checking if edge {:?} {:?} contains {:?}", node1, node2, a);
+        let result = node1 == a || node2 == a;
+        // println!("Result: {:?}", result);
+        result
     }
 }
 
