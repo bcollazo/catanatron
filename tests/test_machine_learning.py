@@ -7,15 +7,17 @@ from tests.utils import advance_to_play_turn, build_initial_placements
 from catanatron.state import player_deck_replenish
 from catanatron.models.enums import ORE, Action, ActionType, WHEAT, NodeRef
 from catanatron.models.board import Board, get_edges
-from catanatron.models.map import (
+from catanatron.models.map_template import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
+)
+from catanatron.models.map_instance import (
     NUM_EDGES,
     NUM_NODES,
-    CatanMap,
+    MapInstance,
 )
 from catanatron.game import Game
-from catanatron.models.map import number_probability
+from catanatron.models.map_instance import number_probability
 from catanatron.models.player import SimplePlayer, Color
 from catanatron_gym.features import (
     create_sample,
@@ -126,8 +128,8 @@ def test_reachability_features():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
-    game = Game(players, seed=123, catan_map=catan_map)
+    map_instance = MapInstance.from_template(BASE_MAP_TEMPLATE)
+    game = Game(players, seed=123, map_instance=map_instance)
     p0_color = game.state.colors[0]
 
     game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 5))
@@ -197,7 +199,7 @@ def test_tile_features_in_mini():
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
     ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+    game = Game(players, map_instance=MapInstance.from_template(MINI_MAP_TEMPLATE))
 
     features = tile_features(game, players[0].color)
     haystack = "".join(features.keys())
@@ -209,7 +211,7 @@ def test_port_features_in_mini():
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
     ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+    game = Game(players, map_instance=MapInstance.from_template(MINI_MAP_TEMPLATE))
 
     features = port_features(game, players[0].color)
     assert len(features) == 0
@@ -247,7 +249,7 @@ def test_graph_features_in_mini():
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
     ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+    game = Game(players, map_instance=MapInstance.from_template(MINI_MAP_TEMPLATE))
     p0_color = game.state.colors[0]
     game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
@@ -378,8 +380,8 @@ def test_resource_proba_planes():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
-    game = Game(players, seed=123, catan_map=catan_map)
+    map_instance = MapInstance.from_template(BASE_MAP_TEMPLATE)
+    game = Game(players, seed=123, map_instance=map_instance)
 
     tensor = create_board_tensor(game, players[0].color)
     assert tensor[0][0][0] == 0

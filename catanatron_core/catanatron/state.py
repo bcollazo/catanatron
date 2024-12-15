@@ -7,7 +7,7 @@ import pickle
 from collections import defaultdict
 from typing import Any, List, Tuple, Dict, Iterable
 
-from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
+from catanatron.models.map_instance import BASE_MAP_TEMPLATE, MapInstance
 from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -66,14 +66,14 @@ from catanatron.models.enums import FastResource
 # Create Player State blueprint
 PLAYER_INITIAL_STATE = {
     "VICTORY_POINTS": 0,
-    "ROADS_AVAILABLE": 15,
-    "SETTLEMENTS_AVAILABLE": 5,
-    "CITIES_AVAILABLE": 4,
+    # de-normalized features (for performance and ease of creating feature vectors)
     "HAS_ROAD": False,
     "HAS_ARMY": False,
     "HAS_ROLLED": False,
     "HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN": False,
-    # de-normalized features (for performance since we think they are good features)
+    "ROADS_AVAILABLE": 15,
+    "SETTLEMENTS_AVAILABLE": 5,
+    "CITIES_AVAILABLE": 4,
     "ACTUAL_VICTORY_POINTS": 0,
     "LONGEST_ROAD_LENGTH": 0,
     "KNIGHT_OWNED_AT_START": False,
@@ -119,6 +119,7 @@ class State:
         current_turn_index (int): index per colors array of player whose turn is it.
         current_prompt (ActionPrompt): DEPRECATED. Not needed; use is_initial_build_phase,
             is_moving_knight, etc... instead.
+        is_initial_build_phase (bool): If current player is building initial settlements
         is_discarding (bool): If current player needs to discard.
         is_moving_knight (bool): If current player needs to move robber.
         is_road_building (bool): If current player needs to build free roads per Road
@@ -131,14 +132,16 @@ class State:
     def __init__(
         self,
         players: List[Player],
-        catan_map=None,
+        map_instance=None,
         discard_limit=7,
         initialize=True,
     ):
         if initialize:
             self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
-            self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
+            self.board = Board(
+                map_instance or MapInstance.from_template(BASE_MAP_TEMPLATE)
+            )
             self.discard_limit = discard_limit
 
             # feature-ready dictionary
