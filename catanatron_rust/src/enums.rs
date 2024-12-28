@@ -73,7 +73,7 @@ pub enum ActionPrompt {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Action {
     // The first value in all these is the color of the player.
-    Roll(u8), // None. Log instead sets it to (int, int) rolled.
+    Roll(u8, Option<(u8, u8)>), // None. Log instead sets it to (int, int) rolled.
     MoveRobber(u8, Coordinate, Option<u8>), //  Log has extra element of card stolen.
     Discard(u8), // value is None|Resource[].
     BuildRoad(u8, EdgeId),
@@ -106,7 +106,7 @@ pub enum MapType {
 // TODO: Make immutable and read-only
 #[derive(Debug)]
 pub struct GameConfiguration {
-    pub dicard_limit: u8,
+    pub discard_limit: u8,
     pub vps_to_win: u8,
     pub map_type: MapType,
     pub num_players: u8,

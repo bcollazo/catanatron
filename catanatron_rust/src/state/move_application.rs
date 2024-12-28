@@ -1,14 +1,13 @@
 use std::collections::HashSet;
 
+use rand::Rng;
+
 use crate::{
-    deck_slices::{freqdeck_add, freqdeck_sub, ROAD_COST, SETTLEMENT_COST},
+    deck_slices::*,
     enums::Action,
     map_instance::EdgeId,
     state::Building,
-    state_vector::{
-        actual_victory_points_index, BANK_RESOURCE_SLICE, CURRENT_TICK_SEAT_INDEX,
-        CURRENT_TURN_SEAT_INDEX, IS_INITIAL_BUILD_PHASE_INDEX,
-    },
+    state_vector::*,
 };
 
 use super::State;
@@ -21,6 +20,18 @@ impl State {
             }
             Action::BuildRoad(color, edge_id) => {
                 self.build_road(color, edge_id);
+            }
+            Action::BuildCity(color, node_id) =>{
+                self.build_city(color, node_id);
+            }
+            Action::Roll(color, dice_opt) => {
+                self.roll_dice(color, dice_opt);
+            }
+            Action::Discard(color) => {
+                self.discard(color);
+            }
+            Action::MoveRobber(color, coord, victim_opt) => {
+                self.move_robber(color, coord, victim_opt);
             }
             _ => {
                 panic!("Action not implemented: {:?}", action);
@@ -40,7 +51,7 @@ impl State {
         let num_players = self.get_num_players() as i8;
         let next_index =
             ((self.get_current_tick_seat() as i8 + step_size + num_players) % num_players) as u8;
-        self.vector[CURRENT_TICK_SEAT_INDEX] = next_index;
+
         self.vector[CURRENT_TURN_SEAT_INDEX] = next_index;
     }
 
@@ -160,6 +171,94 @@ impl State {
 
         // TODO: Return previous road
     }
+
+    fn build_city(&mut self, color: u8, node_id: u8) {
+        self.buildings.insert(node_id, Building::City(color, node_id));
+        let buildings = self.buildings_by_color.entry(color).or_default();
+        if let Some (pos) = buildings.iter().position(|b| {
+            if let Building::Settlement(_, n) = b {
+                *n == node_id
+            } else {
+                false
+            }
+        }) {
+            buildings.remove(pos);
+        }
+        freqdeck_sub(self.get_mut_player_hand(color), CITY_COST);
+        freqdeck_add(&mut self.vector[BANK_RESOURCE_SLICE], CITY_COST);
+        self.add_victory_points(color, 1);
+    }
+
+    fn roll_dice(&mut self, color: u8, dice_opt: Option<(u8, u8)>) {
+        self.vector[HAS_ROLLED_INDEX] = 1;
+        let (die1, die2) = dice_opt.unwrap_or_else(|| {
+            let mut rng = rand::thread_rng();
+            (rng.gen_range(1..=6), rng.gen_range(1..=6))
+        });
+        let total = die1 + die2;
+
+        if total == 7 {
+            let discarders: Vec<bool> = (0..self.get_num_players())
+                .map(|c| {
+                    let player_hand = self.get_player_hand(c);
+                    let total_cards: u8 = player_hand.iter().sum();
+                    total_cards > self.config.discard_limit
+            })
+            .collect();
+            
+            let should_enter_discard_phase = discarders.iter().any(|&x| x);
+            if should_enter_discard_phase {
+                if let Some(first_discarder) = discarders.iter().position(|&x| x) {
+                    self.vector[CURRENT_TICK_SEAT_INDEX] = first_discarder as u8;
+                    self.vector[IS_DISCARDING_INDEX] = 1;
+                }
+            } else {
+                self.vector[IS_MOVING_ROBBER_INDEX] = 1;
+                self.vector[CURRENT_TICK_SEAT_INDEX] = color;
+            }
+        } else {
+            // TODO: Yield resources
+            self.vector[CURRENT_TICK_SEAT_INDEX] = color;
+        }
+        // TODO: Set playable_actions???
+    }
+
+    fn discard(&mut self, color: u8) {
+        todo!();
+    }
+
+    fn move_robber(&mut self, color: u8, coordinate: (i8, i8, i8), victim_opt: Option<u8>) {
+        self.vector[ROBBER_TILE_INDEX] = self.map_instance
+            .get_land_tile(coordinate)
+            .unwrap()
+            .id;
+
+        if let Some(victim) = victim_opt {
+            let total_cards: u8 = self.get_player_hand(victim).iter().sum();
+
+            if total_cards > 0 {
+                // Randomly select card to steal
+                let mut rng = rand::thread_rng();
+                let selected_idx = rng.gen_range(0..total_cards);
+
+                let mut cumsum = 0;
+                let mut stolen_resource_idx = 0;
+                for (i, &count) in self.get_player_hand(victim).iter().enumerate() {
+                    cumsum += count;
+                    if selected_idx < cumsum {
+                        stolen_resource_idx = i;
+                        break;
+                    }
+                }
+
+                let mut stolen_freqdeck = [0; 5];
+                stolen_freqdeck[stolen_resource_idx] = 1;
+                freqdeck_sub(self.get_mut_player_hand(victim), stolen_freqdeck);
+                freqdeck_add(self.get_mut_player_hand(color), stolen_freqdeck);
+            }
+        }
+        self.vector[IS_MOVING_ROBBER_INDEX] = 0;
+    }
 }
 
 #[cfg(test)]
@@ -167,7 +266,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_build_settlement() {
+    fn test_build_settlement_initial_build_phase() {
         let mut state = State::new_base();
         let color = state.get_current_color();
         assert_eq!(state.buildings.get(&0), None);
@@ -185,5 +284,74 @@ mod tests {
         assert_eq!(state.get_actual_victory_points(color), 1);
     }
 
-    // TODO: Assert build_settlement spends player resources
+    #[test]
+    fn test_build_settlement_spends_resources() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+        assert_eq!(state.buildings.get(&0), None);
+        assert_eq!(state.board_buildable_ids.len(), 54);
+        assert_eq!(state.get_actual_victory_points(color), 0);
+
+        // Exit initial build phase
+        state.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
+
+        freqdeck_add(state.get_mut_player_hand(color), SETTLEMENT_COST);
+        let hand_before = state.get_player_hand(color).to_vec();
+
+        let node_id = 0;
+        state.build_settlement(color, node_id);
+
+        assert_eq!(
+            state.buildings.get(&node_id),
+            Some(&Building::Settlement(color, node_id))
+        );
+        assert_eq!(state.board_buildable_ids.len(), 50);
+        assert_eq!(state.get_actual_victory_points(color), 1);
+        
+        let hand_after = state.get_player_hand(color);
+        for i in 0..5 {
+            assert_eq!(hand_after[i], hand_before[i] - SETTLEMENT_COST[i]);
+        }
+    }
+
+    #[test]
+    fn test_roll_seven_triggers_discard() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        {
+            let hand = state.get_mut_player_hand(color);
+            hand[0] = 8; // Give 8 wood cards
+        }
+
+        state.roll_dice(color, Some((4, 3)));
+
+        assert_eq!(state.vector[HAS_ROLLED_INDEX], 1);
+        assert_eq!(state.vector[IS_DISCARDING_INDEX], 1);
+        assert_eq!(state.vector[CURRENT_TICK_SEAT_INDEX], color);
+        assert_eq!(state.vector[IS_MOVING_ROBBER_INDEX], 0);
+    }
+
+    #[test]
+    fn test_roll_seven_no_discard_needed() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        state.roll_dice(color, Some((4, 3)));
+
+        assert_eq!(state.vector[HAS_ROLLED_INDEX], 1);
+        assert_eq!(state.vector[IS_DISCARDING_INDEX], 0);
+        assert_eq!(state.vector[CURRENT_TICK_SEAT_INDEX], color);
+        assert_eq!(state.vector[IS_MOVING_ROBBER_INDEX], 1);
+    }
+
+    #[test]
+    fn test_roll_tracks_has_rolled() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        assert_eq!(state.vector[HAS_ROLLED_INDEX], 0);
+        state.roll_dice(color, Some((2, 3)));
+        assert_eq!(state.vector[HAS_ROLLED_INDEX], 1);
+    }
 }

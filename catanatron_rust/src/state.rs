@@ -75,7 +75,7 @@ impl State {
     pub fn new_base() -> Self {
         let global_state = GlobalState::new();
         let config = GameConfiguration {
-            dicard_limit: 7,
+            discard_limit: 7,
             vps_to_win: 10,
             map_type: MapType::Base,
             num_players: 4,
@@ -224,6 +224,22 @@ impl State {
             }
         }
         buildable.into_iter().collect()
+    }
+
+    pub fn buildable_node_ids(&self, color: u8,) -> Vec<u8> {
+        let road_subgraphs = match self.connected_components.get(&color) {
+            Some(components) => components,
+            None => &vec![],
+        };
+
+        let mut road_connected_nodes: HashSet<u8> = HashSet::new();
+        for component in road_subgraphs {
+            road_connected_nodes.extend(component);
+        }
+
+        road_connected_nodes.intersection(&self.board_buildable_ids)
+            .copied()
+            .collect()
     }
 
     fn get_connected_component_index(&self, color: u8, a: u8) -> Option<usize> {
