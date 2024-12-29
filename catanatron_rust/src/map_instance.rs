@@ -163,6 +163,10 @@ impl MapInstance {
     pub fn get_neighbor_edges(&self, node_id: NodeId) -> Vec<EdgeId> {
         self.edge_neighbors.get(&node_id).unwrap().clone()
     }
+
+    pub fn get_adjacent_tiles(&self, node_id: NodeId) -> Option<&Vec<LandTile>> {
+        self.adjacent_land_tiles.get(&node_id)
+    }
 }
 
 impl MapInstance {

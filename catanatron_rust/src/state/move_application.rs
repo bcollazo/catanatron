@@ -71,11 +71,33 @@ impl State {
 
         self.add_victory_points(color, 1);
 
-        // TODO: If second house, yield resources
-
-        // Maintain caches and longest road =====
-        //   - connected_components
         if self.is_initial_build_phase() {
+            let owned_buildings = self.buildings_by_color.get(&color).unwrap();
+            let owned_settlements = owned_buildings
+                .iter()
+                .filter(|b| matches!(b, Building::Settlement(_, _)))
+                .count();
+
+            // If second house, yield resources
+            if owned_settlements == 2 {
+                let adjacent_tiles = self.map_instance.get_adjacent_tiles(node_id);
+                if let Some(adjacent_tiles) = adjacent_tiles {
+                    let mut total_resources = [0; 5];
+                    for tile in adjacent_tiles {
+                        if let Some(resource) = tile.resource {
+                            total_resources[resource as usize] += 1;
+                        }
+                    }
+
+                    let bank = &mut self.vector[BANK_RESOURCE_SLICE];
+                    freqdeck_sub(bank, total_resources);
+
+                    let hand = self.get_mut_player_hand(color);
+                    freqdeck_add(hand, total_resources);
+                }
+            }
+            // Maintain caches and longest road =====
+            //   - connected_components
             let component = HashSet::from([node_id]);
             self.connected_components
                 .entry(color)
@@ -353,5 +375,34 @@ mod tests {
         assert_eq!(state.vector[HAS_ROLLED_INDEX], 0);
         state.roll_dice(color, Some((2, 3)));
         assert_eq!(state.vector[HAS_ROLLED_INDEX], 1);
+    }
+
+    #[test]
+    fn test_second_settlement_yields_resources() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+        let first_node = 0;
+        let bank_before = state.vector[BANK_RESOURCE_SLICE].to_vec();
+        let hand_before = state.get_player_hand(color).to_vec();
+
+        state.build_settlement(color, first_node);
+
+        assert_eq!(state.get_player_hand(color), hand_before);
+        assert_eq!(state.vector[BANK_RESOURCE_SLICE], bank_before);
+
+        let second_node = 3;
+        let bank_before = state.vector[BANK_RESOURCE_SLICE].to_vec();
+        let hand_before = state.get_player_hand(color).to_vec();
+
+        state.build_settlement(color, second_node);
+
+        assert_ne!(state.get_player_hand(color), hand_before);
+        assert_ne!(state.vector[BANK_RESOURCE_SLICE], bank_before);
+
+        for i in 0..5 {
+            let bank_diff = bank_before[i] - state.vector[BANK_RESOURCE_SLICE][i];
+            let hand_diff = state.get_player_hand(color)[i] - hand_before[i];
+            assert_eq!(bank_diff, hand_diff);
+        }
     }
 }

@@ -159,11 +159,11 @@ impl State {
 
     // TODO: Maybe move to mutations(?)
     pub fn get_mut_player_hand(&mut self, color: u8) -> &mut [u8] {
-        &mut self.vector[player_hand_slice(color)]
+        &mut self.vector[player_hand_slice(self.config.num_players, color)]
     }
 
     pub fn get_player_hand(&self, color: u8) -> &[u8] {
-        &self.vector[player_hand_slice(color)]
+        &self.vector[player_hand_slice(self.config.num_players, color)]
     }
 
     pub fn winner(&self) -> Option<u8> {
