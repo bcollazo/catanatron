@@ -288,8 +288,18 @@ impl MapInstance {
                     land_edges.insert(edge_id);
                     node_neighbors.entry(edge_id.0).or_default().push(edge_id.1);
                     node_neighbors.entry(edge_id.1).or_default().push(edge_id.0);
-                    edge_neighbors.entry(edge_id.0).or_default().push(edge_id);
-                    edge_neighbors.entry(edge_id.1).or_default().push(edge_id);
+
+                    // Only insert edge into edge_neighbors if not already present
+                    {
+                        let edges_for_node_0 = edge_neighbors.entry(edge_id.0).or_default();
+                        if !edges_for_node_0.contains(&edge_id) {
+                            edges_for_node_0.push(edge_id);
+                        }
+                        let edges_for_node_1 = edge_neighbors.entry(edge_id.1).or_default();
+                        if !edges_for_node_1.contains(&edge_id) {
+                            edges_for_node_1.push(edge_id);
+                        }
+                    }
                 });
             } else if let Tile::Port(port_tile) = tile {
                 let (a_noderef, b_noderef) = get_noderefs_from_port_direction(port_tile.direction);

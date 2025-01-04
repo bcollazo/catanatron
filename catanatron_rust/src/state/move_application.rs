@@ -1,11 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use rand::Rng;
 
 use crate::{
     deck_slices::*,
     enums::Action,
-    map_instance::EdgeId,
+    map_instance::{EdgeId, NodeId},
     state::Building,
     state_vector::*,
 };
@@ -16,10 +16,14 @@ impl State {
     pub fn apply_action(&mut self, action: Action) {
         match action {
             Action::BuildSettlement(color, node_id) => {
-                self.build_settlement(color, node_id);
+                let (new_owner, new_length) = 
+                    self.build_settlement(color, node_id);
+                self.maintain_longest_road(new_owner, new_length);
             }
             Action::BuildRoad(color, edge_id) => {
-                self.build_road(color, edge_id);
+                let (new_owner, new_length) = 
+                    self.build_road(color, edge_id);
+                self.maintain_longest_road(new_owner, new_length);
             }
             Action::BuildCity(color, node_id) =>{
                 self.build_city(color, node_id);
@@ -46,6 +50,11 @@ impl State {
         self.vector[actual_victory_points_index(n, color)] += points;
     }
 
+    pub fn sub_victory_points(&mut self, color: u8, points: u8) {
+        let n = self.get_num_players();
+        self.vector[actual_victory_points_index(n, color)] -= points;
+    }
+
     pub fn advance_turn(&mut self, step_size: i8) {
         // We add an extra num_players to ensure next_index is positive (u8)
         let num_players = self.get_num_players() as i8;
@@ -53,26 +62,29 @@ impl State {
             ((self.get_current_tick_seat() as i8 + step_size + num_players) % num_players) as u8;
 
         self.vector[CURRENT_TURN_SEAT_INDEX] = next_index;
+        self.vector[CURRENT_TICK_SEAT_INDEX] = next_index;
     }
 
-    pub fn build_settlement(&mut self, color: u8, node_id: u8) {
+    pub fn build_settlement(&mut self, placing_color: u8, node_id: u8) -> (Option<u8>, u8) {
         self.buildings
-            .insert(node_id, Building::Settlement(color, node_id));
+            .insert(node_id, Building::Settlement(placing_color, node_id));
         self.buildings_by_color
-            .entry(color)
+            .entry(placing_color)
             .or_default()
-            .push(Building::Settlement(color, node_id));
+            .push(Building::Settlement(placing_color, node_id));
 
         let is_free = self.is_initial_build_phase();
         if !is_free {
-            freqdeck_sub(self.get_mut_player_hand(color), SETTLEMENT_COST);
+            freqdeck_sub(self.get_mut_player_hand(placing_color), SETTLEMENT_COST);
             freqdeck_add(&mut self.vector[BANK_RESOURCE_SLICE], SETTLEMENT_COST);
         }
 
-        self.add_victory_points(color, 1);
+        self.add_victory_points(placing_color, 1);
 
-        if self.is_initial_build_phase() {
-            let owned_buildings = self.buildings_by_color.get(&color).unwrap();
+        let mut road_lengths: HashMap<u8, u8> = HashMap::new();
+
+        if is_free {
+            let owned_buildings = self.buildings_by_color.get(&placing_color).unwrap();
             let owned_settlements = owned_buildings
                 .iter()
                 .filter(|b| matches!(b, Building::Settlement(_, _)))
@@ -92,7 +104,7 @@ impl State {
                     let bank = &mut self.vector[BANK_RESOURCE_SLICE];
                     freqdeck_sub(bank, total_resources);
 
-                    let hand = self.get_mut_player_hand(color);
+                    let hand = self.get_mut_player_hand(placing_color);
                     freqdeck_add(hand, total_resources);
                 }
             }
@@ -100,30 +112,88 @@ impl State {
             //   - connected_components
             let component = HashSet::from([node_id]);
             self.connected_components
-                .entry(color)
+                .entry(placing_color)
                 .or_default()
                 .push(component);
         } else {
-            // TODO: Mantain connected_components
-            // TODO: Mantain longest_road_color and longest_road_length (maybe swapping vps)
-            todo!();
+            // Mantain connected_components
+            // Mantain longest_road_color and longest_road_length
+            let mut plowed_edges_by_color: HashMap<u8, Vec<EdgeId>> = HashMap::new();
+            for edge in self.map_instance.get_neighbor_edges(node_id) {
+                if let Some(&road_color) = self.roads.get(&edge) {
+                    plowed_edges_by_color.entry(road_color).or_default().push(edge);
+                }
+            }
+
+            for (plowed_color, plowed_edges) in plowed_edges_by_color {
+                if plowed_edges.len() != 2  || plowed_color == placing_color {
+                    continue; // Skip if no bisection/plow
+                }
+
+                if let Some(plowed_component_idx) = self.get_connected_component_index(plowed_color, node_id) {
+                    let outer_nodes: Vec<NodeId> = plowed_edges.iter()
+                        .map(|&edge| if edge.0 == node_id { edge.1 } else { edge.0 })
+                        .collect();
+
+                    // First remove the bisected component
+                    let road_components = self.connected_components.get_mut(&plowed_color).unwrap();
+                    road_components.remove(plowed_component_idx);
+
+                    let mut new_components = Vec::new();
+                    for outer_node in outer_nodes {
+                        let new_component = self.dfs_walk(outer_node, plowed_color);
+                        if !new_component.is_empty() {
+                            new_components.push(new_component);
+                        }
+                    }
+
+                    let road_components = self.connected_components.get_mut(&plowed_color).unwrap();
+                    road_components.extend(new_components);
+                }
+
+                // Insert the longest road length for all colors if a road was plowed
+                for (&color, components) in &self.connected_components {
+                    let max_length = components.iter()
+                        .map(|component| self.longest_acyclic_path(component, color).len())
+                        .max()
+                        .unwrap_or(0);
+                    road_lengths.insert(color, max_length as u8);
+                }
+            }
         }
         // - board_buildable_ids
         self.board_buildable_ids.remove(&node_id);
         for neighbor_id in self.map_instance.get_neighbor_nodes(node_id) {
             self.board_buildable_ids.remove(&neighbor_id);
         }
+
+        // Determine new longest road holder
+        let (new_road_color, new_road_length) = if road_lengths.is_empty() {
+            // If no road lengths affected, just return the previous longest road
+            (self.longest_road_color, self.longest_road_length)
+        } else {
+            let max_entry = road_lengths.iter()
+            .filter(|(_, &len)| len >= 5)
+            .max_by_key(|(_, &len)| len);
+
+            match max_entry {
+                Some((&color, &length)) => (Some(color), length),
+                None => (None, 0) // No player has >= 5 roads
+            }
+        };
+        (new_road_color, new_road_length)
     }
 
-    fn build_road(&mut self, color: u8, edge_id: EdgeId) {
+    fn build_road(&mut self, placing_color: u8, edge_id: EdgeId) -> (Option<u8>, u8) {
         let inverted_edge = (edge_id.1, edge_id.0);
-        self.roads.insert(edge_id, color);
-        self.roads.insert(inverted_edge, color);
-
+        self.roads.insert(edge_id, placing_color);
+        self.roads.insert(inverted_edge, placing_color);
+        self.roads_by_color[placing_color as usize] += 1;
+    
         let is_initial_build_phase = self.is_initial_build_phase();
         let is_free = is_initial_build_phase || self.is_road_building();
         if !is_free {
-            freqdeck_sub(self.get_mut_player_hand(color), ROAD_COST);
+            freqdeck_sub(self.get_mut_player_hand(placing_color), ROAD_COST);
             freqdeck_add(&mut self.vector[BANK_RESOURCE_SLICE], ROAD_COST);
         }
 
@@ -148,50 +218,51 @@ impl State {
         // Maintain caches and longest road =====
         // Extend or merge components
         let (a, b) = edge_id;
-        let a_index = self.get_connected_component_index(color, a);
-        let b_index = self.get_connected_component_index(color, b);
-        if a_index.is_none() && !self.is_enemy_node(color, a) {
+        let a_index = self.get_connected_component_index(placing_color, a);
+        let b_index = self.get_connected_component_index(placing_color, b);
+
+        let affected_component = if a_index.is_none() && !self.is_enemy_node(placing_color, a) {
             // There has to be a component from b (since roads can only be built in a connected fashion)
-            let component = self
-                .connected_components
-                .get_mut(&color)
-                .unwrap()
-                .get_mut(b_index.unwrap())
-                .unwrap();
+            let component = self.connected_components.get_mut(&placing_color).unwrap()
+                .get_mut(b_index.unwrap()).unwrap();
             component.insert(a); // extend said component by 1 more node
-        } else if b_index.is_none() && !self.is_enemy_node(color, b) {
+            component.clone()
+        } else if b_index.is_none() && !self.is_enemy_node(placing_color, b) {
             // There has to be a component from a (since roads can only be built in a connected fashion)
-            let component = self
-                .connected_components
-                .get_mut(&color)
-                .unwrap()
-                .get_mut(a_index.unwrap())
-                .unwrap();
-            component.insert(b); // extend said component by 1 more node
+            let component = self.connected_components.get_mut(&placing_color).unwrap()
+                .get_mut(a_index.unwrap()).unwrap();
+            component.insert(b);
+            component.clone()
         } else if a_index.is_some() && b_index.is_some() && a_index != b_index {
             // Merge components into one and delete the other
-            let a_component = self
-                .connected_components
-                .get_mut(&color)
-                .unwrap()
-                .remove(a_index.unwrap());
-            let b_component = self
-                .connected_components
-                .get_mut(&color)
-                .unwrap()
-                .remove(b_index.unwrap());
-            let mut new_component = a_component.clone();
-            new_component.extend(b_component);
-            self.connected_components
-                .get_mut(&color)
-                .unwrap()
-                .push(new_component);
+            let smaller_idx = a_index.unwrap().min(b_index.unwrap());
+            let larger_idx = a_index.unwrap().max(b_index.unwrap());
+            let removed_component = self.connected_components.get_mut(&placing_color).unwrap()
+                .remove(larger_idx);
+            let kept_component = self.connected_components.get_mut(&placing_color).unwrap()
+                .get_mut(smaller_idx).unwrap();
+            kept_component.extend(&removed_component);
+            kept_component.clone()
         } else {
+            // Edge is within same component, just get that component
             // In this case, a_index == b_index, which means that the edge
             // is already part of one component. No actions needed.
-        }
-
-        // TODO: Return previous road
+            self.connected_components.get(&placing_color).unwrap()
+                .get(a_index.unwrap()).unwrap().clone()
+        };
+    
+        let prev_road_color = self.longest_road_color;
+    
+        // Calculate length for affected component
+        let path_length = self.longest_acyclic_path(&affected_component, placing_color).len() as u8;
+        
+        let (new_road_color, new_road_length) = 
+            if path_length >= 5 && path_length > self.longest_road_length{
+                (Some(placing_color), path_length)
+            } else {
+                (prev_road_color, self.longest_road_length)
+            };
+        (new_road_color, new_road_length)
     }
 
     fn build_city(&mut self, color: u8, node_id: u8) {
@@ -280,6 +351,48 @@ impl State {
             }
         }
         self.vector[IS_MOVING_ROBBER_INDEX] = 0;
+    }
+
+    fn maintain_longest_road(&mut self, new_owner: Option<u8>, new_length: u8) {
+        let prev_owner = self.longest_road_color;
+        self.longest_road_color = new_owner;
+        self.longest_road_length = new_length;
+
+        if new_owner == prev_owner {
+            return;
+        }
+
+        if let Some(prev_owner) = prev_owner {
+            self.sub_victory_points(prev_owner, 2);
+        }
+
+        if let Some(new_owner) = new_owner {
+            self.add_victory_points(new_owner, 2);
+        }
+    }
+
+    fn dfs_walk(&self, start_node: NodeId, color: u8) -> HashSet<NodeId> {
+        let mut agenda = vec![start_node];
+        let mut visited = HashSet::new();
+
+        while let Some(node) = agenda.pop() {
+            if visited.contains(&node) {
+                continue;
+            }
+            visited.insert(node);
+
+            if self.is_enemy_node(color, node) {
+                continue;
+            }
+
+            for neighbor in self.map_instance.get_neighbor_nodes(node) {
+                let edge = (node.min(neighbor), node.max(neighbor));
+                if self.roads.get(&edge) == Some(&color) {
+                    agenda.push(neighbor);
+                }
+            }
+        }
+        visited
     }
 }
 
@@ -404,5 +517,142 @@ mod tests {
             let hand_diff = state.get_player_hand(color)[i] - hand_before[i];
             assert_eq!(bank_diff, hand_diff);
         }
+    }
+
+    #[test]
+    fn test_settlement_cuts_longest_road() {
+        let mut state = State::new_base();
+        let color1 = 1;
+        let color2 = 2;
+
+        // give color1 6 consecutive roads
+        state.apply_action(Action::BuildSettlement(color1, 0));
+        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5), (5,16)] {
+            state.apply_action(Action::BuildRoad(color1, edge));
+        }
+
+        assert_eq!(state.longest_road_color, Some(color1));
+        assert_eq!(state.get_actual_victory_points(color1), 3);
+        assert_eq!(state.get_actual_victory_points(color2), 0);
+
+        // Give color2 a settlement at node 4 to bisect color1's Longest Road
+        state.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
+        freqdeck_add(state.get_mut_player_hand(color2), SETTLEMENT_COST);
+        state.apply_action(Action::BuildSettlement(color2, 4));
+
+        assert_eq!(state.longest_road_color, None);
+        assert_eq!(state.get_actual_victory_points(color1), 1);
+        assert_eq!(state.get_actual_victory_points(color2), 1);
+    }
+
+    #[test]
+    fn test_build_road_maintains_connected_components() {
+        let mut state = State::new_base();
+        let color1 = 1;
+
+        state.build_settlement(color1, 0);
+        state.build_road(color1, (0, 1));
+
+        let components = state.connected_components.get(&color1).unwrap();
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0], HashSet::from([0, 1]));
+
+        state.build_road(color1, (1, 2));
+
+        let components = state.connected_components.get(&color1).unwrap();
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0], HashSet::from([0, 1, 2]));
+
+        state.build_settlement(color1, 4);
+        state.build_road(color1, (3, 4));
+
+        let components = state.connected_components.get(&color1).unwrap();
+        assert_eq!(components.len(), 2);
+        assert_eq!(components[0], HashSet::from([0, 1, 2]));
+        assert_eq!(components[1], HashSet::from([3, 4]));
+
+        state.build_road(color1, (2, 3));
+
+        let components = state.connected_components.get(&color1).unwrap();
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0], HashSet::from([0, 1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn test_settlement_cuts_longest_road_and_transfers() {
+        let mut state = State::new_base();
+        let color1 = 1;
+        let color2 = 2;
+
+        // give color1 6 consecutive roads
+        state.apply_action(Action::BuildSettlement(color1, 0));
+        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5), (5,16)] {
+            state.apply_action(Action::BuildRoad(color1, edge));
+        }
+        // Give color2 5 consecutive roads with potential to bisect/plow color1's road
+        state.apply_action(Action::BuildSettlement(color2, 11));
+        for edge in [(11,12),(12,13),(13,14),(14,15),(4,15)] {
+            state.apply_action(Action::BuildRoad(color2, edge));
+        }
+
+        assert_eq!(state.longest_road_color, Some(color1));
+        assert_eq!(state.get_actual_victory_points(color1), 3);
+        assert_eq!(state.get_actual_victory_points(color2), 1);
+
+        // Give color2 a settlement at node 4 to bisect color1's Longest Road
+        state.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
+        freqdeck_add(state.get_mut_player_hand(color2), SETTLEMENT_COST);
+        state.apply_action(Action::BuildSettlement(color2, 4));
+
+        assert_eq!(state.longest_road_color, Some(color2));
+        assert_eq!(state.get_actual_victory_points(color1), 1);
+        assert_eq!(state.get_actual_victory_points(color2), 4);
+    }
+
+    #[test]
+    fn test_extend_own_longest_road() {
+        let mut state = State::new_base();
+        let color1 = 1;
+        
+        state.apply_action(Action::BuildSettlement(color1, 0));
+        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5)] {
+            state.apply_action(Action::BuildRoad(color1, edge));
+        }
+
+        assert_eq!(state.longest_road_color, Some(color1));
+        assert_eq!(state.longest_road_length, 5);
+        assert_eq!(state.get_actual_victory_points(color1), 3);
+
+        state.apply_action(Action::BuildRoad(color1, (5, 16)));
+
+        assert_eq!(state.longest_road_color, Some(color1));
+        assert_eq!(state.longest_road_length, 6);
+        assert_eq!(state.get_actual_victory_points(color1), 3);
+    }
+
+    #[test]
+    fn test_bisection_counts_remaining_components() {
+        let mut state = State::new_base();
+        let color1 = 1;
+        let color2 = 2;
+
+        state.apply_action(Action::BuildSettlement(color1, 0));
+        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5), (5,16)] {
+            state.apply_action(Action::BuildRoad(color1, edge));
+        }
+
+        assert_eq!(state.longest_road_color, Some(color1));
+        assert_eq!(state.longest_road_length, 6);
+        assert_eq!(state.get_actual_victory_points(color1), 3);
+
+        state.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
+        freqdeck_add(state.get_mut_player_hand(color2), SETTLEMENT_COST);
+        state.apply_action(Action::BuildSettlement(color2, 5));
+
+        assert_eq!(state.longest_road_color, Some(color1));
+        assert_eq!(state.longest_road_length, 5);
+        assert_eq!(state.connected_components.get(&color1).unwrap().len(), 2);
+        assert_eq!(state.get_actual_victory_points(color1), 3);
+        assert_eq!(state.get_actual_victory_points(color2), 1);
     }
 }

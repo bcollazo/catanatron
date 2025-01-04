@@ -272,6 +272,66 @@ impl State {
         let (node1, node2) = edge;
         node1 == a || node2 == a
     }
+
+    fn dfs_longest_path(
+        &self,
+        node: NodeId,
+        parent: Option<NodeId>,
+        connected_set: &HashSet<NodeId>,
+        color: u8,
+        current_path: &mut Vec<EdgeId>,
+        best_path: &mut Vec<EdgeId>,
+    ) {
+        // If current_path is longer than what we have, store it
+        if current_path.len() > best_path.len() {
+            *best_path = current_path.clone();
+        }
+
+        for &neighbor in &self.map_instance.get_neighbor_nodes(node) {
+            // Must be in the connected component
+            if !connected_set.contains(&neighbor) {
+                continue;
+            }
+            let edge = (node.min(neighbor), node.max(neighbor));
+
+            // Avoid going back to parent
+            if parent == Some(neighbor) {
+                continue;
+            }
+            // Skip roads not owned by us
+            if self.roads.get(&edge) != Some(&color) {
+                continue;
+            }
+            // Acyclic check
+            if current_path.contains(&edge) {
+                continue;
+            }
+
+            // Move forward
+            current_path.push(edge);
+            self.dfs_longest_path(neighbor, Some(node), connected_set, color, current_path, best_path);
+            current_path.pop();
+        }
+    }
+
+    pub fn longest_acyclic_path(&self, connected_node_set: &HashSet<NodeId>, color: u8) -> Vec<EdgeId> {
+        if connected_node_set.is_empty() {
+            return vec![];
+        }
+
+        let mut overall_best_path = Vec::new();
+
+        for &start_node in connected_node_set {
+            let mut current_path = Vec::new();
+            let mut best_path = Vec::new();
+
+            self.dfs_longest_path(start_node, None, connected_node_set, color, &mut current_path, &mut best_path);
+            if best_path.len() > overall_best_path.len() {
+                overall_best_path = best_path;
+            }
+        }
+        overall_best_path
+    }
 }
 
 #[cfg(test)]
@@ -292,5 +352,27 @@ mod tests {
         assert!(state.is_initial_build_phase());
         assert!(!state.is_moving_robber());
         assert!(!state.is_discarding());
+    }
+    
+    #[test]
+    fn test_longest_acyclic_path() {
+        let mut state = State::new_base();
+        let color = 0;
+
+        state.roads.insert((0, 1), color);
+        state.roads.insert((1, 2), color);
+        state.roads.insert((2, 3), color);
+        state.roads.insert((3, 4), color);
+        state.roads.insert((4, 5), color);
+        state.roads.insert((0, 5), color);
+        state.roads.insert((0, 20), color);
+        state.roads.insert((20, 19), color);
+        state.roads.insert((20, 22), color);
+        state.roads.insert((22, 23), color);
+        state.roads.insert((6, 23), color);
+
+        let all_nodes = HashSet::from([0, 1, 2, 3, 4, 5, 19, 20, 22, 23, 6]);
+        let path = state.longest_acyclic_path(&all_nodes, color);
+        assert_eq!(path.len(), 10);
     }
 }
