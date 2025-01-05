@@ -134,7 +134,7 @@ impl State {
     pub fn can_play_dev(&self, dev_card: u8) -> bool {
         let color = self.get_current_color();
         let dev_card_index = dev_card as usize;
-        let has_one = self.vector[player_devhand_slice(color)][dev_card_index] > 0;
+        let has_one = self.vector[player_devhand_slice(self.config.num_players, color)][dev_card_index] > 0;
         let has_played_in_turn = self.vector[HAS_PLAYED_DEV_CARD] == 1;
         has_one && !has_played_in_turn
     }
@@ -164,6 +164,14 @@ impl State {
 
     pub fn get_player_hand(&self, color: u8) -> &[u8] {
         &self.vector[player_hand_slice(self.config.num_players, color)]
+    }
+
+    pub fn get_mut_player_devhand(&mut self, color: u8) -> &mut [u8] {
+        &mut self.vector[player_devhand_slice(self.config.num_players, color)]
+    }
+
+    pub fn get_player_devhand(&self, color: u8) -> &[u8] {
+        &self.vector[player_devhand_slice(self.config.num_players, color)]
     }
 
     pub fn winner(&self) -> Option<u8> {

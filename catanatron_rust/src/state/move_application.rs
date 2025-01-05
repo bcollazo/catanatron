@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::{
     deck_slices::*,
-    enums::Action,
+    enums::{Action, DevCard},
     map_instance::{EdgeId, NodeId},
     state::Building,
     state_vector::*,
@@ -27,6 +27,9 @@ impl State {
             }
             Action::BuildCity(color, node_id) =>{
                 self.build_city(color, node_id);
+            }
+            Action::BuyDevelopmentCard(color) => {
+                self.buy_development_card(color);
             }
             Action::Roll(color, dice_opt) => {
                 self.roll_dice(color, dice_opt);
@@ -280,6 +283,38 @@ impl State {
         freqdeck_sub(self.get_mut_player_hand(color), CITY_COST);
         freqdeck_add(&mut self.vector[BANK_RESOURCE_SLICE], CITY_COST);
         self.add_victory_points(color, 1);
+    }
+
+    fn buy_development_card(&mut self, color: u8) -> Option<DevCard> {
+        // Get next card from deck
+        if let Some(card) = take_next_dev_card(&mut self.vector) {
+            // Pay for the card
+            freqdeck_sub(self.get_mut_player_hand(color), DEVCARD_COST);
+            freqdeck_add(&mut self.vector[BANK_RESOURCE_SLICE], DEVCARD_COST);
+
+            let dev_card = match card {
+                0 => DevCard::Knight,
+                1 => DevCard::YearOfPlenty,
+                2 => DevCard::Monopoly,
+                3 => DevCard::RoadBuilding,
+                4 => DevCard::VictoryPoint,
+                _ => panic!("Invalid dev card index"),
+            };
+
+            match dev_card {
+                DevCard::VictoryPoint => {
+                    self.add_victory_points(color, 1);
+                }
+                _ => {
+                    let dev_hand = &mut self.vector[player_devhand_slice(self.config.num_players, color)];
+                    dev_hand[card as usize] += 1;
+                }
+            }
+
+            Some(dev_card)
+        } else {
+            None
+        }
     }
 
     fn roll_dice(&mut self, color: u8, dice_opt: Option<(u8, u8)>) {
@@ -654,5 +689,50 @@ mod tests {
         assert_eq!(state.connected_components.get(&color1).unwrap().len(), 2);
         assert_eq!(state.get_actual_victory_points(color1), 3);
         assert_eq!(state.get_actual_victory_points(color2), 1);
+    }
+
+    #[test]
+    fn test_buy_development_cards() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+        let mut cards_drawn = 0;
+
+        while cards_drawn < 26 {
+            freqdeck_add(state.get_mut_player_hand(color), DEVCARD_COST);
+            let initial_hand: [u8; 5] = state.get_player_hand(color).try_into().unwrap();
+            let initial_devhand = state.get_player_devhand(color).to_vec();
+            let initial_bank = state.vector[BANK_RESOURCE_SLICE].to_vec();
+            let initial_vps = state.get_actual_victory_points(color);
+
+            let drawn_card = state.buy_development_card(color);
+            cards_drawn += 1;
+
+            println!("Cards Drawn: {}, Drawn card: {:?}", cards_drawn, drawn_card);
+
+            if cards_drawn < 26 {
+                let hand_after = state.get_player_hand(color);
+                let bank_after = &state.vector[BANK_RESOURCE_SLICE];
+                for i in 0..5 {
+                    assert_eq!(hand_after[i], initial_hand[i] - DEVCARD_COST[i]);
+                    assert_eq!(bank_after[i], initial_bank[i] + DEVCARD_COST[i]);
+                }
+                let devhand_after = state.get_player_devhand(color);
+
+                if drawn_card == Some(DevCard::VictoryPoint) {
+                    // VP added, devhand not incremented
+                    assert_eq!(state.get_actual_victory_points(color), initial_vps + 1);
+                    assert_eq!(devhand_after[drawn_card.unwrap() as usize], initial_devhand[drawn_card.unwrap() as usize]);
+                } else {
+                    // VP not added, devhand incremented
+                    assert_eq!(state.get_actual_victory_points(color), initial_vps);
+                    assert_eq!(devhand_after[drawn_card.unwrap() as usize], initial_devhand[drawn_card.unwrap() as usize] + 1);
+                }
+            } else {
+                // 26th card should not be drawn
+                assert!(drawn_card.is_none());
+                assert_eq!(state.get_player_hand(color), initial_hand);
+                assert_eq!(&state.vector[BANK_RESOURCE_SLICE], initial_bank);
+            }
+        }
     }
 }
