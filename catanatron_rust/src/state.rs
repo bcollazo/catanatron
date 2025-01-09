@@ -75,7 +75,7 @@ impl State {
     pub fn new_base() -> Self {
         let global_state = GlobalState::new();
         let config = GameConfiguration {
-            dicard_limit: 7,
+            discard_limit: 7,
             vps_to_win: 10,
             map_type: MapType::Base,
             num_players: 4,
@@ -134,7 +134,7 @@ impl State {
     pub fn can_play_dev(&self, dev_card: u8) -> bool {
         let color = self.get_current_color();
         let dev_card_index = dev_card as usize;
-        let has_one = self.vector[player_devhand_slice(color)][dev_card_index] > 0;
+        let has_one = self.vector[player_devhand_slice(self.config.num_players, color)][dev_card_index] > 0;
         let has_played_in_turn = self.vector[HAS_PLAYED_DEV_CARD] == 1;
         has_one && !has_played_in_turn
     }
@@ -159,11 +159,19 @@ impl State {
 
     // TODO: Maybe move to mutations(?)
     pub fn get_mut_player_hand(&mut self, color: u8) -> &mut [u8] {
-        &mut self.vector[player_hand_slice(color)]
+        &mut self.vector[player_hand_slice(self.config.num_players, color)]
     }
 
     pub fn get_player_hand(&self, color: u8) -> &[u8] {
-        &self.vector[player_hand_slice(color)]
+        &self.vector[player_hand_slice(self.config.num_players, color)]
+    }
+
+    pub fn get_mut_player_devhand(&mut self, color: u8) -> &mut [u8] {
+        &mut self.vector[player_devhand_slice(self.config.num_players, color)]
+    }
+
+    pub fn get_player_devhand(&self, color: u8) -> &[u8] {
+        &self.vector[player_devhand_slice(self.config.num_players, color)]
     }
 
     pub fn winner(&self) -> Option<u8> {
@@ -226,6 +234,22 @@ impl State {
         buildable.into_iter().collect()
     }
 
+    pub fn buildable_node_ids(&self, color: u8,) -> Vec<u8> {
+        let road_subgraphs = match self.connected_components.get(&color) {
+            Some(components) => components,
+            None => &vec![],
+        };
+
+        let mut road_connected_nodes: HashSet<u8> = HashSet::new();
+        for component in road_subgraphs {
+            road_connected_nodes.extend(component);
+        }
+
+        road_connected_nodes.intersection(&self.board_buildable_ids)
+            .copied()
+            .collect()
+    }
+
     fn get_connected_component_index(&self, color: u8, a: u8) -> Option<usize> {
         let components = self.connected_components.get(&color).unwrap();
         for (i, component) in components.iter().enumerate() {
@@ -256,6 +280,66 @@ impl State {
         let (node1, node2) = edge;
         node1 == a || node2 == a
     }
+
+    fn dfs_longest_path(
+        &self,
+        node: NodeId,
+        parent: Option<NodeId>,
+        connected_set: &HashSet<NodeId>,
+        color: u8,
+        current_path: &mut Vec<EdgeId>,
+        best_path: &mut Vec<EdgeId>,
+    ) {
+        // If current_path is longer than what we have, store it
+        if current_path.len() > best_path.len() {
+            *best_path = current_path.clone();
+        }
+
+        for &neighbor in &self.map_instance.get_neighbor_nodes(node) {
+            // Must be in the connected component
+            if !connected_set.contains(&neighbor) {
+                continue;
+            }
+            let edge = (node.min(neighbor), node.max(neighbor));
+
+            // Avoid going back to parent
+            if parent == Some(neighbor) {
+                continue;
+            }
+            // Skip roads not owned by us
+            if self.roads.get(&edge) != Some(&color) {
+                continue;
+            }
+            // Acyclic check
+            if current_path.contains(&edge) {
+                continue;
+            }
+
+            // Move forward
+            current_path.push(edge);
+            self.dfs_longest_path(neighbor, Some(node), connected_set, color, current_path, best_path);
+            current_path.pop();
+        }
+    }
+
+    pub fn longest_acyclic_path(&self, connected_node_set: &HashSet<NodeId>, color: u8) -> Vec<EdgeId> {
+        if connected_node_set.is_empty() {
+            return vec![];
+        }
+
+        let mut overall_best_path = Vec::new();
+
+        for &start_node in connected_node_set {
+            let mut current_path = Vec::new();
+            let mut best_path = Vec::new();
+
+            self.dfs_longest_path(start_node, None, connected_node_set, color, &mut current_path, &mut best_path);
+            if best_path.len() > overall_best_path.len() {
+                overall_best_path = best_path;
+            }
+        }
+        overall_best_path
+    }
 }
 
 #[cfg(test)]
@@ -276,5 +360,27 @@ mod tests {
         assert!(state.is_initial_build_phase());
         assert!(!state.is_moving_robber());
         assert!(!state.is_discarding());
+    }
+    
+    #[test]
+    fn test_longest_acyclic_path() {
+        let mut state = State::new_base();
+        let color = 0;
+
+        state.roads.insert((0, 1), color);
+        state.roads.insert((1, 2), color);
+        state.roads.insert((2, 3), color);
+        state.roads.insert((3, 4), color);
+        state.roads.insert((4, 5), color);
+        state.roads.insert((0, 5), color);
+        state.roads.insert((0, 20), color);
+        state.roads.insert((20, 19), color);
+        state.roads.insert((20, 22), color);
+        state.roads.insert((22, 23), color);
+        state.roads.insert((6, 23), color);
+
+        let all_nodes = HashSet::from([0, 1, 2, 3, 4, 5, 19, 20, 22, 23, 6]);
+        let path = state.longest_acyclic_path(&all_nodes, color);
+        assert_eq!(path.len(), 10);
     }
 }

@@ -93,13 +93,24 @@ pub const IS_BUILDING_ROAD_INDEX: usize = 38;
 pub const FREE_ROADS_AVAILABLE_INDEX: usize = 39;
 
 pub const ROBBER_TILE_INDEX: usize = 42;
-pub fn player_hand_slice(color: u8) -> std::ops::Range<usize> {
-    let start = PLAYER_STATE_START_INDEX + 1 + (color as usize * 15);
+pub fn player_hand_slice(num_players: u8, color: u8) -> std::ops::Range<usize> {
+    let start = PLAYER_STATE_START_INDEX + num_players as usize + 1 + (color as usize * 15);
     start..start + 5
 }
-pub fn player_devhand_slice(color: u8) -> std::ops::Range<usize> {
-    let start = PLAYER_STATE_START_INDEX + 6 + (color as usize * 15);
+pub fn player_devhand_slice(num_players: u8, color: u8) -> std::ops::Range<usize> {
+    let start = PLAYER_STATE_START_INDEX + num_players as usize + 6 + (color as usize * 15);
     start..start + 5
+}
+
+// TODO: I'm not sure if it makes more sense to have this in state.rs?
+pub fn take_next_dev_card(vector: &mut StateVector) -> Option<u8> {
+    let ptr = vector[DEV_BANK_PTR_INDEX] as usize;
+    if ptr >= 25 {
+        return None;
+    }
+    let card = vector[5 + ptr];
+    vector[DEV_BANK_PTR_INDEX] += 1;
+    Some(card)
 }
 
 /// This is a compact representation of the omnipotent state of the game.

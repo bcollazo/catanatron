@@ -79,13 +79,13 @@ fn get_unit_vector(direction: Direction) -> (i8, i8, i8) {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hexagon {
-    // TODO: id?
     pub(crate) nodes: HashMap<NodeRef, NodeId>,
     pub(crate) edges: HashMap<EdgeRef, EdgeId>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LandTile {
+    pub(crate) id: u8,
     pub(crate) hexagon: Hexagon,
     pub(crate) resource: Option<Resource>,
     pub(crate) number: Option<u8>,
@@ -93,6 +93,7 @@ pub struct LandTile {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PortTile {
+    pub(crate) id: u8,
     pub(crate) hexagon: Hexagon,
     pub(crate) resource: Option<Resource>,
     pub(crate) direction: Direction,
@@ -162,6 +163,10 @@ impl MapInstance {
     pub fn get_neighbor_edges(&self, node_id: NodeId) -> Vec<EdgeId> {
         self.edge_neighbors.get(&node_id).unwrap().clone()
     }
+
+    pub fn get_adjacent_tiles(&self, node_id: NodeId) -> Option<&Vec<LandTile>> {
+        self.adjacent_land_tiles.get(&node_id)
+    }
 }
 
 impl MapInstance {
@@ -185,6 +190,9 @@ impl MapInstance {
         let mut hexagons: HashMap<Coordinate, Hexagon> = HashMap::new();
         let mut tiles: HashMap<Coordinate, Tile> = HashMap::new();
         let mut autoinc = 0;
+        let mut tile_autoinc = 0;
+        let mut port_autoinc = 0;
+    
         for (&coordinate, &tile_slot) in map_template.topology.iter() {
             let (nodes, edges, new_autoinc) = get_nodes_edges(&hexagons, coordinate, autoinc);
             autoinc = new_autoinc;
@@ -194,6 +202,7 @@ impl MapInstance {
                 let resource = shuffled_tiles.pop().unwrap();
                 if resource.is_none() {
                     let land_tile = LandTile {
+                        id: tile_autoinc,
                         hexagon: hexagon.clone(),
                         resource,
                         number: None,
@@ -202,12 +211,14 @@ impl MapInstance {
                 } else {
                     let number = shuffled_numbers.pop().unwrap();
                     let land_tile = LandTile {
+                        id: tile_autoinc,
                         hexagon: hexagon.clone(),
                         resource,
                         number: Some(number),
                     };
                     tiles.insert(coordinate, Tile::Land(land_tile));
                 }
+                tile_autoinc += 1;
             } else if tile_slot == TileSlot::Water {
                 let water_tile = WaterTile {
                     hexagon: hexagon.clone(),
@@ -225,11 +236,13 @@ impl MapInstance {
                 };
                 let resource = shuffled_ports.pop().unwrap();
                 let port_tile = PortTile {
+                    id: port_autoinc,
                     hexagon: hexagon.clone(),
                     resource,
                     direction,
                 };
                 tiles.insert(coordinate, Tile::Port(port_tile));
+                port_autoinc += 1;
             }
 
             hexagons.insert(coordinate, hexagon);
@@ -275,8 +288,18 @@ impl MapInstance {
                     land_edges.insert(edge_id);
                     node_neighbors.entry(edge_id.0).or_default().push(edge_id.1);
                     node_neighbors.entry(edge_id.1).or_default().push(edge_id.0);
-                    edge_neighbors.entry(edge_id.0).or_default().push(edge_id);
-                    edge_neighbors.entry(edge_id.1).or_default().push(edge_id);
+
+                    // Only insert edge into edge_neighbors if not already present
+                    {
+                        let edges_for_node_0 = edge_neighbors.entry(edge_id.0).or_default();
+                        if !edges_for_node_0.contains(&edge_id) {
+                            edges_for_node_0.push(edge_id);
+                        }
+                        let edges_for_node_1 = edge_neighbors.entry(edge_id.1).or_default();
+                        if !edges_for_node_1.contains(&edge_id) {
+                            edges_for_node_1.push(edge_id);
+                        }
+                    }
                 });
             } else if let Tile::Port(port_tile) = tile {
                 let (a_noderef, b_noderef) = get_noderefs_from_port_direction(port_tile.direction);
@@ -588,6 +611,7 @@ mod tests {
         assert_eq!(
             map_instance.tiles.get(&(0, 0, 0)),
             Some(&Tile::Land(LandTile {
+                id: 0,
                 hexagon: Hexagon {
                     nodes: HashMap::from([
                         (NodeRef::North, 0),
@@ -613,6 +637,7 @@ mod tests {
         assert_eq!(
             map_instance.land_tiles.get(&(1, -1, 0)),
             Some(&LandTile {
+                id: 1,
                 hexagon: Hexagon {
                     nodes: HashMap::from([
                         (NodeRef::North, 6),

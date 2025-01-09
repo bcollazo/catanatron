@@ -74,7 +74,7 @@ fn main() {
     println!("Colors {:?}", COLORS);
 
     let config = GameConfiguration {
-        dicard_limit: 7,
+        discard_limit: 7,
         vps_to_win: 10,
         map_type: MapType::Base,
         num_players: 2,
