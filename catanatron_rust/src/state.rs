@@ -134,7 +134,8 @@ impl State {
     pub fn can_play_dev(&self, dev_card: u8) -> bool {
         let color = self.get_current_color();
         let dev_card_index = dev_card as usize;
-        let has_one = self.vector[player_devhand_slice(self.config.num_players, color)][dev_card_index] > 0;
+        let has_one =
+            self.vector[player_devhand_slice(self.config.num_players, color)][dev_card_index] > 0;
         let has_played_in_turn = self.vector[HAS_PLAYED_DEV_CARD] == 1;
         has_one && !has_played_in_turn
     }
@@ -234,7 +235,7 @@ impl State {
         buildable.into_iter().collect()
     }
 
-    pub fn buildable_node_ids(&self, color: u8,) -> Vec<u8> {
+    pub fn buildable_node_ids(&self, color: u8) -> Vec<u8> {
         let road_subgraphs = match self.connected_components.get(&color) {
             Some(components) => components,
             None => &vec![],
@@ -245,7 +246,8 @@ impl State {
             road_connected_nodes.extend(component);
         }
 
-        road_connected_nodes.intersection(&self.board_buildable_ids)
+        road_connected_nodes
+            .intersection(&self.board_buildable_ids)
             .copied()
             .collect()
     }
@@ -317,12 +319,23 @@ impl State {
 
             // Move forward
             current_path.push(edge);
-            self.dfs_longest_path(neighbor, Some(node), connected_set, color, current_path, best_path);
+            self.dfs_longest_path(
+                neighbor,
+                Some(node),
+                connected_set,
+                color,
+                current_path,
+                best_path,
+            );
             current_path.pop();
         }
     }
 
-    pub fn longest_acyclic_path(&self, connected_node_set: &HashSet<NodeId>, color: u8) -> Vec<EdgeId> {
+    pub fn longest_acyclic_path(
+        &self,
+        connected_node_set: &HashSet<NodeId>,
+        color: u8,
+    ) -> Vec<EdgeId> {
         if connected_node_set.is_empty() {
             return vec![];
         }
@@ -333,7 +346,14 @@ impl State {
             let mut current_path = Vec::new();
             let mut best_path = Vec::new();
 
-            self.dfs_longest_path(start_node, None, connected_node_set, color, &mut current_path, &mut best_path);
+            self.dfs_longest_path(
+                start_node,
+                None,
+                connected_node_set,
+                color,
+                &mut current_path,
+                &mut best_path,
+            );
             if best_path.len() > overall_best_path.len() {
                 overall_best_path = best_path;
             }
@@ -361,7 +381,7 @@ mod tests {
         assert!(!state.is_moving_robber());
         assert!(!state.is_discarding());
     }
-    
+
     #[test]
     fn test_longest_acyclic_path() {
         let mut state = State::new_base();

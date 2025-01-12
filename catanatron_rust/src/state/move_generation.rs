@@ -246,7 +246,10 @@ mod tests {
         let mut state = State::new_base();
 
         assert!(state.is_initial_build_phase());
-        assert!(matches!(state.get_action_prompt(), ActionPrompt::BuildInitialSettlement));
+        assert!(matches!(
+            state.get_action_prompt(),
+            ActionPrompt::BuildInitialSettlement
+        ));
 
         let actions = state.generate_playable_actions();
         match &actions[0] {
@@ -254,7 +257,10 @@ mod tests {
             _ => panic!("Expected BuildSettlement action to be first action"),
         }
         state.apply_action(actions[0]);
-        
-        assert!(matches!(state.get_action_prompt(), ActionPrompt::BuildInitialRoad));
+
+        assert!(matches!(
+            state.get_action_prompt(),
+            ActionPrompt::BuildInitialRoad
+        ));
     }
 }

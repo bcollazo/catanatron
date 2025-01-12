@@ -75,7 +75,7 @@ pub enum Action {
     // The first value in all these is the color of the player.
     Roll(u8, Option<(u8, u8)>), // None. Log instead sets it to (int, int) rolled.
     MoveRobber(u8, Coordinate, Option<u8>), //  Log has extra element of card stolen.
-    Discard(u8), // value is None|Resource[].
+    Discard(u8),                // value is None|Resource[].
     BuildRoad(u8, EdgeId),
     BuildSettlement(u8, NodeId),
     BuildCity(u8, NodeId),

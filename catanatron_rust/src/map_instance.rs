@@ -192,7 +192,7 @@ impl MapInstance {
         let mut autoinc = 0;
         let mut tile_autoinc = 0;
         let mut port_autoinc = 0;
-    
+
         for (&coordinate, &tile_slot) in map_template.topology.iter() {
             let (nodes, edges, new_autoinc) = get_nodes_edges(&hexagons, coordinate, autoinc);
             autoinc = new_autoinc;

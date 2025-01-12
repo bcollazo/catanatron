@@ -16,16 +16,14 @@ impl State {
     pub fn apply_action(&mut self, action: Action) {
         match action {
             Action::BuildSettlement(color, node_id) => {
-                let (new_owner, new_length) = 
-                    self.build_settlement(color, node_id);
+                let (new_owner, new_length) = self.build_settlement(color, node_id);
                 self.maintain_longest_road(new_owner, new_length);
             }
             Action::BuildRoad(color, edge_id) => {
-                let (new_owner, new_length) = 
-                    self.build_road(color, edge_id);
+                let (new_owner, new_length) = self.build_road(color, edge_id);
                 self.maintain_longest_road(new_owner, new_length);
             }
-            Action::BuildCity(color, node_id) =>{
+            Action::BuildCity(color, node_id) => {
                 self.build_city(color, node_id);
             }
             Action::BuyDevelopmentCard(color) => {
@@ -124,17 +122,23 @@ impl State {
             let mut plowed_edges_by_color: HashMap<u8, Vec<EdgeId>> = HashMap::new();
             for edge in self.map_instance.get_neighbor_edges(node_id) {
                 if let Some(&road_color) = self.roads.get(&edge) {
-                    plowed_edges_by_color.entry(road_color).or_default().push(edge);
+                    plowed_edges_by_color
+                        .entry(road_color)
+                        .or_default()
+                        .push(edge);
                 }
             }
 
             for (plowed_color, plowed_edges) in plowed_edges_by_color {
-                if plowed_edges.len() != 2  || plowed_color == placing_color {
+                if plowed_edges.len() != 2 || plowed_color == placing_color {
                     continue; // Skip if no bisection/plow
                 }
 
-                if let Some(plowed_component_idx) = self.get_connected_component_index(plowed_color, node_id) {
-                    let outer_nodes: Vec<NodeId> = plowed_edges.iter()
+                if let Some(plowed_component_idx) =
+                    self.get_connected_component_index(plowed_color, node_id)
+                {
+                    let outer_nodes: Vec<NodeId> = plowed_edges
+                        .iter()
                         .map(|&edge| if edge.0 == node_id { edge.1 } else { edge.0 })
                         .collect();
 
@@ -156,7 +160,8 @@ impl State {
 
                 // Insert the longest road length for all colors if a road was plowed
                 for (&color, components) in &self.connected_components {
-                    let max_length = components.iter()
+                    let max_length = components
+                        .iter()
                         .map(|component| self.longest_acyclic_path(component, color).len())
                         .max()
                         .unwrap_or(0);
@@ -175,13 +180,14 @@ impl State {
             // If no road lengths affected, just return the previous longest road
             (self.longest_road_color, self.longest_road_length)
         } else {
-            let max_entry = road_lengths.iter()
-            .filter(|(_, &len)| len >= 5)
-            .max_by_key(|(_, &len)| len);
+            let max_entry = road_lengths
+                .iter()
+                .filter(|(_, &len)| len >= 5)
+                .max_by_key(|(_, &len)| len);
 
             match max_entry {
                 Some((&color, &length)) => (Some(color), length),
-                None => (None, 0) // No player has >= 5 roads
+                None => (None, 0), // No player has >= 5 roads
             }
         };
         (new_road_color, new_road_length)
@@ -192,7 +198,7 @@ impl State {
         self.roads.insert(edge_id, placing_color);
         self.roads.insert(inverted_edge, placing_color);
         self.roads_by_color[placing_color as usize] += 1;
-    
+
         let is_initial_build_phase = self.is_initial_build_phase();
         let is_free = is_initial_build_phase || self.is_road_building();
         if !is_free {
@@ -226,41 +232,62 @@ impl State {
 
         let affected_component = if a_index.is_none() && !self.is_enemy_node(placing_color, a) {
             // There has to be a component from b (since roads can only be built in a connected fashion)
-            let component = self.connected_components.get_mut(&placing_color).unwrap()
-                .get_mut(b_index.unwrap()).unwrap();
+            let component = self
+                .connected_components
+                .get_mut(&placing_color)
+                .unwrap()
+                .get_mut(b_index.unwrap())
+                .unwrap();
             component.insert(a); // extend said component by 1 more node
             component.clone()
         } else if b_index.is_none() && !self.is_enemy_node(placing_color, b) {
             // There has to be a component from a (since roads can only be built in a connected fashion)
-            let component = self.connected_components.get_mut(&placing_color).unwrap()
-                .get_mut(a_index.unwrap()).unwrap();
+            let component = self
+                .connected_components
+                .get_mut(&placing_color)
+                .unwrap()
+                .get_mut(a_index.unwrap())
+                .unwrap();
             component.insert(b);
             component.clone()
         } else if a_index.is_some() && b_index.is_some() && a_index != b_index {
             // Merge components into one and delete the other
             let smaller_idx = a_index.unwrap().min(b_index.unwrap());
             let larger_idx = a_index.unwrap().max(b_index.unwrap());
-            let removed_component = self.connected_components.get_mut(&placing_color).unwrap()
+            let removed_component = self
+                .connected_components
+                .get_mut(&placing_color)
+                .unwrap()
                 .remove(larger_idx);
-            let kept_component = self.connected_components.get_mut(&placing_color).unwrap()
-                .get_mut(smaller_idx).unwrap();
+            let kept_component = self
+                .connected_components
+                .get_mut(&placing_color)
+                .unwrap()
+                .get_mut(smaller_idx)
+                .unwrap();
             kept_component.extend(&removed_component);
             kept_component.clone()
         } else {
             // Edge is within same component, just get that component
             // In this case, a_index == b_index, which means that the edge
             // is already part of one component. No actions needed.
-            self.connected_components.get(&placing_color).unwrap()
-                .get(a_index.unwrap()).unwrap().clone()
+            self.connected_components
+                .get(&placing_color)
+                .unwrap()
+                .get(a_index.unwrap())
+                .unwrap()
+                .clone()
         };
-    
+
         let prev_road_color = self.longest_road_color;
-    
+
         // Calculate length for affected component
-        let path_length = self.longest_acyclic_path(&affected_component, placing_color).len() as u8;
-        
-        let (new_road_color, new_road_length) = 
-            if path_length >= 5 && path_length > self.longest_road_length{
+        let path_length = self
+            .longest_acyclic_path(&affected_component, placing_color)
+            .len() as u8;
+
+        let (new_road_color, new_road_length) =
+            if path_length >= 5 && path_length > self.longest_road_length {
                 (Some(placing_color), path_length)
             } else {
                 (prev_road_color, self.longest_road_length)
@@ -269,9 +296,10 @@ impl State {
     }
 
     fn build_city(&mut self, color: u8, node_id: u8) {
-        self.buildings.insert(node_id, Building::City(color, node_id));
+        self.buildings
+            .insert(node_id, Building::City(color, node_id));
         let buildings = self.buildings_by_color.entry(color).or_default();
-        if let Some (pos) = buildings.iter().position(|b| {
+        if let Some(pos) = buildings.iter().position(|b| {
             if let Building::Settlement(_, n) = b {
                 *n == node_id
             } else {
@@ -306,7 +334,8 @@ impl State {
                     self.add_victory_points(color, 1);
                 }
                 _ => {
-                    let dev_hand = &mut self.vector[player_devhand_slice(self.config.num_players, color)];
+                    let dev_hand =
+                        &mut self.vector[player_devhand_slice(self.config.num_players, color)];
                     dev_hand[card as usize] += 1;
                 }
             }
@@ -331,9 +360,9 @@ impl State {
                     let player_hand = self.get_player_hand(c);
                     let total_cards: u8 = player_hand.iter().sum();
                     total_cards > self.config.discard_limit
-            })
-            .collect();
-            
+                })
+                .collect();
+
             let should_enter_discard_phase = discarders.iter().any(|&x| x);
             if should_enter_discard_phase {
                 if let Some(first_discarder) = discarders.iter().position(|&x| x) {
@@ -356,10 +385,7 @@ impl State {
     }
 
     fn move_robber(&mut self, color: u8, coordinate: (i8, i8, i8), victim_opt: Option<u8>) {
-        self.vector[ROBBER_TILE_INDEX] = self.map_instance
-            .get_land_tile(coordinate)
-            .unwrap()
-            .id;
+        self.vector[ROBBER_TILE_INDEX] = self.map_instance.get_land_tile(coordinate).unwrap().id;
 
         if let Some(victim) = victim_opt {
             let total_cards: u8 = self.get_player_hand(victim).iter().sum();
@@ -477,7 +503,7 @@ mod tests {
         );
         assert_eq!(state.board_buildable_ids.len(), 50);
         assert_eq!(state.get_actual_victory_points(color), 1);
-        
+
         let hand_after = state.get_player_hand(color);
         for i in 0..5 {
             assert_eq!(hand_after[i], hand_before[i] - SETTLEMENT_COST[i]);
@@ -562,7 +588,7 @@ mod tests {
 
         // give color1 6 consecutive roads
         state.apply_action(Action::BuildSettlement(color1, 0));
-        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5), (5,16)] {
+        for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 16)] {
             state.apply_action(Action::BuildRoad(color1, edge));
         }
 
@@ -621,12 +647,12 @@ mod tests {
 
         // give color1 6 consecutive roads
         state.apply_action(Action::BuildSettlement(color1, 0));
-        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5), (5,16)] {
+        for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 16)] {
             state.apply_action(Action::BuildRoad(color1, edge));
         }
         // Give color2 5 consecutive roads with potential to bisect/plow color1's road
         state.apply_action(Action::BuildSettlement(color2, 11));
-        for edge in [(11,12),(12,13),(13,14),(14,15),(4,15)] {
+        for edge in [(11, 12), (12, 13), (13, 14), (14, 15), (4, 15)] {
             state.apply_action(Action::BuildRoad(color2, edge));
         }
 
@@ -648,9 +674,9 @@ mod tests {
     fn test_extend_own_longest_road() {
         let mut state = State::new_base();
         let color1 = 1;
-        
+
         state.apply_action(Action::BuildSettlement(color1, 0));
-        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5)] {
+        for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)] {
             state.apply_action(Action::BuildRoad(color1, edge));
         }
 
@@ -672,7 +698,7 @@ mod tests {
         let color2 = 2;
 
         state.apply_action(Action::BuildSettlement(color1, 0));
-        for edge in [(0,1), (1,2), (2,3), (3,4), (4,5), (5,16)] {
+        for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 16)] {
             state.apply_action(Action::BuildRoad(color1, edge));
         }
 
@@ -721,11 +747,17 @@ mod tests {
                 if drawn_card == Some(DevCard::VictoryPoint) {
                     // VP added, devhand not incremented
                     assert_eq!(state.get_actual_victory_points(color), initial_vps + 1);
-                    assert_eq!(devhand_after[drawn_card.unwrap() as usize], initial_devhand[drawn_card.unwrap() as usize]);
+                    assert_eq!(
+                        devhand_after[drawn_card.unwrap() as usize],
+                        initial_devhand[drawn_card.unwrap() as usize]
+                    );
                 } else {
                     // VP not added, devhand incremented
                     assert_eq!(state.get_actual_victory_points(color), initial_vps);
-                    assert_eq!(devhand_after[drawn_card.unwrap() as usize], initial_devhand[drawn_card.unwrap() as usize] + 1);
+                    assert_eq!(
+                        devhand_after[drawn_card.unwrap() as usize],
+                        initial_devhand[drawn_card.unwrap() as usize] + 1
+                    );
                 }
             } else {
                 // 26th card should not be drawn
