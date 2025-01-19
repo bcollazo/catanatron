@@ -355,6 +355,7 @@ impl State {
         let total = die1 + die2;
 
         if total == 7 {
+            // Discard phase
             let discarders: Vec<bool> = (0..self.get_num_players())
                 .map(|c| {
                     let player_hand = self.get_player_hand(c);
@@ -374,10 +375,42 @@ impl State {
                 self.vector[CURRENT_TICK_SEAT_INDEX] = color;
             }
         } else {
-            // TODO: Yield resources
+            // First collect all yields we need to do
+            let mut all_yields = Vec::new();
+
+            {
+                let matching_tiles = self.map_instance.get_tiles_by_number(total);
+                for tile in matching_tiles {
+                    // Skip robber tile
+                    if self.vector[ROBBER_TILE_INDEX] == tile.id {
+                        continue;
+                    }
+
+                    if let Some(resource) = tile.resource {
+                        let resource_idx = resource as usize;
+                        // Collect all yields for this tile
+                        for &node_id in tile.hexagon.nodes.values() {
+                            if let Some(building) = self.buildings.get(&node_id) {
+                                match building {
+                                    Building::Settlement(owner_color, _) => {
+                                        all_yields.push((*owner_color, resource_idx, 1));
+                                    }
+                                    Building::City(owner_color, _) => {
+                                        all_yields.push((*owner_color, resource_idx, 2));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // TODO: Handle if bank is empty
+            for (owner_color, resource_idx, amount) in all_yields {
+                self.vector[BANK_RESOURCE_SLICE][resource_idx] -= amount;
+                self.get_mut_player_hand(owner_color)[resource_idx] += amount;
+            }
             self.vector[CURRENT_TICK_SEAT_INDEX] = color;
         }
-        // TODO: Set playable_actions???
     }
 
     fn discard(&mut self, color: u8) {
@@ -765,6 +798,113 @@ mod tests {
                 assert_eq!(state.get_player_hand(color), initial_hand);
                 assert_eq!(&state.vector[BANK_RESOURCE_SLICE], initial_bank);
             }
+        }
+    }
+
+    #[test]
+    fn test_roll_yields_resources() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        state.build_settlement(color, 0);
+
+        let adjacent_tiles = state.map_instance.get_adjacent_tiles(0).unwrap();
+
+        let mut chosen_roll = None;
+        let mut expected_resource_yields = [0; 5];
+
+        for tile in adjacent_tiles.iter() {
+            if let (Some(number), Some(resource)) = (tile.number, tile.resource) {
+                // First valid number we find will be our roll
+                // Don't pick robber tile
+                if tile.id != state.vector[ROBBER_TILE_INDEX] {
+                    if chosen_roll.is_none() {
+                        chosen_roll = Some(number);
+                    }
+
+                    if Some(number) == chosen_roll {
+                        expected_resource_yields[resource as usize] += 1;
+                    }
+                }
+            }
+        }
+
+        let initial_bank = state.vector[BANK_RESOURCE_SLICE].to_vec();
+        let initial_hand = state.get_player_hand(color).to_vec();
+        // Roll numbers should sum to chosen_roll
+        let roll_numbers = (chosen_roll.unwrap() / 2, (chosen_roll.unwrap() + 1) / 2);
+
+        state.apply_action(Action::Roll(color, Some(roll_numbers)));
+
+        for resource_idx in 0..5 {
+            assert_eq!(
+                state.vector[BANK_RESOURCE_SLICE][resource_idx],
+                initial_bank[resource_idx] - expected_resource_yields[resource_idx],
+                "Bank should have {} fewer resource of {:?}",
+                expected_resource_yields[resource_idx],
+                resource_idx
+            );
+            assert_eq!(
+                state.get_player_hand(color)[resource_idx],
+                initial_hand[resource_idx] + expected_resource_yields[resource_idx],
+                "Player should have {} more resource of {:?}",
+                expected_resource_yields[resource_idx],
+                resource_idx
+            )
+        }
+    }
+
+    #[test]
+    fn test_roll_city_yields_double() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        freqdeck_add(state.get_mut_player_hand(color), CITY_COST);
+        state.build_settlement(color, 0);
+        state.build_city(color, 0);
+
+        let adjacent_tiles = state.map_instance.get_adjacent_tiles(0).unwrap();
+
+        let mut chosen_roll = None;
+        let mut expected_resource_yields = [0; 5];
+
+        for tile in adjacent_tiles.iter() {
+            if let (Some(number), Some(resource)) = (tile.number, tile.resource) {
+                // Don't pick robber tile
+                if tile.id != state.vector[ROBBER_TILE_INDEX] {
+                    if chosen_roll.is_none() {
+                        chosen_roll = Some(number);
+                    }
+
+                    if Some(number) == chosen_roll {
+                        expected_resource_yields[resource as usize] += 2;
+                    }
+                }
+            }
+        }
+
+        let initial_bank = state.vector[BANK_RESOURCE_SLICE].to_vec();
+        let initial_hand = state.get_player_hand(color).to_vec();
+        // Roll numbers should sum to chosen_roll
+        let roll_numbers = (chosen_roll.unwrap() / 2, (chosen_roll.unwrap() + 1) / 2);
+
+        state.apply_action(Action::Roll(color, Some(roll_numbers)));
+
+        for resource_idx in 0..5 {
+            assert_eq!(
+                state.vector[BANK_RESOURCE_SLICE][resource_idx],
+                initial_bank[resource_idx] - expected_resource_yields[resource_idx],
+                "Bank should have {} fewer resource of {:?}",
+                expected_resource_yields[resource_idx],
+                resource_idx
+            );
+            assert_eq!(
+                state.get_player_hand(color)[resource_idx],
+                initial_hand[resource_idx] + expected_resource_yields[resource_idx],
+                "Player should have {} more resource of {:?}",
+                expected_resource_yields[resource_idx],
+                resource_idx
+            );
         }
     }
 }

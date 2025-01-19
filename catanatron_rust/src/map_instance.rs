@@ -167,6 +167,13 @@ impl MapInstance {
     pub fn get_adjacent_tiles(&self, node_id: NodeId) -> Option<&Vec<LandTile>> {
         self.adjacent_land_tiles.get(&node_id)
     }
+
+    pub fn get_tiles_by_number(&self, number: u8) -> Vec<&LandTile> {
+        self.land_tiles
+            .values()
+            .filter(|&tile| tile.number == Some(number))
+            .collect()
+    }
 }
 
 impl MapInstance {
