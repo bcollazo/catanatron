@@ -1005,14 +1005,12 @@ mod tests {
 
         let mut chosen_roll = None;
         let mut chosen_resource = None;
-        let mut chosen_tile_id = None;
 
         for tile in adjacent_tiles.iter() {
             if let (Some(number), Some(resource)) = (tile.number, tile.resource) {
                 if tile.id != state.vector[ROBBER_TILE_INDEX] && chosen_roll.is_none() {
                     chosen_roll = Some(number);
                     chosen_resource = Some(resource);
-                    chosen_tile_id = Some(tile.id);
                 }
             }
         }
