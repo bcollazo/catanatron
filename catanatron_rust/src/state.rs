@@ -409,6 +409,12 @@ impl State {
         self.get_mut_player_hand(color)[resource_idx] += 1;
     }
 
+    pub fn take_from_player_give_to_bank(&mut self, color: u8, resource: u8, amount: u8) {
+        let resource_idx = resource as usize;
+        self.get_mut_player_hand(color)[resource_idx] -= amount;
+        self.vector[BANK_RESOURCE_SLICE][resource_idx] += amount;
+    }
+
     pub fn get_player_resource_count(&self, color: u8, resource: u8) -> u8 {
         self.get_player_hand(color)[resource as usize]
     }

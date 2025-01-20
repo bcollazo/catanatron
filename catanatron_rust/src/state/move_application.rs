@@ -51,6 +51,9 @@ impl State {
             Action::PlayRoadBuilding(color) => {
                 self.play_road_building(color);
             }
+            Action::MaritimeTrade(color, (give, take, ratio)) => {
+                self.maritime_trade(color, give, take, ratio);
+            }
             _ => {
                 panic!("Action not implemented: {:?}", action);
             }
@@ -672,6 +675,13 @@ impl State {
         // Set state for free roads
         self.vector[IS_BUILDING_ROAD_INDEX] = 1;
         self.vector[FREE_ROADS_AVAILABLE_INDEX] = 2;
+    }
+
+    fn maritime_trade(&mut self, color: u8, give: u8, take: u8, ratio: u8) {
+        // Assume move_generation has already checked that player has enough resources
+        // to give and that bank has enough resources to take
+        self.take_from_player_give_to_bank(color, give, ratio);
+        self.take_from_bank_give_to_player(color, take);
     }
 }
 
@@ -1460,5 +1470,22 @@ mod tests {
         // Verify state was set for free roads
         assert_eq!(state.vector[IS_BUILDING_ROAD_INDEX], 1);
         assert_eq!(state.vector[FREE_ROADS_AVAILABLE_INDEX], 2);
+    }
+
+    #[test]
+    fn test_maritime_trade_basic_rate() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        state.get_mut_player_hand(color)[0] = 4; // 4 wood
+
+        let initial_bank_brick = state.vector[BANK_RESOURCE_SLICE][1];
+
+        state.apply_action(Action::MaritimeTrade(color, (0, 1, 4)));
+
+        assert_eq!(state.get_player_hand(color)[0], 0);
+        assert_eq!(state.get_player_hand(color)[1], 1);
+        assert_eq!(state.vector[BANK_RESOURCE_SLICE][0], 19 + 4);
+        assert_eq!(state.vector[BANK_RESOURCE_SLICE][1], initial_bank_brick - 1);
     }
 }

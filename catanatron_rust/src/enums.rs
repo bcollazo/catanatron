@@ -86,7 +86,7 @@ pub enum Action {
     PlayRoadBuilding(u8),
 
     // First element of tuples is in, last is out.
-    MaritimeTrade(u8, (FreqDeck, u8)),
+    MaritimeTrade(u8, (u8, u8, u8)), // (Give Resource, Get Resource, Ratio)
     OfferTrade(u8, (FreqDeck, FreqDeck)),
     AcceptTrade(u8, (FreqDeck, FreqDeck)),
     RejectTrade(u8),
