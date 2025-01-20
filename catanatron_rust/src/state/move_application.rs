@@ -468,8 +468,36 @@ impl State {
         }
     }
 
+    /*
+     * TODO: For now, we're not letting players choose what to discard, to avoid
+     * the combinatorial explosion of possibilities. Instead, we'll just
+     * force discards in a way that maximizes resource diversity.
+     */
     fn discard(&mut self, color: u8) {
-        todo!();
+        let mut remaining_hand = self.get_player_hand(color).to_vec();
+        let total_cards: u8 = remaining_hand.iter().sum();
+        let mut to_discard = total_cards - (total_cards / 2);
+        let mut discarded = [0u8; 5];
+
+        while to_discard > 0 {
+            // Find highest frequency resources
+            let max_count = *remaining_hand.iter().max().unwrap();
+            let max_indices: Vec<_> = (0..5).filter(|&i| remaining_hand[i] == max_count).collect();
+
+            // Take one card from each highest frequency resource
+            for &i in &max_indices {
+                if to_discard > 0 {
+                    remaining_hand[i] -= 1;
+                    discarded[i] += 1;
+                    to_discard -= 1;
+                }
+            }
+        }
+
+        freqdeck_sub(self.get_mut_player_hand(color), discarded);
+        freqdeck_add(&mut self.vector[BANK_RESOURCE_SLICE], discarded);
+        self.vector[IS_DISCARDING_INDEX] = 0;
+        // TODO: Advance turn; handle discarders left and pass turn to original roller
     }
 
     fn move_robber(&mut self, color: u8, coordinate: (i8, i8, i8), victim_opt: Option<u8>) {
@@ -1070,6 +1098,48 @@ mod tests {
             state.get_player_hand(color2)[resource_idx],
             hand2_before,
             "Player 2 should not receive resources"
+        );
+    }
+
+    #[test]
+    fn test_discard() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Give the player a known distribution of 17 cards
+        freqdeck_add(state.get_mut_player_hand(color), [3, 9, 1, 3, 1]);
+
+        let bank_before = state.vector[BANK_RESOURCE_SLICE].to_vec();
+
+        state.discard(color);
+
+        // After discarding, the player should have half => 17 / 2 = 8.
+        let total_after: u8 = state.get_player_hand(color).iter().sum();
+        assert_eq!(total_after, 8, "Player should have exactly 8 cards left.");
+
+        // Verify discard phase ended
+        assert_eq!(
+            state.vector[IS_DISCARDING_INDEX], 0,
+            "Discard phase should end."
+        );
+
+        // The bank should have received exactly 6 more cards in total
+        let bank_after = &state.vector[BANK_RESOURCE_SLICE];
+        let mut total_discarded = 0;
+        for i in 0..5 {
+            total_discarded += bank_after[i] - bank_before[i];
+        }
+        assert_eq!(
+            total_discarded, 9,
+            "Exactly 9 cards should have been added to the bank."
+        );
+
+        // Check the specific distribution after discard
+        let final_player_hand = state.get_player_hand(color);
+        assert_eq!(
+            final_player_hand,
+            &[2, 2, 1, 2, 1],
+            "Discard logic should spread discards across highest-frequency resources first."
         );
     }
 }
