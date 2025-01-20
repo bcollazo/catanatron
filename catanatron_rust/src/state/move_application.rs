@@ -355,61 +355,116 @@ impl State {
         let total = die1 + die2;
 
         if total == 7 {
-            // Discard phase
-            let discarders: Vec<bool> = (0..self.get_num_players())
-                .map(|c| {
-                    let player_hand = self.get_player_hand(c);
-                    let total_cards: u8 = player_hand.iter().sum();
-                    total_cards > self.config.discard_limit
-                })
-                .collect();
+            self.handle_roll_seven(color);
+        } else {
+            self.distribute_roll_yields(total);
+            self.vector[CURRENT_TICK_SEAT_INDEX] = color;
+        }
+    }
 
-            let should_enter_discard_phase = discarders.iter().any(|&x| x);
-            if should_enter_discard_phase {
-                if let Some(first_discarder) = discarders.iter().position(|&x| x) {
-                    self.vector[CURRENT_TICK_SEAT_INDEX] = first_discarder as u8;
-                    self.vector[IS_DISCARDING_INDEX] = 1;
-                }
-            } else {
-                self.vector[IS_MOVING_ROBBER_INDEX] = 1;
-                self.vector[CURRENT_TICK_SEAT_INDEX] = color;
+    fn handle_roll_seven(&mut self, color: u8) {
+        // Check who needs to discard
+        let discarders: Vec<bool> = (0..self.get_num_players())
+            .map(|c| {
+                let player_hand = self.get_player_hand(c);
+                let total_cards: u8 = player_hand.iter().sum();
+                total_cards > self.config.discard_limit
+            })
+            .collect();
+
+        let should_enter_discard_phase = discarders.iter().any(|&x| x);
+        if should_enter_discard_phase {
+            if let Some(first_discarder) = discarders.iter().position(|&x| x) {
+                self.vector[CURRENT_TICK_SEAT_INDEX] = first_discarder as u8;
+                self.vector[IS_DISCARDING_INDEX] = 1;
             }
         } else {
-            // First collect all yields we need to do
-            let mut all_yields = Vec::new();
+            self.vector[IS_MOVING_ROBBER_INDEX] = 1;
+            self.vector[CURRENT_TICK_SEAT_INDEX] = color;
+        }
+    }
 
-            {
-                let matching_tiles = self.map_instance.get_tiles_by_number(total);
-                for tile in matching_tiles {
-                    // Skip robber tile
-                    if self.vector[ROBBER_TILE_INDEX] == tile.id {
-                        continue;
-                    }
+    // Returns Vec of (color, resource_index, amount) tuples for what each player should receive
+    fn collect_roll_yields(&self, roll: u8) -> Vec<(u8, usize, u8)> {
+        let mut all_yields = Vec::new();
+        let matching_tiles = self.map_instance.get_tiles_by_number(roll);
 
-                    if let Some(resource) = tile.resource {
-                        let resource_idx = resource as usize;
-                        // Collect all yields for this tile
-                        for &node_id in tile.hexagon.nodes.values() {
-                            if let Some(building) = self.buildings.get(&node_id) {
-                                match building {
-                                    Building::Settlement(owner_color, _) => {
-                                        all_yields.push((*owner_color, resource_idx, 1));
-                                    }
-                                    Building::City(owner_color, _) => {
-                                        all_yields.push((*owner_color, resource_idx, 2));
-                                    }
-                                }
+        for tile in matching_tiles {
+            // Skip robber tile
+            if self.vector[ROBBER_TILE_INDEX] == tile.id {
+                continue;
+            }
+
+            if let Some(resource) = tile.resource {
+                let resource_idx = resource as usize;
+                // Collect all yields for this tile
+                for &node_id in tile.hexagon.nodes.values() {
+                    if let Some(building) = self.buildings.get(&node_id) {
+                        match building {
+                            Building::Settlement(owner_color, _) => {
+                                all_yields.push((*owner_color, resource_idx, 1));
+                            }
+                            Building::City(owner_color, _) => {
+                                all_yields.push((*owner_color, resource_idx, 2));
                             }
                         }
                     }
                 }
             }
-            // TODO: Handle if bank is empty
-            for (owner_color, resource_idx, amount) in all_yields {
+        }
+        all_yields
+    }
+
+    fn distribute_roll_yields(&mut self, roll: u8) {
+        let yields = self.collect_roll_yields(roll);
+        if yields.is_empty() {
+            return;
+        }
+
+        // Calculate total needed by resource type
+        let mut resource_needs = [0u8; 5];
+        for (_, resource_idx, amount) in &yields {
+            resource_needs[*resource_idx] += amount;
+        }
+
+        // Check what can be allocated from bank
+        let bank = &self.vector[BANK_RESOURCE_SLICE];
+        let mut distributable = resource_needs;
+        let mut insufficient = false;
+        let multiple_recipients = yields
+            .iter()
+            .map(|(color, _, _)| color)
+            .collect::<HashSet<_>>()
+            .len()
+            > 1;
+
+        for i in 0..5 {
+            if bank[i] < resource_needs[i] {
+                if multiple_recipients {
+                    // If not enough for everyone, no one gets anything
+                    return;
+                }
+                distributable[i] = bank[i];
+                insufficient = true;
+            }
+        }
+
+        // If we got here, we can distribute something
+        if insufficient {
+            // Single player case - give what we can
+            for (owner_color, resource_idx, amount) in yields {
+                let available = distributable[resource_idx].min(amount);
+                if available > 0 {
+                    self.vector[BANK_RESOURCE_SLICE][resource_idx] -= available;
+                    self.get_mut_player_hand(owner_color)[resource_idx] += available;
+                }
+            }
+        } else {
+            // Full distribution case
+            for (owner_color, resource_idx, amount) in yields {
                 self.vector[BANK_RESOURCE_SLICE][resource_idx] -= amount;
                 self.get_mut_player_hand(owner_color)[resource_idx] += amount;
             }
-            self.vector[CURRENT_TICK_SEAT_INDEX] = color;
         }
     }
 
@@ -906,5 +961,115 @@ mod tests {
                 resource_idx
             );
         }
+    }
+
+    #[test]
+    fn test_roll_single_player_partial_payment_when_insufficient_bank() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        let node_id = 0;
+        state.build_settlement(color, node_id);
+        freqdeck_add(state.get_mut_player_hand(color), CITY_COST);
+        state.build_city(color, node_id);
+
+        let adjacent_tiles = state.map_instance.get_adjacent_tiles(node_id).unwrap();
+
+        let mut chosen_roll = None;
+        let mut chosen_resource = None;
+        let mut chosen_tile_id = None;
+
+        for tile in adjacent_tiles.iter() {
+            if let (Some(number), Some(resource)) = (tile.number, tile.resource) {
+                if tile.id != state.vector[ROBBER_TILE_INDEX] && chosen_roll.is_none() {
+                    chosen_roll = Some(number);
+                    chosen_resource = Some(resource);
+                    chosen_tile_id = Some(tile.id);
+                }
+            }
+        }
+        assert!(chosen_roll.is_some(), "Should find at least one valid tile");
+
+        for i in 0..5 {
+            state.vector[BANK_RESOURCE_SLICE][i] = 1;
+        }
+        let hand_before = state.get_player_hand(color).to_vec();
+
+        let roll = chosen_roll.unwrap();
+        let roll_numbers = (roll / 2, (roll + 1) / 2);
+        state.roll_dice(color, Some(roll_numbers));
+
+        let chosen_resource_idx = chosen_resource.unwrap() as usize;
+        assert_eq!(state.vector[BANK_RESOURCE_SLICE][chosen_resource_idx], 0);
+
+        assert_eq!(
+            state.get_player_hand(color)[chosen_resource_idx],
+            hand_before[chosen_resource_idx] + 1
+        );
+        assert_eq!(state.vector[BANK_RESOURCE_SLICE][chosen_resource_idx], 0)
+    }
+
+    #[test]
+    fn test_roll_multiple_player_no_payment_when_insufficient_bank() {
+        let mut state = State::new_base();
+        let color1 = 1;
+        let color2 = 2;
+
+        let (resource, number, node1, node2) = {
+            let tile = state
+                .map_instance
+                .get_land_tiles()
+                .values()
+                .find(|tile| {
+                    tile.resource.is_some() && // Not a desert
+                    tile.id != state.vector[ROBBER_TILE_INDEX] // Not under robber
+                })
+                .expect("Should be at least one valid tile");
+
+            let node_ids: Vec<_> = tile.hexagon.nodes.values().take(2).copied().collect();
+
+            (
+                tile.resource.unwrap(),
+                tile.number.unwrap(),
+                node_ids[0],
+                node_ids[1],
+            )
+        };
+
+        // Place two opposing cities on a shared tile with expected yields
+        state.build_settlement(color1, node1);
+        state.build_settlement(color2, node2);
+        freqdeck_add(state.get_mut_player_hand(color1), CITY_COST);
+        freqdeck_add(state.get_mut_player_hand(color2), CITY_COST);
+        state.build_city(color1, node1);
+        state.build_city(color2, node2);
+
+        // Set bank to have only 1 of the needed resource
+        let resource_idx = resource as usize;
+        state.vector[BANK_RESOURCE_SLICE][resource_idx] = 1;
+
+        let bank_before = state.vector[BANK_RESOURCE_SLICE][resource_idx];
+        let hand1_before = state.get_player_hand(color1)[resource_idx];
+        let hand2_before = state.get_player_hand(color2)[resource_idx];
+
+        // Roll the shared tile's number
+        let roll_numbers = (number / 2, (number + 1) / 2);
+        state.roll_dice(color1, Some(roll_numbers));
+
+        assert_eq!(
+            state.vector[BANK_RESOURCE_SLICE][resource_idx], bank_before,
+            "Bank should be unchanged"
+        );
+        // Neither player should get any resources
+        assert_eq!(
+            state.get_player_hand(color1)[resource_idx],
+            hand1_before,
+            "Player 1 should not receive resources"
+        );
+        assert_eq!(
+            state.get_player_hand(color2)[resource_idx],
+            hand2_before,
+            "Player 2 should not receive resources"
+        );
     }
 }
