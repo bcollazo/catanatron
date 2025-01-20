@@ -81,8 +81,8 @@ pub enum Action {
     BuildCity(u8, NodeId),
     BuyDevelopmentCard(u8), // value is None. Log value is card.
     PlayKnight(u8),
-    PlayYearOfPlenty(u8, (Option<u8>, Option<u8>)),
-    PlayMonopoly(u8, u8), // value is Resource
+    PlayYearOfPlenty(u8, [u8; 2]), // Two resources to take from bank
+    PlayMonopoly(u8, u8),          // value is Resource
     PlayRoadBuilding(u8),
 
     // First element of tuples is in, last is out.

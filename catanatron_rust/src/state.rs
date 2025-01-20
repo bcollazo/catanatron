@@ -9,9 +9,9 @@ use crate::{
     map_instance::{EdgeId, MapInstance, NodeId},
     state_vector::{
         actual_victory_points_index, initialize_state, player_devhand_slice, player_hand_slice,
-        seating_order_slice, StateVector, CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX,
-        HAS_PLAYED_DEV_CARD, HAS_ROLLED_INDEX, IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX,
-        IS_MOVING_ROBBER_INDEX,
+        player_played_devhand_slice, seating_order_slice, StateVector, BANK_RESOURCE_SLICE,
+        CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX, HAS_PLAYED_DEV_CARD, HAS_ROLLED_INDEX,
+        IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
     },
 };
 
@@ -39,6 +39,8 @@ pub struct State {
     connected_components: HashMap<u8, Vec<HashSet<NodeId>>>,
     longest_road_color: Option<u8>,
     longest_road_length: u8,
+    largest_army_color: Option<u8>,
+    largest_army_count: u8,
 }
 
 mod move_application;
@@ -56,6 +58,8 @@ impl State {
         let connected_components = HashMap::new();
         let longest_road_color = None;
         let longest_road_length = 0;
+        let largest_army_color = None;
+        let largest_army_count = 0;
 
         Self {
             config,
@@ -69,6 +73,8 @@ impl State {
             connected_components,
             longest_road_color,
             longest_road_length,
+            largest_army_color,
+            largest_army_count,
         }
     }
 
@@ -359,6 +365,64 @@ impl State {
             }
         }
         overall_best_path
+    }
+
+    pub fn add_dev_card(&mut self, color: u8, card_idx: usize) {
+        self.vector[player_devhand_slice(self.config.num_players, color)][card_idx] += 1;
+    }
+
+    pub fn get_dev_card_count(&self, color: u8, card_idx: usize) -> u8 {
+        self.vector[player_devhand_slice(self.config.num_players, color)][card_idx]
+    }
+
+    pub fn get_played_dev_card_count(&self, color: u8, card_idx: usize) -> u8 {
+        self.vector[player_played_devhand_slice(self.config.num_players, color)][card_idx]
+    }
+
+    pub fn add_played_dev_card(&mut self, color: u8, card_idx: usize) {
+        self.vector[player_played_devhand_slice(self.config.num_players, color)][card_idx] += 1;
+    }
+
+    pub fn remove_dev_card(&mut self, color: u8, card_idx: usize) {
+        self.vector[player_devhand_slice(self.config.num_players, color)][card_idx] -= 1;
+    }
+
+    pub fn set_has_played_dev_card(&mut self) {
+        self.vector[HAS_PLAYED_DEV_CARD] = 1;
+    }
+
+    pub fn set_is_moving_robber(&mut self) {
+        self.vector[IS_MOVING_ROBBER_INDEX] = 1;
+    }
+
+    pub fn clear_is_moving_robber(&mut self) {
+        self.vector[IS_MOVING_ROBBER_INDEX] = 0;
+    }
+
+    pub fn bank_has_resource(&self, resource: u8) -> bool {
+        self.vector[BANK_RESOURCE_SLICE][resource as usize] > 0
+    }
+
+    pub fn take_from_bank_give_to_player(&mut self, color: u8, resource: u8) {
+        let resource_idx = resource as usize;
+        self.vector[BANK_RESOURCE_SLICE][resource_idx] -= 1;
+        self.get_mut_player_hand(color)[resource_idx] += 1;
+    }
+
+    pub fn get_player_resource_count(&self, color: u8, resource: u8) -> u8 {
+        self.get_player_hand(color)[resource as usize]
+    }
+
+    pub fn take_from_player_give_to_player(
+        &mut self,
+        from_color: u8,
+        to_color: u8,
+        resource: u8,
+        amount: u8,
+    ) {
+        let resource_idx = resource as usize;
+        self.get_mut_player_hand(from_color)[resource_idx] -= amount;
+        self.get_mut_player_hand(to_color)[resource_idx] += amount;
     }
 }
 

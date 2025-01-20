@@ -38,6 +38,19 @@ impl State {
             Action::MoveRobber(color, coord, victim_opt) => {
                 self.move_robber(color, coord, victim_opt);
             }
+            Action::PlayKnight(color) => {
+                self.play_knight(color);
+                self.maintain_largest_army();
+            }
+            Action::PlayYearOfPlenty(color, resources) => {
+                self.play_year_of_plenty(color, resources);
+            }
+            Action::PlayMonopoly(color, resource) => {
+                self.play_monopoly(color, resource);
+            }
+            Action::PlayRoadBuilding(color) => {
+                self.play_road_building(color);
+            }
             _ => {
                 panic!("Action not implemented: {:?}", action);
             }
@@ -570,6 +583,95 @@ impl State {
             }
         }
         visited
+    }
+
+    fn play_knight(&mut self, color: u8) {
+        // Mark card as played
+        self.remove_dev_card(color, DevCard::Knight as usize);
+        self.add_played_dev_card(color, DevCard::Knight as usize);
+        self.set_has_played_dev_card();
+
+        // Set state to move robber
+        self.set_is_moving_robber();
+    }
+
+    fn maintain_largest_army(&mut self) {
+        let prev_owner = self.largest_army_color;
+        let prev_count = self.largest_army_count;
+
+        // Find player with most knights (if any have 3 or more)
+        let mut max_knights = 0;
+        let mut max_knights_color = None;
+
+        for color in 0..self.get_num_players() {
+            let knights = self.get_played_dev_card_count(color, DevCard::Knight as usize);
+            if knights >= 3 && knights > max_knights {
+                max_knights = knights;
+                max_knights_color = Some(color);
+            }
+        }
+
+        // Case where playerB meets playerA's largest army -> no change
+        if max_knights == prev_count {
+            return;
+        }
+
+        self.largest_army_color = max_knights_color;
+        self.largest_army_count = max_knights;
+
+        // If playerA retains largest army -> no VP changes
+        if max_knights_color == prev_owner {
+            return;
+        }
+
+        if let Some(prev_owner) = prev_owner {
+            self.sub_victory_points(prev_owner, 2);
+        }
+
+        if let Some(new_owner) = max_knights_color {
+            self.add_victory_points(new_owner, 2);
+        }
+    }
+
+    fn play_year_of_plenty(&mut self, color: u8, resources: [u8; 2]) {
+        // Assume move_generation has already checked that player has year of plenty card
+        // and that bank has enough resources
+        self.remove_dev_card(color, DevCard::YearOfPlenty as usize);
+        self.add_played_dev_card(color, DevCard::YearOfPlenty as usize);
+        self.set_has_played_dev_card();
+
+        // Give resources to player
+        for resource in resources {
+            self.take_from_bank_give_to_player(color, resource);
+        }
+    }
+
+    fn play_monopoly(&mut self, color: u8, resource: u8) {
+        // Assume move_generation has already checked that player has monopoly card.
+        self.remove_dev_card(color, DevCard::Monopoly as usize);
+        self.add_played_dev_card(color, DevCard::Monopoly as usize);
+        self.set_has_played_dev_card();
+
+        // Steal all resources of type from other players
+        for victim_color in 0..self.get_num_players() {
+            if victim_color != color {
+                let amount = self.get_player_resource_count(victim_color, resource);
+                if amount > 0 {
+                    self.take_from_player_give_to_player(victim_color, color, resource, amount);
+                }
+            }
+        }
+    }
+
+    fn play_road_building(&mut self, color: u8) {
+        // Assume move_generation has already checked that player has road building card.
+        self.remove_dev_card(color, DevCard::RoadBuilding as usize);
+        self.add_played_dev_card(color, DevCard::RoadBuilding as usize);
+        self.set_has_played_dev_card();
+
+        // Set state for free roads
+        self.vector[IS_BUILDING_ROAD_INDEX] = 1;
+        self.vector[FREE_ROADS_AVAILABLE_INDEX] = 2;
     }
 }
 
@@ -1139,5 +1241,224 @@ mod tests {
             &[2, 2, 1, 2, 1],
             "Discard logic should spread discards across highest-frequency resources first."
         );
+    }
+
+    #[test]
+    fn test_play_knight() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        state.add_dev_card(color, DevCard::Knight as usize);
+        assert_eq!(state.get_dev_card_count(color, DevCard::Knight as usize), 1);
+        assert_eq!(
+            state.get_played_dev_card_count(color, DevCard::Knight as usize),
+            0
+        );
+        assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 0);
+        assert_eq!(state.vector[IS_MOVING_ROBBER_INDEX], 0);
+
+        state.play_knight(color);
+
+        assert_eq!(state.get_dev_card_count(color, DevCard::Knight as usize), 0);
+        assert_eq!(
+            state.get_played_dev_card_count(color, DevCard::Knight as usize),
+            1
+        );
+        assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 1);
+        assert_eq!(state.vector[IS_MOVING_ROBBER_INDEX], 1);
+    }
+
+    #[test]
+    fn test_play_knight_largest_army() {
+        let mut state = State::new_base();
+        let color1 = 1;
+        let color2 = 2;
+
+        // Give first player 3 knight cards
+        for _ in 0..3 {
+            state.add_dev_card(color1, DevCard::Knight as usize);
+        }
+
+        // Play knights and verify largest army
+        for i in 0..3 {
+            state.vector[HAS_PLAYED_DEV_CARD] = 0; // Reset for each turn
+            state.apply_action(Action::PlayKnight(color1));
+
+            // Verify knight was removed and marked as played
+            assert_eq!(
+                state.get_dev_card_count(color1, DevCard::Knight as usize),
+                2 - i
+            );
+            assert_eq!(
+                state.get_played_dev_card_count(color1, DevCard::Knight as usize),
+                i + 1
+            );
+            assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 1);
+            assert_eq!(state.vector[IS_MOVING_ROBBER_INDEX], 1);
+
+            // Check largest army status
+            if i == 2 {
+                assert_eq!(state.largest_army_color, Some(color1));
+                assert_eq!(state.largest_army_count, 3);
+                assert_eq!(state.get_actual_victory_points(color1), 2);
+                assert_eq!(state.get_actual_victory_points(color2), 0);
+            } else {
+                assert_eq!(state.largest_army_color, None);
+                assert_eq!(state.largest_army_count, 0);
+                assert_eq!(state.get_actual_victory_points(color1), 0);
+                assert_eq!(state.get_actual_victory_points(color2), 0);
+            }
+        }
+
+        // Now give second player 4 knight cards and have them take largest army
+        for _ in 0..4 {
+            state.add_dev_card(color2, DevCard::Knight as usize);
+        }
+
+        // Play knights with second player
+        for i in 0..4 {
+            state.vector[HAS_PLAYED_DEV_CARD] = 0; // Reset for each turn
+            state.apply_action(Action::PlayKnight(color2));
+
+            // Verify knight was removed and marked as played
+            assert_eq!(
+                state.get_dev_card_count(color2, DevCard::Knight as usize),
+                3 - i
+            );
+            assert_eq!(
+                state.get_played_dev_card_count(color2, DevCard::Knight as usize),
+                i + 1
+            );
+
+            // Check largest army status
+            if i == 3 {
+                // After 4th knight, should take largest army
+                assert_eq!(state.largest_army_color, Some(color2));
+                assert_eq!(state.largest_army_count, 4);
+                assert_eq!(state.get_actual_victory_points(color1), 0); // Lost 2 VPs
+                assert_eq!(state.get_actual_victory_points(color2), 2); // Gained 2 VPs
+            } else {
+                // Still held by first player
+                assert_eq!(state.largest_army_color, Some(color1));
+                assert_eq!(state.largest_army_count, 3);
+                assert_eq!(state.get_actual_victory_points(color1), 2);
+                assert_eq!(state.get_actual_victory_points(color2), 0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_play_year_of_plenty() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Give player a year of plenty card
+        state.add_dev_card(color, DevCard::YearOfPlenty as usize);
+
+        let bank_before = state.vector[BANK_RESOURCE_SLICE].to_vec();
+        let hand_before = state.get_player_hand(color).to_vec();
+
+        // Play year of plenty for wood and brick
+        state.play_year_of_plenty(color, [0, 1]);
+
+        // Verify card was removed from hand
+        assert_eq!(
+            state.get_dev_card_count(color, DevCard::YearOfPlenty as usize),
+            0
+        );
+
+        // Verify card was marked as played
+        assert_eq!(
+            state.get_played_dev_card_count(color, DevCard::YearOfPlenty as usize),
+            1
+        );
+        assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 1);
+
+        // Verify resources were transferred
+        assert_eq!(state.vector[BANK_RESOURCE_SLICE][0], bank_before[0] - 1);
+        assert_eq!(state.vector[BANK_RESOURCE_SLICE][1], bank_before[1] - 1);
+        assert_eq!(state.get_player_hand(color)[0], hand_before[0] + 1);
+        assert_eq!(state.get_player_hand(color)[1], hand_before[1] + 1);
+    }
+
+    #[test]
+    fn test_play_monopoly() {
+        let mut state = State::new_base();
+        let monopolist_color = state.get_current_color();
+
+        // Give player a monopoly card
+        state.add_dev_card(monopolist_color, DevCard::Monopoly as usize);
+
+        // Give other players some wood
+        for other_color in 0..state.get_num_players() {
+            if other_color != monopolist_color {
+                state.get_mut_player_hand(other_color)[0] = 3;
+            }
+        }
+
+        let initial_wood = state.get_player_hand(monopolist_color)[0];
+        let expected_stolen = 3 * (state.get_num_players() - 1) as u8; // 3 wood from each other player
+
+        // Play monopoly on wood (resource index 0)
+        state.play_monopoly(monopolist_color, 0);
+
+        assert_eq!(
+            state.get_dev_card_count(monopolist_color, DevCard::Monopoly as usize),
+            0
+        );
+        assert_eq!(
+            state.get_played_dev_card_count(monopolist_color, DevCard::Monopoly as usize),
+            1
+        );
+        assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 1);
+        assert_eq!(
+            state.get_player_hand(monopolist_color)[0],
+            initial_wood + expected_stolen
+        );
+
+        // Verify other players lost their wood
+        for other_color in 0..state.get_num_players() {
+            if other_color != monopolist_color {
+                assert_eq!(state.get_player_hand(other_color)[0], 0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_play_road_building() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Give player a road building card
+        state.add_dev_card(color, DevCard::RoadBuilding as usize);
+        assert_eq!(
+            state.get_dev_card_count(color, DevCard::RoadBuilding as usize),
+            1
+        );
+        assert_eq!(
+            state.get_played_dev_card_count(color, DevCard::RoadBuilding as usize),
+            0
+        );
+        assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 0);
+
+        // Play road building card
+        state.play_road_building(color);
+
+        // Verify card was removed from hand
+        assert_eq!(
+            state.get_dev_card_count(color, DevCard::RoadBuilding as usize),
+            0
+        );
+
+        // Verify card was marked as played
+        assert_eq!(
+            state.get_played_dev_card_count(color, DevCard::RoadBuilding as usize),
+            1
+        );
+        assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 1);
+
+        // Verify state was set for free roads
+        assert_eq!(state.vector[IS_BUILDING_ROAD_INDEX], 1);
+        assert_eq!(state.vector[FREE_ROADS_AVAILABLE_INDEX], 2);
     }
 }

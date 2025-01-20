@@ -102,6 +102,11 @@ pub fn player_devhand_slice(num_players: u8, color: u8) -> std::ops::Range<usize
     start..start + 5
 }
 
+pub fn player_played_devhand_slice(num_players: u8, color: u8) -> std::ops::Range<usize> {
+    let start = PLAYER_STATE_START_INDEX + num_players as usize + 11 + (color as usize * 15);
+    start..start + 4
+}
+
 // TODO: I'm not sure if it makes more sense to have this in state.rs?
 pub fn take_next_dev_card(vector: &mut StateVector) -> Option<u8> {
     let ptr = vector[DEV_BANK_PTR_INDEX] as usize;
