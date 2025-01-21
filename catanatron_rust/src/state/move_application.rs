@@ -54,6 +54,9 @@ impl State {
             Action::MaritimeTrade(color, (give, take, ratio)) => {
                 self.maritime_trade(color, give, take, ratio);
             }
+            Action::EndTurn(color) => {
+                self.end_turn(color);
+            }
             _ => {
                 panic!("Action not implemented: {:?}", action);
             }
@@ -682,6 +685,13 @@ impl State {
         // to give and that bank has enough resources to take
         self.take_from_player_give_to_bank(color, give, ratio);
         self.take_from_bank_give_to_player(color, take);
+    }
+
+    fn end_turn(&mut self, _color: u8) {
+        self.vector[HAS_PLAYED_DEV_CARD] = 0;
+        self.vector[HAS_ROLLED_INDEX] = 0;
+
+        self.advance_turn(1);
     }
 }
 
@@ -1487,5 +1497,27 @@ mod tests {
         assert_eq!(state.get_player_hand(color)[1], 1);
         assert_eq!(state.vector[BANK_RESOURCE_SLICE][0], 19 + 4);
         assert_eq!(state.vector[BANK_RESOURCE_SLICE][1], initial_bank_brick - 1);
+    }
+
+    #[test]
+    fn test_end_turn() {
+        let mut state = State::new_base();
+        let starting_color = state.get_current_color();
+        let seating_order = state.get_seating_order().to_vec();
+
+        state.vector[HAS_PLAYED_DEV_CARD] = 1;
+        state.vector[HAS_ROLLED_INDEX] = 1;
+        state.apply_action(Action::EndTurn(starting_color));
+
+        assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 0);
+        assert_eq!(state.vector[HAS_ROLLED_INDEX], 0);
+
+        assert_eq!(state.get_current_color(), seating_order[1]);
+
+        for _ in 0..(state.get_num_players() - 1) {
+            state.apply_action(Action::EndTurn(state.get_current_color()));
+        }
+
+        assert_eq!(state.get_current_color(), starting_color);
     }
 }
