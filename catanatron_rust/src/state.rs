@@ -9,9 +9,9 @@ use crate::{
     map_instance::{EdgeId, MapInstance, NodeId},
     state_vector::{
         actual_victory_points_index, initialize_state, player_devhand_slice, player_hand_slice,
-        seating_order_slice, StateVector, CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX,
-        HAS_PLAYED_DEV_CARD, HAS_ROLLED_INDEX, IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX,
-        IS_MOVING_ROBBER_INDEX,
+        player_played_devhand_slice, seating_order_slice, StateVector, BANK_RESOURCE_SLICE,
+        CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX, HAS_PLAYED_DEV_CARD, HAS_ROLLED_INDEX,
+        IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
     },
 };
 
@@ -39,6 +39,8 @@ pub struct State {
     connected_components: HashMap<u8, Vec<HashSet<NodeId>>>,
     longest_road_color: Option<u8>,
     longest_road_length: u8,
+    largest_army_color: Option<u8>,
+    largest_army_count: u8,
 }
 
 mod move_application;
@@ -56,6 +58,8 @@ impl State {
         let connected_components = HashMap::new();
         let longest_road_color = None;
         let longest_road_length = 0;
+        let largest_army_color = None;
+        let largest_army_count = 0;
 
         Self {
             config,
@@ -69,6 +73,8 @@ impl State {
             connected_components,
             longest_road_color,
             longest_road_length,
+            largest_army_color,
+            largest_army_count,
         }
     }
 
@@ -134,7 +140,8 @@ impl State {
     pub fn can_play_dev(&self, dev_card: u8) -> bool {
         let color = self.get_current_color();
         let dev_card_index = dev_card as usize;
-        let has_one = self.vector[player_devhand_slice(self.config.num_players, color)][dev_card_index] > 0;
+        let has_one =
+            self.vector[player_devhand_slice(self.config.num_players, color)][dev_card_index] > 0;
         let has_played_in_turn = self.vector[HAS_PLAYED_DEV_CARD] == 1;
         has_one && !has_played_in_turn
     }
@@ -234,7 +241,7 @@ impl State {
         buildable.into_iter().collect()
     }
 
-    pub fn buildable_node_ids(&self, color: u8,) -> Vec<u8> {
+    pub fn buildable_node_ids(&self, color: u8) -> Vec<u8> {
         let road_subgraphs = match self.connected_components.get(&color) {
             Some(components) => components,
             None => &vec![],
@@ -245,7 +252,8 @@ impl State {
             road_connected_nodes.extend(component);
         }
 
-        road_connected_nodes.intersection(&self.board_buildable_ids)
+        road_connected_nodes
+            .intersection(&self.board_buildable_ids)
             .copied()
             .collect()
     }
@@ -317,12 +325,23 @@ impl State {
 
             // Move forward
             current_path.push(edge);
-            self.dfs_longest_path(neighbor, Some(node), connected_set, color, current_path, best_path);
+            self.dfs_longest_path(
+                neighbor,
+                Some(node),
+                connected_set,
+                color,
+                current_path,
+                best_path,
+            );
             current_path.pop();
         }
     }
 
-    pub fn longest_acyclic_path(&self, connected_node_set: &HashSet<NodeId>, color: u8) -> Vec<EdgeId> {
+    pub fn longest_acyclic_path(
+        &self,
+        connected_node_set: &HashSet<NodeId>,
+        color: u8,
+    ) -> Vec<EdgeId> {
         if connected_node_set.is_empty() {
             return vec![];
         }
@@ -333,12 +352,83 @@ impl State {
             let mut current_path = Vec::new();
             let mut best_path = Vec::new();
 
-            self.dfs_longest_path(start_node, None, connected_node_set, color, &mut current_path, &mut best_path);
+            self.dfs_longest_path(
+                start_node,
+                None,
+                connected_node_set,
+                color,
+                &mut current_path,
+                &mut best_path,
+            );
             if best_path.len() > overall_best_path.len() {
                 overall_best_path = best_path;
             }
         }
         overall_best_path
+    }
+
+    pub fn add_dev_card(&mut self, color: u8, card_idx: usize) {
+        self.vector[player_devhand_slice(self.config.num_players, color)][card_idx] += 1;
+    }
+
+    pub fn get_dev_card_count(&self, color: u8, card_idx: usize) -> u8 {
+        self.vector[player_devhand_slice(self.config.num_players, color)][card_idx]
+    }
+
+    pub fn get_played_dev_card_count(&self, color: u8, card_idx: usize) -> u8 {
+        self.vector[player_played_devhand_slice(self.config.num_players, color)][card_idx]
+    }
+
+    pub fn add_played_dev_card(&mut self, color: u8, card_idx: usize) {
+        self.vector[player_played_devhand_slice(self.config.num_players, color)][card_idx] += 1;
+    }
+
+    pub fn remove_dev_card(&mut self, color: u8, card_idx: usize) {
+        self.vector[player_devhand_slice(self.config.num_players, color)][card_idx] -= 1;
+    }
+
+    pub fn set_has_played_dev_card(&mut self) {
+        self.vector[HAS_PLAYED_DEV_CARD] = 1;
+    }
+
+    pub fn set_is_moving_robber(&mut self) {
+        self.vector[IS_MOVING_ROBBER_INDEX] = 1;
+    }
+
+    pub fn clear_is_moving_robber(&mut self) {
+        self.vector[IS_MOVING_ROBBER_INDEX] = 0;
+    }
+
+    pub fn bank_has_resource(&self, resource: u8) -> bool {
+        self.vector[BANK_RESOURCE_SLICE][resource as usize] > 0
+    }
+
+    pub fn take_from_bank_give_to_player(&mut self, color: u8, resource: u8) {
+        let resource_idx = resource as usize;
+        self.vector[BANK_RESOURCE_SLICE][resource_idx] -= 1;
+        self.get_mut_player_hand(color)[resource_idx] += 1;
+    }
+
+    pub fn take_from_player_give_to_bank(&mut self, color: u8, resource: u8, amount: u8) {
+        let resource_idx = resource as usize;
+        self.get_mut_player_hand(color)[resource_idx] -= amount;
+        self.vector[BANK_RESOURCE_SLICE][resource_idx] += amount;
+    }
+
+    pub fn get_player_resource_count(&self, color: u8, resource: u8) -> u8 {
+        self.get_player_hand(color)[resource as usize]
+    }
+
+    pub fn take_from_player_give_to_player(
+        &mut self,
+        from_color: u8,
+        to_color: u8,
+        resource: u8,
+        amount: u8,
+    ) {
+        let resource_idx = resource as usize;
+        self.get_mut_player_hand(from_color)[resource_idx] -= amount;
+        self.get_mut_player_hand(to_color)[resource_idx] += amount;
     }
 }
 
@@ -361,7 +451,7 @@ mod tests {
         assert!(!state.is_moving_robber());
         assert!(!state.is_discarding());
     }
-    
+
     #[test]
     fn test_longest_acyclic_path() {
         let mut state = State::new_base();

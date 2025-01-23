@@ -75,18 +75,18 @@ pub enum Action {
     // The first value in all these is the color of the player.
     Roll(u8, Option<(u8, u8)>), // None. Log instead sets it to (int, int) rolled.
     MoveRobber(u8, Coordinate, Option<u8>), //  Log has extra element of card stolen.
-    Discard(u8), // value is None|Resource[].
+    Discard(u8),                // value is None|Resource[].
     BuildRoad(u8, EdgeId),
     BuildSettlement(u8, NodeId),
     BuildCity(u8, NodeId),
     BuyDevelopmentCard(u8), // value is None. Log value is card.
     PlayKnight(u8),
-    PlayYearOfPlenty(u8, (Option<u8>, Option<u8>)),
-    PlayMonopoly(u8, u8), // value is Resource
+    PlayYearOfPlenty(u8, [u8; 2]), // Two resources to take from bank
+    PlayMonopoly(u8, u8),          // value is Resource
     PlayRoadBuilding(u8),
 
     // First element of tuples is in, last is out.
-    MaritimeTrade(u8, (FreqDeck, u8)),
+    MaritimeTrade(u8, (u8, u8, u8)), // (Give Resource, Get Resource, Ratio)
     OfferTrade(u8, (FreqDeck, FreqDeck)),
     AcceptTrade(u8, (FreqDeck, FreqDeck)),
     RejectTrade(u8),

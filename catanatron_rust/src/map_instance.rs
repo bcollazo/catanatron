@@ -167,6 +167,13 @@ impl MapInstance {
     pub fn get_adjacent_tiles(&self, node_id: NodeId) -> Option<&Vec<LandTile>> {
         self.adjacent_land_tiles.get(&node_id)
     }
+
+    pub fn get_tiles_by_number(&self, number: u8) -> Vec<&LandTile> {
+        self.land_tiles
+            .values()
+            .filter(|&tile| tile.number == Some(number))
+            .collect()
+    }
 }
 
 impl MapInstance {
@@ -192,7 +199,7 @@ impl MapInstance {
         let mut autoinc = 0;
         let mut tile_autoinc = 0;
         let mut port_autoinc = 0;
-    
+
         for (&coordinate, &tile_slot) in map_template.topology.iter() {
             let (nodes, edges, new_autoinc) = get_nodes_edges(&hexagons, coordinate, autoinc);
             autoinc = new_autoinc;
