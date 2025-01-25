@@ -403,13 +403,13 @@ impl State {
         self.vector[BANK_RESOURCE_SLICE][resource as usize] > 0
     }
 
-    pub fn take_from_bank_give_to_player(&mut self, color: u8, resource: u8) {
+    pub fn from_bank_to_player(&mut self, color: u8, resource: u8) {
         let resource_idx = resource as usize;
         self.vector[BANK_RESOURCE_SLICE][resource_idx] -= 1;
         self.get_mut_player_hand(color)[resource_idx] += 1;
     }
 
-    pub fn take_from_player_give_to_bank(&mut self, color: u8, resource: u8, amount: u8) {
+    pub fn from_player_to_bank(&mut self, color: u8, resource: u8, amount: u8) {
         let resource_idx = resource as usize;
         self.get_mut_player_hand(color)[resource_idx] -= amount;
         self.vector[BANK_RESOURCE_SLICE][resource_idx] += amount;
@@ -419,7 +419,7 @@ impl State {
         self.get_player_hand(color)[resource as usize]
     }
 
-    pub fn take_from_player_give_to_player(
+    pub fn from_player_to_player(
         &mut self,
         from_color: u8,
         to_color: u8,

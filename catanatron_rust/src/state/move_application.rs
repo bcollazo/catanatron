@@ -657,7 +657,7 @@ impl State {
 
         // Give resources to player
         for resource in resources {
-            self.take_from_bank_give_to_player(color, resource);
+            self.from_bank_to_player(color, resource);
         }
     }
 
@@ -672,7 +672,7 @@ impl State {
             if victim_color != color {
                 let amount = self.get_player_resource_count(victim_color, resource);
                 if amount > 0 {
-                    self.take_from_player_give_to_player(victim_color, color, resource, amount);
+                    self.from_player_to_player(victim_color, color, resource, amount);
                 }
             }
         }
@@ -692,8 +692,8 @@ impl State {
     fn maritime_trade(&mut self, color: u8, give: u8, take: u8, ratio: u8) {
         // Assume move_generation has already checked that player has enough resources
         // to give and that bank has enough resources to take
-        self.take_from_player_give_to_bank(color, give, ratio);
-        self.take_from_bank_give_to_player(color, take);
+        self.from_player_to_bank(color, give, ratio);
+        self.from_bank_to_player(color, take);
     }
 
     fn end_turn(&mut self, _color: u8) {
