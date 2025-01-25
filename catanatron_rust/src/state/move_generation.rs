@@ -30,7 +30,10 @@ impl State {
         if is_initial_build_phase {
             self.board_buildable_ids
                 .iter()
-                .map(|node_id| Action::BuildSettlement(color, *node_id))
+                .map(|node_id| Action::BuildSettlement {
+                    color,
+                    node_id: *node_id,
+                })
                 .collect()
         } else {
             let has_resources = freqdeck_contains(self.get_player_hand(color), SETTLEMENT_COST);
@@ -40,7 +43,7 @@ impl State {
             if has_resources && has_settlements_available {
                 self.buildable_node_ids(color)
                     .into_iter()
-                    .map(|node_id| Action::BuildSettlement(color, node_id))
+                    .map(|node_id| Action::BuildSettlement { color, node_id })
                     .collect()
             } else {
                 vec![]
@@ -58,7 +61,10 @@ impl State {
         self.board_buildable_edges(color)
             .iter()
             .filter(|edge_id| self.edge_contains(**edge_id, last_node_id))
-            .map(|edge_id| Action::BuildRoad(color, *edge_id))
+            .map(|edge_id| Action::BuildRoad {
+                color,
+                edge_id: *edge_id,
+            })
             .collect()
     }
 
@@ -71,7 +77,10 @@ impl State {
         if is_free || freqdeck_contains(self.get_player_hand(color), ROAD_COST) {
             self.board_buildable_edges(color)
                 .iter()
-                .map(|edge_id| Action::BuildRoad(color, *edge_id))
+                .map(|edge_id| Action::BuildRoad {
+                    color,
+                    edge_id: *edge_id,
+                })
                 .collect()
         } else {
             vec![]
@@ -92,7 +101,10 @@ impl State {
         self.get_settlements(color)
             .iter()
             .map(|building| match building {
-                Building::Settlement(color, node_id) => Action::BuildCity(*color, *node_id),
+                Building::Settlement(color, node_id) => Action::BuildCity {
+                    color: *color,
+                    node_id: *node_id,
+                },
                 _ => panic!("Invalid building type"),
             })
             .collect()
@@ -102,32 +114,35 @@ impl State {
         if self.is_road_building() {
             return self.road_possibilities(color, true);
         } else if !self.current_player_rolled() {
-            let mut actions = vec![Action::Roll(color, None)];
+            let mut actions = vec![Action::Roll {
+                color,
+                dice_opt: None,
+            }];
             if self.can_play_dev(DevCard::Knight as u8) {
-                actions.push(Action::PlayKnight(color));
+                actions.push(Action::PlayKnight { color });
             }
             return actions;
         }
 
-        let mut actions = vec![Action::EndTurn(color)];
+        let mut actions = vec![Action::EndTurn { color }];
         actions.extend(self.settlement_possibilities(color, false));
         actions.extend(self.road_possibilities(color, false));
         actions.extend(self.city_possibilities(color));
 
         if self.can_play_dev(DevCard::Knight as u8) {
-            actions.push(Action::PlayKnight(color));
+            actions.push(Action::PlayKnight { color });
         }
         if self.can_play_dev(DevCard::YearOfPlenty as u8) {
             // TODO:
-            // actions.push(Action::PlayYearOfPlenty(color));
+            // actions.push(Action::PlayYearOfPlenty { color, resources });
         }
         if self.can_play_dev(DevCard::Monopoly as u8) {
             // TOOD:
-            // actions.push(Action::PlayMonopoly(color));
+            // actions.push(Action::PlayMonopoly { color, resource });
         }
         if self.can_play_dev(DevCard::RoadBuilding as u8) {
             // TODO: What if user has no roads left? or is completely blocked?
-            actions.push(Action::PlayRoadBuilding(color));
+            actions.push(Action::PlayRoadBuilding { color });
         }
 
         // TODO: Maritime trade possibilities
@@ -146,7 +161,7 @@ mod tests {
         let state = State::new_base();
         let actions = state.generate_playable_actions();
         assert_eq!(actions.len(), 54);
-        assert!(matches!(actions[0], Action::BuildSettlement(_, _)));
+        assert!(matches!(actions[0], Action::BuildSettlement { .. }));
     }
 
     #[test]
@@ -164,23 +179,29 @@ mod tests {
             *resource = 5;
         }
 
-        let action = Action::BuildSettlement(color, 0);
+        let action = Action::BuildSettlement { color, node_id: 0 };
         state.apply_action(action);
 
-        let action = Action::BuildRoad(color, (0, 1));
+        let action = Action::BuildRoad {
+            color,
+            edge_id: (0, 1),
+        };
         state.apply_action(action);
 
         let actions = state.settlement_possibilities(0, false);
         assert_eq!(actions.len(), 0);
 
-        let action = Action::BuildRoad(color, (1, 2));
+        let action = Action::BuildRoad {
+            color,
+            edge_id: (1, 2),
+        };
         state.apply_action(action);
 
         // Should be able to build at node 2
         let actions = state.settlement_possibilities(color, false);
         assert_eq!(actions.len(), 1);
         assert!(actions.iter().any(|action| {
-            matches!(action, Action::BuildSettlement(c, node_id) if *c == color && *node_id == 2)
+            matches!(action, Action::BuildSettlement { color: c, node_id } if *c == color && *node_id == 2)
         }));
     }
 
@@ -193,7 +214,7 @@ mod tests {
 
         for action in actions {
             match action {
-                Action::BuildSettlement(c, _) => assert_eq!(c, curr_color),
+                Action::BuildSettlement { color, .. } => assert_eq!(color, curr_color),
                 _ => panic!("Expected BuildSettlement action"),
             }
         }
@@ -211,9 +232,9 @@ mod tests {
 
         for action in actions {
             match action {
-                Action::BuildRoad(c, edge) => {
-                    assert_eq!(c, curr_color);
-                    assert!(edge.0 == 0 || edge.1 == 0);
+                Action::BuildRoad { color, edge_id } => {
+                    assert_eq!(color, curr_color);
+                    assert!(edge_id.0 == 0 || edge_id.1 == 0);
                 }
                 _ => panic!("Expected BuildRoad action"),
             }
@@ -232,7 +253,7 @@ mod tests {
 
         for action in actions {
             match action {
-                Action::BuildSettlement(_, node_id) => {
+                Action::BuildSettlement { color: _, node_id } => {
                     assert_ne!(node_id, 0);
                     assert!(!neighbors.contains(&node_id));
                 }
@@ -253,7 +274,7 @@ mod tests {
 
         let actions = state.generate_playable_actions();
         match &actions[0] {
-            Action::BuildSettlement(_, _) => (),
+            Action::BuildSettlement { .. } => (),
             _ => panic!("Expected BuildSettlement action to be first action"),
         }
         state.apply_action(actions[0]);

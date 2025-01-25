@@ -15,46 +15,55 @@ use super::State;
 impl State {
     pub fn apply_action(&mut self, action: Action) {
         match action {
-            Action::BuildSettlement(color, node_id) => {
+            Action::BuildSettlement { color, node_id } => {
                 let (new_owner, new_length) = self.build_settlement(color, node_id);
                 self.maintain_longest_road(new_owner, new_length);
             }
-            Action::BuildRoad(color, edge_id) => {
+            Action::BuildRoad { color, edge_id } => {
                 let (new_owner, new_length) = self.build_road(color, edge_id);
                 self.maintain_longest_road(new_owner, new_length);
             }
-            Action::BuildCity(color, node_id) => {
+            Action::BuildCity { color, node_id } => {
                 self.build_city(color, node_id);
             }
-            Action::BuyDevelopmentCard(color) => {
+            Action::BuyDevelopmentCard { color } => {
                 self.buy_development_card(color);
             }
-            Action::Roll(color, dice_opt) => {
+            Action::Roll { color, dice_opt } => {
                 self.roll_dice(color, dice_opt);
             }
-            Action::Discard(color) => {
+            Action::Discard { color } => {
                 self.discard(color);
             }
-            Action::MoveRobber(color, coord, victim_opt) => {
-                self.move_robber(color, coord, victim_opt);
+            Action::MoveRobber {
+                color,
+                coordinate,
+                victim_opt,
+            } => {
+                self.move_robber(color, coordinate, victim_opt);
             }
-            Action::PlayKnight(color) => {
+            Action::PlayKnight { color } => {
                 self.play_knight(color);
                 self.maintain_largest_army();
             }
-            Action::PlayYearOfPlenty(color, resources) => {
+            Action::PlayYearOfPlenty { color, resources } => {
                 self.play_year_of_plenty(color, resources);
             }
-            Action::PlayMonopoly(color, resource) => {
+            Action::PlayMonopoly { color, resource } => {
                 self.play_monopoly(color, resource);
             }
-            Action::PlayRoadBuilding(color) => {
+            Action::PlayRoadBuilding { color } => {
                 self.play_road_building(color);
             }
-            Action::MaritimeTrade(color, (give, take, ratio)) => {
+            Action::MaritimeTrade {
+                color,
+                give,
+                take,
+                ratio,
+            } => {
                 self.maritime_trade(color, give, take, ratio);
             }
-            Action::EndTurn(color) => {
+            Action::EndTurn { color } => {
                 self.end_turn(color);
             }
             _ => {
@@ -825,9 +834,15 @@ mod tests {
         let color2 = 2;
 
         // give color1 6 consecutive roads
-        state.apply_action(Action::BuildSettlement(color1, 0));
+        state.apply_action(Action::BuildSettlement {
+            color: color1,
+            node_id: 0,
+        });
         for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 16)] {
-            state.apply_action(Action::BuildRoad(color1, edge));
+            state.apply_action(Action::BuildRoad {
+                color: color1,
+                edge_id: edge,
+            });
         }
 
         assert_eq!(state.longest_road_color, Some(color1));
@@ -837,7 +852,10 @@ mod tests {
         // Give color2 a settlement at node 4 to bisect color1's Longest Road
         state.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
         freqdeck_add(state.get_mut_player_hand(color2), SETTLEMENT_COST);
-        state.apply_action(Action::BuildSettlement(color2, 4));
+        state.apply_action(Action::BuildSettlement {
+            color: color2,
+            node_id: 4,
+        });
 
         assert_eq!(state.longest_road_color, None);
         assert_eq!(state.get_actual_victory_points(color1), 1);
@@ -884,14 +902,26 @@ mod tests {
         let color2 = 2;
 
         // give color1 6 consecutive roads
-        state.apply_action(Action::BuildSettlement(color1, 0));
+        state.apply_action(Action::BuildSettlement {
+            color: color1,
+            node_id: 0,
+        });
         for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 16)] {
-            state.apply_action(Action::BuildRoad(color1, edge));
+            state.apply_action(Action::BuildRoad {
+                color: color1,
+                edge_id: edge,
+            });
         }
         // Give color2 5 consecutive roads with potential to bisect/plow color1's road
-        state.apply_action(Action::BuildSettlement(color2, 11));
+        state.apply_action(Action::BuildSettlement {
+            color: color2,
+            node_id: 11,
+        });
         for edge in [(11, 12), (12, 13), (13, 14), (14, 15), (4, 15)] {
-            state.apply_action(Action::BuildRoad(color2, edge));
+            state.apply_action(Action::BuildRoad {
+                color: color2,
+                edge_id: edge,
+            });
         }
 
         assert_eq!(state.longest_road_color, Some(color1));
@@ -901,7 +931,10 @@ mod tests {
         // Give color2 a settlement at node 4 to bisect color1's Longest Road
         state.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
         freqdeck_add(state.get_mut_player_hand(color2), SETTLEMENT_COST);
-        state.apply_action(Action::BuildSettlement(color2, 4));
+        state.apply_action(Action::BuildSettlement {
+            color: color2,
+            node_id: 4,
+        });
 
         assert_eq!(state.longest_road_color, Some(color2));
         assert_eq!(state.get_actual_victory_points(color1), 1);
@@ -913,16 +946,25 @@ mod tests {
         let mut state = State::new_base();
         let color1 = 1;
 
-        state.apply_action(Action::BuildSettlement(color1, 0));
+        state.apply_action(Action::BuildSettlement {
+            color: color1,
+            node_id: 0,
+        });
         for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)] {
-            state.apply_action(Action::BuildRoad(color1, edge));
+            state.apply_action(Action::BuildRoad {
+                color: color1,
+                edge_id: edge,
+            });
         }
 
         assert_eq!(state.longest_road_color, Some(color1));
         assert_eq!(state.longest_road_length, 5);
         assert_eq!(state.get_actual_victory_points(color1), 3);
 
-        state.apply_action(Action::BuildRoad(color1, (5, 16)));
+        state.apply_action(Action::BuildRoad {
+            color: color1,
+            edge_id: (5, 16),
+        });
 
         assert_eq!(state.longest_road_color, Some(color1));
         assert_eq!(state.longest_road_length, 6);
@@ -935,9 +977,15 @@ mod tests {
         let color1 = 1;
         let color2 = 2;
 
-        state.apply_action(Action::BuildSettlement(color1, 0));
+        state.apply_action(Action::BuildSettlement {
+            color: color1,
+            node_id: 0,
+        });
         for edge in [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 16)] {
-            state.apply_action(Action::BuildRoad(color1, edge));
+            state.apply_action(Action::BuildRoad {
+                color: color1,
+                edge_id: edge,
+            });
         }
 
         assert_eq!(state.longest_road_color, Some(color1));
@@ -946,7 +994,10 @@ mod tests {
 
         state.vector[IS_INITIAL_BUILD_PHASE_INDEX] = 0;
         freqdeck_add(state.get_mut_player_hand(color2), SETTLEMENT_COST);
-        state.apply_action(Action::BuildSettlement(color2, 5));
+        state.apply_action(Action::BuildSettlement {
+            color: color2,
+            node_id: 5,
+        });
 
         assert_eq!(state.longest_road_color, Some(color1));
         assert_eq!(state.longest_road_length, 5);
@@ -1039,7 +1090,10 @@ mod tests {
         // Roll numbers should sum to chosen_roll
         let roll_numbers = (chosen_roll.unwrap() / 2, (chosen_roll.unwrap() + 1) / 2);
 
-        state.apply_action(Action::Roll(color, Some(roll_numbers)));
+        state.apply_action(Action::Roll {
+            color,
+            dice_opt: Some(roll_numbers),
+        });
 
         for resource_idx in 0..5 {
             assert_eq!(
@@ -1093,7 +1147,10 @@ mod tests {
         // Roll numbers should sum to chosen_roll
         let roll_numbers = (chosen_roll.unwrap() / 2, (chosen_roll.unwrap() + 1) / 2);
 
-        state.apply_action(Action::Roll(color, Some(roll_numbers)));
+        state.apply_action(Action::Roll {
+            color,
+            dice_opt: Some(roll_numbers),
+        });
 
         for resource_idx in 0..5 {
             assert_eq!(
@@ -1302,7 +1359,7 @@ mod tests {
         // Play knights and verify largest army
         for i in 0..3 {
             state.vector[HAS_PLAYED_DEV_CARD] = 0; // Reset for each turn
-            state.apply_action(Action::PlayKnight(color1));
+            state.apply_action(Action::PlayKnight { color: color1 });
 
             // Verify knight was removed and marked as played
             assert_eq!(
@@ -1338,7 +1395,7 @@ mod tests {
         // Play knights with second player
         for i in 0..4 {
             state.vector[HAS_PLAYED_DEV_CARD] = 0; // Reset for each turn
-            state.apply_action(Action::PlayKnight(color2));
+            state.apply_action(Action::PlayKnight { color: color2 });
 
             // Verify knight was removed and marked as played
             assert_eq!(
@@ -1491,7 +1548,12 @@ mod tests {
 
         let initial_bank_brick = state.vector[BANK_RESOURCE_SLICE][1];
 
-        state.apply_action(Action::MaritimeTrade(color, (0, 1, 4)));
+        state.apply_action(Action::MaritimeTrade {
+            color,
+            give: 0,
+            take: 1,
+            ratio: 4,
+        });
 
         assert_eq!(state.get_player_hand(color)[0], 0);
         assert_eq!(state.get_player_hand(color)[1], 1);
@@ -1507,7 +1569,9 @@ mod tests {
 
         state.vector[HAS_PLAYED_DEV_CARD] = 1;
         state.vector[HAS_ROLLED_INDEX] = 1;
-        state.apply_action(Action::EndTurn(starting_color));
+        state.apply_action(Action::EndTurn {
+            color: starting_color,
+        });
 
         assert_eq!(state.vector[HAS_PLAYED_DEV_CARD], 0);
         assert_eq!(state.vector[HAS_ROLLED_INDEX], 0);
@@ -1515,7 +1579,9 @@ mod tests {
         assert_eq!(state.get_current_color(), seating_order[1]);
 
         for _ in 0..(state.get_num_players() - 1) {
-            state.apply_action(Action::EndTurn(state.get_current_color()));
+            state.apply_action(Action::EndTurn {
+                color: state.get_current_color(),
+            });
         }
 
         assert_eq!(state.get_current_color(), starting_color);
