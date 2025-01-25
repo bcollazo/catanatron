@@ -419,7 +419,7 @@ impl State {
 
         for tile in matching_tiles {
             // Skip robber tile
-            if self.vector[ROBBER_TILE_INDEX] == tile.id {
+            if self.get_robber_tile() == tile.id {
                 continue;
             }
 
@@ -529,7 +529,7 @@ impl State {
     }
 
     fn move_robber(&mut self, color: u8, coordinate: (i8, i8, i8), victim_opt: Option<u8>) {
-        self.vector[ROBBER_TILE_INDEX] = self.map_instance.get_land_tile(coordinate).unwrap().id;
+        self.set_robber_tile(self.map_instance.get_land_tile(coordinate).unwrap().id);
 
         if let Some(victim) = victim_opt {
             let total_cards: u8 = self.get_player_hand(victim).iter().sum();
@@ -1073,7 +1073,7 @@ mod tests {
             if let (Some(number), Some(resource)) = (tile.number, tile.resource) {
                 // First valid number we find will be our roll
                 // Don't pick robber tile
-                if tile.id != state.vector[ROBBER_TILE_INDEX] {
+                if tile.id != state.get_robber_tile() {
                     if chosen_roll.is_none() {
                         chosen_roll = Some(number);
                     }
@@ -1130,7 +1130,7 @@ mod tests {
         for tile in adjacent_tiles.iter() {
             if let (Some(number), Some(resource)) = (tile.number, tile.resource) {
                 // Don't pick robber tile
-                if tile.id != state.vector[ROBBER_TILE_INDEX] {
+                if tile.id != state.get_robber_tile() {
                     if chosen_roll.is_none() {
                         chosen_roll = Some(number);
                     }
@@ -1187,7 +1187,7 @@ mod tests {
 
         for tile in adjacent_tiles.iter() {
             if let (Some(number), Some(resource)) = (tile.number, tile.resource) {
-                if tile.id != state.vector[ROBBER_TILE_INDEX] && chosen_roll.is_none() {
+                if tile.id != state.get_robber_tile() && chosen_roll.is_none() {
                     chosen_roll = Some(number);
                     chosen_resource = Some(resource);
                 }
@@ -1227,7 +1227,7 @@ mod tests {
                 .values()
                 .find(|tile| {
                     tile.resource.is_some() && // Not a desert
-                    tile.id != state.vector[ROBBER_TILE_INDEX] // Not under robber
+                    tile.id != state.get_robber_tile() // Not under robber
                 })
                 .expect("Should be at least one valid tile");
 

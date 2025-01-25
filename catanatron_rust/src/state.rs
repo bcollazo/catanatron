@@ -12,6 +12,7 @@ use crate::{
         player_played_devhand_slice, seating_order_slice, StateVector, BANK_RESOURCE_SLICE,
         CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX, HAS_PLAYED_DEV_CARD, HAS_ROLLED_INDEX,
         IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
+        ROBBER_TILE_INDEX,
     },
 };
 
@@ -429,6 +430,14 @@ impl State {
         let resource_idx = resource as usize;
         self.get_mut_player_hand(from_color)[resource_idx] -= amount;
         self.get_mut_player_hand(to_color)[resource_idx] += amount;
+    }
+
+    pub fn get_robber_tile(&self) -> u8 {
+        self.vector[ROBBER_TILE_INDEX]
+    }
+
+    pub fn set_robber_tile(&mut self, tile_id: u8) {
+        self.vector[ROBBER_TILE_INDEX] = tile_id;
     }
 }
 

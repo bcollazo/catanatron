@@ -148,6 +148,10 @@ impl MapInstance {
         &self.land_nodes
     }
 
+    pub fn get_port_nodes(&self) -> &HashSet<NodeId> {
+        &self.port_nodes
+    }
+
     pub fn get_tile(&self, coordinate: Coordinate) -> Option<&Tile> {
         self.tiles.get(&coordinate)
     }

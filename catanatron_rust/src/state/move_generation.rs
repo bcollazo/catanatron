@@ -1,6 +1,7 @@
 use crate::deck_slices::{freqdeck_contains, CITY_COST, ROAD_COST, SETTLEMENT_COST};
 use crate::enums::{Action, ActionPrompt, DevCard};
 use crate::state::State;
+use std::collections::HashSet;
 
 use super::Building;
 
@@ -16,9 +17,9 @@ impl State {
                 self.settlement_possibilities(current_color, true)
             }
             ActionPrompt::BuildInitialRoad => self.initial_road_possibilities(current_color),
+            ActionPrompt::MoveRobber => self.robber_possibilities(current_color),
             ActionPrompt::PlayTurn => self.play_turn_possibilities(current_color),
             ActionPrompt::Discard => todo!("generate_playbale_actions for Discard"),
-            ActionPrompt::MoveRobber => todo!("generate_playbale_actions for Move robber"),
             ActionPrompt::DecideTrade => todo!("generate_playbale_actions for Decide trade"),
             ActionPrompt::DecideAcceptees => {
                 todo!("generate_playbale_actions for Decide acceptees")
@@ -125,6 +126,8 @@ impl State {
         }
 
         let mut actions = vec![Action::EndTurn { color }];
+
+        // Add all possible actions
         actions.extend(self.settlement_possibilities(color, false));
         actions.extend(self.road_possibilities(color, false));
         actions.extend(self.city_possibilities(color));
@@ -149,12 +152,58 @@ impl State {
 
         actions
     }
+
+    pub fn robber_possibilities(&self, color: u8) -> Vec<Action> {
+        let mut actions = vec![];
+        let current_robber_tile = self.get_robber_tile();
+
+        for (coordinate, tile) in self.map_instance.get_land_tiles() {
+            // Skip current robber location
+            if tile.id == current_robber_tile {
+                continue;
+            }
+
+            // Find players to steal from at this tile
+            let mut victims = HashSet::new();
+            for node_id in tile.hexagon.nodes.values() {
+                if let Some(building) = self.buildings.get(node_id) {
+                    match building {
+                        Building::Settlement(victim_color, _) | Building::City(victim_color, _) => {
+                            // Can't steal from yourself and victim must have resources
+                            if *victim_color != color
+                                && self.get_player_hand(*victim_color).iter().sum::<u8>() > 0
+                            {
+                                victims.insert(*victim_color);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if victims.is_empty() {
+                actions.push(Action::MoveRobber {
+                    color,
+                    coordinate: *coordinate,
+                    victim_opt: None,
+                });
+            } else {
+                for victim in victims {
+                    actions.push(Action::MoveRobber {
+                        color,
+                        coordinate: *coordinate,
+                        victim_opt: Some(victim),
+                    });
+                }
+            }
+        }
+
+        actions
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::enums::{Action, ActionPrompt};
-    use crate::state::State;
+    use super::*;
 
     #[test]
     fn test_move_generation() {
@@ -283,5 +332,78 @@ mod tests {
             state.get_action_prompt(),
             ActionPrompt::BuildInitialRoad
         ));
+    }
+
+    #[test]
+    fn test_robber_possibilities() {
+        let mut state = State::new_base();
+        let color1 = 1;
+        let color2 = 2;
+
+        state.build_settlement(color2, 0);
+
+        // Give resources to color2
+        let hand = state.get_mut_player_hand(color2);
+        hand[1] = 1; // Use Brick's index (1) directly
+
+        let actions = state.robber_possibilities(color1);
+
+        // Should be able to move robber to any land tile except current location
+        let num_land_tiles = state.map_instance.get_land_tiles().len();
+        assert_eq!(actions.len(), num_land_tiles - 1);
+
+        // Count how many actions involve stealing
+        let steal_actions_count = actions.iter().filter(|action| {
+            matches!(action, Action::MoveRobber { victim_opt: Some(v), .. } if *v == color2)
+        }).count();
+
+        // Node 0 is connected to 3 tiles, but one might be the robber's current location
+        assert!(
+            steal_actions_count == 2 || steal_actions_count == 3,
+            "Should have 2 or 3 tiles where stealing is possible"
+        );
+
+        // Verify can't steal from player with no resources
+        let hand = state.get_mut_player_hand(color2);
+        hand[1] = 0; // Clear Brick resource
+        let actions = state.robber_possibilities(color1);
+        assert_eq!(actions.len(), num_land_tiles - 1); // All tiles except current
+
+        // Verify no stealing actions when victim has no resources
+        let steal_actions_count = actions
+            .iter()
+            .filter(|action| {
+                matches!(
+                    action,
+                    Action::MoveRobber {
+                        victim_opt: Some(_),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(
+            steal_actions_count, 0,
+            "Should have no stealing actions when victim has no resources"
+        );
+    }
+
+    #[test]
+    fn test_robber_cant_stay_in_place() {
+        let state = State::new_base();
+        let color = state.get_current_color();
+        let actions = state.robber_possibilities(color);
+
+        // Get current robber tile
+        let current_robber_tile = state.get_robber_tile();
+
+        // Verify no action tries to move robber to current location
+        assert!(actions.iter().all(|action| {
+            if let Action::MoveRobber { coordinate, .. } = action {
+                state.map_instance.get_land_tile(*coordinate).unwrap().id != current_robber_tile
+            } else {
+                false
+            }
+        }));
     }
 }
