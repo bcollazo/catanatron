@@ -447,6 +447,53 @@ impl State {
     pub fn set_bank_resource(&mut self, resource_index: usize, count: u8) {
         self.vector[BANK_RESOURCE_SLICE.start + resource_index] = count;
     }
+
+    /// Calculates effective production (considering robber) for a player
+    pub fn get_effective_production(&self, color: u8) -> Vec<f64> {
+        self.get_player_production_internal(color, true)
+    }
+
+    /// Calculates total production (ignoring robber) for a player
+    pub fn get_total_production(&self, color: u8) -> Vec<f64> {
+        self.get_player_production_internal(color, false)
+    }
+
+    fn get_player_production_internal(&self, color: u8, consider_robber: bool) -> Vec<f64> {
+        let mut production = vec![0.0; 5]; // One for each resource
+        let robber_tile = if consider_robber {
+            Some(self.get_robber_tile())
+        } else {
+            None
+        };
+
+        // Get all buildings for this player
+        if let Some(buildings) = self.buildings_by_color.get(&color) {
+            for building in buildings {
+                let (node_id, multiplier) = match building {
+                    Building::Settlement(_, node) => (*node, 1.0),
+                    Building::City(_, node) => (*node, 2.0),
+                };
+
+                // Skip if robber is blocking this node
+                if let Some(robber_id) = robber_tile {
+                    if let Some(adjacent_tiles) = self.map_instance.get_adjacent_tiles(node_id) {
+                        if adjacent_tiles.iter().any(|tile| tile.id == robber_id) {
+                            continue;
+                        }
+                    }
+                }
+
+                // Get production for this node
+                if let Some(node_prod) = self.map_instance.get_node_production(node_id) {
+                    for (resource, prob) in node_prod {
+                        production[*resource as usize] += prob * multiplier;
+                    }
+                }
+            }
+        }
+
+        production
+    }
 }
 
 #[cfg(test)]

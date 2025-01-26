@@ -152,6 +152,14 @@ impl MapInstance {
         &self.port_nodes
     }
 
+    pub fn get_node_production(&self, node_id: NodeId) -> Option<&HashMap<Resource, f64>> {
+        self.node_production.get(&node_id)
+    }
+
+    pub fn get_all_node_production(&self) -> &HashMap<NodeId, HashMap<Resource, f64>> {
+        &self.node_production
+    }
+
     pub fn get_tile(&self, coordinate: Coordinate) -> Option<&Tile> {
         self.tiles.get(&coordinate)
     }
