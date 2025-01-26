@@ -130,6 +130,9 @@ pub struct MapInstance {
     // - BFS capabilities
     // all which doesn't sound too bad to implement.
     land_nodes: HashSet<NodeId>,
+
+    // TODO: Track valid edges for building roads.
+    #[allow(dead_code)]
     land_edges: HashSet<EdgeId>,
     node_neighbors: HashMap<NodeId, Vec<NodeId>>,
     edge_neighbors: HashMap<NodeId, Vec<EdgeId>>,
