@@ -104,7 +104,7 @@ pub enum Action {
     },
     PlayYearOfPlenty {
         color: u8,
-        resources: [u8; 2],
+        resources: (u8, Option<u8>),
     },
     PlayMonopoly {
         color: u8,

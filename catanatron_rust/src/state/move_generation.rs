@@ -111,6 +111,50 @@ impl State {
             .collect()
     }
 
+    pub fn year_of_plenty_possibilities(&self, color: u8) -> Vec<Action> {
+        let bank_resources = self.get_bank_resources();
+        let mut actions = Vec::new();
+
+        // First try all same-resource pairs
+        for (resource, &count) in bank_resources.iter().enumerate() {
+            if count > 1 {
+                actions.push(Action::PlayYearOfPlenty {
+                    color,
+                    resources: (resource as u8, Some(resource as u8)),
+                });
+            }
+        }
+
+        // Then try different-resource pairs
+        for (resource1, &count1) in bank_resources.iter().enumerate() {
+            if count1 > 0 {
+                for (resource2, &count2) in bank_resources.iter().enumerate().skip(resource1 + 1) {
+                    if count2 > 0 {
+                        actions.push(Action::PlayYearOfPlenty {
+                            color,
+                            resources: (resource1 as u8, Some(resource2 as u8)),
+                        });
+                    }
+                }
+            }
+        }
+
+        // If no two-resource actions possible, try single resources
+        if actions.is_empty() {
+            for (resource, &count) in bank_resources.iter().enumerate() {
+                if count > 0 {
+                    actions.push(Action::PlayYearOfPlenty {
+                        color,
+                        resources: (resource as u8, None),
+                    });
+                    break; // Only need first available resource
+                }
+            }
+        }
+
+        actions
+    }
+
     pub fn play_turn_possibilities(&self, color: u8) -> Vec<Action> {
         if self.is_road_building() {
             return self.road_possibilities(color, true);
@@ -136,8 +180,7 @@ impl State {
             actions.push(Action::PlayKnight { color });
         }
         if self.can_play_dev(DevCard::YearOfPlenty as u8) {
-            // TODO:
-            // actions.push(Action::PlayYearOfPlenty { color, resources });
+            actions.extend(self.year_of_plenty_possibilities(color));
         }
         if self.can_play_dev(DevCard::Monopoly as u8) {
             // TOOD:
@@ -405,5 +448,55 @@ mod tests {
                 false
             }
         }));
+    }
+
+    #[test]
+    fn test_year_of_plenty_possibilities() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Give player a Year of Plenty card
+        state.add_dev_card(color, DevCard::YearOfPlenty as usize);
+
+        // Test with full bank - should have 15 actions:
+        // - 5 same-resource actions (Wood+Wood, Brick+Brick, etc.)
+        // - 10 different-resource combinations (5 choose 2)
+        let actions = state.year_of_plenty_possibilities(color);
+        assert_eq!(actions.len(), 15);
+
+        // Test with empty bank - should have 0 actions
+        for i in 0..5 {
+            // 5 resource types
+            state.set_bank_resource(i, 0);
+        }
+        let actions = state.year_of_plenty_possibilities(color);
+        assert_eq!(actions.len(), 0);
+
+        // Test with only 2 ORE available
+        state.set_bank_resource(4, 2);
+        let actions = state.year_of_plenty_possibilities(color);
+        assert_eq!(actions.len(), 1); // Can only take ORE+ORE
+        assert!(matches!(
+            actions[0],
+            Action::PlayYearOfPlenty {
+                resources: (4, Some(4)),
+                ..
+            }
+        ));
+
+        // Test with only 1 WHEAT available
+        for i in 0..5 {
+            state.set_bank_resource(i, 0);
+        }
+        state.set_bank_resource(3, 1);
+        let actions = state.year_of_plenty_possibilities(color);
+        assert_eq!(actions.len(), 1); // Can take just one WHEAT when that's all that's available
+        assert!(matches!(
+            actions[0],
+            Action::PlayYearOfPlenty {
+                resources: (3, None),
+                ..
+            }
+        ));
     }
 }

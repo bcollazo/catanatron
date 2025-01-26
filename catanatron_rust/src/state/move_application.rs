@@ -648,16 +648,19 @@ impl State {
         }
     }
 
-    fn play_year_of_plenty(&mut self, color: u8, resources: [u8; 2]) {
+    fn play_year_of_plenty(&mut self, color: u8, resources: (u8, Option<u8>)) {
         // Assume move_generation has already checked that player has year of plenty card
         // and that bank has enough resources
         self.remove_dev_card(color, DevCard::YearOfPlenty as usize);
         self.add_played_dev_card(color, DevCard::YearOfPlenty as usize);
         self.set_has_played_dev_card();
 
-        // Give resources to player
-        for resource in resources {
-            self.from_bank_to_player(color, resource);
+        // Give first resource to player
+        self.from_bank_to_player(color, resources.0);
+
+        // Give second resource if specified
+        if let Some(resource2) = resources.1 {
+            self.from_bank_to_player(color, resource2);
         }
     }
 
@@ -1436,7 +1439,7 @@ mod tests {
         let hand_before = state.get_player_hand(color).to_vec();
 
         // Play year of plenty for wood and brick
-        state.play_year_of_plenty(color, [0, 1]);
+        state.play_year_of_plenty(color, (0, Some(1)));
 
         // Verify card was removed from hand
         assert_eq!(

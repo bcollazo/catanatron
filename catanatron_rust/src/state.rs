@@ -439,6 +439,14 @@ impl State {
     pub fn set_robber_tile(&mut self, tile_id: u8) {
         self.vector[ROBBER_TILE_INDEX] = tile_id;
     }
+
+    pub fn get_bank_resources(&self) -> &[u8] {
+        &self.vector[BANK_RESOURCE_SLICE]
+    }
+
+    pub fn set_bank_resource(&mut self, resource_index: usize, count: u8) {
+        self.vector[BANK_RESOURCE_SLICE.start + resource_index] = count;
+    }
 }
 
 #[cfg(test)]
