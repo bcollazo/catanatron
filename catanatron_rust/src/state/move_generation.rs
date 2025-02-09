@@ -1,6 +1,7 @@
 use crate::deck_slices::{freqdeck_contains, CITY_COST, ROAD_COST, SETTLEMENT_COST};
 use crate::enums::{Action, ActionPrompt, DevCard};
 use crate::state::State;
+use crate::state_vector::get_free_roads_available;
 use std::collections::HashSet;
 
 use super::Building;
@@ -19,10 +20,10 @@ impl State {
             ActionPrompt::BuildInitialRoad => self.initial_road_possibilities(current_color),
             ActionPrompt::MoveRobber => self.robber_possibilities(current_color),
             ActionPrompt::PlayTurn => self.play_turn_possibilities(current_color),
-            ActionPrompt::Discard => todo!("generate_playbale_actions for Discard"),
-            ActionPrompt::DecideTrade => todo!("generate_playbale_actions for Decide trade"),
+            ActionPrompt::Discard => self.discard_possibilities(current_color),
+            ActionPrompt::DecideTrade => todo!("generate_playable_actions for Decide trade"),
             ActionPrompt::DecideAcceptees => {
-                todo!("generate_playbale_actions for Decide acceptees")
+                todo!("generate_playable_actions for Decide acceptees")
             }
         }
     }
@@ -117,7 +118,7 @@ impl State {
 
         // First try all same-resource pairs
         for (resource, &count) in bank_resources.iter().enumerate() {
-            if count > 1 {
+            if count >= 2 {
                 actions.push(Action::PlayYearOfPlenty {
                     color,
                     resources: (resource as u8, Some(resource as u8)),
@@ -157,6 +158,9 @@ impl State {
 
     pub fn play_turn_possibilities(&self, color: u8) -> Vec<Action> {
         if self.is_road_building() {
+            if get_free_roads_available(&self.vector) == 0 {
+                return vec![];
+            }
             return self.road_possibilities(color, true);
         } else if !self.current_player_rolled() {
             let mut actions = vec![Action::Roll {
@@ -183,17 +187,78 @@ impl State {
             actions.extend(self.year_of_plenty_possibilities(color));
         }
         if self.can_play_dev(DevCard::Monopoly as u8) {
-            // TOOD:
-            // actions.push(Action::PlayMonopoly { color, resource });
+            for resource in 0..5 {
+                actions.push(Action::PlayMonopoly { color, resource });
+            }
         }
         if self.can_play_dev(DevCard::RoadBuilding as u8) {
             // TODO: What if user has no roads left? or is completely blocked?
             actions.push(Action::PlayRoadBuilding { color });
         }
 
-        // TODO: Maritime trade possibilities
+        // Add maritime trade possibilities
+        actions.extend(self.maritime_trade_possibilities(color));
+
+        // TODO: Domestic trading is temporarily disabled to reduce the state space explosion
+        // This simplification allows us to first build a superhuman AI player without
+        // the complexity of domestic trading.
 
         actions
+    }
+
+    fn calculate_port_rates(&self, color: u8) -> [u8; 5] {
+        let mut port_rates = [4; 5]; // Default 4:1 rate for all resources
+
+        let Some(player_buildings) = self.buildings_by_color.get(&color) else {
+            return port_rates;
+        };
+
+        // For each player building, check if it's on a port and update rates
+        for building in player_buildings {
+            let node_id = match building {
+                Building::Settlement(_, id) | Building::City(_, id) => id,
+            };
+
+            if let Some(&port_resource) = self.map_instance.get_port_nodes().get(node_id) {
+                match port_resource {
+                    Some(resource) => port_rates[resource as usize] = 2,
+                    None => port_rates
+                        .iter_mut()
+                        .for_each(|rate| *rate = (*rate).min(3)),
+                }
+            }
+        }
+
+        port_rates
+    }
+
+    pub fn maritime_trade_possibilities(&self, color: u8) -> Vec<Action> {
+        let hand = self.get_player_hand(color);
+        let bank = self.get_bank_resources();
+        let port_rates = self.calculate_port_rates(color);
+
+        hand.iter()
+            .enumerate()
+            .flat_map(|(give_idx, &give_count)| {
+                let rate = port_rates[give_idx];
+                if give_count >= rate {
+                    (0..5)
+                        .filter(|&take_idx| {
+                            // Ensure bank has enough resources and it's a different resource
+                            take_idx != give_idx && bank[take_idx] > 0
+                        })
+                        .map(|take_idx| Action::MaritimeTrade {
+                            color,
+                            give: give_idx as u8,
+                            take: take_idx as u8,
+                            ratio: rate,
+                        })
+                        .collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
     }
 
     pub fn robber_possibilities(&self, color: u8) -> Vec<Action> {
@@ -242,11 +307,40 @@ impl State {
 
         actions
     }
+
+    pub fn discard_possibilities(&self, color: u8) -> Vec<Action> {
+        let hand = self.get_player_hand(color);
+        let total_cards: u8 = hand.iter().sum();
+
+        // If player has 7 or fewer cards, they don't need to discard
+        if total_cards <= 7 {
+            return vec![];
+        }
+
+        // For now, just generate a single discard action
+        // This is to prevent state space explosion
+        vec![Action::Discard { color }]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::enums::Resource;
+
+    fn find_port_node_by_type(state: &State, resource: Option<Resource>) -> Option<u8> {
+        state
+            .map_instance
+            .get_port_nodes()
+            .iter()
+            .find_map(|(&node_id, &port_resource)| {
+                if port_resource == resource {
+                    Some(node_id)
+                } else {
+                    None
+                }
+            })
+    }
 
     #[test]
     fn test_move_generation() {
@@ -498,5 +592,145 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn test_discard_possibilities() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Give player 8 cards (above discard limit)
+        {
+            let hand = state.get_mut_player_hand(color);
+            hand[0] = 8; // Give 8 wood cards
+        }
+
+        let actions = state.discard_possibilities(color);
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(actions[0], Action::Discard { color: c } if c == color));
+
+        // Test with 7 cards (at discard limit)
+        {
+            let hand = state.get_mut_player_hand(color);
+            hand[0] = 7;
+        }
+        let actions = state.discard_possibilities(color);
+        assert_eq!(actions.len(), 0);
+    }
+
+    #[test]
+    fn test_maritime_trade_possibilities() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Give player 4 wood (enough for 4:1 trade)
+        {
+            let hand = state.get_mut_player_hand(color);
+            hand[0] = 4;
+        }
+
+        let actions = state.maritime_trade_possibilities(color);
+
+        // Should be able to trade 4 wood for any other resource
+        assert_eq!(actions.len(), 4); // Can trade for brick, sheep, wheat, ore
+        assert!(actions.iter().all(|action| matches!(
+            action,
+            Action::MaritimeTrade {
+                color: c,
+                give,
+                take,
+                ratio
+            } if *c == color && *give == 0 && *ratio == 4 && *take != 0
+        )));
+
+        // Test with insufficient resources
+        {
+            let hand = state.get_mut_player_hand(color);
+            hand[0] = 3;
+        }
+        let actions = state.maritime_trade_possibilities(color);
+        assert_eq!(actions.len(), 0);
+    }
+
+    #[test]
+    fn test_maritime_trade_with_empty_bank() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Give player resources for trading
+        let hand = state.get_mut_player_hand(color);
+        hand[0] = 4; // Give 4 wood for 4:1 trade
+
+        // Empty the bank
+        for i in 0..5 {
+            state.set_bank_resource(i, 0);
+        }
+
+        let actions = state.maritime_trade_possibilities(color);
+        assert_eq!(
+            actions.len(),
+            0,
+            "Should not be able to trade with empty bank"
+        );
+    }
+
+    #[test]
+    fn test_maritime_trade_with_two_to_one_port() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Find a 2:1 wood port node
+        let wood_port_node = find_port_node_by_type(&state, Some(Resource::Wood)).unwrap();
+
+        // Build settlement at wood port
+        state.build_settlement(color, wood_port_node);
+
+        // Give player 2 wood (enough for 2:1 trade)
+        let hand = state.get_mut_player_hand(color);
+        hand[0] = 2;
+
+        let actions = state.maritime_trade_possibilities(color);
+        assert!(
+            actions.iter().any(|action| matches!(
+                action,
+                Action::MaritimeTrade {
+                    color: c,
+                    give,
+                    take,
+                    ratio
+                } if *c == color && *give == 0 && *ratio == 2 && *take != 0
+            )),
+            "Should be able to use 2:1 wood port"
+        );
+    }
+
+    #[test]
+    fn test_maritime_trade_with_three_to_one_port() {
+        let mut state = State::new_base();
+        let color = state.get_current_color();
+
+        // Find a 3:1 port node
+        let port_node = find_port_node_by_type(&state, None).unwrap();
+
+        // Build settlement at 3:1 port
+        state.build_settlement(color, port_node);
+
+        // Give player 3 brick (enough for 3:1 trade)
+        let hand = state.get_mut_player_hand(color);
+        hand[1] = 3; // Give 3 brick
+
+        let actions = state.maritime_trade_possibilities(color);
+        assert!(
+            actions.iter().any(|action| matches!(
+                action,
+                Action::MaritimeTrade {
+                    color: c,
+                    give,
+                    take,
+                    ratio
+                } if *c == color && *give == 1 && *ratio == 3 && *take != 0
+            )),
+            "Should be able to use 3:1 port for brick"
+        );
     }
 }

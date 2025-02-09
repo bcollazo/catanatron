@@ -115,7 +115,7 @@ pub enum Tile {
 pub struct MapInstance {
     tiles: HashMap<Coordinate, Tile>,
     land_tiles: HashMap<Coordinate, LandTile>,
-    port_nodes: HashSet<NodeId>,
+    port_nodes: HashMap<NodeId, Option<Resource>>,
     adjacent_land_tiles: HashMap<NodeId, Vec<LandTile>>,
     node_production: HashMap<NodeId, HashMap<Resource, f64>>,
 
@@ -151,7 +151,7 @@ impl MapInstance {
         &self.land_nodes
     }
 
-    pub fn get_port_nodes(&self) -> &HashSet<NodeId> {
+    pub fn get_port_nodes(&self) -> &HashMap<NodeId, Option<Resource>> {
         &self.port_nodes
     }
 
@@ -274,7 +274,7 @@ impl MapInstance {
 
     fn from_tiles(tiles: HashMap<Coordinate, Tile>, dice_probas: &HashMap<u8, f64>) -> Self {
         let mut land_tiles: HashMap<Coordinate, LandTile> = HashMap::new();
-        let mut port_nodes: HashSet<NodeId> = HashSet::new();
+        let mut port_nodes: HashMap<NodeId, Option<Resource>> = HashMap::new();
         let mut adjacent_land_tiles: HashMap<NodeId, Vec<LandTile>> = HashMap::new();
         let mut node_production: HashMap<NodeId, HashMap<Resource, f64>> = HashMap::new();
 
@@ -325,8 +325,14 @@ impl MapInstance {
                 });
             } else if let Tile::Port(port_tile) = tile {
                 let (a_noderef, b_noderef) = get_noderefs_from_port_direction(port_tile.direction);
-                port_nodes.insert(*port_tile.hexagon.nodes.get(&a_noderef).unwrap());
-                port_nodes.insert(*port_tile.hexagon.nodes.get(&b_noderef).unwrap());
+                port_nodes.insert(
+                    *port_tile.hexagon.nodes.get(&a_noderef).unwrap(),
+                    port_tile.resource,
+                );
+                port_nodes.insert(
+                    *port_tile.hexagon.nodes.get(&b_noderef).unwrap(),
+                    port_tile.resource,
+                );
             }
         }
 

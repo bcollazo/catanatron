@@ -138,6 +138,10 @@ pub fn player_played_devhand_slice(num_players: u8, color: u8) -> std::ops::Rang
     start..start + PLAYER_PLAYED_DEVCARDS_SIZE
 }
 
+pub fn get_free_roads_available(vector: &StateVector) -> u8 {
+    vector[FREE_ROADS_AVAILABLE_INDEX]
+}
+
 // TODO: I'm not sure if it makes more sense to have this in state.rs?
 pub fn take_next_dev_card(vector: &mut StateVector) -> Option<u8> {
     let ptr = vector[DEV_BANK_PTR_INDEX] as usize;
