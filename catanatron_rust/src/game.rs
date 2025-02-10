@@ -147,7 +147,11 @@ mod tests {
         play_tick(&players, &mut state); // third player road
         let second_player_second_settlement_action = play_tick(&players, &mut state);
         let second_player_second_node_id;
-        if let Action::BuildSettlement(player, node_id) = second_player_second_settlement_action {
+        if let Action::BuildSettlement {
+            color: player,
+            node_id,
+        } = second_player_second_settlement_action
+        {
             assert_eq!(player, second_player);
             second_player_second_node_id = node_id;
         } else {
@@ -160,7 +164,7 @@ mod tests {
         assert_all_build_roads(playable_actions.clone(), second_player);
         // assert playable_actions are connected to the last settlement
         assert!(playable_actions.iter().all(|e| {
-            if let Action::BuildRoad(_, edge_id) = e {
+            if let Action::BuildRoad { edge_id, .. } = e {
                 second_player_second_node_id == edge_id.0
                     || second_player_second_node_id == edge_id.1
             } else {
@@ -208,8 +212,8 @@ mod tests {
     fn assert_all_build_settlements(playable_actions: Vec<Action>, player: u8) {
         assert!(
             playable_actions.iter().all(|e| {
-                if let Action::BuildSettlement(p, _) = e {
-                    *p == player
+                if let Action::BuildSettlement { color, .. } = e {
+                    *color == player
                 } else {
                     false
                 }
@@ -222,8 +226,8 @@ mod tests {
     fn assert_all_build_roads(playable_actions: Vec<Action>, player: u8) {
         assert!(
             playable_actions.iter().all(|e| {
-                if let Action::BuildRoad(p, _) = e {
-                    *p == player
+                if let Action::BuildRoad { color, .. } = e {
+                    *color == player
                 } else {
                     false
                 }

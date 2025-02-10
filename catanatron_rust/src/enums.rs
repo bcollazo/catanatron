@@ -72,28 +72,74 @@ pub enum ActionPrompt {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Action {
-    // The first value in all these is the color of the player.
-    Roll(u8, Option<(u8, u8)>), // None. Log instead sets it to (int, int) rolled.
-    MoveRobber(u8, Coordinate, Option<u8>), //  Log has extra element of card stolen.
-    Discard(u8),                // value is None|Resource[].
-    BuildRoad(u8, EdgeId),
-    BuildSettlement(u8, NodeId),
-    BuildCity(u8, NodeId),
-    BuyDevelopmentCard(u8), // value is None. Log value is card.
-    PlayKnight(u8),
-    PlayYearOfPlenty(u8, [u8; 2]), // Two resources to take from bank
-    PlayMonopoly(u8, u8),          // value is Resource
-    PlayRoadBuilding(u8),
-
-    // First element of tuples is in, last is out.
-    MaritimeTrade(u8, (u8, u8, u8)), // (Give Resource, Get Resource, Ratio)
-    OfferTrade(u8, (FreqDeck, FreqDeck)),
-    AcceptTrade(u8, (FreqDeck, FreqDeck)),
-    RejectTrade(u8),
-    ConfirmTrade(u8, (FreqDeck, FreqDeck, u8)), // 11-tuple. First 10 like OfferTrade, last is color of accepting player.
-    CancelTrade(u8),
-
-    EndTurn(u8), // None
+    Roll {
+        color: u8,
+        dice_opt: Option<(u8, u8)>,
+    },
+    MoveRobber {
+        color: u8,
+        coordinate: Coordinate,
+        victim_opt: Option<u8>,
+    },
+    Discard {
+        color: u8,
+    },
+    BuildRoad {
+        color: u8,
+        edge_id: EdgeId,
+    },
+    BuildSettlement {
+        color: u8,
+        node_id: NodeId,
+    },
+    BuildCity {
+        color: u8,
+        node_id: NodeId,
+    },
+    BuyDevelopmentCard {
+        color: u8,
+    },
+    PlayKnight {
+        color: u8,
+    },
+    PlayYearOfPlenty {
+        color: u8,
+        resources: (u8, Option<u8>),
+    },
+    PlayMonopoly {
+        color: u8,
+        resource: u8,
+    },
+    PlayRoadBuilding {
+        color: u8,
+    },
+    MaritimeTrade {
+        color: u8,
+        give: u8,
+        take: u8,
+        ratio: u8,
+    },
+    OfferTrade {
+        color: u8,
+        trade: (FreqDeck, FreqDeck),
+    },
+    AcceptTrade {
+        color: u8,
+        trade: (FreqDeck, FreqDeck),
+    },
+    RejectTrade {
+        color: u8,
+    },
+    ConfirmTrade {
+        color: u8,
+        trade: (FreqDeck, FreqDeck, u8),
+    },
+    CancelTrade {
+        color: u8,
+    },
+    EndTurn {
+        color: u8,
+    },
 }
 
 #[derive(Debug)]

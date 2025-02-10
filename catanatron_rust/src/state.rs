@@ -12,6 +12,7 @@ use crate::{
         player_played_devhand_slice, seating_order_slice, StateVector, BANK_RESOURCE_SLICE,
         CURRENT_TICK_SEAT_INDEX, FREE_ROADS_AVAILABLE_INDEX, HAS_PLAYED_DEV_CARD, HAS_ROLLED_INDEX,
         IS_DISCARDING_INDEX, IS_INITIAL_BUILD_PHASE_INDEX, IS_MOVING_ROBBER_INDEX,
+        ROBBER_TILE_INDEX,
     },
 };
 
@@ -403,13 +404,13 @@ impl State {
         self.vector[BANK_RESOURCE_SLICE][resource as usize] > 0
     }
 
-    pub fn take_from_bank_give_to_player(&mut self, color: u8, resource: u8) {
+    pub fn from_bank_to_player(&mut self, color: u8, resource: u8) {
         let resource_idx = resource as usize;
         self.vector[BANK_RESOURCE_SLICE][resource_idx] -= 1;
         self.get_mut_player_hand(color)[resource_idx] += 1;
     }
 
-    pub fn take_from_player_give_to_bank(&mut self, color: u8, resource: u8, amount: u8) {
+    pub fn from_player_to_bank(&mut self, color: u8, resource: u8, amount: u8) {
         let resource_idx = resource as usize;
         self.get_mut_player_hand(color)[resource_idx] -= amount;
         self.vector[BANK_RESOURCE_SLICE][resource_idx] += amount;
@@ -419,7 +420,7 @@ impl State {
         self.get_player_hand(color)[resource as usize]
     }
 
-    pub fn take_from_player_give_to_player(
+    pub fn from_player_to_player(
         &mut self,
         from_color: u8,
         to_color: u8,
@@ -429,6 +430,69 @@ impl State {
         let resource_idx = resource as usize;
         self.get_mut_player_hand(from_color)[resource_idx] -= amount;
         self.get_mut_player_hand(to_color)[resource_idx] += amount;
+    }
+
+    pub fn get_robber_tile(&self) -> u8 {
+        self.vector[ROBBER_TILE_INDEX]
+    }
+
+    pub fn set_robber_tile(&mut self, tile_id: u8) {
+        self.vector[ROBBER_TILE_INDEX] = tile_id;
+    }
+
+    pub fn get_bank_resources(&self) -> &[u8] {
+        &self.vector[BANK_RESOURCE_SLICE]
+    }
+
+    pub fn set_bank_resource(&mut self, resource_index: usize, count: u8) {
+        self.vector[BANK_RESOURCE_SLICE.start + resource_index] = count;
+    }
+
+    /// Calculates effective production (considering robber) for a player
+    pub fn get_effective_production(&self, color: u8) -> Vec<f64> {
+        self.get_player_production_internal(color, true)
+    }
+
+    /// Calculates total production (ignoring robber) for a player
+    pub fn get_total_production(&self, color: u8) -> Vec<f64> {
+        self.get_player_production_internal(color, false)
+    }
+
+    fn get_player_production_internal(&self, color: u8, consider_robber: bool) -> Vec<f64> {
+        let mut production = vec![0.0; 5]; // One for each resource
+        let robber_tile = if consider_robber {
+            Some(self.get_robber_tile())
+        } else {
+            None
+        };
+
+        // Get all buildings for this player
+        if let Some(buildings) = self.buildings_by_color.get(&color) {
+            for building in buildings {
+                let (node_id, multiplier) = match building {
+                    Building::Settlement(_, node) => (*node, 1.0),
+                    Building::City(_, node) => (*node, 2.0),
+                };
+
+                // Skip if robber is blocking this node
+                if let Some(robber_id) = robber_tile {
+                    if let Some(adjacent_tiles) = self.map_instance.get_adjacent_tiles(node_id) {
+                        if adjacent_tiles.iter().any(|tile| tile.id == robber_id) {
+                            continue;
+                        }
+                    }
+                }
+
+                // Get production for this node
+                if let Some(node_prod) = self.map_instance.get_node_production(node_id) {
+                    for (resource, prob) in node_prod {
+                        production[*resource as usize] += prob * multiplier;
+                    }
+                }
+            }
+        }
+
+        production
     }
 }
 
