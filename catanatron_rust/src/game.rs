@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::enums::{Action, GameConfiguration};
+use crate::enums::{Action, GameConfiguration, MapType};
 use crate::global_state::GlobalState;
 use crate::map_instance::MapInstance;
-use crate::player::Player;
+use crate::players::{Player, RandomPlayer};
 use crate::state::State;
+use pyo3::prelude::*;
 
 pub fn play_game(
     global_state: GlobalState,
@@ -54,7 +55,7 @@ mod tests {
     use super::*;
     use crate::{
         enums::{Action, ActionPrompt, MapType},
-        player::RandomPlayer,
+        players::RandomPlayer,
     };
 
     fn setup_game(
@@ -235,5 +236,46 @@ mod tests {
             "Expected all actions to be BuildRoad for player {:?}",
             player
         );
+    }
+}
+
+#[pyclass(unsendable)]
+pub struct Game {
+    num_players: usize,
+    config: GameConfiguration,
+}
+
+#[pymethods]
+impl Game {
+    #[new]
+    fn new(num_players: usize) -> Self {
+        let config = GameConfiguration {
+            discard_limit: 7,
+            vps_to_win: 10,
+            map_type: MapType::Base,
+            num_players: num_players as u8,
+            max_ticks: 1000,
+        };
+        Game { 
+            num_players,
+            config,
+        }
+    }
+    
+    fn play(&self) {
+        let global_state = GlobalState::new();
+        let mut players = HashMap::new();
+        for i in 0..self.num_players {
+            players.insert(i as u8, Box::new(RandomPlayer {}) as Box<dyn Player>);
+        }
+        if let Some(winner) = play_game(global_state, self.config.clone(), players) {
+            println!("Player {} won!", winner);
+        } else {
+            println!("Game ended without a winner");
+        }
+    }
+
+    fn get_num_players(&self) -> usize {
+        self.num_players
     }
 }

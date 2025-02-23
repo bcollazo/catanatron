@@ -59,7 +59,7 @@ pub enum EdgeRef {
     Northeast,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum ActionPrompt {
     BuildInitialSettlement,
     BuildInitialRoad,
@@ -142,15 +142,14 @@ pub enum Action {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MapType {
     Mini,
     Base,
     Tournament,
 }
 
-// TODO: Make immutable and read-only
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GameConfiguration {
     pub discard_limit: u8,
     pub vps_to_win: u8,

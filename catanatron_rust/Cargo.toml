@@ -6,9 +6,15 @@ edition = "2021"
 [lib]
 name = "catanatron_rust"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "catanatron_rust"
+path = "src/main.rs"
 
 [dependencies]
 rand = "0.8"
+pyo3 = { version = "0.19", features = ["extension-module"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
