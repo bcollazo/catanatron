@@ -5,7 +5,6 @@ use catanatron_rust::global_state;
 use catanatron_rust::map_instance::MapInstance;
 use catanatron_rust::players::{Player, RandomPlayer};
 use catanatron_rust::state_vector;
-use env_logger;
 use log::{debug, info};
 use std::collections::HashMap;
 use std::time::Instant;

@@ -14,7 +14,7 @@ def main():
         print(f"Created game with {game.get_num_players()} players")
         print("Game configuration:")
         print("- Victory points to win: 10")
-        print("- Maximum ticks: 1000")
+        print("- Maximum ticks: 10000")
 
         print("\nStarting game simulation...")
         start_time = time.time()
@@ -31,7 +31,7 @@ def main():
         if winner is not None:
             print(f"WINNER: Player {winner} reached 10 victory points!")
         else:
-            print("NO WINNER: Game reached 1000 ticks without a winner")
+            print("NO WINNER: Game reached 10000 ticks without a winner")
             print("This happens when no player reaches 10 victory points")
             print("within the maximum number of turns.")
         print("=" * 50)

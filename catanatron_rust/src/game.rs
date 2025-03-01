@@ -286,7 +286,7 @@ impl Game {
             vps_to_win: 10,
             map_type: MapType::Base,
             num_players: num_players as u8,
-            max_ticks: 1000,
+            max_ticks: 10000,
         };
         Game {
             num_players,
@@ -311,7 +311,7 @@ impl Game {
     fn get_num_players(&self) -> usize {
         self.num_players
     }
-    
+
     fn get_winner(&self) -> Option<u8> {
         self.winner
     }
