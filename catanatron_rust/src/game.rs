@@ -14,6 +14,12 @@ pub fn play_game(
     config: GameConfiguration,
     players: HashMap<u8, Box<dyn Player>>,
 ) -> Option<u8> {
+    debug!(
+        "play_game: config={:?}, players={:?}",
+        config,
+        players.keys().collect::<Vec<_>>()
+    );
+
     let map_instance = MapInstance::new(
         &global_state.base_map_template,
         &global_state.dice_probas,
@@ -22,6 +28,13 @@ pub fn play_game(
     let rc_config = Rc::new(config);
     info!("Playing game with configuration: {:?}", rc_config);
     let mut state = State::new(rc_config.clone(), Rc::new(map_instance));
+
+    debug!(
+        "State initialized: current_tick_seat={}, current_color={}",
+        state.get_current_tick_seat(),
+        state.get_current_color()
+    );
+
     info!("Seat order: {:?}", state.get_seating_order());
     let mut num_ticks = 0;
     while state.winner().is_none() && num_ticks < rc_config.max_ticks {
@@ -34,7 +47,24 @@ pub fn play_game(
 
 fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) -> Action {
     let current_color = state.get_current_color();
-    let current_player = players.get(&current_color).unwrap();
+    debug!(
+        "play_tick: current_color={}, players={:?}, action_prompt={:?}",
+        current_color,
+        players.keys().collect::<Vec<_>>(),
+        state.get_action_prompt()
+    );
+
+    let current_player = match players.get(&current_color) {
+        Some(player) => player,
+        None => {
+            debug!(
+                "ERROR: No player found for color {}. Available players: {:?}",
+                current_color,
+                players.keys().collect::<Vec<_>>()
+            );
+            panic!("No player found for color {}", current_color);
+        }
+    };
 
     let playable_actions = state.generate_playable_actions();
     debug!(
@@ -244,6 +274,7 @@ mod tests {
 pub struct Game {
     num_players: usize,
     config: GameConfiguration,
+    winner: Option<u8>,
 }
 
 #[pymethods]
@@ -260,16 +291,18 @@ impl Game {
         Game {
             num_players,
             config,
+            winner: None,
         }
     }
 
-    fn play(&self) {
+    fn play(&mut self) {
         let global_state = GlobalState::new();
         let mut players = HashMap::new();
         for i in 0..self.num_players {
             players.insert(i as u8, Box::new(RandomPlayer {}) as Box<dyn Player>);
         }
-        match play_game(global_state, self.config.clone(), players) {
+        self.winner = play_game(global_state, self.config.clone(), players);
+        match self.winner {
             Some(winner) => info!("Game completed - Player {} won!", winner),
             None => info!("Game ended without a winner"),
         }
@@ -277,5 +310,9 @@ impl Game {
 
     fn get_num_players(&self) -> usize {
         self.num_players
+    }
+    
+    fn get_winner(&self) -> Option<u8> {
+        self.winner
     }
 }

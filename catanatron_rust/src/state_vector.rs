@@ -60,6 +60,8 @@ pub fn get_state_array_size(num_players: usize) -> usize {
     // TODO: Hardcoded for BASE_MAP
     let n = num_players;
 
+    log::debug!("get_state_array_size: num_players={}, n={}", num_players, n);
+
     let mut size: usize = 0;
     // Trying to have as most fixed-size vector first as possible
     //  so that we can understand/debug all configurations similarly.
@@ -107,7 +109,14 @@ pub fn bank_resource_index(resource: u8) -> usize {
 }
 
 pub fn seating_order_slice(num_players: usize) -> std::ops::Range<usize> {
-    PLAYER_STATE_START_INDEX..PLAYER_STATE_START_INDEX + num_players
+    let slice = PLAYER_STATE_START_INDEX..PLAYER_STATE_START_INDEX + num_players;
+    log::debug!(
+        "seating_order_slice: num_players={}, PLAYER_STATE_START_INDEX={}, slice={:?}",
+        num_players,
+        PLAYER_STATE_START_INDEX,
+        slice
+    );
+    slice
 }
 
 pub fn actual_victory_points_index(num_players: u8, color: u8) -> usize {
@@ -171,9 +180,17 @@ pub fn take_next_dev_card(vector: &mut StateVector) -> Option<u8> {
 ///  faster rollouts. This one is compact optimized for copying.
 /// TODO: Accept a seed for deterministic tests
 pub fn initialize_state(num_players: u8) -> Vec<u8> {
-    let n = num_players as usize;
+    log::debug!(
+        "initialize_state: num_players={}, PLAYER_STATE_START_INDEX={}",
+        num_players,
+        PLAYER_STATE_START_INDEX
+    );
 
+    let n = num_players as usize;
     let size = get_state_array_size(n);
+
+    log::debug!("initialize_state: size={}, n={}", size, n);
+
     let mut vector = vec![0; size];
 
     // Initialize Bank Resources

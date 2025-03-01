@@ -87,6 +87,8 @@ fn main() {
     let mut players: HashMap<u8, Box<dyn Player>> = HashMap::new();
     players.insert(Color::Red as u8, Box::new(RandomPlayer {}));
     players.insert(Color::Blue as u8, Box::new(RandomPlayer {}));
+    players.insert(Color::Orange as u8, Box::new(RandomPlayer {}));
+    players.insert(Color::White as u8, Box::new(RandomPlayer {}));
 
     let result = play_game(global_state, config, players);
     info!("Game result: {:?}", result);
