@@ -56,7 +56,10 @@ impl State {
         let buildings_by_color = HashMap::new();
         let roads = HashMap::new();
         let roads_by_color = vec![0; config.num_players as usize];
-        let connected_components = HashMap::new();
+        let mut connected_components = HashMap::new();
+        for color in 0..config.num_players {
+            connected_components.insert(color, Vec::new());
+        }
         let longest_road_color = None;
         let longest_road_length = 0;
         let largest_army_color = None;

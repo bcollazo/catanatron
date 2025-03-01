@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::{HashMap, HashSet};
 
 use rand::Rng;
@@ -16,11 +17,27 @@ impl State {
     pub fn apply_action(&mut self, action: Action) {
         match action {
             Action::BuildSettlement { color, node_id } => {
+                debug!(
+                    "Building settlement for player {} at node {}",
+                    color, node_id
+                );
                 let (new_owner, new_length) = self.build_settlement(color, node_id);
+                debug!(
+                    "Settlement built. New longest road: owner={:?}, length={}",
+                    new_owner, new_length
+                );
                 self.maintain_longest_road(new_owner, new_length);
             }
             Action::BuildRoad { color, edge_id } => {
+                debug!(
+                    "Building road for player {} at edge ({}, {})",
+                    color, edge_id.0, edge_id.1
+                );
                 let (new_owner, new_length) = self.build_road(color, edge_id);
+                debug!(
+                    "Road built. New longest road: owner={:?}, length={}",
+                    new_owner, new_length
+                );
                 self.maintain_longest_road(new_owner, new_length);
             }
             Action::BuildCity { color, node_id } => {
@@ -71,7 +88,7 @@ impl State {
             }
         }
 
-        println!("Applying action {:?}", action);
+        debug!("Finished applying action: {:?}", action);
     }
 
     pub fn add_victory_points(&mut self, color: u8, points: u8) {

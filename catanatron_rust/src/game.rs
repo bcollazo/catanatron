@@ -1,3 +1,4 @@
+use log::{debug, info};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -19,12 +20,12 @@ pub fn play_game(
         0,
     );
     let rc_config = Rc::new(config);
-    println!("Playing game with configuration: {:?}", rc_config);
+    info!("Playing game with configuration: {:?}", rc_config);
     let mut state = State::new(rc_config.clone(), Rc::new(map_instance));
-    println!("Seat order: {:?}", state.get_seating_order());
+    info!("Seat order: {:?}", state.get_seating_order());
     let mut num_ticks = 0;
     while state.winner().is_none() && num_ticks < rc_config.max_ticks {
-        println!("Tick {:?} =====", num_ticks);
+        debug!("Tick {:?} =====", num_ticks);
         play_tick(&players, &mut state);
         num_ticks += 1;
     }
@@ -36,12 +37,12 @@ fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) -> Actio
     let current_player = players.get(&current_color).unwrap();
 
     let playable_actions = state.generate_playable_actions();
-    println!(
+    debug!(
         "Player {:?} has {:?} playable actions",
         current_color, playable_actions
     );
     let action = current_player.decide(state, &playable_actions);
-    println!(
+    debug!(
         "Player {:?} decided to play action {:?}",
         current_color, action
     );
@@ -158,7 +159,7 @@ mod tests {
         } else {
             panic!("Expected Action::BuildSettlement");
         }
-        println!("{}", second_player_second_node_id);
+        debug!("{}", second_player_second_node_id);
 
         // second player road 2
         let playable_actions = state.generate_playable_actions();
@@ -256,22 +257,21 @@ impl Game {
             num_players: num_players as u8,
             max_ticks: 1000,
         };
-        Game { 
+        Game {
             num_players,
             config,
         }
     }
-    
+
     fn play(&self) {
         let global_state = GlobalState::new();
         let mut players = HashMap::new();
         for i in 0..self.num_players {
             players.insert(i as u8, Box::new(RandomPlayer {}) as Box<dyn Player>);
         }
-        if let Some(winner) = play_game(global_state, self.config.clone(), players) {
-            println!("Player {} won!", winner);
-        } else {
-            println!("Game ended without a winner");
+        match play_game(global_state, self.config.clone(), players) {
+            Some(winner) => info!("Game completed - Player {} won!", winner),
+            None => info!("Game ended without a winner"),
         }
     }
 

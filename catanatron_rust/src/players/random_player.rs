@@ -1,8 +1,8 @@
 use rand::prelude::*;
 
+use super::Player;
 use crate::enums::Action;
 use crate::state::State;
-use super::Player;
 
 pub struct RandomPlayer {}
 
@@ -14,4 +14,4 @@ impl Player for RandomPlayer {
             .expect("There should always be at least one playable action")
             .clone()
     }
-} 
+}

@@ -7,4 +7,4 @@ pub trait Player {
     fn decide(&self, state: &State, playable_actions: &[Action]) -> Action;
 }
 
-pub use random_player::RandomPlayer; 
+pub use random_player::RandomPlayer;
