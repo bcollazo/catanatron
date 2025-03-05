@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::{HashMap, HashSet};
 
 use rand::Rng;
@@ -14,13 +15,38 @@ use super::State;
 
 impl State {
     pub fn apply_action(&mut self, action: Action) {
+        debug!("Applying action: {:?}", action);
+        debug!("Current state: current_color={}, action_prompt={:?}, is_initial_build_phase={}, buildings={}, roads={}", 
+            self.get_current_color(),
+            self.get_action_prompt(),
+            self.is_initial_build_phase(),
+            self.buildings.len(),
+            self.roads.len() / 2
+        );
+
         match action {
             Action::BuildSettlement { color, node_id } => {
+                debug!(
+                    "Building settlement for player {} at node {}",
+                    color, node_id
+                );
                 let (new_owner, new_length) = self.build_settlement(color, node_id);
+                debug!(
+                    "Settlement built. New longest road: owner={:?}, length={}",
+                    new_owner, new_length
+                );
                 self.maintain_longest_road(new_owner, new_length);
             }
             Action::BuildRoad { color, edge_id } => {
+                debug!(
+                    "Building road for player {} at edge ({}, {})",
+                    color, edge_id.0, edge_id.1
+                );
                 let (new_owner, new_length) = self.build_road(color, edge_id);
+                debug!(
+                    "Road built. New longest road: owner={:?}, length={}",
+                    new_owner, new_length
+                );
                 self.maintain_longest_road(new_owner, new_length);
             }
             Action::BuildCity { color, node_id } => {
@@ -71,7 +97,14 @@ impl State {
             }
         }
 
-        println!("Applying action {:?}", action);
+        debug!("Finished applying action: {:?}", action);
+        debug!("Updated state: current_color={}, action_prompt={:?}, is_initial_build_phase={}, buildings={}, roads={}", 
+            self.get_current_color(),
+            self.get_action_prompt(),
+            self.is_initial_build_phase(),
+            self.buildings.len(),
+            self.roads.len() / 2
+        );
     }
 
     pub fn add_victory_points(&mut self, color: u8, points: u8) {
@@ -258,54 +291,12 @@ impl State {
         let a_index = self.get_connected_component_index(placing_color, a);
         let b_index = self.get_connected_component_index(placing_color, b);
 
-        let affected_component = if a_index.is_none() && !self.is_enemy_node(placing_color, a) {
-            // There has to be a component from b (since roads can only be built in a connected fashion)
-            let component = self
-                .connected_components
-                .get_mut(&placing_color)
-                .unwrap()
-                .get_mut(b_index.unwrap())
-                .unwrap();
-            component.insert(a); // extend said component by 1 more node
-            component.clone()
-        } else if b_index.is_none() && !self.is_enemy_node(placing_color, b) {
-            // There has to be a component from a (since roads can only be built in a connected fashion)
-            let component = self
-                .connected_components
-                .get_mut(&placing_color)
-                .unwrap()
-                .get_mut(a_index.unwrap())
-                .unwrap();
-            component.insert(b);
-            component.clone()
-        } else if a_index.is_some() && b_index.is_some() && a_index != b_index {
-            // Merge components into one and delete the other
-            let smaller_idx = a_index.unwrap().min(b_index.unwrap());
-            let larger_idx = a_index.unwrap().max(b_index.unwrap());
-            let removed_component = self
-                .connected_components
-                .get_mut(&placing_color)
-                .unwrap()
-                .remove(larger_idx);
-            let kept_component = self
-                .connected_components
-                .get_mut(&placing_color)
-                .unwrap()
-                .get_mut(smaller_idx)
-                .unwrap();
-            kept_component.extend(&removed_component);
-            kept_component.clone()
-        } else {
-            // Edge is within same component, just get that component
-            // In this case, a_index == b_index, which means that the edge
-            // is already part of one component. No actions needed.
-            self.connected_components
-                .get(&placing_color)
-                .unwrap()
-                .get(a_index.unwrap())
-                .unwrap()
-                .clone()
-        };
+        // Make sure the connected_components for this color exists
+        self.connected_components.entry(placing_color).or_default();
+
+        // Update connected components based on the new road
+        let affected_component =
+            self.update_connected_components(placing_color, a, b, a_index, b_index);
 
         let prev_road_color = self.longest_road_color;
 
@@ -321,6 +312,82 @@ impl State {
                 (prev_road_color, self.longest_road_length)
             };
         (new_road_color, new_road_length)
+    }
+
+    /// Updates the road network when a new road is built
+    ///
+    /// This method maintains the connected components for a player's road network:
+    /// - Merges components when a road connects two previously separate networks
+    /// - Extends an existing component when a road connects to it
+    /// - Creates a new component for isolated roads
+    ///
+    /// The function also handles enemy settlements that would block connections.
+    ///
+    /// Returns the affected component that contains the new road.
+    fn update_connected_components(
+        &mut self,
+        placing_color: u8,
+        a: NodeId,
+        b: NodeId,
+        a_index: Option<usize>,
+        b_index: Option<usize>,
+    ) -> HashSet<NodeId> {
+        // Pre-compute node validity before mutable borrow
+        let a_valid = !self.is_enemy_node(placing_color, a);
+        let b_valid = !self.is_enemy_node(placing_color, b);
+
+        // Get the components list for this color, creating it if it doesn't exist
+        let components = self.connected_components.entry(placing_color).or_default();
+
+        // Case 1: Both nodes are in components
+        if let (Some(a_idx), Some(b_idx)) = (a_index, b_index) {
+            if a_idx == b_idx {
+                // Both in same component - no change needed
+                return components[a_idx].clone();
+            }
+
+            // Merge components - always merge into the component with smaller index
+            // to minimize shifts in the vector
+            let (keep_idx, remove_idx) = if a_idx < b_idx {
+                (a_idx, b_idx)
+            } else {
+                (b_idx, a_idx)
+            };
+
+            let removed = components.remove(remove_idx);
+            components[keep_idx].extend(removed);
+            return components[keep_idx].clone();
+        }
+
+        // Case 2: Only one node is in a component - extend that component
+        if let Some(idx) = a_index.or(b_index) {
+            let component = &mut components[idx];
+
+            // Add the node that isn't in a component if it's valid
+            let new_node = if a_index.is_some() { b } else { a };
+            let is_valid = if a_index.is_some() { b_valid } else { a_valid };
+
+            if is_valid {
+                component.insert(new_node);
+            }
+
+            return component.clone();
+        }
+
+        // Case 3: Neither node is in a component - create a new one with valid nodes
+        let mut new_component = HashSet::new();
+        if a_valid {
+            new_component.insert(a);
+        }
+        if b_valid {
+            new_component.insert(b);
+        }
+
+        if !new_component.is_empty() {
+            components.push(new_component.clone());
+        }
+
+        new_component
     }
 
     fn build_city(&mut self, color: u8, node_id: u8) {
@@ -449,6 +516,8 @@ impl State {
             return;
         }
 
+        debug!("Roll {} yields: {:?}", roll, yields);
+
         // Calculate total needed by resource type
         let mut resource_needs = [0u8; 5];
         for (_, resource_idx, amount) in &yields {
@@ -457,43 +526,72 @@ impl State {
 
         // Check what can be allocated from bank
         let bank = &self.vector[BANK_RESOURCE_SLICE];
-        let mut distributable = resource_needs;
-        let mut insufficient = false;
-        let multiple_recipients = yields
-            .iter()
-            .map(|(color, _, _)| color)
-            .collect::<HashSet<_>>()
-            .len()
-            > 1;
+        debug!(
+            "Current bank: [{}, {}, {}, {}, {}]",
+            bank[0], bank[1], bank[2], bank[3], bank[4]
+        );
+        debug!("Total resource needs: {:?}", resource_needs);
 
+        // For each resource type, determine if multiple players need it
+        let mut resource_recipients = [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()];
+        for (color, resource_idx, _) in &yields {
+            if !resource_recipients[*resource_idx].contains(color) {
+                resource_recipients[*resource_idx].push(*color);
+            }
+        }
+
+        // Determine which resources can be distributed
+        let mut can_distribute = [true; 5];
         for i in 0..5 {
             if bank[i] < resource_needs[i] {
-                if multiple_recipients {
-                    // If not enough for everyone, no one gets anything
-                    return;
+                // Resource is insufficient
+                if resource_recipients[i].len() > 1 {
+                    // Multiple players need this resource - no one gets it
+                    debug!(
+                        "Resource {}: insufficient for multiple recipients ({}), no one gets it",
+                        i,
+                        resource_recipients[i].len()
+                    );
+                    can_distribute[i] = false;
+                } else {
+                    debug!("Resource {}: insufficient for single recipient, will distribute what's available", i);
+                    // Single player - they get what's available (handled during distribution)
                 }
-                distributable[i] = bank[i];
-                insufficient = true;
             }
         }
 
-        // If we got here, we can distribute something
-        if insufficient {
-            // Single player case - give what we can
-            for (owner_color, resource_idx, amount) in yields {
-                let available = distributable[resource_idx].min(amount);
-                if available > 0 {
-                    self.vector[BANK_RESOURCE_SLICE][resource_idx] -= available;
-                    self.get_mut_player_hand(owner_color)[resource_idx] += available;
-                }
+        // Make a copy of bank resources to track what's distributed
+        let mut remaining = [0u8; 5];
+        remaining.copy_from_slice(&bank[..5]);
+
+        // Distribute resources according to the rules
+        for (owner_color, resource_idx, amount) in yields {
+            if !can_distribute[resource_idx] {
+                // Skip resources that can't be distributed
+                continue;
             }
-        } else {
-            // Full distribution case
-            for (owner_color, resource_idx, amount) in yields {
-                self.vector[BANK_RESOURCE_SLICE][resource_idx] -= amount;
-                self.get_mut_player_hand(owner_color)[resource_idx] += amount;
+
+            // Calculate how much to give (either full amount or what's available)
+            let available = remaining[resource_idx].min(amount);
+            if available > 0 {
+                // Update tracking of what's left
+                remaining[resource_idx] -= available;
+
+                // Update actual game state
+                self.vector[BANK_RESOURCE_SLICE][resource_idx] -= available;
+                self.get_mut_player_hand(owner_color)[resource_idx] += available;
+
+                debug!(
+                    "Distributed {} of resource {} to player {}",
+                    available, resource_idx, owner_color
+                );
             }
         }
+
+        debug!(
+            "Bank after distribution: {:?}",
+            &self.vector[BANK_RESOURCE_SLICE]
+        );
     }
 
     /*
@@ -1588,5 +1686,71 @@ mod tests {
         }
 
         assert_eq!(state.get_current_color(), starting_color);
+    }
+
+    #[test]
+    fn test_update_connected_components() {
+        // Create a test state
+        let mut state = State::new_base();
+        let color = 0; // Red player
+
+        // Create two separate components
+        let mut comp1 = HashSet::new();
+        comp1.insert(0);
+        comp1.insert(1);
+
+        let mut comp2 = HashSet::new();
+        comp2.insert(3);
+        comp2.insert(4);
+
+        state.connected_components.insert(color, vec![comp1, comp2]);
+
+        // Add roads to connect the components
+        state.roads.insert((1, 2), color);
+        state.roads.insert((2, 3), color);
+
+        // First update: Connect node 1 to node 2
+        // Node 1 is in component index 0, node 2 is not in any component
+        let _updated_component = state.update_connected_components(color, 1, 2, Some(0), None);
+
+        // Verify node 2 was added to the first component
+        let components = state.connected_components.get(&color).unwrap();
+        assert_eq!(components.len(), 2, "Should still have two components");
+        assert!(
+            components[0].contains(&2),
+            "First component should now contain node 2"
+        );
+
+        // Second update: Connect node 2 to node 3
+        // After the first update, node 2 is now in component index 0
+        // Node 3 is in component index 1
+        let _updated_component = state.update_connected_components(color, 2, 3, Some(0), Some(1));
+
+        // Verify that the components were merged
+        let components = state.connected_components.get(&color).unwrap();
+        assert_eq!(components.len(), 1, "Components should be merged into one");
+
+        // Verify the merged component contains all nodes
+        let merged = &components[0];
+        assert!(
+            merged.contains(&0),
+            "Merged component should contain node 0"
+        );
+        assert!(
+            merged.contains(&1),
+            "Merged component should contain node 1"
+        );
+        assert!(
+            merged.contains(&2),
+            "Merged component should contain node 2"
+        );
+        assert!(
+            merged.contains(&3),
+            "Merged component should contain node 3"
+        );
+        assert!(
+            merged.contains(&4),
+            "Merged component should contain node 4"
+        );
     }
 }

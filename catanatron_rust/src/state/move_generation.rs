@@ -159,7 +159,7 @@ impl State {
     pub fn play_turn_possibilities(&self, color: u8) -> Vec<Action> {
         if self.is_road_building() {
             if get_free_roads_available(&self.vector) == 0 {
-                return vec![];
+                return vec![Action::EndTurn { color }]; // Always provide EndTurn
             }
             return self.road_possibilities(color, true);
         } else if !self.current_player_rolled() {
@@ -312,9 +312,9 @@ impl State {
         let hand = self.get_player_hand(color);
         let total_cards: u8 = hand.iter().sum();
 
-        // If player has 7 or fewer cards, they don't need to discard
+        // If player has 7 or fewer cards, they can just end their turn
         if total_cards <= 7 {
-            return vec![];
+            return vec![Action::EndTurn { color }];
         }
 
         // For now, just generate a single discard action
@@ -615,7 +615,8 @@ mod tests {
             hand[0] = 7;
         }
         let actions = state.discard_possibilities(color);
-        assert_eq!(actions.len(), 0);
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(actions[0], Action::EndTurn { color: c } if c == color));
     }
 
     #[test]

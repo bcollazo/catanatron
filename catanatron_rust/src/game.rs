@@ -1,29 +1,44 @@
+use log::{debug, info};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::enums::{Action, GameConfiguration};
+use crate::enums::{Action, GameConfiguration, MapType};
 use crate::global_state::GlobalState;
 use crate::map_instance::MapInstance;
-use crate::player::Player;
+use crate::players::{Player, RandomPlayer};
 use crate::state::State;
+use pyo3::prelude::*;
 
 pub fn play_game(
     global_state: GlobalState,
     config: GameConfiguration,
     players: HashMap<u8, Box<dyn Player>>,
 ) -> Option<u8> {
+    debug!(
+        "play_game: config={:?}, players={:?}",
+        config,
+        players.keys().collect::<Vec<_>>()
+    );
+
     let map_instance = MapInstance::new(
         &global_state.base_map_template,
         &global_state.dice_probas,
         0,
     );
     let rc_config = Rc::new(config);
-    println!("Playing game with configuration: {:?}", rc_config);
+    info!("Playing game with configuration: {:?}", rc_config);
     let mut state = State::new(rc_config.clone(), Rc::new(map_instance));
-    println!("Seat order: {:?}", state.get_seating_order());
+
+    debug!(
+        "State initialized: current_tick_seat={}, current_color={}",
+        state.get_current_tick_seat(),
+        state.get_current_color()
+    );
+
+    info!("Seat order: {:?}", state.get_seating_order());
     let mut num_ticks = 0;
     while state.winner().is_none() && num_ticks < rc_config.max_ticks {
-        println!("Tick {:?} =====", num_ticks);
+        debug!("Tick {:?} =====", num_ticks);
         play_tick(&players, &mut state);
         num_ticks += 1;
     }
@@ -32,15 +47,32 @@ pub fn play_game(
 
 fn play_tick(players: &HashMap<u8, Box<dyn Player>>, state: &mut State) -> Action {
     let current_color = state.get_current_color();
-    let current_player = players.get(&current_color).unwrap();
+    debug!(
+        "play_tick: current_color={}, players={:?}, action_prompt={:?}",
+        current_color,
+        players.keys().collect::<Vec<_>>(),
+        state.get_action_prompt()
+    );
+
+    let current_player = match players.get(&current_color) {
+        Some(player) => player,
+        None => {
+            debug!(
+                "ERROR: No player found for color {}. Available players: {:?}",
+                current_color,
+                players.keys().collect::<Vec<_>>()
+            );
+            panic!("No player found for color {}", current_color);
+        }
+    };
 
     let playable_actions = state.generate_playable_actions();
-    println!(
+    debug!(
         "Player {:?} has {:?} playable actions",
         current_color, playable_actions
     );
     let action = current_player.decide(state, &playable_actions);
-    println!(
+    debug!(
         "Player {:?} decided to play action {:?}",
         current_color, action
     );
@@ -54,7 +86,7 @@ mod tests {
     use super::*;
     use crate::{
         enums::{Action, ActionPrompt, MapType},
-        player::RandomPlayer,
+        players::RandomPlayer,
     };
 
     fn setup_game(
@@ -157,7 +189,7 @@ mod tests {
         } else {
             panic!("Expected Action::BuildSettlement");
         }
-        println!("{}", second_player_second_node_id);
+        debug!("{}", second_player_second_node_id);
 
         // second player road 2
         let playable_actions = state.generate_playable_actions();
@@ -235,5 +267,52 @@ mod tests {
             "Expected all actions to be BuildRoad for player {:?}",
             player
         );
+    }
+}
+
+#[pyclass(unsendable)]
+pub struct Game {
+    num_players: usize,
+    config: GameConfiguration,
+    winner: Option<u8>,
+}
+
+#[pymethods]
+impl Game {
+    #[new]
+    fn new(num_players: usize) -> Self {
+        let config = GameConfiguration {
+            discard_limit: 7,
+            vps_to_win: 10,
+            map_type: MapType::Base,
+            num_players: num_players as u8,
+            max_ticks: 10000,
+        };
+        Game {
+            num_players,
+            config,
+            winner: None,
+        }
+    }
+
+    fn play(&mut self) {
+        let global_state = GlobalState::new();
+        let mut players = HashMap::new();
+        for i in 0..self.num_players {
+            players.insert(i as u8, Box::new(RandomPlayer {}) as Box<dyn Player>);
+        }
+        self.winner = play_game(global_state, self.config.clone(), players);
+        match self.winner {
+            Some(winner) => info!("Game completed - Player {} won!", winner),
+            None => info!("Game ended without a winner"),
+        }
+    }
+
+    fn get_num_players(&self) -> usize {
+        self.num_players
+    }
+
+    fn get_winner(&self) -> Option<u8> {
+        self.winner
     }
 }

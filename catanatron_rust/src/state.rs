@@ -1,3 +1,4 @@
+use log::debug;
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
@@ -49,14 +50,27 @@ mod move_generation;
 
 impl State {
     pub fn new(config: Rc<GameConfiguration>, map_instance: Rc<MapInstance>) -> Self {
+        debug!(
+            "State::new: config={:?}, num_players={}",
+            config, config.num_players
+        );
+
         let vector = initialize_state(config.num_players);
+        debug!(
+            "State::new: vector initialized, length={}, seating_order={:?}",
+            vector.len(),
+            &vector[seating_order_slice(config.num_players as usize)]
+        );
 
         let board_buildable_ids = map_instance.land_nodes().clone();
         let buildings = HashMap::new();
         let buildings_by_color = HashMap::new();
         let roads = HashMap::new();
         let roads_by_color = vec![0; config.num_players as usize];
-        let connected_components = HashMap::new();
+        let mut connected_components = HashMap::new();
+        for color in 0..config.num_players {
+            connected_components.insert(color, Vec::new());
+        }
         let longest_road_color = None;
         let longest_road_length = 0;
         let largest_army_color = None;
@@ -121,7 +135,15 @@ impl State {
     /// Returns a slice of Colors in the order of seating
     /// e.g. [2, 1, 0, 3] if Orange goes first, then Blue, then Red, and then White
     pub fn get_seating_order(&self) -> &[u8] {
-        &self.vector[seating_order_slice(self.config.num_players as usize)]
+        let slice = seating_order_slice(self.config.num_players as usize);
+        debug!(
+            "get_seating_order: num_players={}, slice={:?}, vector.len()={}",
+            self.config.num_players,
+            slice,
+            self.vector.len()
+        );
+
+        &self.vector[slice]
     }
 
     pub fn get_current_tick_seat(&self) -> u8 {
@@ -131,6 +153,23 @@ impl State {
     pub fn get_current_color(&self) -> u8 {
         let seating_order = self.get_seating_order();
         let current_tick_seat = self.get_current_tick_seat();
+        debug!(
+            "get_current_color: seating_order={:?}, current_tick_seat={}, seating_order.len()={}",
+            seating_order,
+            current_tick_seat,
+            seating_order.len()
+        );
+
+        if current_tick_seat as usize >= seating_order.len() {
+            debug!(
+                "ERROR: current_tick_seat {} is out of bounds for seating_order of length {}",
+                current_tick_seat,
+                seating_order.len()
+            );
+            // Return a default value to avoid panic
+            return 0;
+        }
+
         seating_order[current_tick_seat as usize]
     }
 
