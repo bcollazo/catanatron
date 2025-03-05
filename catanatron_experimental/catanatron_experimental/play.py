@@ -15,7 +15,7 @@ from rich.text import Text
 
 from catanatron.game import Game
 from catanatron.models.player import Color
-from catanatron.models.map import build_map
+from catanatron.models.map_instance import build_map
 from catanatron.state_functions import get_actual_victory_points
 
 # try to suppress TF output before any potentially tf-importing modules
@@ -203,7 +203,7 @@ class OutputOptions:
 class GameConfigOptions:
     discard_limit: int = 7
     vps_to_win: int = 10
-    catan_map: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
+    map_instance: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
 
 
 COLOR_TO_RICH_STYLE = {
@@ -234,12 +234,12 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        catan_map = build_map(game_config.catan_map)
+        map_instance = build_map(game_config.map_instance)
         game = Game(
             players,
             discard_limit=game_config.discard_limit,
             vps_to_win=game_config.vps_to_win,
-            catan_map=catan_map,
+            map_instance=map_instance,
         )
         game.play(accumulators)
         yield game

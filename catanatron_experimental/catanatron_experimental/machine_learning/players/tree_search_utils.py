@@ -1,7 +1,7 @@
 import math
 from collections import defaultdict
 
-from catanatron.models.map import number_probability
+from catanatron.models.map_instance import number_probability
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
