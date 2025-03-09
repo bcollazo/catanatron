@@ -25,20 +25,26 @@ fn catanatron_rust(_py: Python, m: &PyModule) -> PyResult<()> {
         info!("Initialized catanatron_rust logging");
     });
     
-    // Export the Game class
+    // Export the Game class at top level
     m.add_class::<game::Game>()?;
     
-    // Export Python-friendly classes
-    m.add_class::<python::Action>()?;
-    m.add_class::<python::Player>()?;
-    m.add_class::<python::RandomPlayer>()?;
+    // Also export the Python-friendly Game class at the top level for easier access
     m.add_class::<python::Game>()?;
     
-    // Export utility functions
-    m.add_function(wrap_pyfunction!(python::game::create_game, m)?)?;
+    // Create a 'python' submodule
+    let python_module = PyModule::new(_py, "python")?;
     
-    // Export enums for use in Python
-    // In a future version, we'll want to export more types to match the Python API
+    // Add Python-friendly classes to the python submodule
+    python_module.add_class::<python::Action>()?;
+    python_module.add_class::<python::Player>()?;
+    python_module.add_class::<python::RandomPlayer>()?;
+    python_module.add_class::<python::Game>()?;
+    
+    // Add utility functions to the python submodule
+    python_module.add_function(wrap_pyfunction!(python::game::create_game, _py)?)?;
+    
+    // Add the python submodule to the main module
+    m.add_submodule(python_module)?;
     
     Ok(())
 }

@@ -245,17 +245,69 @@ impl fmt::Debug for PythonPlayerAdapter {
 /// Create a PythonPlayerAdapter from a PyObject
 pub fn create_player_adapter(player: PyObject) -> PyResult<Arc<dyn RustPlayer>> {
     Python::with_gil(|py| {
-        // Try to get the player's color
-        let color = if let Ok(py_player) = player.extract::<&PyCell<Player>>(py) {
+        // Try to get the player's color - first look for _rust_color attribute
+        let color = if let Ok(rust_color) = player.getattr(py, "_rust_color") {
+            match rust_color.extract::<u8>(py) {
+                Ok(color_val) => {
+                    println!("Found _rust_color attribute: {}", color_val);
+                    color_val
+                },
+                Err(e) => {
+                    println!("Error extracting _rust_color: {:?}", e);
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        format!("_rust_color attribute must be a u8 integer (0-255): {:?}", e)
+                    ));
+                }
+            }
+        } else if let Ok(py_player) = player.extract::<&PyCell<Player>>(py) {
+            println!("Extracted player as PyCell<Player>");
             py_player.borrow().color
-        } else if let Ok(color) = player.getattr(py, "color")?.extract::<u8>(py) {
-            color
+        } else if let Ok(color_attr) = player.getattr(py, "color") {
+            println!("Found color attribute, attempting to extract");
+            
+            // Try to extract as u8 first
+            if let Ok(color_val) = color_attr.extract::<u8>(py) {
+                println!("  - Extracted as u8: {}", color_val);
+                color_val
+            } else {
+                // If that fails, try to see if it's an enum with a 'name' attribute
+                if let Ok(name_attr) = color_attr.getattr(py, "name") {
+                    if let Ok(name_str) = name_attr.extract::<String>(py) {
+                        println!("  - Found color.name: {}", name_str);
+                        // Map the color name to a u8
+                        match name_str.as_str() {
+                            "RED" => 0,
+                            "BLUE" => 1,
+                            "ORANGE" => 2,
+                            "WHITE" => 3,
+                            _ => {
+                                println!("  - Unknown color name: {}", name_str);
+                                return Err(pyo3::exceptions::PyValueError::new_err(
+                                    format!("Unknown color name: {}", name_str)
+                                ));
+                            }
+                        }
+                    } else {
+                        println!("  - color.name is not a string");
+                        return Err(pyo3::exceptions::PyValueError::new_err(
+                            "color.name is not a string"
+                        ));
+                    }
+                } else {
+                    println!("  - color attribute is not a u8 or an enum with name");
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        "color attribute must be a u8 integer or an enum with a 'name' attribute"
+                    ));
+                }
+            }
         } else {
+            println!("Player object has no color or _rust_color attribute");
             return Err(pyo3::exceptions::PyValueError::new_err(
-                "Player object must have a 'color' attribute"
+                "Player object must have a 'color' attribute or '_rust_color' attribute"
             ));
         };
         
+        println!("Creating PythonPlayerAdapter with color={}", color);
         Ok(Arc::new(PythonPlayerAdapter::new(player, color)) as Arc<dyn RustPlayer>)
     })
 } 

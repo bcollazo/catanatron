@@ -1,10 +1,24 @@
 from collections import namedtuple
 import sys
+import logging
 
 from rich.table import Table
 
 from catanatron.models.player import RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
+
+try:
+    from catanatron_experimental.player_adapter import RustCompatibleMixin
+    from catanatron_experimental.player_registry import register_rust_compatible
+    RUST_ADAPTER_AVAILABLE = True
+except ImportError:
+    RUST_ADAPTER_AVAILABLE = False
+    # Create dummy functions if the modules aren't available
+    class RustCompatibleMixin:
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+    def register_rust_compatible(cls):
+        return cls
 
 # Try to see if Rust backend is available (we don't need RandomPlayer directly)
 RUST_AVAILABLE = False
@@ -16,12 +30,15 @@ except ImportError as e:
     print(f"Error checking if Rust is available: {e}")
 
 # Create a proxy for the Rust RandomPlayer
-class RustRandomPlayerProxy(RandomPlayer):
+@register_rust_compatible
+class RustRandomPlayerProxy(RustCompatibleMixin, RandomPlayer):
     """A proxy that uses the Python RandomPlayer but flags it for Rust optimization"""
     
     def __init__(self, color, name=None):
+        self.logger = logging.getLogger(__name__)
+        
         if not RUST_AVAILABLE:
-            print("Warning: Rust backend not available, RustRandomPlayer will use Python implementation")
+            self.logger.warning("Rust backend not available, RustRandomPlayer will use Python implementation")
             
         # Store the name as an attribute since RandomPlayer doesn't handle it
         self.name = name if name is not None else f"RustRandom {color}"
@@ -32,11 +49,46 @@ class RustRandomPlayerProxy(RandomPlayer):
         # Add a special attribute to mark this player for Rust optimization
         self.is_rust_player = True
         
+        # Add Rust-specific color attribute
+        # Map color to numeric value for Rust (RED=0, BLUE=1, ORANGE=2, WHITE=3)
+        color_map = {
+            "RED": 0,
+            "BLUE": 1,
+            "ORANGE": 2,
+            "WHITE": 3,
+        }
+        
+        # Extract the color name - handle both enum.name and string representations
+        if hasattr(self.color, 'name'):
+            color_name = str(self.color.name)
+        else:
+            color_name = str(self.color)
+        
+        if color_name in color_map:
+            self._rust_color = color_map[color_name]
+            self.logger.debug(f"Set _rust_color={self._rust_color} for player {self.name} with color {color_name}")
+        else:
+            # Default to RED if color not recognized
+            self._rust_color = 0
+            self.logger.warning(f"Unrecognized color {color_name}, defaulting to RED (0) for Rust")
+            
+        # Ensure the color attribute is accessible directly as needed
+        if not hasattr(self, 'color') or self.color is None:
+            self.logger.warning(f"Player {self.name} has no color attribute, setting explicitly")
+            self.color = color
+        
+    def decide(self, game, playable_actions):
+        """
+        Overridden decide method that delegates to RandomPlayer's implementation
+        This ensures compatibility with both Python and Rust backends
+        """
+        return super().decide(game, playable_actions)
+    
     def __str__(self):
-        return f"RustRandom({self.name})"
+        return f"RustRandom({self.name}, _rust_color={self._rust_color})"
         
     def __repr__(self):
-        return f"RustRandomPlayerProxy(color={self.color.name}, name='{self.name}')"
+        return f"RustRandomPlayerProxy(color={self.color}, name='{self.name}', _rust_color={self._rust_color})"
 
 # from catanatron_experimental.mcts_score_collector import (
 #     MCTSScoreCollector,
@@ -163,15 +215,14 @@ def player_help_table():
     table.add_column("CODE", justify="center", style="cyan", no_wrap=True)
     table.add_column("PLAYER")
     table.add_column("DESCRIPTION")
-    table.add_column("AVAILABLE", justify="center")
+    table.add_column("RUST COMPATIBLE", justify="center", style="green")
     
     for player in CLI_PLAYERS:
-        available = "Yes"
-        # Check if this is a Rust player and if Rust is available
+        rust_compatible = "✓" if player.code == "RR" else "✗"
         if player.code == "RR" and not RUST_AVAILABLE:
-            available = "No (Rust not available)"
-        
-        table.add_row(player.code, player.name, player.description, available)
+            rust_compatible = "✗ (Rust not installed)"
+            
+        table.add_row(player.code, player.name, player.description, rust_compatible)
     
     return table
 
