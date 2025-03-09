@@ -535,6 +535,27 @@ impl State {
     }
 }
 
+// Implementing Clone for State
+impl Clone for State {
+    fn clone(&self) -> Self {
+        State {
+            config: self.config.clone(),
+            map_instance: self.map_instance.clone(),
+            vector: self.vector.clone(),
+            board_buildable_ids: self.board_buildable_ids.clone(),
+            buildings: self.buildings.clone(),
+            buildings_by_color: self.buildings_by_color.clone(),
+            roads: self.roads.clone(),
+            roads_by_color: self.roads_by_color.clone(),
+            connected_components: self.connected_components.clone(),
+            longest_road_color: self.longest_road_color,
+            longest_road_length: self.longest_road_length,
+            largest_army_color: self.largest_army_color,
+            largest_army_count: self.largest_army_count,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

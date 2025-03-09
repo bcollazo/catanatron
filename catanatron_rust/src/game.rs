@@ -8,6 +8,7 @@ use crate::map_instance::MapInstance;
 use crate::players::{Player, RandomPlayer};
 use crate::state::State;
 use pyo3::prelude::*;
+use pyo3::types::PyList;
 
 pub fn play_game(
     global_state: GlobalState,
@@ -275,37 +276,166 @@ pub struct Game {
     num_players: usize,
     config: GameConfiguration,
     winner: Option<u8>,
+    state: Option<State>,
+    players: HashMap<u8, Box<dyn Player>>,
+    accumulators: Vec<PyObject>,
 }
 
 #[pymethods]
 impl Game {
     #[new]
-    fn new(num_players: usize) -> Self {
+    #[pyo3(signature = (
+        players,
+        _seed = None,
+        discard_limit = 7,
+        vps_to_win = 10,
+        _map_instance = None,
+        _initialize = true
+    ))]
+    fn new(
+        py: Python,
+        players: &PyList,
+        _seed: Option<i64>,
+        discard_limit: u8,
+        vps_to_win: u8,
+        _map_instance: Option<&PyAny>,  // Unused, prefix with underscore
+        _initialize: bool,              // Unused, prefix with underscore
+    ) -> PyResult<Self> {
+        let num_players = players.len();
         let config = GameConfiguration {
-            discard_limit: 7,
-            vps_to_win: 10,
-            map_type: MapType::Base,
+            discard_limit,
+            vps_to_win,
+            map_type: MapType::Base, // For now, hardcoded to Base
             num_players: num_players as u8,
             max_ticks: 10000,
         };
-        Game {
+
+        let mut player_map = HashMap::new();
+
+        // Check if we're integrating with Python players
+        let use_python_players = true;  // Set to true to enable Python player integration
+        
+        if use_python_players {
+            // Create PythonPlayerWrappers for each Python player
+            for (i, player) in players.iter().enumerate() {
+                let python_player = player.to_object(py);
+                player_map.insert(
+                    i as u8, 
+                    Box::new(crate::players::PythonPlayerWrapper::new(python_player)) as Box<dyn Player>
+                );
+            }
+        } else {
+            // Use RandomPlayers for each color
+            for i in 0..num_players {
+                player_map.insert(i as u8, Box::new(RandomPlayer {}) as Box<dyn Player>);
+            }
+        }
+
+        Ok(Game {
             num_players,
             config,
             winner: None,
-        }
+            state: None,
+            players: player_map,
+            accumulators: Vec::new(),
+        })
     }
 
-    fn play(&mut self) {
-        let global_state = GlobalState::new();
-        let mut players = HashMap::new();
-        for i in 0..self.num_players {
-            players.insert(i as u8, Box::new(RandomPlayer {}) as Box<dyn Player>);
+    fn play(&mut self, py: Python, accumulators: Option<Vec<PyObject>>, decide_fn: Option<PyObject>) -> PyResult<Option<u8>> {
+        // If accumulators are provided, store them
+        if let Some(accs) = accumulators {
+            self.accumulators = accs;
         }
-        self.winner = play_game(global_state, self.config.clone(), players);
+
+        // Call any accumulators' before method
+        for accumulator in &self.accumulators {
+            let _ = accumulator.call_method1(py, "before", (Option::<PyObject>::None.to_object(py),));
+        }
+
+        // Initialize and play the game
+        let global_state = GlobalState::new();
+        
+        // Create a new state - in the future, we'll need to support custom map instances
+        let map_instance = MapInstance::new(
+            &global_state.base_map_template,
+            &global_state.dice_probas,
+            0, // No seed for now
+        );
+        let rc_config = Rc::new(self.config.clone());
+        let state = State::new(rc_config.clone(), Rc::new(map_instance));
+        self.state = Some(state);
+
+        // Play the game until a winner or max ticks
+        let mut num_ticks = 0;
+        while self.state.as_ref().unwrap().winner().is_none() && num_ticks < rc_config.max_ticks {
+            self.play_tick(py, decide_fn.clone())?;
+            num_ticks += 1;
+        }
+
+        // Store the winner and call any accumulators' after method
+        self.winner = self.state.as_ref().unwrap().winner();
+        
+        for accumulator in &self.accumulators {
+            let _ = accumulator.call_method1(py, "after", (Option::<PyObject>::None.to_object(py),));
+        }
+
         match self.winner {
             Some(winner) => info!("Game completed - Player {} won!", winner),
             None => info!("Game ended without a winner"),
         }
+
+        Ok(self.winner)
+    }
+
+    fn play_tick(&mut self, py: Python, _decide_fn: Option<PyObject>) -> PyResult<PyObject> {
+        if self.state.is_none() {
+            // Initialize state if not already done
+            let global_state = GlobalState::new();
+            let map_instance = MapInstance::new(
+                &global_state.base_map_template,
+                &global_state.dice_probas,
+                0,
+            );
+            let rc_config = Rc::new(self.config.clone());
+            self.state = Some(State::new(rc_config.clone(), Rc::new(map_instance)));
+        }
+        
+        let state = self.state.as_mut().unwrap();
+        let current_color = state.get_current_color();
+        
+        let playable_actions = state.generate_playable_actions();
+        debug!(
+            "Player {:?} has {:?} playable actions",
+            current_color, playable_actions
+        );
+        
+        // Get the current player
+        let current_player = match self.players.get(&current_color) {
+            Some(player) => player,
+            None => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    format!("No player found for color {}", current_color)
+                ));
+            }
+        };
+        
+        // Let the player decide what to do
+        let action = current_player.decide(state, &playable_actions);
+        debug!(
+            "Player {:?} decided to play action {:?}",
+            current_color, action
+        );
+        
+        // Call accumulators' step method before applying the action
+        for accumulator in &self.accumulators {
+            let _ = accumulator.call_method1(py, "step", (Option::<PyObject>::None.to_object(py), format!("{:?}", action).to_object(py)));
+        }
+        
+        // Apply the action
+        state.apply_action(action);
+        
+        // Return the action as a Python object
+        Ok(format!("{:?}", action).to_object(py))
     }
 
     fn get_num_players(&self) -> usize {
@@ -314,5 +444,19 @@ impl Game {
 
     fn get_winner(&self) -> Option<u8> {
         self.winner
+    }
+    
+    // New methods to match Python API
+    fn winning_color(&self) -> Option<u8> {
+        self.winner
+    }
+    
+    // State inspection methods - placeholders for now
+    fn get_state_repr(&self, py: Python) -> PyResult<PyObject> {
+        if let Some(state) = &self.state {
+            Ok(format!("{:?}", state).to_object(py))
+        } else {
+            Ok(Option::<PyObject>::None.to_object(py))
+        }
     }
 }

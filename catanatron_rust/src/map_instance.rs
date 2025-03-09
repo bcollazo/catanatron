@@ -696,3 +696,19 @@ mod tests {
         assert_node_value(&map_instance, (0, -2, 2), NodeRef::NorthWest, 11);
     }
 }
+
+impl Clone for MapInstance {
+    fn clone(&self) -> Self {
+        Self {
+            tiles: self.tiles.clone(),
+            land_tiles: self.land_tiles.clone(),
+            port_nodes: self.port_nodes.clone(),
+            adjacent_land_tiles: self.adjacent_land_tiles.clone(),
+            node_production: self.node_production.clone(),
+            land_nodes: self.land_nodes.clone(),
+            land_edges: self.land_edges.clone(),
+            node_neighbors: self.node_neighbors.clone(),
+            edge_neighbors: self.edge_neighbors.clone(),
+        }
+    }
+}

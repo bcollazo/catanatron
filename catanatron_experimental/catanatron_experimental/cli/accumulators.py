@@ -136,6 +136,11 @@ class StatisticsAccumulator(GameAccumulator):
     def get_avg_duration(self):
         return sum(self.durations) / len(self.durations)
 
+    @property
+    def player_statistics(self):
+        """Return player statistics for compatibility with the play.py script"""
+        return self.results_by_player
+
 
 class StepDatabaseAccumulator(GameAccumulator):
     """
