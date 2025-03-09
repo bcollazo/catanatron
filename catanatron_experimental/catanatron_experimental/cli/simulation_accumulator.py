@@ -1,4 +1,24 @@
-from catanatron.game import GameAccumulator
+import os
+import sys
+
+# Add all necessary paths to Python path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, BASE_DIR)
+sys.path.insert(0, os.path.join(BASE_DIR, 'catanatron_core'))
+
+try:
+    from catanatron.game import GameAccumulator
+except ImportError:
+    # Fallback definition if import fails
+    class GameAccumulator:
+        def before(self, game):
+            pass
+            
+        def step(self, game, action):
+            pass
+            
+        def after(self, game):
+            pass
 
 
 class SimulationAccumulator(GameAccumulator):

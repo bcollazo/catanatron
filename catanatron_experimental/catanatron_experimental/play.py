@@ -1,61 +1,78 @@
-import os
 import importlib.util
+import logging
+import os
+import sys
+import time
+import random
+import traceback
+from collections import Counter
 from dataclasses import dataclass
 from typing import Literal, Union
 
 import click
+from rich.box import MINIMAL
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TimeRemainingColumn,
+)
 from rich.table import Table
-from rich.progress import Progress
-from rich.progress import Progress, BarColumn, TimeRemainingColumn
-from rich import box
-from rich.console import Console
 from rich.theme import Theme
 from rich.text import Text
 
 from catanatron.game import Game
 from catanatron.models.player import Color
 from catanatron.models.map_instance import build_map
-from catanatron.state_functions import get_actual_victory_points
 
-# try to suppress TF output before any potentially tf-importing modules
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-from catanatron_experimental.utils import ensure_dir, formatSecs
-from catanatron_experimental.cli.cli_players import (
-    CUSTOM_ACCUMULATORS,
-    player_help_table,
-    CLI_PLAYERS,
-)
+# Import from utils
+from catanatron_experimental.utils import formatSecs, ensure_dir
+
+# Import CLI-related modules
+from catanatron_experimental.cli.cli_players import CLI_PLAYERS
 from catanatron_experimental.cli.accumulators import (
-    JsonDataAccumulator,
     CsvDataAccumulator,
     DatabaseAccumulator,
+    JsonDataAccumulator,
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
-from catanatron_experimental.cli.simulation_accumulator import SimulationAccumulator
-
-
-custom_theme = Theme(
-    {
-        "progress.remaining": "",
-        "progress.percentage": "",
-        "bar.complete": "green",
-        "bar.finished": "green",
-    }
+from catanatron_experimental.cli.utils import (
+    CUSTOM_ACCUMULATORS,
+    custom_theme,
+    get_actual_victory_points,
+    player_help_table,
+    parse_player_arg,
 )
-console = Console(theme=custom_theme)
+from catanatron_experimental.cli.simulation_accumulator import SimulationAccumulator
+from catanatron_experimental.engine_interface import (
+    create_game,
+    is_rust_available,
+    prepare_accumulators,
+)
 
+# Try to import is_rust_compatible_instance from player_registry
+try:
+    from catanatron_experimental.player_registry import is_rust_compatible_instance
+    PLAYER_REGISTRY_AVAILABLE = True
+except ImportError:
+    PLAYER_REGISTRY_AVAILABLE = False
+    # Create a dummy function if the registry module isn't available
+    def is_rust_compatible_instance(player):
+        return hasattr(player, 'is_rust_player') and player.is_rust_player
+
+# try to suppress TF output before any potentially tf-importing modules
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 class CustomTimeRemainingColumn(TimeRemainingColumn):
-    """Renders estimated time remaining according to show_time field."""
+    """Custom column for displaying time remaining in Rich progress bar."""
 
     def render(self, task):
-        """Show time remaining."""
-        show = task.fields.get("show_time", True)
-        if not show:
-            return Text("")
-        return super().render(task)
+        """Render the column."""
+        remaining = task.time_remaining
+        if remaining is None:
+            return Text("-:--:--", style="progress.remaining")
+        return Text(formatSecs(int(remaining)), style="progress.remaining")
 
 
 @click.command()
@@ -100,6 +117,18 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
         """,
 )
 @click.option(
+    "--rust",
+    default=False,
+    is_flag=True,
+    help="Use the Rust backend for faster simulation. Fails if Rust backend is not available.",
+)
+@click.option(
+    "--strict-rust",
+    default=False,
+    is_flag=True,
+    help="When used with --rust, only allow players explicitly marked as Rust-compatible.",
+)
+@click.option(
     "--config-discard-limit",
     default=7,
     help="Sets Discard Limit to use in games.",
@@ -122,6 +151,12 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Silence console output. Useful for debugging.",
 )
 @click.option(
+    "--log-level",
+    default="INFO",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    help="Set the Python logging level. Use DEBUG for verbose output.",
+)
+@click.option(
     "--help-players",
     default=False,
     type=bool,
@@ -136,23 +171,59 @@ def simulate(
     json,
     csv,
     db,
+    rust,
+    strict_rust,
     config_discard_limit,
     config_vps_to_win,
     config_map,
     quiet,
+    log_level,
     help_players,
 ):
     """
     Catan Bot Simulator.
-    Catanatron allows you to simulate millions of games at scale
-    and test bot strategies against each other.
 
-    Examples:\n\n
+    Examples:
         catanatron-play --players=R,R,R,R --num=1000\n
         catanatron-play --players=W,W,R,R --num=50000 --output=data/ --csv\n
         catanatron-play --players=VP,F --num=10 --output=data/ --json\n
-        catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
+        catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet\n
+        catanatron-play --players=R,R,R,R --num=100 --rust
+        catanatron-play --players=RR,RR --rust
+        catanatron-play --players=RR,RR --rust --log-level=ERROR
     """
+    # Set Python logging level
+    import logging
+    numeric_level = getattr(logging, log_level.upper(), None)
+    if isinstance(numeric_level, int):
+        logging.basicConfig(level=numeric_level)
+    
+    # Set logging for the Rust backend to reduce verbosity
+    if rust:
+        # Set the RUST_LOG environment variable to control Rust log levels
+        import os
+        # Map Python log levels to Rust log levels
+        rust_level = {
+            "DEBUG": "debug",
+            "INFO": "info", 
+            "WARNING": "warn",
+            "ERROR": "error",
+            "CRITICAL": "error"
+        }.get(log_level.upper(), "warn")
+        os.environ['RUST_LOG'] = rust_level
+    
+    # If Rust is requested but not available, fail fast
+    if rust and not is_rust_available():
+        raise ImportError("Rust backend requested but not available. Please build the Rust backend first.")
+        
+    # Show information about Rust backend status
+    if rust and is_rust_available():
+        console = Console()
+        console.print("[yellow]Note: The Rust backend integration is still in development.[/yellow]")
+        console.print("[yellow]Only players marked with 'RR' are fully Rust-compatible.[/yellow]")
+        # Remove the message about fallback since we don't fall back with --rust
+        # console.print("[yellow]Games with mixed player types (R and RR) will use the Python backend.[/yellow]")
+
     if code:
         abspath = os.path.abspath(code)
         spec = importlib.util.spec_from_file_location("module.name", abspath)
@@ -162,34 +233,78 @@ def simulate(
 
     if help_players:
         return Console().print(player_help_table())
+
     if output and not (json or csv):
-        return print("--output requires either --json or --csv to be set")
+        click.echo("--output specified but neither --json nor --csv specified. No output.")
 
-    player_keys = players.split(",")
-    players = []
-    colors = [c for c in Color]
-    for i, key in enumerate(player_keys):
-        parts = key.split(":")
-        code = parts[0]
-        for cli_player in CLI_PLAYERS:
-            if cli_player.code == code:
-                params = [colors[i]] + parts[1:]
-                player = cli_player.import_fn(*params)
-                players.append(player)
-                break
+    # Figure out Players objects from CLI options
+    player_specs = parse_player_arg(players)
+    players = [player for player, _ in player_specs]
+    
+    # Create output options and game config options with proper values
+    output_options = OutputOptions(
+        output=output,
+        csv=csv,
+        json=json,
+        db=db
+    )
+    
+    game_config = GameConfigOptions(
+        discard_limit=config_discard_limit,
+        vps_to_win=config_vps_to_win,
+        map_instance=config_map
+    )
 
-    output_options = OutputOptions(output, csv, json, db)
-    game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
-    play_batch(
+    # When using Rust, check for player compatibility based on strictness setting
+    if rust and is_rust_available():
+        from catanatron_experimental.rust_bridge import _is_player_rust_compatible
+        console = Console()
+        console.print("[yellow]Note: The Rust backend integration is still in development.[/yellow]")
+        
+        # Check players and provide warnings for non-Rust-compatible players
+        non_rust_compatible = []
+        for i, player in enumerate(players):
+            # Use strict checking if strict_rust flag is set
+            if not _is_player_rust_compatible(player, strict_check=strict_rust):
+                non_rust_compatible.append((i, player))
+        
+        if non_rust_compatible:
+            if strict_rust:
+                # In strict mode, refuse to run with incompatible players
+                console.print("[red]Error: Some players are not Rust-compatible:[/red]")
+                for i, player in non_rust_compatible:
+                    console.print(f"[red]  - Player {i}: {player}[/red]")
+                console.print("[red]When using --strict-rust, all players must be explicitly Rust-compatible.[/red]")
+                console.print("[red]Use player type 'RR' for Rust-compatible players.[/red]")
+                return
+            else:
+                # In non-strict mode, warn but continue
+                console.print("[yellow]Warning: Some players are not explicitly marked as Rust-compatible:[/yellow]")
+                for i, player in non_rust_compatible:
+                    console.print(f"[yellow]  - Player {i}: {player}[/yellow]")
+                console.print("[yellow]The system will attempt to adapt these players for the Rust backend.[/yellow]")
+                console.print("[yellow]For best results, consider using player type 'RR' for all players.[/yellow]")
+                console.print("[yellow]You can use --strict-rust to enforce strict compatibility.[/yellow]")
+                
+                # Ask for confirmation before proceeding
+                if not quiet and click.confirm("Do you want to continue?", default=True):
+                    pass
+                elif not quiet:
+                    return
+
+    # Play the games with no silent exception catching for Rust
+    return play_batch(
         num,
         players,
-        output_options,
-        game_config,
-        quiet,
+        output_options=output_options,
+        game_config=game_config,
+        quiet=quiet,
+        use_rust=rust,
+        strict_rust=strict_rust,
     )
 
 
-@dataclass(frozen=True)
+@dataclass
 class OutputOptions:
     """Class to keep track of output CLI flags"""
 
@@ -199,54 +314,170 @@ class OutputOptions:
     db: bool = False
 
 
-@dataclass(frozen=True)
+@dataclass
 class GameConfigOptions:
     discard_limit: int = 7
     vps_to_win: int = 10
     map_instance: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
 
 
-COLOR_TO_RICH_STYLE = {
-    Color.RED: "red",
-    Color.BLUE: "blue",
-    Color.ORANGE: "yellow",
-    Color.WHITE: "white",
-}
-
-
 def rich_player_name(player):
-    style = COLOR_TO_RICH_STYLE[player.color]
-    return f"[{style}]{player}[/{style}]"
+    color = player.color
+    return f"[{color.value}]{player}[/{color.value}]"
 
 
 def rich_color(color):
-    if color is None:
-        return ""
-    style = COLOR_TO_RICH_STYLE[color]
-    return f"[{style}]{color.value}[/{style}]"
+    """
+    Format a color for rich display.
+    
+    Args:
+        color: Either a Color enum object (from Python backend) or an integer (from Rust backend)
+              where 0=RED, 1=BLUE, 2=ORANGE, 3=WHITE
+    
+    Returns:
+        A formatted string for rich display
+    """
+    # Define color name mapping for Rust integer colors
+    COLOR_NAMES = {
+        0: "red",
+        1: "blue", 
+        2: "orange",
+        3: "white"
+    }
+    
+    if isinstance(color, int):
+        # Handle Rust integer colors
+        name = COLOR_NAMES.get(color, "gray")
+        style = name
+        # Return the text representation for the color
+        color_text = {0: "RED", 1: "BLUE", 2: "ORANGE", 3: "WHITE"}.get(color, str(color))
+        return f"[{style}]{color_text}[/{style}]"
+    else:
+        # Handle Python Color enum objects
+        name = color.name.lower()
+        style = name
+        return f"[{style}]{color.value}[/{style}]"
 
 
-def play_batch_core(num_games, players, game_config, accumulators=[]):
+def play_batch_core(num_games, players, game_config, accumulators=[], use_rust=False, strict_rust=False):
+    """Plays a batch of games with the given players and config.
+    
+    Args:
+        num_games: Number of games to play
+        players: List of Player objects
+        game_config: GameConfigOptions
+        accumulators: List of accumulators to use
+        use_rust: Whether to use Rust backend
+        strict_rust: Whether to strictly enforce Rust compatibility
+        
+    Returns:
+        List of winners (colors)
+        
+    Raises:
+        When use_rust=True, will propagate all exceptions from the Rust backend
+        rather than catching them.
+    """
+    import traceback
+    from catanatron_experimental.engine_interface import create_game
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Initialize accumulators that need to be initialized once per batch
     for accumulator in accumulators:
         if isinstance(accumulator, SimulationAccumulator):
             accumulator.before_all()
-
-    for _ in range(num_games):
-        for player in players:
-            player.reset_state()
-        map_instance = build_map(game_config.map_instance)
-        game = Game(
-            players,
-            discard_limit=game_config.discard_limit,
-            vps_to_win=game_config.vps_to_win,
-            map_instance=map_instance,
-        )
-        game.play(accumulators)
-        yield game
-
+    
+    winners = []
+    for i in range(num_games):
+        # When using Rust, we want to propagate exceptions to enforce strict behavior
+        # When using Python, we catch exceptions to continue with other games
+        if use_rust:
+            # Reset player state if needed
+            for player in players:
+                if hasattr(player, 'reset_state'):
+                    player.reset_state()
+            
+            # For Rust backend, use map_type parameter
+            game_params = {
+                'discard_limit': game_config.discard_limit,
+                'vps_to_win': game_config.vps_to_win,
+                'map_type': game_config.map_instance,  # Pass the map type string directly
+                'seed': None,  # Explicit None to match Rust expectation
+            }
+            
+            # Create the game with appropriate parameters - don't catch exceptions
+            game = create_game(
+                players=players, 
+                use_rust=use_rust,
+                strict_rust=strict_rust,  # Pass strict_rust directly
+                **game_params
+            )
+            
+            # Initialize accumulators
+            for accumulator in accumulators:
+                accumulator.before(game)
+            
+            # Play the game
+            winner = game.play()
+            winners.append(winner)
+            
+            # Update accumulators
+            for accumulator in accumulators:
+                accumulator.after(game)
+        else:
+            # Original code with exception handling for Python backend
+            try:
+                # Reset player state if needed
+                for player in players:
+                    if hasattr(player, 'reset_state'):
+                        player.reset_state()
+                
+                # For Python backend, use map_instance parameter with build_map
+                from catanatron.models.map_instance import build_map
+                game_params = {
+                    'discard_limit': game_config.discard_limit,
+                    'vps_to_win': game_config.vps_to_win,
+                    'map_instance': build_map(game_config.map_instance),
+                    'seed': None,
+                }
+                
+                # Create the game with appropriate parameters
+                game = create_game(
+                    players=players, 
+                    use_rust=use_rust,
+                    **game_params
+                )
+                
+                # Initialize accumulators
+                for accumulator in accumulators:
+                    try:
+                        accumulator.before(game)
+                    except Exception as e:
+                        logger.error(f"Error in accumulator.before: {e}")
+                
+                # Play the game
+                winner = game.play()
+                winners.append(winner)
+                
+                # Update accumulators
+                for accumulator in accumulators:
+                    try:
+                        accumulator.after(game)
+                    except Exception as e:
+                        logger.error(f"Error in accumulator.after: {e}")
+                        
+            except Exception as e:
+                logger.error(f"Error in game {i+1}: {type(e).__name__}: {e}")
+                logger.error(traceback.format_exc())
+                # Continue with the next game
+                continue
+    
+    # Finalize accumulators
     for accumulator in accumulators:
         if isinstance(accumulator, SimulationAccumulator):
             accumulator.after_all()
+            
+    return winners
 
 
 def play_batch(
@@ -255,141 +486,100 @@ def play_batch(
     output_options=None,
     game_config=None,
     quiet=False,
+    use_rust=False,
+    strict_rust=False,
 ):
-    output_options = output_options or OutputOptions()
-    game_config = game_config or GameConfigOptions()
+    """
+    Play multiple games at once.
+    
+    Args:
+        num_games: Number of games to play
+        players: List of player objects
+        output_options: Output configuration
+        game_config: Game configuration
+        quiet: Whether to suppress console output
+        use_rust: Whether to use the Rust backend
+        strict_rust: Whether to strictly enforce Rust compatibility
+    """
+    if output_options is None:
+        output_options = OutputOptions()
+    if game_config is None:
+        game_config = GameConfigOptions()
 
-    statistics_accumulator = StatisticsAccumulator()
-    vp_accumulator = VpDistributionAccumulator()
-    accumulators = [statistics_accumulator, vp_accumulator]
-    if output_options.output:
-        ensure_dir(output_options.output)
-    if output_options.output and output_options.csv:
-        accumulators.append(CsvDataAccumulator(output_options.output))
-    if output_options.output and output_options.json:
-        accumulators.append(JsonDataAccumulator(output_options.output))
-    if output_options.db:
-        accumulators.append(DatabaseAccumulator())
-    for accumulator_class in CUSTOM_ACCUMULATORS:
-        accumulators.append(accumulator_class(players=players, game_config=game_config))
+    console = Console()
 
-    if quiet:
-        for _ in play_batch_core(num_games, players, game_config, accumulators):
-            pass
-        return (
-            dict(statistics_accumulator.wins),
-            dict(statistics_accumulator.results_by_player),
-            statistics_accumulator.games,
-        )
+    # ===== Configure Output Options =====
+    directory = output_options.output
+    if directory is not None:
+        ensure_dir(directory)
 
-    # ===== Game Details
-    last_n = 10
-    actual_last_n = min(last_n, num_games)
-    table = Table(title=f"Last {actual_last_n} Games", box=box.MINIMAL)
-    table.add_column("#", justify="right", no_wrap=True)
-    table.add_column("SEATING")
-    table.add_column("TURNS", justify="right")
-    for player in players:
-        table.add_column(f"{player.color.value} VP", justify="right")
-    table.add_column("WINNER")
-    if output_options.db:
-        table.add_column("LINK", overflow="fold")
+    # ===== Set up Accumulators (we keep track of winners) =====
+    additional_accumulators = []  # can be extended for specific needs
+    accumulators = additional_accumulators
+    # Always track winners, for CLI output
+    winners_by_color = Counter()
+    
+    # Record start time
+    start = time.time()
 
     with Progress(
         "[progress.description]{task.description}",
         BarColumn(),
         "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
         CustomTimeRemainingColumn(),
-        console=console,
+        console=None if quiet else console,
     ) as progress:
-        main_task = progress.add_task(f"Playing {num_games} games...", total=num_games)
-        player_tasks = [
-            progress.add_task(
-                rich_player_name(player), total=num_games, show_time=False
+        task = progress.add_task(f"Running {num_games} games...", total=num_games)
+        
+        # Play games and collect winners
+        try:
+            winners = play_batch_core(
+                num_games, 
+                players, 
+                game_config, 
+                accumulators=accumulators, 
+                use_rust=use_rust,
+                strict_rust=strict_rust
             )
-            for player in players
-        ]
+            progress.update(task, advance=num_games)
+        except Exception as e:
+            # When using Rust, provide a clearer error message
+            if use_rust:
+                console.print(f"\n[bold red]Error running games with Rust backend:[/bold red]")
+                console.print(f"[red]{type(e).__name__}: {str(e)}[/red]")
+                console.print("[yellow]Try with --log-level=DEBUG for more details.[/yellow]")
+                return []
+            else:
+                # Re-raise for Python backend
+                raise
 
-        for i, game in enumerate(
-            play_batch_core(num_games, players, game_config, accumulators)
-        ):
-            winning_color = game.winning_color()
+    # Update the counter with the winners
+    for winner in winners:
+        winners_by_color[winner] += 1
 
-            if (num_games - last_n) < (i + 1):
-                seating = ",".join([rich_color(c) for c in game.state.colors])
-                row = [
-                    str(i + 1),
-                    seating,
-                    str(game.state.num_turns),
-                ]
-                for player in players:  # should be in column order
-                    points = get_actual_victory_points(game.state, player.color)
-                    row.append(str(points))
-                row.append(rich_color(winning_color))
-                if output_options.db:
-                    row.append(accumulators[-1].link)
-
-                table.add_row(*row)
-
-            progress.update(main_task, advance=1)
-            if winning_color is not None:
-                winning_index = list(map(lambda p: p.color, players)).index(
-                    winning_color
-                )
-                winner_task = player_tasks[winning_index]
-                progress.update(winner_task, advance=1)
-        progress.refresh()
-    console.print(table)
-
-    # ===== PLAYER SUMMARY
-    table = Table(title="Player Summary", box=box.MINIMAL)
-    table.add_column("", no_wrap=True)
-    table.add_column("WINS", justify="right")
-    table.add_column("AVG VP", justify="right")
-    table.add_column("AVG SETTLES", justify="right")
-    table.add_column("AVG CITIES", justify="right")
-    table.add_column("AVG ROAD", justify="right")
-    table.add_column("AVG ARMY", justify="right")
-    table.add_column("AVG DEV VP", justify="right")
-    for player in players:
-        vps = statistics_accumulator.results_by_player[player.color]
-        avg_vps = sum(vps) / len(vps)
-        avg_settlements = vp_accumulator.get_avg_settlements(player.color)
-        avg_cities = vp_accumulator.get_avg_cities(player.color)
-        avg_largest = vp_accumulator.get_avg_largest(player.color)
-        avg_longest = vp_accumulator.get_avg_longest(player.color)
-        avg_devvps = vp_accumulator.get_avg_devvps(player.color)
-        table.add_row(
-            rich_player_name(player),
-            str(statistics_accumulator.wins[player.color]),
-            f"{avg_vps:.2f}",
-            f"{avg_settlements:.2f}",
-            f"{avg_cities:.2f}",
-            f"{avg_longest:.2f}",
-            f"{avg_largest:.2f}",
-            f"{avg_devvps:.2f}",
+    # Calculate elapsed time
+    elapsed = time.time() - start
+    rate = num_games / elapsed if elapsed > 0 else float("inf")
+    
+    if not quiet:
+        console.print("\n=========== RESULTS ===========")
+        console.print(
+            f"Ran {num_games} games in {elapsed:.3f} secs\nRate: {rate:.2f} games/sec\n"
         )
-    console.print(table)
 
-    # ===== GAME SUMMARY
-    avg_ticks = f"{statistics_accumulator.get_avg_ticks():.2f}"
-    avg_turns = f"{statistics_accumulator.get_avg_turns():.2f}"
-    avg_duration = formatSecs(statistics_accumulator.get_avg_duration())
-    table = Table(box=box.MINIMAL, title="Game Summary")
-    table.add_column("AVG TICKS", justify="right")
-    table.add_column("AVG TURNS", justify="right")
-    table.add_column("AVG DURATION", justify="right")
-    table.add_row(avg_ticks, avg_turns, avg_duration)
-    console.print(table)
+        console.print("=========== WINNERS ===========")
+        
+        # Print winners accounting for possible integer colors from Rust
+        if len(winners_by_color) > 0:
+            for color, count in winners_by_color.most_common():
+                console.print(
+                    f"{rich_color(color)}: {count} ({count/num_games*100:.1f}%)",
+                )
+        else:
+            console.print("No winners recorded.")
 
-    if output_options.output and output_options.csv:
-        console.print(f"GZIP CSVs saved at: [green]{output_options.output}[/green]")
-
-    return (
-        dict(statistics_accumulator.wins),
-        dict(statistics_accumulator.results_by_player),
-        statistics_accumulator.games,
-    )
+    return winners
 
 
 if __name__ == "__main__":
