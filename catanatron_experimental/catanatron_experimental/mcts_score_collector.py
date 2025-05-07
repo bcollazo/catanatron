@@ -17,7 +17,7 @@ from catanatron.state_functions import (
 )
 from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
 from catanatron_experimental.machine_learning.players.playouts import run_playouts
-from catanatron_gym.features import (
+from catanatron_env.features import (
     build_production_features,
     resource_hand_features,
 )

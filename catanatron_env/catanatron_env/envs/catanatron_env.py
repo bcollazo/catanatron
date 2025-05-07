@@ -7,11 +7,11 @@ from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
-from catanatron_gym.features import (
+from catanatron_env.features import (
     create_sample,
     get_feature_ordering,
 )
-from catanatron_gym.board_tensor_features import (
+from catanatron_env.board_tensor_features import (
     create_board_tensor,
     get_channels,
     is_graph_feature,

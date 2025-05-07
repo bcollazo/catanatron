@@ -1,10 +1,9 @@
 from typing import Any, List, Literal, Tuple
 import functools
 from collections import Counter
-from catanatron.models.decks import freqdeck_count
-
 import networkx as nx
 
+from catanatron.models.decks import freqdeck_count
 from catanatron.state_functions import (
     get_player_buildings,
     player_key,

@@ -1,20 +1,21 @@
-catanatron\_gym.envs package
+catanatron\_env.envs package
 ============================
 
 Submodules
 ----------
 
-catanatron\_gym.envs.catanatron\_env module
+catanatron\_env.envs.catanatron\_env module
 -------------------------------------------
 
-.. automodule:: catanatron_gym.envs.catanatron_env
+.. automodule:: catanatron_env.envs.catanatron_env
    :members:
+   :undoc-members:
    :show-inheritance:
 
 Module contents
 ---------------
 
-.. automodule:: catanatron_gym.envs
+.. automodule:: catanatron_env.envs
    :members:
    :undoc-members:
    :show-inheritance:

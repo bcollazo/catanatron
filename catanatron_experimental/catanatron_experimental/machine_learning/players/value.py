@@ -9,7 +9,7 @@ from catanatron.state_functions import (
 )
 from catanatron.models.player import Player
 from catanatron.models.enums import RESOURCES, SETTLEMENT, CITY
-from catanatron_gym.features import (
+from catanatron_env.features import (
     build_production_features,
     reachability_features,
     resource_hand_features,

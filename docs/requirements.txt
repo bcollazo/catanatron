@@ -32,4 +32,4 @@ sphinxcontrib-serializinghtml==1.1.5
 urllib3==1.26.6
 zipp==3.8.1
 -e catanatron_core
--e catanatron_gym
+-e catanatron_env
