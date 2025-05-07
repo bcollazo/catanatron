@@ -39,18 +39,18 @@ jobs:
         run: |
           pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
-      - name: Lint with black
-        run: |
-          black catanatron_core --check
-          black catanatron_gym --check
-          black catanatron_server --check
-          black catanatron_experimental --check
       - name: Run sample catanatron-play
         run: |
           catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Install development dependencies
         run: |
           pip install -r dev-requirements.txt
+      - name: Lint with black
+        run: |
+          black catanatron_core --check
+          black catanatron_gym --check
+          black catanatron_server --check
+          black catanatron_experimental --check
       - name: Test with pytest
         run: |
           coverage run --source=catanatron -m pytest tests/
