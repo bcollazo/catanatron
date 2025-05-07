@@ -22,7 +22,7 @@ git clone git@github.com:bcollazo/catanatron.git
 cd catanatron/
 ```
 
-Create a virtual environment with Python3.8 or higher. Then:
+Create a virtual environment with Python3.12 or higher. Then:
 
 ```bash
 python -m venv venv
