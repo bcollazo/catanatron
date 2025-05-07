@@ -12,14 +12,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: 3.12
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools
-          pip install -r all-requirements.txt
+          pip install -r requirements.txt
 
       - name: Checkout PR and Master Branch
         uses: actions/checkout@v4
