@@ -17,22 +17,24 @@ See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https:/
 
 Clone this repository and install dependencies. This will include the Catanatron bot implementation and the `catanatron-play` simulator.
 
-```
+```bash
 git clone git@github.com:bcollazo/catanatron.git
 cd catanatron/
 ```
 
 Create a virtual environment with Python3.8 or higher. Then:
 
-```
-pip install -r all-requirements.txt
+```bash
+python -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Usage
 
 Run simulations and generate datasets via the CLI:
 
-```
+```bash
 catanatron-play --players=R,R,R,W --num=100
 ```
 
@@ -65,7 +67,7 @@ class FooPlayer(Player):
 
 Run it by passing the source code to `catanatron-play`:
 
-```
+```bash
 catanatron-play --code=myplayers.py --players=R,R,R,FOO --num=10
 ```
 
@@ -91,14 +93,14 @@ We provide a [docker-compose.yml](docker-compose.yml) with everything needed to 
 
 To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install/) installed, and run (from this repo's root):
 
-```
-docker-compose up
+```bash
+docker compose up
 ```
 
 You can now use the `--db` flag to make the catanatron-play simulator save
 the game in the database for inspection via the web server.
 
-```
+```bash
 catanatron-play --players=W,W,W,W --db --num=1
 ```
 
@@ -191,13 +193,13 @@ done by running 1000 (when possible) 1v1 games against previous in list.
 
 To develop for Catanatron core logic you can use the following test suite:
 
-```
+```bash
 coverage run --source=catanatron -m pytest tests/ && coverage report
 ```
 
 Or you can run the suite in watch-mode with:
 
-```
+```bash
 ptw --ignore=tests/integration_tests/ --nobeep
 ```
 
@@ -205,13 +207,13 @@ ptw --ignore=tests/integration_tests/ --nobeep
 
 Generate JSON files with complete information about games and decisions by running:
 
-```
+```bash
 catanatron-play --num=100 --output=my-data-path/ --json
 ```
 
 Similarly (with Tensorflow installed) you can generate several GZIP CSVs of a basic set of features:
 
-```
+```bash
 catanatron-play --num=100 --output=my-data-path/ --csv
 ```
 
@@ -228,7 +230,7 @@ As an alternative to running the project with Docker, you can run the following 
 
 ### React UI
 
-```
+```bash
 cd ui/
 npm install
 npm start
@@ -236,7 +238,7 @@ npm start
 
 This can also be run via Docker independetly like (after building):
 
-```
+```bash
 docker build -t bcollazo/catanatron-react-ui:latest ui/
 docker run -it -p 3000:3000 bcollazo/catanatron-react-ui
 ```
@@ -246,7 +248,7 @@ docker run -it -p 3000:3000 bcollazo/catanatron-react-ui
 Ensure you are inside a virtual environment with all dependencies installed and
 use `flask run`.
 
-```
+```bash
 python3.8 -m venv venv
 source ./venv/bin/activate
 pip install -r requirements.txt
@@ -257,7 +259,7 @@ flask run
 
 This can also be run via Docker independetly like (after building):
 
-```
+```bash
 docker build -t bcollazo/catanatron-server:latest . -f Dockerfile.web
 docker run -it -p 5000:5000 bcollazo/catanatron-server
 ```
@@ -266,8 +268,8 @@ docker run -it -p 5000:5000 bcollazo/catanatron-server
 
 Make sure you have `docker-compose` installed (https://docs.docker.com/compose/install/).
 
-```
-docker-compose up
+```bash
+docker compose up
 ```
 
 Or run any other database deployment (locally or in the cloud).
@@ -278,25 +280,25 @@ Or run any other database deployment (locally or in the cloud).
 
 For watching training progress, use `keras.callbacks.TensorBoard` and open TensorBoard:
 
-```
+```bash
 tensorboard --logdir logs
 ```
 
 ### Docker GPU TensorFlow
 
-```
+```bash
 docker run -it tensorflow/tensorflow:latest-gpu-jupyter bash
 docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensorflow/tensorflow:latest-gpu-jupyter
 ```
 
 ### Testing Performance
 
-```
+```bash
 python -m cProfile -o profile.pstats catanatron_experimental/catanatron_experimental/play.py --num=5
 snakeviz profile.pstats
 ```
 
-```
+```bash
 pytest --benchmark-compare=0001 --benchmark-compare-fail=mean:10% --benchmark-columns=min,max,mean,stddev
 ```
 
@@ -312,7 +314,7 @@ In [3]: x.get_chunk(10)
 
 catanatron Package
 
-```
+```bash
 make build PACKAGE=catanatron_core
 make upload PACKAGE=catanatron_core
 make upload-production PACKAGE=catanatron_core
@@ -320,7 +322,7 @@ make upload-production PACKAGE=catanatron_core
 
 catanatron_gym Package
 
-```
+```bash
 make build PACKAGE=catanatron_gym
 make upload PACKAGE=catanatron_gym
 make upload-production PACKAGE=catanatron_gym
@@ -328,7 +330,7 @@ make upload-production PACKAGE=catanatron_gym
 
 ### Building Docs
 
-```
+```bash
 sphinx-quickstart docs
 sphinx-apidoc -o docs/source catanatron_core
 sphinx-build -b html docs/source/ docs/build/html
