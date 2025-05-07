@@ -3,6 +3,7 @@ Implements https://www.chessprogramming.org/SPSA
 
 This seems to work!  - November 7, 2021
 """
+
 import random
 import numpy as np
 
