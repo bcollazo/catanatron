@@ -1,1 +1,1 @@
-from catanatron_env.envs.grid_world import GridWorldEnv
+from catanatron_env.envs.catanatron_env import CatanatronEnv

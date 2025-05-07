@@ -8,8 +8,4 @@ packages = ["catanatron_env"]
 [project]
 name = "catanatron_env"
 version = "0.0.1"
-dependencies = [
-  "gymnasium",
-  "pygame>=2.1.3",
-  "pre-commit",
-]
+dependencies = ["gymnasium", "pre-commit", "catanatron", "numpy"]
