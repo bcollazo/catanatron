@@ -248,7 +248,7 @@ class CatanMap:
 
 
 def init_port_nodes_cache(
-    tiles: Dict[Coordinate, Tile]
+    tiles: Dict[Coordinate, Tile],
 ) -> Dict[Union[FastResource, None], Set[int]]:
     """Initializes board.port_nodes cache.
 
@@ -271,7 +271,7 @@ def init_port_nodes_cache(
 
 
 def init_adjacent_tiles(
-    land_tiles: Dict[Coordinate, LandTile]
+    land_tiles: Dict[Coordinate, LandTile],
 ) -> Dict[int, List[LandTile]]:
     adjacent_tiles = defaultdict(list)  # node_id => tile[3]
     for tile in land_tiles.values():
@@ -281,7 +281,7 @@ def init_adjacent_tiles(
 
 
 def init_node_production(
-    adjacent_tiles: Dict[int, List[LandTile]]
+    adjacent_tiles: Dict[int, List[LandTile]],
 ) -> Dict[NodeId, Counter]:
     """Returns node_id => Counter({WHEAT: 0.123, ...})"""
     node_production = dict()
