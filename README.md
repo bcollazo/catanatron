@@ -331,6 +331,7 @@ make upload-production PACKAGE=catanatron_gym
 ### Building Docs
 
 ```bash
+pip install -r docs/requirements.txt
 sphinx-quickstart docs
 sphinx-apidoc -o docs/source catanatron_core
 sphinx-build -b html docs/source/ docs/build/html
