@@ -122,9 +122,11 @@ def mcts_analysis_endpoint(game_id, state_index):
                 {
                     "success": True,
                     "probabilities": probabilities,
-                    "state_index": state_index
-                    if state_index is not None
-                    else len(game.state.actions),
+                    "state_index": (
+                        state_index
+                        if state_index is not None
+                        else len(game.state.actions)
+                    ),
                 }
             ),
             status=200,

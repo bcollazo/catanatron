@@ -24,27 +24,33 @@ jobs:
 
   build-python:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.11
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: ${{ matrix.python-version }}
           cache: "pip" # caching pip dependencies
       - name: Install dependencies
         run: |
           pip install --upgrade pip setuptools wheel
-          pip install -r all-requirements.txt
+          pip install -r requirements.txt
+      - name: Run sample catanatron-play
+        run: |
+          catanatron-play --players=R,W,F,AB:2 --num=2
+      - name: Install development dependencies
+        run: |
+          pip install -r dev-requirements.txt
       - name: Lint with black
         run: |
           black catanatron_core --check
           black catanatron_gym --check
           black catanatron_server --check
           black catanatron_experimental --check
-      - name: Run sample catanatron-play
-        run: |
-          catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Test with pytest
         run: |
           coverage run --source=catanatron -m pytest tests/
@@ -56,13 +62,16 @@ jobs:
 
   build-gym:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.11
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: ${{ matrix.python-version }}
           cache: "pip" # caching pip dependencies
       - name: Install dependencies
         run: |
@@ -81,7 +90,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 16
       - run: npm ci

@@ -1,7 +1,8 @@
 """
-Move-generation functions (these return a list of actions that can be taken 
+Move-generation functions (these return a list of actions that can be taken
 by current player). Main function is generate_playable_actions.
 """
+
 import operator as op
 from functools import reduce
 from typing import Any, Dict, List, Set, Tuple, Union
