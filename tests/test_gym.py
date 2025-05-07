@@ -1,12 +1,12 @@
 import random
 
-import gymnasium as gym
+import gymnasium
 from gymnasium.utils.env_checker import check_env
 
-from catanatron_gym.features import get_feature_ordering
+from catanatron_env.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
 from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
-from catanatron_gym.envs.catanatron_env import CatanatronEnv
+from catanatron_env.envs.catanatron_env import CatanatronEnv
 
 features = get_feature_ordering(2)
 
@@ -52,7 +52,7 @@ def test_gym():
 
 
 def test_gym_registration_and_api_works():
-    env = gym.make("catanatron_gym:catanatron-v1")
+    env = gymnasium.make("catanatron_env/Catanatron-v0")
     observation, info = env.reset()
     done = False
     reward = 0
@@ -65,8 +65,8 @@ def test_gym_registration_and_api_works():
 
 
 def test_invalid_action_reward():
-    env = gym.make(
-        "catanatron_gym:catanatron-v1", config={"invalid_action_reward": -1234}
+    env = gymnasium.make(
+        "catanatron_env/Catanatron-v0", config={"invalid_action_reward": -1234}
     )
     first_obs, _ = env.reset()
     invalid_action = next(filter(lambda i: i not in env.get_valid_actions(), range(1000)))  # type: ignore
@@ -86,8 +86,8 @@ def test_custom_reward():
     def custom_reward(game, p0_color):
         return 123
 
-    env = gym.make(
-        "catanatron_gym:catanatron-v1", config={"reward_function": custom_reward}
+    env = gymnasium.make(
+        "catanatron_env/Catanatron-v0", config={"reward_function": custom_reward}
     )
     observation, info = env.reset()
     action = random.choice(env.get_valid_actions())  # type: ignore
@@ -96,7 +96,7 @@ def test_custom_reward():
 
 
 def test_custom_map():
-    env = gym.make("catanatron_gym:catanatron-v1", config={"map_type": "MINI"})
+    env = gymnasium.make("catanatron_env/Catanatron-v0", config={"map_type": "MINI"})
     observation, info = env.reset()
     assert len(env.get_valid_actions()) < 50  # type: ignore
     assert len(observation) < 614
@@ -104,8 +104,8 @@ def test_custom_map():
 
 
 def test_enemies():
-    env = gym.make(
-        "catanatron_gym:catanatron-v1",
+    env = gymnasium.make(
+        "catanatron_env/Catanatron-v0",
         config={
             "enemies": [
                 ValueFunctionPlayer(Color.RED),
@@ -131,8 +131,8 @@ def test_enemies():
 
 
 def test_mixed_rep():
-    env = gym.make(
-        "catanatron_gym:catanatron-v1",
+    env = gymnasium.make(
+        "catanatron_env/Catanatron-v0",
         config={"representation": "mixed"},
     )
     observation, info = env.reset()

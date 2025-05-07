@@ -100,7 +100,7 @@ This would execute five 4-player `RandomPlayer` games and output GZIP CSVs to th
  rewards.csv.gzip: Several "labels" we tried for each (state, action) pair. RETURN for example is 1 if player ultimately won, 0 otherwise.
 </p>
 
-For more information on these representations, look at the [action table](https://catanatron.readthedocs.io/en/latest/catanatron_gym.envs.html#catanatron_gym.envs.catanatron_env.CatanatronEnv.action_space) and [state table](https://catanatron.readthedocs.io/en/latest/catanatron_gym.envs.html#catanatron_gym.envs.catanatron_env.CatanatronEnv.observation_space).
+For more information on these representations, look at the [action table](https://catanatron.readthedocs.io/en/latest/catanatron_env.envs.html#catanatron_env.envs.catanatron_env.CatanatronEnv.action_space) and [state table](https://catanatron.readthedocs.io/en/latest/catanatron_env.envs.html#catanatron_env.envs.catanatron_env.CatanatronEnv.observation_space).
 
 ## Attempt #1: Cross-Entropy Method and Online DQN
 
@@ -201,4 +201,4 @@ You can clone the repo, install dependencies, and test your own ideas for improv
 
 ## PS: Future Work
 
-I also still see possibility in the Reinforcement Learning approaches with a self-play component. For example, it could be very interesting to get either https://github.com/suragnair/alpha-zero-general or https://github.com/werner-duvaud/muzero-general working with Catanatron. I have implemented a Gym-like interface [here](https://github.com/bcollazo/catanatron/tree/master/catanatron_gym), but it is not clear to me how to adapt those repositories.
+I also still see possibility in the Reinforcement Learning approaches with a self-play component. For example, it could be very interesting to get either https://github.com/suragnair/alpha-zero-general or https://github.com/werner-duvaud/muzero-general working with Catanatron. I have implemented a Gym-like interface [here](https://github.com/bcollazo/catanatron/tree/master/catanatron_env), but it is not clear to me how to adapt those repositories.

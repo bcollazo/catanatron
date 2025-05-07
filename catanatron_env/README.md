@@ -26,9 +26,9 @@ for _ in range(1000):
 env.close()
 ```
 
-For `action` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron_gym.envs.html#catanatron_gym.envs.catanatron_env.CatanatronEnv.action_space).
+For `action` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron_env.envs.html#catanatron_env.envs.catanatron_env.CatanatronEnv.action_space).
 
-For `observation` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron_gym.envs.html#catanatron_gym.envs.catanatron_env.CatanatronEnv.observation_space).
+For `observation` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron_env.envs.html#catanatron_env.envs.catanatron_env.CatanatronEnv.observation_space).
 
 You can access `env.game.state` and build your own "observation" (features) vector as well.
 

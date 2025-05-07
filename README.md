@@ -166,7 +166,7 @@ The code is divided in the following 5 components (folders):
 - **catanatron_server**: Contains a Flask web server in order to serve
   game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. It defaults to using an ephemeral in-memory sqlite database. Also pip-installable (not publised in PyPi however).
 
-- **catanatron_gym**: OpenAI Gym interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. This can be pip-installed independently with `pip install catanatron_gym`, for more information see [catanatron_gym/README.md](catanatron_gym/README.md).
+- **catanatron_env**: Gymnasium interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. This can be pip-installed independently with `pip install catanatron_env`, for more information see [catanatron_env/README.md](catanatron_env/README.md).
 
 - **catantron_experimental**: A collection of unorganized scripts with contain many failed attempts at finding the best possible bot. Its ok to break these scripts. Its pip-installable. Exposes a `catanatron-play` command-line script that can be used to play games in bulk, create machine learning datasets of games, and more!
 
@@ -320,12 +320,12 @@ make upload PACKAGE=catanatron_core
 make upload-production PACKAGE=catanatron_core
 ```
 
-catanatron_gym Package
+catanatron_env Package
 
 ```bash
-make build PACKAGE=catanatron_gym
-make upload PACKAGE=catanatron_gym
-make upload-production PACKAGE=catanatron_gym
+make build PACKAGE=catanatron_env
+make upload PACKAGE=catanatron_env
+make upload-production PACKAGE=catanatron_env
 ```
 
 ### Building Docs

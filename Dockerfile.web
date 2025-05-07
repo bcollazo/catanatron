@@ -7,7 +7,7 @@ RUN pip install --upgrade pip
 COPY . .
 RUN pip install -e catanatron_core
 RUN pip install -e catanatron_server
-RUN pip install -e catanatron_gym
+RUN pip install -e catanatron_env
 RUN pip install -e catanatron_experimental
 
 EXPOSE 5000
