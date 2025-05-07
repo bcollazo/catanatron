@@ -334,6 +334,8 @@ make upload-production PACKAGE=catanatron_env
 pip install -r docs/requirements.txt
 sphinx-quickstart docs
 sphinx-apidoc -o docs/source catanatron_core
+sphinx-apidoc -o docs/source catanatron_env
+sphinx-apidoc -o docs/source catanatron_server
 sphinx-build -b html docs/source/ docs/build/html
 ```
 
