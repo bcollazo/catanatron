@@ -14,6 +14,31 @@ epsilon = 1e-8
 EXP_C = 2**0.5
 
 
+class MCTSPlayer(Player):
+    def __init__(self, color, num_simulations=SIMULATIONS, prunning=False):
+        super().__init__(color)
+        self.num_simulations = int(num_simulations)
+        self.prunning = bool(prunning)
+
+    def decide(self, game: Game, playable_actions):
+        actions = list_prunned_actions(game) if self.prunning else playable_actions
+        if len(actions) == 1:
+            return actions[0]
+
+        start = time.time()
+        root = StateNode(self.color, game.copy(), None, self.prunning)
+        for _ in range(self.num_simulations):
+            root.run_simulation()
+
+        # print(
+        #     f"{str(self)} took {time.time() - start} secs to decide {len(playable_actions)}"
+        # )
+        return root.choose_best_action()
+
+    def __repr__(self):
+        return super().__repr__() + f"({self.num_simulations}:{self.prunning})"
+
+
 class StateNode:
     def __init__(self, color, game, parent, prunning=False):
         self.level = 0 if parent is None else parent.level + 1
@@ -108,33 +133,3 @@ class StateNode:
             tmp = tmp.parent
 
             tmp.wins += value
-
-
-class MCTSPlayer(Player):
-    def __init__(self, color, num_simulations=SIMULATIONS, prunning=False):
-        super().__init__(color)
-        self.num_simulations = int(num_simulations)
-        self.prunning = bool(prunning)
-
-    def decide(self, game: Game, playable_actions):
-        # if len(game.state.actions) > 10:
-        #     import sys
-
-        #     sys.exit(1)
-        actions = list_prunned_actions(game) if self.prunning else playable_actions
-        if len(actions) == 1:
-            return actions[0]
-
-        start = time.time()
-        root = StateNode(self.color, game.copy(), None, self.prunning)
-        for _ in range(self.num_simulations):
-            root.run_simulation()
-
-        print(
-            f"{str(self)} took {time.time() - start} secs to decide {len(playable_actions)}"
-        )
-
-        return root.choose_best_action()
-
-    def __repr__(self):
-        return super().__repr__() + f"({self.num_simulations}:{self.prunning})"
