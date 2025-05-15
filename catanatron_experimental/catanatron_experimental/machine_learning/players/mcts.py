@@ -7,10 +7,7 @@ import numpy as np
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron_experimental.machine_learning.players.playouts import run_playout
-from catanatron_experimental.machine_learning.players.tree_search_utils import (
-    execute_spectrum,
-    list_prunned_actions,
-)
+from catanatron.players.tree_search_utils import execute_spectrum, list_prunned_actions
 
 SIMULATIONS = 10
 epsilon = 1e-8

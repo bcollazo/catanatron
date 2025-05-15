@@ -4,10 +4,7 @@ from typing import Any
 
 from catanatron.game import Game
 from catanatron.models.player import Player
-from catanatron_experimental.machine_learning.players.tree_search_utils import (
-    expand_spectrum,
-    list_prunned_actions,
-)
+from catanatron.players.tree_search_utils import expand_spectrum, list_prunned_actions
 from catanatron_experimental.machine_learning.players.value import (
     DEFAULT_WEIGHTS,
     get_value_fn,
