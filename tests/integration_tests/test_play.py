@@ -8,3 +8,10 @@ def test_play():
     result = runner.invoke(simulate, ["--num=5", "--players=R,R,R,W"])
     assert result.exit_code == 0
     assert "Game Summary" in result.output
+
+
+def test_play_strong():
+    runner = CliRunner()
+    result = runner.invoke(simulate, ["--num=1", "--players=AB,V,VP,M"])
+    assert result.exit_code == 0
+    assert "Game Summary" in result.output

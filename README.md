@@ -27,7 +27,8 @@ Create a virtual environment with Python3.12 or higher. Then:
 ```bash
 python -m venv venv
 source ./venv/bin/activate
-pip install -r requirements.txt
+pip install -e .[web,gym,dev]
+pip install -e catanatron_experimental
 ```
 
 ## Usage
