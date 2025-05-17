@@ -189,39 +189,39 @@ class DebugActionNode:
         self.probas = []
 
 
-def render_debug_tree(node):
-    from graphviz import Digraph
+# def render_debug_tree(node):
+#     from graphviz import Digraph
 
-    dot = Digraph("AlphaBetaSearch")
+#     dot = Digraph("AlphaBetaSearch")
 
-    agenda = [node]
+#     agenda = [node]
 
-    while len(agenda) != 0:
-        tmp = agenda.pop()
-        dot.node(
-            tmp.label,
-            label=f"<{tmp.label}<br /><font point-size='10'>{tmp.expected_value}</font>>",
-            style="filled",
-            fillcolor=tmp.color.value,
-        )
-        for child in tmp.children:
-            action_label = (
-                f"{tmp.label} - {str(child.action).replace('<', '').replace('>', '')}"
-            )
-            dot.node(
-                action_label,
-                label=f"<{action_label}<br /><font point-size='10'>{child.expected_value}</font>>",
-                shape="box",
-            )
-            dot.edge(tmp.label, action_label)
-            for action_child, proba in zip(child.children, child.probas):
-                dot.node(
-                    action_child.label,
-                    label=f"<{action_child.label}<br /><font point-size='10'>{action_child.expected_value}</font>>",
-                )
-                dot.edge(action_label, action_child.label, label=str(proba))
-                agenda.append(action_child)
-    print(dot.render())
+#     while len(agenda) != 0:
+#         tmp = agenda.pop()
+#         dot.node(
+#             tmp.label,
+#             label=f"<{tmp.label}<br /><font point-size='10'>{tmp.expected_value}</font>>",
+#             style="filled",
+#             fillcolor=tmp.color.value,
+#         )
+#         for child in tmp.children:
+#             action_label = (
+#                 f"{tmp.label} - {str(child.action).replace('<', '').replace('>', '')}"
+#             )
+#             dot.node(
+#                 action_label,
+#                 label=f"<{action_label}<br /><font point-size='10'>{child.expected_value}</font>>",
+#                 shape="box",
+#             )
+#             dot.edge(tmp.label, action_label)
+#             for action_child, proba in zip(child.children, child.probas):
+#                 dot.node(
+#                     action_child.label,
+#                     label=f"<{action_child.label}<br /><font point-size='10'>{action_child.expected_value}</font>>",
+#                 )
+#                 dot.edge(action_label, action_child.label, label=str(proba))
+#                 agenda.append(action_child)
+#     print(dot.render())
 
 
 class SameTurnAlphaBetaPlayer(AlphaBetaPlayer):

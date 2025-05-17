@@ -5,13 +5,13 @@ from catanatron_experimental.play import simulate
 
 def test_play():
     runner = CliRunner()
-    result = runner.invoke(simulate, ["--num=5", "--players=R,R,R,W"])
+    result = runner.invoke(simulate, ["--num=5", "--players=R,V,VP,W"])
     assert result.exit_code == 0
     assert "Game Summary" in result.output
 
 
 def test_play_strong():
     runner = CliRunner()
-    result = runner.invoke(simulate, ["--num=1", "--players=AB,V,VP,M"])
+    result = runner.invoke(simulate, ["--num=1", "--players=AB,SAB,M"])
     assert result.exit_code == 0
     assert "Game Summary" in result.output
