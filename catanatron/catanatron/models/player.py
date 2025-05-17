@@ -1,4 +1,6 @@
 import random
+import builtins
+
 from enum import Enum
 
 
@@ -57,6 +59,10 @@ class SimplePlayer(Player):
 class HumanPlayer(Player):
     """Human player that selects which action to take using standard input"""
 
+    def __init__(self, color, is_bot=False, input_fn=builtins.input):
+        super().__init__(color, is_bot)
+        self.input_fn = input_fn  # this is for testing purposes
+
     def decide(self, game, playable_actions):
         for i, action in enumerate(playable_actions):
             print(f"{i}: {action.action_type} {action.value}")
@@ -64,7 +70,7 @@ class HumanPlayer(Player):
         while i is None or (i < 0 or i >= len(playable_actions)):
             print("Please enter a valid index:")
             try:
-                x = input(">>> ")
+                x = self.input_fn(">>> ")  # Use the input_fn
                 i = int(x)
             except ValueError:
                 pass

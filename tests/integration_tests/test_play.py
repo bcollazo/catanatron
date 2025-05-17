@@ -12,6 +12,6 @@ def test_play():
 
 def test_play_strong():
     runner = CliRunner()
-    result = runner.invoke(simulate, ["--num=1", "--players=AB,SAB,M"])
+    result = runner.invoke(simulate, ["--num=1", "--players=AB,SAB,M:3:True,G:3"])
     assert result.exit_code == 0
     assert "Game Summary" in result.output
