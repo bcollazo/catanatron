@@ -48,8 +48,6 @@ jobs:
       - name: Lint with black
         run: |
           black catanatron --check
-          black catanatron[gym] --check
-          black catanatron_server --check
           black catanatron_experimental --check
       - name: Test with pytest
         run: |

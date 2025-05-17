@@ -1,6 +1,6 @@
 import webbrowser
 
-from catanatron_server.models import database_session, upsert_game_state
+from catanatron.web.models import database_session, upsert_game_state
 
 
 def ensure_link(game):

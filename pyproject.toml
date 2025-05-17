@@ -5,9 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "catanatron"
 version = "3.3.0"
-authors = [
-    { name = "Bryan Collazo", email = "bcollazo2010@gmail.com" },
-]
+authors = [{ name = "Bryan Collazo", email = "bcollazo2010@gmail.com" }]
 description = "Fast Settlers of Catan Python Implementation"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,14 +16,16 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = [
-    "networkx",
-]
+dependencies = ["networkx"]
 
 [project.optional-dependencies]
-gym = [
-    "gymnasium",
-    "numpy",
+gym = ["gymnasium", "numpy"]
+web = [
+    "flask",
+    "flask_cors",
+    "flask_sqlalchemy",
+    "sqlalchemy",
+    "psycopg2-binary",
 ]
 
 [project.urls]
@@ -34,4 +34,3 @@ Repository = "https://github.com/bcollazo/catanatron"
 
 [tool.setuptools.packages.find]
 where = ["catanatron"]
-

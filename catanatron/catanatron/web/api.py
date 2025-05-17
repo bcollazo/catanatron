@@ -4,7 +4,7 @@ import traceback
 
 from flask import Response, Blueprint, jsonify, abort, request
 
-from catanatron_server.models import upsert_game_state, get_game_state
+from catanatron.web.models import upsert_game_state, get_game_state
 from catanatron.json import GameEncoder, action_from_json
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.game import Game

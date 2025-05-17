@@ -1,8 +1,8 @@
 import pytest
 import json
 
-from catanatron_server import create_app
-from catanatron_server.models import db
+from catanatron.web import create_app
+from catanatron.web.models import db
 
 
 @pytest.fixture

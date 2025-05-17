@@ -23,7 +23,7 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     # ===== Initialize Database
-    from catanatron_server.models import db
+    from catanatron.web.models import db
 
     with app.app_context():
         db.init_app(app)

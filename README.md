@@ -153,20 +153,21 @@ print(game.play())  # returns winning color
 You can use the `open_link` helper function to open up the game (useful for debugging):
 
 ```python
-from catanatron_server.utils import open_link
+from catanatron.web.utils import open_link
 open_link(game)  # opens game in browser
 ```
 
 ## Architecture
 
-The code is divided in the following 5 components (folders):
+The code is divided in three main components (folders):
 
-- **catanatron**: A pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see `setup.py`) and can be used as a Python package. See the documentation for the package here: https://catanatron.readthedocs.io/.
+- **catanatron**: The pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see [pyproject.toml](pyproject.toml)) and can be used as a Python package. See the documentation for the package here: https://catanatron.readthedocs.io/.
 
-- **catanatron_server**: Contains a Flask web server in order to serve
-  game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. It defaults to using an ephemeral in-memory sqlite database. Also pip-installable (not publised in PyPi however).
+  - **catanatron.web**: An extension package (optionally installed) that contains a Flask web server in order to serve
+    game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. 
+    It defaults to using an ephemeral in-memory sqlite database. Also pip-installable with `pip install catanatron[web]`.
 
-- **catanatron_gym**: Gymnasium interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. This can be pip-installed independently with `pip install catanatron_gym`, for more information see [catanatron_gym/README.md](catanatron_gym/README.md).
+  - **catanatron.gym**: Gymnasium interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. This can be pip-installed independently with `pip install catanatron[gym]`, for more information see [catanatron/gym/README.md](catanatron/catanatron/gym/README.md).
 
 - **catantron_experimental**: A collection of unorganized scripts with contain many failed attempts at finding the best possible bot. Its ok to break these scripts. Its pip-installable. Exposes a `catanatron-play` command-line script that can be used to play games in bulk, create machine learning datasets of games, and more!
 
@@ -251,10 +252,9 @@ use `flask run`.
 ```bash
 python3.8 -m venv venv
 source ./venv/bin/activate
-pip install -r requirements.txt
+pip install catanatron[web]
 
-cd catanatron_server/catanatron_server
-flask run
+FLASK_DEBUG=1 FLASK_APP=catanatron.web/catanatron.web flask run
 ```
 
 This can also be run via Docker independetly like (after building):
@@ -334,8 +334,6 @@ make upload-production PACKAGE=catanatron_gym
 pip install -r docs/requirements.txt
 sphinx-quickstart docs
 sphinx-apidoc -o docs/source catanatron
-sphinx-apidoc -o docs/source catanatron_gym
-sphinx-apidoc -o docs/source catanatron_server
 sphinx-build -b html docs/source/ docs/build/html
 ```
 
