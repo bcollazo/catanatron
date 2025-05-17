@@ -15,7 +15,7 @@ def test_root_node_initial_properties():
     ]
     game_instance = Game(players)
 
-    player_color = "blue"
+    player_color = Color.BLUE
 
     # 2. Create a StateNode instance for the root of a search tree
     root_node = StateNode(
