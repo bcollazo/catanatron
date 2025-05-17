@@ -7,6 +7,7 @@ from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_en
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 from flask_sqlalchemy import SQLAlchemy
+from flask import abort
 
 from catanatron.json import GameEncoder
 
@@ -74,14 +75,18 @@ def get_game_state(game_id, state_index=None):
             db.session.query(GameState)
             .filter_by(uuid=game_id)
             .order_by(GameState.state_index.desc())
-            .first_or_404()
+            .first()
         )
+        if result is None:
+            abort(404)
     else:
         result = (
             db.session.query(GameState)
             .filter_by(uuid=game_id, state_index=state_index)
-            .first_or_404()
+            .first()
         )
+        if result is None:
+            abort(404)
     db.session.commit()
-    game = pickle.loads(result.pickle_data)
+    game = pickle.loads(result.pickle_data)  # type: ignore
     return game

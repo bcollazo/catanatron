@@ -1,16 +1,17 @@
 import json
 import logging
 import traceback
+from typing import List
 
 from flask import Response, Blueprint, jsonify, abort, request
 
 from catanatron.web.models import upsert_game_state, get_game_state
 from catanatron.json import GameEncoder, action_from_json
-from catanatron.models.player import Color, RandomPlayer
+from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.game import Game
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.minimax import AlphaBetaPlayer
-from catanatron_experimental.analysis.mcts_analysis import GameAnalyzer
+from catanatron.web.mcts_analysis import GameAnalyzer
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -28,6 +29,8 @@ def player_factory(player_key):
 
 @bp.route("/games", methods=("POST",))
 def post_game_endpoint():
+    if not request.is_json or request.json is None or "players" not in request.json:
+        abort(400, description="Missing or invalid JSON body: 'players' key required")
     player_keys = request.json["players"]
     players = list(map(player_factory, zip(player_keys, Color)))
 
@@ -38,8 +41,8 @@ def post_game_endpoint():
 
 @bp.route("/games/<string:game_id>/states/<string:state_index>", methods=("GET",))
 def get_game_endpoint(game_id, state_index):
-    state_index = None if state_index == "latest" else int(state_index)
-    game = get_game_state(game_id, state_index)
+    parsed_state_index = _parse_state_index(state_index)
+    game = get_game_state(game_id, parsed_state_index)
     if game is None:
         abort(404, description="Resource not found")
 
@@ -64,7 +67,7 @@ def post_action_endpoint(game_id):
         )
 
     # TODO: remove `or body_is_empty` when fully implement actions in FE
-    body_is_empty = (not request.data) or request.json is None
+    body_is_empty = (not request.data) or request.json is None or request.json == {}
     if game.state.current_player().is_bot or body_is_empty:
         game.play_tick()
         upsert_game_state(game)
@@ -104,13 +107,14 @@ def mcts_analysis_endpoint(game_id, state_index):
     """Get MCTS analysis for specific game state."""
     logging.info(f"MCTS analysis request for game {game_id} at state {state_index}")
 
+    # Convert 'latest' to None for consistency with get_game_state
+    parsed_state_index = _parse_state_index(state_index)
     try:
-        # Convert 'latest' to None for consistency with get_game_state
-        state_index = None if state_index == "latest" else int(state_index)
-
-        game = get_game_state(game_id, state_index)
+        game = get_game_state(game_id, parsed_state_index)
         if game is None:
-            logging.error(f"Game/state not found: {game_id}/{state_index}")
+            logging.error(
+                f"Game/state not found: {game_id}/{state_index}"
+            )  # Use original state_index for logging
             abort(404, description="Game state not found")
 
         analyzer = GameAnalyzer(num_simulations=100)
@@ -123,8 +127,8 @@ def mcts_analysis_endpoint(game_id, state_index):
                     "success": True,
                     "probabilities": probabilities,
                     "state_index": (
-                        state_index
-                        if state_index is not None
+                        parsed_state_index
+                        if parsed_state_index is not None
                         else len(game.state.actions)
                     ),
                 }
@@ -142,6 +146,19 @@ def mcts_analysis_endpoint(game_id, state_index):
             ),
             status=500,
             mimetype="application/json",
+        )
+
+
+def _parse_state_index(state_index_str: str):
+    """Helper function to parse and validate state_index."""
+    if state_index_str == "latest":
+        return None
+    try:
+        return int(state_index_str)
+    except ValueError:
+        abort(
+            400,
+            description="Invalid state_index format. state_index must be an integer or 'latest'.",
         )
 
 

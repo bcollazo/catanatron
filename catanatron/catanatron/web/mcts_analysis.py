@@ -1,4 +1,4 @@
-from catanatron_experimental.machine_learning.players.mcts import StateNode
+from catanatron.players.mcts import StateNode
 
 
 class GameAnalyzer:

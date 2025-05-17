@@ -525,7 +525,7 @@ def create_sample_vector(game, p0_color, features=None):
 def get_feature_ordering(
     num_players=4, map_type: Literal["BASE", "MINI", "TOURNAMENT"] = "BASE"
 ):
-    players: list[Player] = [
+    players = [
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
         SimplePlayer(Color.WHITE),

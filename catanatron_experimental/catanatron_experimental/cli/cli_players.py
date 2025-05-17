@@ -21,8 +21,8 @@ from catanatron.players.minimax import (
     SameTurnAlphaBetaPlayer,
 )
 from catanatron.players.search import VictoryPointPlayer
-from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
-from catanatron_experimental.machine_learning.players.playouts import (
+from catanatron.players.mcts import MCTSPlayer
+from catanatron.players.playouts import (
     GreedyPlayoutsPlayer,
 )
 

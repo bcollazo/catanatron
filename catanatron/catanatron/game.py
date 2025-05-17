@@ -5,7 +5,7 @@ Contains Game class which is a thin-wrapper around the State class.
 import uuid
 import random
 import sys
-from typing import List, Union, Optional
+from typing import Sequence, Union, Optional
 
 from catanatron.models.enums import Action, ActionPrompt, ActionType
 from catanatron.state import State, apply_action
@@ -88,7 +88,7 @@ class Game:
 
     def __init__(
         self,
-        players: List[Player],
+        players: Sequence[Player],
         seed: Optional[int] = None,
         discard_limit: int = 7,
         vps_to_win: int = 10,

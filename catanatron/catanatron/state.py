@@ -5,7 +5,7 @@ Module with main State class and main apply_action call (game controller).
 import random
 import pickle
 from collections import defaultdict
-from typing import Any, List, Tuple, Dict, Iterable
+from typing import Any, List, Sequence, Tuple, Dict
 
 from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
@@ -130,7 +130,7 @@ class State:
 
     def __init__(
         self,
-        players: List[Player],
+        players: Sequence[Player],
         catan_map=None,
         discard_limit=7,
         initialize=True,

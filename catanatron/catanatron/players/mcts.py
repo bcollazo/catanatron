@@ -1,12 +1,11 @@
 import math
 import time
 from collections import defaultdict
-
-import numpy as np
+import random
 
 from catanatron.game import Game
 from catanatron.models.player import Player
-from catanatron_experimental.machine_learning.players.playouts import run_playout
+from catanatron.players.playouts import run_playout
 from catanatron.players.tree_search_utils import execute_spectrum, list_prunned_actions
 
 SIMULATIONS = 10
@@ -100,7 +99,7 @@ class StateNode:
         children = self.children[action]
         children_states = list(map(lambda c: c[0], children))
         children_probas = list(map(lambda c: c[1], children))
-        return np.random.choice(children_states, 1, p=children_probas)[0]
+        return random.choices(children_states, weights=children_probas, k=1)[0]
 
     def choose_best_action(self):
         scores = []

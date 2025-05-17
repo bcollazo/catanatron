@@ -1,5 +1,7 @@
+from typing import List
 from catanatron import Game, RandomPlayer, Color
-from catanatron_experimental.machine_learning.players.mcts import StateNode
+from catanatron.models.player import Player
+from catanatron.players.mcts import StateNode
 
 
 def test_root_node_initial_properties():

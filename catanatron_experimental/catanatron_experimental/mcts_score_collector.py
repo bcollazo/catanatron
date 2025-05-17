@@ -16,7 +16,7 @@ from catanatron.state_functions import (
     player_num_resource_cards,
 )
 from catanatron.players.minimax import AlphaBetaPlayer
-from catanatron_experimental.machine_learning.players.playouts import run_playouts
+from catanatron.players.playouts import run_playouts
 from catanatron.features import (
     build_production_features,
     resource_hand_features,
