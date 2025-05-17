@@ -41,6 +41,9 @@ jobs:
       - name: Run sample catanatron-play
         run: |
           catanatron-play --players=R,W,F,AB:2 --num=2
+      - name: Custom Bot Test
+        run: |
+          catanatron-play --code=examples/custom_player.py --players=F,FOO --num=1
       - name: Install gym
         run: |
           pip install .[gym]

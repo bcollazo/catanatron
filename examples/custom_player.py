@@ -1,11 +1,10 @@
 from typing import Iterable
 
-from catanatron.game import Game
-from catanatron.models.actions import Action
-from catanatron.models.player import Player
+from catanatron import Game, Action, Player
+from catanatron.cli import register_cli_player
 
 
-class MyPlayer(Player):
+class FooPlayer(Player):
     def decide(self, game: Game, playable_actions: Iterable[Action]):
         """Should return one of the playable_actions.
 
@@ -19,3 +18,6 @@ class MyPlayer(Player):
         # As an example we simply return the first action:
         return playable_actions[0]  # type: ignore
         # ===== END YOUR CODE =====
+
+
+register_cli_player("FOO", FooPlayer)

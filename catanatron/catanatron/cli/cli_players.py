@@ -64,18 +64,15 @@ CLI_PLAYERS = [
 ]
 
 
-def register_player(code):
-    def decorator(player_class):
-        CLI_PLAYERS.append(
-            CliPlayer(
-                code,
-                player_class.__name__,
-                player_class.__doc__,
-                player_class,
-            ),
-        )
-
-    return decorator
+def register_cli_player(code, player_class):
+    CLI_PLAYERS.append(
+        CliPlayer(
+            code,
+            player_class.__name__,
+            player_class.__doc__,
+            player_class,
+        ),
+    )
 
 
 CUSTOM_ACCUMULATORS = []
