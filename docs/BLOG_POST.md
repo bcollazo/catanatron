@@ -56,7 +56,7 @@ ValueFunctionPlayer:ORANGE(value_fn=base_fn)  [991]  █████████
 
 <p align="center">3-player Catan between `RandomPlayer`, `WeightedRandomPlayer` and `ValueFunctionPlayer`</p>
 
-You can find the "features" and "weights" I am using for this bot [here](https://github.com/bcollazo/catanatron/blob/master/catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py#L25).
+You can find the "features" and "weights" I am using for this bot [here](https://github.com/bcollazo/catanatron/blob/master/catanatron/players/minimax.py#L25).
 
 ### Performance
 

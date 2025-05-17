@@ -39,7 +39,6 @@ jobs:
         run: |
           pip install --upgrade pip setuptools wheel
           pip install .
-          pip install -e catanatron_experimental
       - name: Run sample catanatron-play
         run: |
           catanatron-play --players=R,W,F,AB:2 --num=2

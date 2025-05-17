@@ -1,6 +1,6 @@
 from click.testing import CliRunner
 
-from catanatron_experimental.play import simulate
+from catanatron.cli.play import simulate
 
 
 def test_play():

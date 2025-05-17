@@ -19,6 +19,5 @@ WORKDIR /app
 RUN python3.8 -m pip install --upgrade pip
 COPY . .
 RUN python3.8 -m pip install -e .[web,gym,dev]
-RUN python3.8 -m pip install -e catanatron_experimental
 
 EXPOSE 8888

@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from catanatron.state import player_key
-from catanatron_experimental.utils import ensure_dir
+from catanatron.utils import ensure_dir
 
 DISCOUNT_FACTOR = 0.99
 DATA_DIRECTORY = "data"

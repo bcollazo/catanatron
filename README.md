@@ -28,7 +28,6 @@ Create a virtual environment with Python3.12 or higher. Then:
 python -m venv venv
 source ./venv/bin/activate
 pip install -e .[web,gym,dev]
-pip install -e catanatron_experimental
 ```
 
 ## Usage
@@ -75,7 +74,7 @@ catanatron-play --code=myplayers.py --players=R,R,R,FOO --num=10
 ## How to Make Catanatron Stronger?
 
 The best bot right now is Alpha Beta Search with a hand-crafted value function. One of the most promising ways of improving Catanatron
-is to have your custom player inhert from ([`AlphaBetaPlayer`](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)) and set a better set of weights for the value function. You can
+is to have your custom player inhert from ([`AlphaBetaPlayer`](catanatron/catanatron/players/minimax.py)) and set a better set of weights for the value function. You can
 also edit the value function and come up with your own innovative features!
 
 For more sophisticated approaches, see example player implementations in [catanatron/catanatron/players](catanatron/catanatron/players)
@@ -115,7 +114,7 @@ For example, write a file like `mycode.py` and have:
 
 ```python
 from catanatron import ActionType
-from catanatron_experimental import SimulationAccumulator, register_accumulator
+from catanatron.cli import SimulationAccumulator, register_accumulator
 
 @register_accumulator
 class PortTradeCounter(SimulationAccumulator):

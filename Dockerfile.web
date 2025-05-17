@@ -8,7 +8,6 @@ RUN pip install --upgrade pip
 
 COPY . .
 RUN pip install -e .[web]
-RUN pip install -e catanatron_experimental
 
 EXPOSE 5000
 

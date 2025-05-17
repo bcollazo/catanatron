@@ -1,2 +1,1 @@
 -e .[gym,web]
--e catanatron_experimental
