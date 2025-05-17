@@ -19,7 +19,7 @@ classifiers = [
 dependencies = ["networkx"]
 
 [project.optional-dependencies]
-gym = ["gymnasium<=0.29", "numpy"]
+gym = ["gymnasium<=0.29.1", "numpy"]
 web = [
     "flask",
     "flask_cors",

@@ -16,17 +16,9 @@ RUN apt update && \
 
 WORKDIR /app
 
-# We copy just the dependencies first to leverage Docker cache
-COPY dev-requirements.txt .
-
 RUN python3.8 -m pip install --upgrade pip
-RUN python3.8 -m pip install -r dev-requirements.txt
-
-# For some reason we can't include the -e . dependency of the 
-#   catanatron package in the dev-requirements.txt. So we install
-#   it separately, here:
 COPY . .
-RUN python3.8 -m pip install -e .[web,gym]
+RUN python3.8 -m pip install -e .[web,gym,dev]
 RUN python3.8 -m pip install -e catanatron_experimental
 
 EXPOSE 8888

@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools
-          pip install -r dev-requirements.txt
+          pip install -r .[dev]
 
       - name: Checkout PR and Master Branch
         uses: actions/checkout@v4
