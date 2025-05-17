@@ -44,7 +44,7 @@ jobs:
           catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Install development dependencies
         run: |
-          pip install -r .[dev]
+          pip install .[dev]
       - name: Lint with black
         run: |
           black catanatron --check
