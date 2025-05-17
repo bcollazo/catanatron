@@ -25,11 +25,11 @@ from tensorflow.keras.optimizers import Adam
 from catanatron.game import Game
 from catanatron.models.player import Player
 from catanatron_experimental.machine_learning.players.playouts import run_playouts
-from catanatron_env.features import (
+from catanatron_gym.features import (
     create_sample_vector,
     get_feature_ordering,
 )
-from catanatron_env.board_tensor_features import (
+from catanatron_gym.board_tensor_features import (
     WIDTH,
     HEIGHT,
     CHANNELS,

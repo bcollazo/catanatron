@@ -48,7 +48,7 @@ jobs:
       - name: Lint with black
         run: |
           black catanatron_core --check
-          black catanatron_env --check
+          black catanatron_gym --check
           black catanatron_server --check
           black catanatron_experimental --check
       - name: Test with pytest
@@ -77,13 +77,13 @@ jobs:
         run: |
           pip install --upgrade pip setuptools wheel
           pip install -e catanatron_core
-          pip install -e catanatron_env
+          pip install -e catanatron_gym
       - name: Inline test
         run: |
-          python -c "import gymnasium; import catanatron_env; env = gymnasium.make('catanatron_env/Catanatron-v0')"
+          python -c "import gymnasium; import catanatron_gym; env = gymnasium.make('catanatron_gym/Catanatron-v0')"
       - name: Test README.md sample (and fail even on warnings)
         run: |
-          python -W error catanatron_env/sample.py
+          python -W error catanatron_gym/sample.py
 
   build-ui:
     runs-on: ubuntu-latest

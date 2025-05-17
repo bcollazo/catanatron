@@ -1,0 +1,1 @@
+from catanatron_gym.envs.catanatron_gym import CatanatronEnv

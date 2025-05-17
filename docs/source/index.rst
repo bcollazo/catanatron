@@ -95,7 +95,7 @@ API Reference
    :maxdepth: 4
 
    catanatron
-   catanatron_env
+   catanatron_gym
 
 
 

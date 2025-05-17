@@ -1,8 +1,8 @@
 import random
 import gymnasium
-import catanatron_env
+import catanatron_gym
 
-env = gymnasium.make("catanatron_env/Catanatron-v0")
+env = gymnasium.make("catanatron_gym/Catanatron-v0")
 observation, info = env.reset()
 for _ in range(1000):
     # your agent here (this takes random actions)

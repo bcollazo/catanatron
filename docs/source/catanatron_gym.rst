@@ -1,4 +1,4 @@
-catanatron\_env package
+catanatron\_gym package
 =======================
 
 Subpackages
@@ -7,23 +7,23 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   catanatron_env.envs
+   catanatron_gym.envs
 
 Submodules
 ----------
 
-catanatron\_env.board\_tensor\_features module
+catanatron\_gym.board\_tensor\_features module
 ----------------------------------------------
 
-.. automodule:: catanatron_env.board_tensor_features
+.. automodule:: catanatron_gym.board_tensor_features
    :members:
    :undoc-members:
    :show-inheritance:
 
-catanatron\_env.features module
+catanatron\_gym.features module
 -------------------------------
 
-.. automodule:: catanatron_env.features
+.. automodule:: catanatron_gym.features
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,7 +31,7 @@ catanatron\_env.features module
 Module contents
 ---------------
 
-.. automodule:: catanatron_env
+.. automodule:: catanatron_gym
    :members:
    :undoc-members:
    :show-inheritance:
