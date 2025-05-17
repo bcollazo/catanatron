@@ -28,7 +28,6 @@ from catanatron.cli.cli_players import (
 )
 from catanatron.cli.accumulators import (
     JsonDataAccumulator,
-    DatabaseAccumulator,
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
@@ -271,6 +270,9 @@ def play_batch(
     if output_options.output and output_options.json:
         accumulators.append(JsonDataAccumulator(output_options.output))
     if output_options.db:
+        # lazy load DatabaseAccumulator since depends on sqlalchemy
+        from catanatron.web.database_accumulator import DatabaseAccumulator
+
         accumulators.append(DatabaseAccumulator())
     for accumulator_class in CUSTOM_ACCUMULATORS:
         accumulators.append(accumulator_class(players=players, game_config=game_config))

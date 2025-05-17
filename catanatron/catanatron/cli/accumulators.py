@@ -13,8 +13,6 @@ from catanatron.state_functions import (
     get_player_buildings,
 )
 from catanatron.models.enums import VICTORY_POINT, SETTLEMENT, CITY
-from catanatron.web.models import database_session, upsert_game_state
-from catanatron.web.utils import ensure_link
 
 
 class VpDistributionAccumulator(GameAccumulator):
@@ -120,28 +118,6 @@ class StatisticsAccumulator(GameAccumulator):
 
     def get_avg_duration(self):
         return sum(self.durations) / len(self.durations)
-
-
-class StepDatabaseAccumulator(GameAccumulator):
-    """
-    Saves a game state to database for each tick.
-    Slows game ~1s per tick.
-    """
-
-    def before(self, game):
-        with database_session() as session:
-            upsert_game_state(game, session)
-
-    def step(self, game):
-        with database_session() as session:
-            upsert_game_state(game, session)
-
-
-class DatabaseAccumulator(GameAccumulator):
-    """Saves last game state to database"""
-
-    def after(self, game):
-        self.link = ensure_link(game)
 
 
 class JsonDataAccumulator(GameAccumulator):
