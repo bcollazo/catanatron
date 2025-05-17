@@ -38,13 +38,14 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
+          pip install .
+          pip install -e catanatron_experimental
       - name: Run sample catanatron-play
         run: |
           catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Install development dependencies
         run: |
-          pip install .[dev]
+          pip install .[gym,web,dev]
       - name: Lint with black
         run: |
           black catanatron --check
