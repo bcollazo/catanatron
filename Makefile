@@ -16,6 +16,7 @@ clean-pyc:
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
 	rm -fr build/
+	rm -rf dist/
 	rm -fr .pytest_cache/
 	# find . -name '*~' -exec rm -f {} +
 
