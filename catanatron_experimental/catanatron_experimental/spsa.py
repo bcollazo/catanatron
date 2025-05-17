@@ -12,7 +12,7 @@ from catanatron.players.value import (
     DEFAULT_WEIGHTS,
     ValueFunctionPlayer,
 )
-from catanatron_experimental.play import play_batch
+from catanatron.cli.play import play_batch
 
 # for (k=0; k < N; k++) {
 #   ak = a / (k + 1 + A)^alpha;

@@ -1,4 +1,4 @@
-from catanatron_experimental.play import simulate
+from catanatron.cli.play import simulate
 
 simulate(50, "AB:2,F", None, False, False)
 

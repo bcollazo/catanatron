@@ -8,7 +8,7 @@ from catanatron.players.value import (
 from ray.tune.suggest.bayesopt import BayesOptSearch
 from ray.tune.suggest.suggestion import ConcurrencyLimiter
 
-from catanatron_experimental.catanatron_experimental.play import play_batch
+from catanatron.cli.play import play_batch
 
 
 def objective(config):

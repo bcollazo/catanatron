@@ -1,6 +1,6 @@
 import os
 from typing import Iterable
-from catanatron_experimental.machine_learning.utils import ensure_dir
+from catanatron.utils import ensure_dir
 
 import pandas as pd
 import tensorflow as tf

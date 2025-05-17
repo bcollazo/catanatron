@@ -4,46 +4,12 @@ from rich.table import Table
 
 from catanatron.models.player import RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
-
-# from catanatron_experimental.mcts_score_collector import (
-#     MCTSScoreCollector,
-#     MCTSPredictor,
-# )
-# from catanatron_experimental.machine_learning.players.reinforcement import (
-#     QRLPlayer,
-#     TensorRLPlayer,
-#     VRLPlayer,
-#     PRLPlayer,
-# )
 from catanatron.players.value import ValueFunctionPlayer
-from catanatron.players.minimax import (
-    AlphaBetaPlayer,
-    SameTurnAlphaBetaPlayer,
-)
+from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
 from catanatron.players.search import VictoryPointPlayer
 from catanatron.players.mcts import MCTSPlayer
-from catanatron.players.playouts import (
-    GreedyPlayoutsPlayer,
-)
+from catanatron.players.playouts import GreedyPlayoutsPlayer
 
-# from catanatron_experimental.machine_learning.players.online_mcts_dqn import (
-#     OnlineMCTSDQNPlayer,
-# )
-
-# PLAYER_CLASSES = {
-#     "O": OnlineMCTSDQNPlayer,
-#     "S": ScikitPlayer,
-#     "Y": MyPlayer,
-#     # Used like: --players=V:path/to/model.model,T:path/to.model
-#     "C": ForcePlayer,
-#     "VRL": VRLPlayer,
-#     "Q": QRLPlayer,
-#     "P": PRLPlayer,
-#     "T": TensorRLPlayer,
-#     "D": DQNPlayer,
-#     "CO": MCTSScoreCollector,
-#     "COP": MCTSPredictor,
-# }
 
 # Player must have a CODE, NAME, DESCRIPTION, CLASS.
 CliPlayer = namedtuple("CliPlayer", ["code", "name", "description", "import_fn"])

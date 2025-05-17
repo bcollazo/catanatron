@@ -16,10 +16,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = ["networkx"]
+dependencies = ["networkx", "click", "rich"]
 
 [project.optional-dependencies]
-gym = ["gymnasium<=0.29.1", "numpy"]
+gym = ["gymnasium<=0.29.1", "numpy", "pandas"]
 web = [
     "flask",
     "flask_cors",
@@ -32,6 +32,9 @@ dev = ["black", "pytest", "pytest-benchmark", "coverage", "coveralls"]
 [project.urls]
 Homepage = "https://github.com/bcollazo/catanatron"
 Repository = "https://github.com/bcollazo/catanatron"
+
+[project.scripts]
+catanatron-play = "catanatron.cli.play:simulate"
 
 [tool.setuptools.packages.find]
 where = ["catanatron"]

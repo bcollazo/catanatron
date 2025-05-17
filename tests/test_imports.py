@@ -1,6 +1,6 @@
 from catanatron import Game, RandomPlayer, Color, GameAccumulator
 
-from catanatron_experimental.my_player import MyPlayer
+from examples.my_player import MyPlayer
 
 
 def test_top_level_imports_work():

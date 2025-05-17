@@ -6,7 +6,7 @@ from catanatron.players.value import (
     ValueFunctionPlayer,
 )
 
-from catanatron_experimental.catanatron_experimental.play import play_batch
+from catanatron.cli.play import play_batch
 
 
 def objective(trial):

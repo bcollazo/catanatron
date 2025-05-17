@@ -20,20 +20,19 @@ from catanatron.state_functions import get_actual_victory_points
 
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-from catanatron_experimental.utils import ensure_dir, formatSecs
-from catanatron_experimental.cli.cli_players import (
+from catanatron.utils import ensure_dir, format_secs
+from catanatron.cli.cli_players import (
     CUSTOM_ACCUMULATORS,
     player_help_table,
     CLI_PLAYERS,
 )
-from catanatron_experimental.cli.accumulators import (
+from catanatron.cli.accumulators import (
     JsonDataAccumulator,
-    CsvDataAccumulator,
     DatabaseAccumulator,
     StatisticsAccumulator,
     VpDistributionAccumulator,
 )
-from catanatron_experimental.cli.simulation_accumulator import SimulationAccumulator
+from catanatron.cli.simulation_accumulator import SimulationAccumulator
 
 
 custom_theme = Theme(
@@ -265,6 +264,9 @@ def play_batch(
     if output_options.output:
         ensure_dir(output_options.output)
     if output_options.output and output_options.csv:
+        # lazy load CsvDataAccumulator since depends on pandas / numpy
+        from catanatron.gym.csv_accumulator import CsvDataAccumulator
+
         accumulators.append(CsvDataAccumulator(output_options.output))
     if output_options.output and output_options.json:
         accumulators.append(JsonDataAccumulator(output_options.output))
@@ -374,7 +376,7 @@ def play_batch(
     # ===== GAME SUMMARY
     avg_ticks = f"{statistics_accumulator.get_avg_ticks():.2f}"
     avg_turns = f"{statistics_accumulator.get_avg_turns():.2f}"
-    avg_duration = formatSecs(statistics_accumulator.get_avg_duration())
+    avg_duration = format_secs(statistics_accumulator.get_avg_duration())
     table = Table(box=box.MINIMAL, title="Game Summary")
     table.add_column("AVG TICKS", justify="right")
     table.add_column("AVG TURNS", justify="right")

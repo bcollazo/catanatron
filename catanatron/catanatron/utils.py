@@ -1,7 +1,7 @@
 import os
 
 
-def formatSecs(secs):
+def format_secs(secs):
     return "{0:.3f} secs".format(secs)
 
 
