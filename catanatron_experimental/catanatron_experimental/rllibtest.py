@@ -15,7 +15,7 @@ tf = try_import_tf()
 
 import tensorflow as tf
 
-from catanatron.gym.envs.catanatron_gym import CatanatronEnv
+from catanatron.gym.envs.catanatron_env import CatanatronEnv
 
 
 # https://towardsdatascience.com/action-masking-with-rllib-5e4bec5e7505

@@ -11,8 +11,8 @@ from catanatron.state_functions import (
     player_num_resource_cards,
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
-from catanatron.models.map import NUM_TILES, CatanMap, build_map
-from catanatron.models.player import Color, SimplePlayer
+from catanatron.models.map import NUM_TILES, CatanMap, build_map, number_probability
+from catanatron.models.player import Player, Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
@@ -23,7 +23,6 @@ from catanatron.models.enums import (
     VICTORY_POINT,
 )
 from catanatron.game import Game
-from catanatron.models.map import number_probability
 
 
 # ===== Helpers
@@ -401,7 +400,7 @@ def expansion_features(game: Game, p0_color: Color):
 
         # owned_edges = get_player_buildings(state, color, ROAD)
         dis_res_prod = {
-            distance: {k: 0 for k in RESOURCES}
+            distance: {k: 0.0 for k in RESOURCES}
             for distance in range(MAX_EXPANSION_DISTANCE)
         }
         for node_id in expandable_node_ids:
@@ -526,7 +525,7 @@ def create_sample_vector(game, p0_color, features=None):
 def get_feature_ordering(
     num_players=4, map_type: Literal["BASE", "MINI", "TOURNAMENT"] = "BASE"
 ):
-    players = [
+    players: list[Player] = [
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
         SimplePlayer(Color.WHITE),

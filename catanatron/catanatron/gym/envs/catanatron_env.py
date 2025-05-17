@@ -7,7 +7,7 @@ from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
-from catanatron.gym.features import (
+from catanatron.features import (
     create_sample,
     get_feature_ordering,
 )

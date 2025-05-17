@@ -10,17 +10,14 @@ from catanatron.models.enums import (
     Action,
     ActionType,
 )
-
 from catanatron.state_functions import (
     get_player_buildings,
     get_dev_cards_in_hand,
     get_player_freqdeck,
     get_enemy_colors,
 )
-from catanatron.gym.features import (
-    build_production_features,
-)
-from catanatron_experimental.machine_learning.players.value import value_production
+from catanatron.features import build_production_features
+from catanatron.players.value import value_production
 
 DETERMINISTIC_ACTIONS = set(
     [

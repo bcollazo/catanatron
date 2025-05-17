@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from catanatron.gym.features import (
+from catanatron.features import (
     create_sample_vector,
     get_feature_ordering,
 )

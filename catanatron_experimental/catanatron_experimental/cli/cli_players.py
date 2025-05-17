@@ -15,8 +15,8 @@ from catanatron.players.weighted_random import WeightedRandomPlayer
 #     VRLPlayer,
 #     PRLPlayer,
 # )
-from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
-from catanatron_experimental.machine_learning.players.minimax import (
+from catanatron.players.value import ValueFunctionPlayer
+from catanatron.players.minimax import (
     AlphaBetaPlayer,
     SameTurnAlphaBetaPlayer,
 )
