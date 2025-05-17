@@ -78,7 +78,7 @@ def register_cli_player(code, player_class):
 CUSTOM_ACCUMULATORS = []
 
 
-def register_accumulator(accumulator_class):
+def register_cli_accumulator(accumulator_class):
     CUSTOM_ACCUMULATORS.append(accumulator_class)
 
 

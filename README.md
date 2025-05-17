@@ -86,7 +86,7 @@ If you find a bot that consistently beats the best bot right now, please submit 
 
 ### Inspecting Games (Browser UI)
 
-We provide a [docker-compose.yml](docker-compose.yml) with everything needed to watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
+We provide a [docker-compose.yml](docker-compose.yml) with everything needed to play and watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
 
 <p align="left">
  <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/CatanatronUI.png">
@@ -98,12 +98,17 @@ To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install
 docker compose up
 ```
 
-You can now use the `--db` flag to make the catanatron-play simulator save
-the game in the database for inspection via the web server.
+You should now be able to visit http://localhost:3000 and play!
+
+You can also (in a new terminal window) install the `[web]` subpackage and use the `--db` flag 
+to make the catanatron-play simulator save the game in the database for inspection via the web server.
 
 ```bash
+pip install .[web]
 catanatron-play --players=W,W,W,W --db --num=1
 ```
+
+The link should be printed in the console.
 
 NOTE: A great contribution would be to make the Web UI allow to step forwards and backwards in a game to inspect it (ala chess.com).
 
@@ -115,9 +120,8 @@ For example, write a file like `mycode.py` and have:
 
 ```python
 from catanatron import ActionType
-from catanatron.cli import SimulationAccumulator, register_accumulator
+from catanatron.cli import SimulationAccumulator, register_cli_accumulator
 
-@register_accumulator
 class PortTradeCounter(SimulationAccumulator):
   def before_all(self):
     self.num_trades = 0
@@ -127,7 +131,9 @@ class PortTradeCounter(SimulationAccumulator):
       self.num_trades += 1
 
   def after_all(self):
-    print(f'There were {self.num_trades} port trades!')
+    print(f'There were {self.num_trades} trades with the bank!')
+
+register_cli_accumulator(PortTradeCounter)
 ```
 
 Then `catanatron-play --code=mycode.py` will count the number of trades in all simulations.

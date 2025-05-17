@@ -41,13 +41,19 @@ jobs:
       - name: Run sample catanatron-play
         run: |
           catanatron-play --players=R,W,F,AB:2 --num=2
-      - name: Custom Bot Test
+      - name: Test Custom Bot
         run: |
           catanatron-play --code=examples/custom_player.py --players=F,FOO --num=1
-      - name: Install gym
+      - name: Test Custom Accumulator
+        run: |
+          catanatron-play --code=examples/custom_accumulator.py --players=F,R --num=1
+      - name: Test Library Example
+        run: |
+          python -W error examples/library_example.py
+      - name: Install Gym
         run: |
           pip install .[gym]
-      - name: Inline test
+      - name: Test Gym Inline
         run: |
           python -c "import gymnasium; import catanatron.gym; env = gymnasium.make('catanatron/Catanatron-v0')"
       - name: Test README.md sample (and fail even on warnings)
