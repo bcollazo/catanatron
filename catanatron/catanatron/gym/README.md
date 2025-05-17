@@ -1,9 +1,9 @@
 # Catanatron Gymnasium Environment
 
-For reinforcement learning purposes, we provide an Open AI Gym environment. To use:
+For reinforcement learning purposes, we provide an Open AI Gym / Gymnasium environment. To use:
 
 ```
-pip install catanatron_gym
+pip install catanatron[gym]
 ```
 
 Make your training loop, ensuring to respect `env.get_valid_actions()`.
@@ -11,9 +11,9 @@ Make your training loop, ensuring to respect `env.get_valid_actions()`.
 ```python
 import random
 import gymnasium
-import catanatron_gym
+import catanatron.gym
 
-env = gymnasium.make('catanatron_gym/Catanatron-v0')
+env = gymnasium.make('catanatron.gym/Catanatron-v0')
 observation, info = env.reset()
 for _ in range(1000):
   # your agent here (this takes random actions)
@@ -26,9 +26,9 @@ for _ in range(1000):
 env.close()
 ```
 
-For `action` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron_gym.envs.html#catanatron_gym.envs.catanatron_gym.CatanatronEnv.action_space).
+For `action` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron.gym.envs.html#catanatron.gym.envs.catanatron.gym.CatanatronEnv.action_space).
 
-For `observation` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron_gym.envs.html#catanatron_gym.envs.catanatron_gym.CatanatronEnv.observation_space).
+For `observation` documentation see [here](https://catanatron.readthedocs.io/en/latest/catanatron.gym.envs.html#catanatron.gym.envs.catanatron.gym.CatanatronEnv.observation_space).
 
 You can access `env.game.state` and build your own "observation" (features) vector as well.
 
@@ -42,7 +42,7 @@ import numpy as np
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
-import catanatron_gym
+import catanatron.gym
 
 
 def mask_fn(env) -> np.ndarray:
@@ -54,7 +54,7 @@ def mask_fn(env) -> np.ndarray:
 
 
 # Init Environment and Model
-env = gymnasium.make("catanatron_gym/Catanatron-v0")
+env = gymnasium.make("catanatron.gym/Catanatron-v0")
 env = ActionMasker(env, mask_fn)  # Wrap to enable masking
 model = MaskablePPO(MaskableActorCriticPolicy, env, verbose=1)
 
@@ -71,7 +71,7 @@ with the `config` keyword argument. See source for details.
 import gymnasium
 from catanatron import Color
 from catanatron.players.weighted_random import WeightedRandomPlayer
-import catanatron_gym
+import catanatron.gym
 
 
 def my_reward_function(game, p0_color):
@@ -86,7 +86,7 @@ def my_reward_function(game, p0_color):
 
 # 3-player catan on a "Mini" map (7 tiles) until 6 points.
 env = gymnasium.make(
-    "catanatron_gym/Catanatron-v0",
+    "catanatron.gym/Catanatron-v0",
     config={
         "map_type": "MINI",
         "vps_to_win": 6,
@@ -108,11 +108,3 @@ This project was created with:
 copier copy https://github.com/Farama-Foundation/gymnasium-env-template.git "path/to/directory"
 ```
 
-## Installation
-
-To install your new environment, run the following commands:
-
-```{shell}
-cd catanatron_gym
-pip install -e .
-```

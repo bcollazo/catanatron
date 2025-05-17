@@ -22,6 +22,12 @@ dependencies = [
     "networkx",
 ]
 
+[project.optional-dependencies]
+gym = [
+    "gymnasium",
+    "numpy",
+]
+
 [project.urls]
 Homepage = "https://github.com/bcollazo/catanatron"
 Repository = "https://github.com/bcollazo/catanatron"

@@ -13,7 +13,7 @@ from catanatron.models.enums import (
 from catanatron.models.coordinate_system import offset_to_cube
 from catanatron.models.board import STATIC_GRAPH
 from catanatron.models.map import number_probability
-from catanatron_gym.features import get_feature_ordering, iter_players
+from catanatron.gym.features import get_feature_ordering, iter_players
 
 # These assume 4 players
 WIDTH = 21

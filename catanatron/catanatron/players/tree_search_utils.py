@@ -17,7 +17,7 @@ from catanatron.state_functions import (
     get_player_freqdeck,
     get_enemy_colors,
 )
-from catanatron_gym.features import (
+from catanatron.gym.features import (
     build_production_features,
 )
 from catanatron_experimental.machine_learning.players.value import value_production
