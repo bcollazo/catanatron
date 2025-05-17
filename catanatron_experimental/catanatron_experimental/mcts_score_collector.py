@@ -1,6 +1,6 @@
 import os
 from typing import Iterable
-from catanatron_experimental.machine_learning.utils import ensure_dir
+from catanatron.utils import ensure_dir
 
 import pandas as pd
 import tensorflow as tf
@@ -15,9 +15,9 @@ from catanatron.state_functions import (
     player_num_dev_cards,
     player_num_resource_cards,
 )
-from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer
-from catanatron_experimental.machine_learning.players.playouts import run_playouts
-from catanatron_env.features import (
+from catanatron.players.minimax import AlphaBetaPlayer
+from catanatron.players.playouts import run_playouts
+from catanatron.features import (
     build_production_features,
     resource_hand_features,
 )

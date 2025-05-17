@@ -6,13 +6,13 @@ from tensorflow import keras
 
 from catanatron.models.player import Player
 from catanatron.models.enums import Action, ActionType
-from catanatron_env.features import (
+from catanatron.features import (
     create_sample,
     create_sample_vector,
     get_feature_ordering,
 )
-from catanatron_env.envs.catanatron_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
-from catanatron_env.board_tensor_features import (
+from catanatron.gym.envs.catanatron_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
+from catanatron.gym.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
 )

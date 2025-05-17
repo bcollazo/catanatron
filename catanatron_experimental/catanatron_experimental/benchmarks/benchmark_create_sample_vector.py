@@ -3,7 +3,7 @@ import timeit
 setup = """
 from catanatron.game import Game
 from catanatron.models.player import RandomPlayer, Color
-from catanatron_env.features import (
+from catanatron.features import (
     create_sample_vector, expansion_features, reachability_features,
     graph_features, tile_features
 )

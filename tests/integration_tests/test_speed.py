@@ -4,8 +4,8 @@ from catanatron.game import Game
 from catanatron.json import GameEncoder
 from catanatron.models.player import Color, SimplePlayer, RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
-from catanatron_env.features import create_sample
-from catanatron_experimental.machine_learning.players.minimax import (
+from catanatron.features import create_sample
+from catanatron.players.minimax import (
     AlphaBetaPlayer,
     SameTurnAlphaBetaPlayer,
 )

@@ -31,7 +31,7 @@ The most basic benchmark is the bot that takes actions completely at random (i.e
 
 ### 2. Weighted Random
 
-The second (slightly better) benchmark, was what I call the `WeightedRandomPlayer`. This bot takes actions at random too, except when “build city”, “build settlement”, or “buy development card” are possible actions. In these cases its skewes its random selection to heavily favor these (in that order). This is basically strictly improving `RandomPlayer` slightly by saying “if you can build a city, do it”. This was inspired by [this paper](https://www.researchgate.net/publication/220716999_Monte-Carlo_Tree_Search_in_Settlers_of_Catan), and it indeed played considerably better. You can see its implementation [here](https://github.com/bcollazo/catanatron/blob/master/catanatron_core/catanatron/players/weighted_random.py) and see how it wins ~60% of the games against `RandomPlayer`:
+The second (slightly better) benchmark, was what I call the `WeightedRandomPlayer`. This bot takes actions at random too, except when “build city”, “build settlement”, or “buy development card” are possible actions. In these cases its skewes its random selection to heavily favor these (in that order). This is basically strictly improving `RandomPlayer` slightly by saying “if you can build a city, do it”. This was inspired by [this paper](https://www.researchgate.net/publication/220716999_Monte-Carlo_Tree_Search_in_Settlers_of_Catan), and it indeed played considerably better. You can see its implementation [here](https://github.com/bcollazo/catanatron/blob/master/catanatron/catanatron/players/weighted_random.py) and see how it wins ~60% of the games against `RandomPlayer`:
 
 ```
 RandomPlayer:RED           [3834]  █████████████████████████
@@ -56,7 +56,7 @@ ValueFunctionPlayer:ORANGE(value_fn=base_fn)  [991]  █████████
 
 <p align="center">3-player Catan between `RandomPlayer`, `WeightedRandomPlayer` and `ValueFunctionPlayer`</p>
 
-You can find the "features" and "weights" I am using for this bot [here](https://github.com/bcollazo/catanatron/blob/master/catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py#L25).
+You can find the "features" and "weights" I am using for this bot [here](https://github.com/bcollazo/catanatron/blob/master/catanatron/players/minimax.py#L25).
 
 ### Performance
 
@@ -100,7 +100,7 @@ This would execute five 4-player `RandomPlayer` games and output GZIP CSVs to th
  rewards.csv.gzip: Several "labels" we tried for each (state, action) pair. RETURN for example is 1 if player ultimately won, 0 otherwise.
 </p>
 
-For more information on these representations, look at the [action table](https://catanatron.readthedocs.io/en/latest/catanatron_env.envs.html#catanatron_env.envs.catanatron_env.CatanatronEnv.action_space) and [state table](https://catanatron.readthedocs.io/en/latest/catanatron_env.envs.html#catanatron_env.envs.catanatron_env.CatanatronEnv.observation_space).
+For more information on these representations, look at the [action table](https://catanatron.readthedocs.io/en/latest/catanatron.gym.envs.html#catanatron.gym.envs.catanatron_env.CatanatronEnv.action_space) and [state table](https://catanatron.readthedocs.io/en/latest/catanatron.gym.envs.html#catanatron.gym.envs.catanatron_env.CatanatronEnv.observation_space).
 
 ## Attempt #1: Cross-Entropy Method and Online DQN
 
@@ -201,4 +201,4 @@ You can clone the repo, install dependencies, and test your own ideas for improv
 
 ## PS: Future Work
 
-I also still see possibility in the Reinforcement Learning approaches with a self-play component. For example, it could be very interesting to get either https://github.com/suragnair/alpha-zero-general or https://github.com/werner-duvaud/muzero-general working with Catanatron. I have implemented a Gym-like interface [here](https://github.com/bcollazo/catanatron/tree/master/catanatron_env), but it is not clear to me how to adapt those repositories.
+I also still see possibility in the Reinforcement Learning approaches with a self-play component. For example, it could be very interesting to get either https://github.com/suragnair/alpha-zero-general or https://github.com/werner-duvaud/muzero-general working with Catanatron. I have implemented a Gym-like interface [here](https://github.com/bcollazo/catanatron/tree/master/catanatron/gym), but it is not clear to me how to adapt those repositories.

@@ -17,7 +17,7 @@ from catanatron.models.map import (
 from catanatron.game import Game
 from catanatron.models.map import number_probability
 from catanatron.models.player import SimplePlayer, Color
-from catanatron_env.features import (
+from catanatron.features import (
     create_sample,
     expansion_features,
     port_features,
@@ -28,7 +28,7 @@ from catanatron_env.features import (
     tile_features,
     graph_features,
 )
-from catanatron_env.board_tensor_features import (
+from catanatron.gym.board_tensor_features import (
     create_board_tensor,
     get_node_and_edge_maps,
     init_board_tensor_map,
