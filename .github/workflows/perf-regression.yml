@@ -20,6 +20,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools
           pip install .[web,gym,dev]
+          pip install -e catanatron_experimental
 
       - name: Checkout PR and Master Branch
         uses: actions/checkout@v4
