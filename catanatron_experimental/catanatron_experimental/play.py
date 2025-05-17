@@ -178,6 +178,7 @@ def simulate(
                 players.append(player)
                 break
 
+    print_banner()
     output_options = OutputOptions(output, csv, json, db)
     game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
@@ -187,6 +188,18 @@ def simulate(
         game_config,
         quiet,
     )
+
+
+def print_banner():
+    with open(f"{os.path.dirname(__file__)}/cli/banner.txt", "r") as banner_file:
+        banner = banner_file.read()
+        console.print(
+            Text.from_markup(f"[blue]{banner}[/blue]"),
+            justify="center",
+            highlight=False,
+            overflow="ignore",
+            soft_wrap=True,
+        )
 
 
 @dataclass(frozen=True)
