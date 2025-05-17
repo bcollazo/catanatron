@@ -1,6 +1,6 @@
 black==25.1.0
 blinker==1.9.0
--e catanatron[web,gym]
+-e .[web,gym]
 -e catanatron_experimental
 certifi==2025.4.26
 charset-normalizer==3.4.2
