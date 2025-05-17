@@ -1,6 +1,6 @@
 black==25.1.0
 blinker==1.9.0
--e catanatron_core
+-e catanatron
 -e catanatron_gym
 -e catanatron_server
 -e catanatron_experimental

@@ -47,7 +47,7 @@ jobs:
           pip install -r dev-requirements.txt
       - name: Lint with black
         run: |
-          black catanatron_core --check
+          black catanatron --check
           black catanatron_gym --check
           black catanatron_server --check
           black catanatron_experimental --check
@@ -76,7 +76,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip setuptools wheel
-          pip install -e catanatron_core
+          pip install -e catanatron
           pip install -e catanatron_gym
       - name: Inline test
         run: |

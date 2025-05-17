@@ -31,7 +31,7 @@ The most basic benchmark is the bot that takes actions completely at random (i.e
 
 ### 2. Weighted Random
 
-The second (slightly better) benchmark, was what I call the `WeightedRandomPlayer`. This bot takes actions at random too, except when “build city”, “build settlement”, or “buy development card” are possible actions. In these cases its skewes its random selection to heavily favor these (in that order). This is basically strictly improving `RandomPlayer` slightly by saying “if you can build a city, do it”. This was inspired by [this paper](https://www.researchgate.net/publication/220716999_Monte-Carlo_Tree_Search_in_Settlers_of_Catan), and it indeed played considerably better. You can see its implementation [here](https://github.com/bcollazo/catanatron/blob/master/catanatron_core/catanatron/players/weighted_random.py) and see how it wins ~60% of the games against `RandomPlayer`:
+The second (slightly better) benchmark, was what I call the `WeightedRandomPlayer`. This bot takes actions at random too, except when “build city”, “build settlement”, or “buy development card” are possible actions. In these cases its skewes its random selection to heavily favor these (in that order). This is basically strictly improving `RandomPlayer` slightly by saying “if you can build a city, do it”. This was inspired by [this paper](https://www.researchgate.net/publication/220716999_Monte-Carlo_Tree_Search_in_Settlers_of_Catan), and it indeed played considerably better. You can see its implementation [here](https://github.com/bcollazo/catanatron/blob/master/catanatron/catanatron/players/weighted_random.py) and see how it wins ~60% of the games against `RandomPlayer`:
 
 ```
 RandomPlayer:RED           [3834]  █████████████████████████

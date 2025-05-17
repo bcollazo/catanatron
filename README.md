@@ -77,7 +77,7 @@ The best bot right now is Alpha Beta Search with a hand-crafted value function. 
 is to have your custom player inhert from ([`AlphaBetaPlayer`](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)) and set a better set of weights for the value function. You can
 also edit the value function and come up with your own innovative features!
 
-For more sophisticated approaches, see example player implementations in [catanatron_core/catanatron/players](catanatron_core/catanatron/players)
+For more sophisticated approaches, see example player implementations in [catanatron/catanatron/players](catanatron/catanatron/players)
 
 If you find a bot that consistently beats the best bot right now, please submit a Pull Request! :)
 
@@ -315,9 +315,9 @@ In [3]: x.get_chunk(10)
 catanatron Package
 
 ```bash
-make build PACKAGE=catanatron_core
-make upload PACKAGE=catanatron_core
-make upload-production PACKAGE=catanatron_core
+make build PACKAGE=catanatron
+make upload PACKAGE=catanatron
+make upload-production PACKAGE=catanatron
 ```
 
 catanatron_gym Package
@@ -333,7 +333,7 @@ make upload-production PACKAGE=catanatron_gym
 ```bash
 pip install -r docs/requirements.txt
 sphinx-quickstart docs
-sphinx-apidoc -o docs/source catanatron_core
+sphinx-apidoc -o docs/source catanatron
 sphinx-apidoc -o docs/source catanatron_gym
 sphinx-apidoc -o docs/source catanatron_server
 sphinx-build -b html docs/source/ docs/build/html

@@ -43,5 +43,5 @@ endif
 
 
 docs:
-	sphinx-apidoc -o docs/source catanatron_core/catanatron
+	sphinx-apidoc -o docs/source catanatron/catanatron
 	sphinx-build -b html docs/source/ docs/build/html
