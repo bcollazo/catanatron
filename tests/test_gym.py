@@ -3,10 +3,10 @@ import random
 import gymnasium
 from gymnasium.utils.env_checker import check_env
 
-from catanatron_gym.features import get_feature_ordering
+from catanatron.gym.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
 from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
-from catanatron_gym.envs.catanatron_gym import CatanatronEnv
+from catanatron.gym.envs.catanatron_gym import CatanatronEnv
 
 features = get_feature_ordering(2)
 

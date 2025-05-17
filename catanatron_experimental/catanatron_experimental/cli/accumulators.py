@@ -25,9 +25,9 @@ from catanatron_experimental.machine_learning.utils import (
     populate_matrices,
     DISCOUNT_FACTOR,
 )
-from catanatron_gym.features import create_sample
-from catanatron_gym.envs.catanatron_gym import to_action_space, to_action_type_space
-from catanatron_gym.board_tensor_features import (
+from catanatron.gym.features import create_sample
+from catanatron.gym.envs.catanatron_gym import to_action_space, to_action_type_space
+from catanatron.gym.board_tensor_features import (
     create_board_tensor,
 )
 
