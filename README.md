@@ -199,9 +199,10 @@ done by running 1000 (when possible) 1v1 games against previous in list.
 
 ## Developing for Catanatron
 
-To develop for Catanatron core logic you can use the following test suite:
+To develop for Catanatron core logic, install the dev dependencies and use the following test suite:
 
 ```bash
+pip install .[web,gym,dev]
 coverage run --source=catanatron -m pytest tests/ && coverage report
 ```
 
@@ -219,7 +220,7 @@ Generate JSON files with complete information about games and decisions by runni
 catanatron-play --num=100 --output=my-data-path/ --json
 ```
 
-Similarly (with Tensorflow installed) you can generate several GZIP CSVs of a basic set of features:
+Similarly you can generate several GZIP CSVs of a basic set of features:
 
 ```bash
 catanatron-play --num=100 --output=my-data-path/ --csv

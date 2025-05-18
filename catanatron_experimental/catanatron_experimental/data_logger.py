@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import tensorflow as tf  # lazy import tf so that catanatron simulator is usable without tf
+import tensorflow as tf
 import pandas as pd
 
 from catanatron.features import (

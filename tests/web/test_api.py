@@ -1,14 +1,7 @@
 import pytest
 import json
 from catanatron.web import create_app
-from catanatron.models.player import Color
-from catanatron.game import (
-    Game,
-)  # Assuming Game can be imported for test setup/assertion
-from catanatron.web.models import (
-    db,
-    GameState,
-)  # For direct db interaction if needed for setup/teardown
+from catanatron.web.models import db, GameState
 
 
 @pytest.fixture
@@ -126,70 +119,6 @@ def test_mcts_analysis_game_not_found(client):
     """Test MCTS analysis for a non-existent game."""
     response = client.get("/api/games/nonexistent/states/nonexistent/mcts-analysis")
     assert response.status_code == 400
-
-
-# def test_post_action_human_turn_valid_action(client, app):
-#     """Test posting a valid action when it's a human player's turn."""
-#     # Create a game where the first player is HUMAN
-#     # Need to adjust player_factory or game setup if HUMAN isn't default first
-#     # For now, let's assume we can make the first player HUMAN
-#     # This might require a refactor in api.py or a more complex setup here.
-
-#     # Simplified: Create a game, then manually update it to be a human's turn
-#     # This is a bit of a hack for testing without deeper refactoring yet.
-#     with app.app_context():
-#         # Create a game with a human player
-#         # The player_factory in api.py will create players based on the list.
-#         # Let's make the first player HUMAN
-#         game_players_config = ["HUMAN", "RANDOM"]
-#         post_response = client.post("/api/games", json={"players": game_players_config})
-#         assert post_response.status_code == 200
-#         game_id = json.loads(post_response.data)["game_id"]
-
-#         # Retrieve the game directly from DB to manipulate for testing
-#         # This is usually not ideal but helps for targeted testing here.
-#         from catanatron.web.models import get_game_state, upsert_game_state
-
-#         game = get_game_state(game_id)
-#         # Ensure it's human's turn (player 0, Color.RED by default)
-#         # If game.state.current_player() is already human and not a bot, we are good.
-#         # If not, this test setup needs to be more robust or the game logic needs to be invoked.
-
-#         # For this example, let's assume the first player is HUMAN and it's their turn.
-#         # We need a valid action. The simplest action is often 'END_TURN'.
-#         # The structure of action_from_json and game.execute needs to be known.
-#         # Let's assume an 'END_TURN' action looks like this:
-#         valid_action_json = {
-#             "type": "END_TURN",
-#             "player_color": game.state.current_player().color.value,
-#         }
-
-#     action_response = client.post(
-#         f"/api/games/{game_id}/actions", json=valid_action_json
-#     )
-#     assert action_response.status_code == 200
-#     action_data = json.loads(action_response.data)
-#     assert len(action_data["state"]["actions"]) > 0  # Check if an action was recorded
-
-
-# Example of a test for player_factory if it were more complex or standalone
-# from catanatron.web.api import player_factory # Assuming direct import is possible
-# def test_player_factory():
-#     player = player_factory(("CATANATRON", Color.RED))
-#     assert isinstance(player, AlphaBetaPlayer)
-#     assert player.color == Color.RED
-
-#     player = player_factory(("RANDOM", Color.BLUE))
-#     assert isinstance(player, RandomPlayer)
-#     assert player.color == Color.BLUE
-
-#     player = player_factory(("HUMAN", Color.ORANGE))
-#     assert isinstance(player, ValueFunctionPlayer)
-#     assert not player.is_bot
-#     assert player.color == Color.ORANGE
-
-#     with pytest.raises(ValueError):
-#         player_factory(("INVALID_TYPE", Color.WHITE))
 
 
 # Stress test endpoint is simple, just check if it runs

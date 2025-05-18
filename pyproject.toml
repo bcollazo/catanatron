@@ -27,7 +27,14 @@ web = [
     "sqlalchemy",
     "psycopg2-binary",
 ]
-dev = ["black", "pytest", "pytest-benchmark", "coverage", "coveralls"]
+dev = [
+    "black",
+    "pytest",
+    "pytest-benchmark",
+    "pytest-watch",
+    "coverage",
+    "coveralls",
+]
 
 [project.urls]
 Homepage = "https://github.com/bcollazo/catanatron"
