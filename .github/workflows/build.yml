@@ -58,7 +58,8 @@ jobs:
           python -c "import gymnasium; import catanatron.gym; env = gymnasium.make('catanatron/Catanatron-v0')"
       - name: Test README.md sample (and fail even on warnings)
         run: |
-          python -W error examples/gym_example.py
+          python -W error examples/gym_example.py && \
+          python -W error examples/gym_vectorized_example.py
       - name: Install the rest of the dependencies
         run: |
           pip install .[web,dev]
