@@ -1,5 +1,7 @@
+from typing import List
 from catanatron import Game, RandomPlayer, Color
-from catanatron_experimental.machine_learning.players.mcts import StateNode
+from catanatron.models.player import Player
+from catanatron.players.mcts import StateNode
 
 
 def test_root_node_initial_properties():
@@ -15,7 +17,7 @@ def test_root_node_initial_properties():
     ]
     game_instance = Game(players)
 
-    player_color = "blue"
+    player_color = Color.BLUE
 
     # 2. Create a StateNode instance for the root of a search tree
     root_node = StateNode(

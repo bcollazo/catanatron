@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
 [![Join the chat at https://gitter.im/bcollazo-catanatron/community](https://badges.gitter.im/bcollazo-catanatron/community.svg)](https://gitter.im/bcollazo-catanatron/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/catanatron_experimental/catanatron_experimental/Overview.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/examples/Overview.ipynb)
 
 Settlers of Catan Bot and Bot Simulator. Test out bot strategies at scale (thousands of games per minutes). The goal of this project is to find the strongest Settlers of Catan bot possible.
 
@@ -27,7 +27,7 @@ Create a virtual environment with Python3.12 or higher. Then:
 ```bash
 python -m venv venv
 source ./venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Usage
@@ -42,27 +42,28 @@ See more information with `catanatron-play --help`.
 
 ## Try Your Own Bots
 
-Implement your own bots by creating a file (e.g. `myplayers.py`) with some `Player` implementations:
+Implement your own bots by creating a file (e.g. `myplayers.py`) with some `Player` implementations, and registering it for CLI usage:
 
 ```python
 from catanatron import Player
-from catanatron_experimental.cli.cli_players import register_player
+from catanatron.cli import register_cli_player
 
-@register_player("FOO")
 class FooPlayer(Player):
-  def decide(self, game, playable_actions):
-    """Should return one of the playable_actions.
+    def decide(self, game, playable_actions):
+        """Should return one of the playable_actions.
 
-    Args:
-        game (Game): complete game state. read-only.
-        playable_actions (Iterable[Action]): options to choose from
-    Return:
-        action (Action): Chosen element of playable_actions
-    """
-    # ===== YOUR CODE HERE =====
-    # As an example we simply return the first action:
-    return playable_actions[0]
-    # ===== END YOUR CODE =====
+        Args:
+            game (Game): complete game state. read-only.
+            playable_actions (Iterable[Action]): options to choose from
+        Return:
+            action (Action): Chosen element of playable_actions
+        """
+        # ===== YOUR CODE HERE =====
+        # As an example we simply return the first action:
+        return playable_actions[0]  # type: ignore
+        # ===== END YOUR CODE =====
+
+register_cli_player("FOO", FooPlayer)
 ```
 
 Run it by passing the source code to `catanatron-play`:
@@ -74,10 +75,10 @@ catanatron-play --code=myplayers.py --players=R,R,R,FOO --num=10
 ## How to Make Catanatron Stronger?
 
 The best bot right now is Alpha Beta Search with a hand-crafted value function. One of the most promising ways of improving Catanatron
-is to have your custom player inhert from ([`AlphaBetaPlayer`](catanatron_experimental/catanatron_experimental/machine_learning/players/minimax.py)) and set a better set of weights for the value function. You can
+is to have your custom player inhert from ([`AlphaBetaPlayer`](catanatron/catanatron/players/minimax.py)) and set a better set of weights for the value function. You can
 also edit the value function and come up with your own innovative features!
 
-For more sophisticated approaches, see example player implementations in [catanatron_core/catanatron/players](catanatron_core/catanatron/players)
+For more sophisticated approaches, see example player implementations in [catanatron/catanatron/players](catanatron/catanatron/players)
 
 If you find a bot that consistently beats the best bot right now, please submit a Pull Request! :)
 
@@ -85,7 +86,7 @@ If you find a bot that consistently beats the best bot right now, please submit 
 
 ### Inspecting Games (Browser UI)
 
-We provide a [docker-compose.yml](docker-compose.yml) with everything needed to watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
+We provide a [docker-compose.yml](docker-compose.yml) with everything needed to play and watch games (useful for debugging). It contains all the web-server infrastructure needed to render a game in a browser.
 
 <p align="left">
  <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/CatanatronUI.png">
@@ -97,12 +98,17 @@ To use, ensure you have [Docker Compose](https://docs.docker.com/compose/install
 docker compose up
 ```
 
-You can now use the `--db` flag to make the catanatron-play simulator save
-the game in the database for inspection via the web server.
+You should now be able to visit http://localhost:3000 and play!
+
+You can also (in a new terminal window) install the `[web]` subpackage and use the `--db` flag 
+to make the catanatron-play simulator save the game in the database for inspection via the web server.
 
 ```bash
+pip install .[web]
 catanatron-play --players=W,W,W,W --db --num=1
 ```
+
+The link should be printed in the console.
 
 NOTE: A great contribution would be to make the Web UI allow to step forwards and backwards in a game to inspect it (ala chess.com).
 
@@ -114,9 +120,8 @@ For example, write a file like `mycode.py` and have:
 
 ```python
 from catanatron import ActionType
-from catanatron_experimental import SimulationAccumulator, register_accumulator
+from catanatron.cli import SimulationAccumulator, register_cli_accumulator
 
-@register_accumulator
 class PortTradeCounter(SimulationAccumulator):
   def before_all(self):
     self.num_trades = 0
@@ -126,7 +131,9 @@ class PortTradeCounter(SimulationAccumulator):
       self.num_trades += 1
 
   def after_all(self):
-    print(f'There were {self.num_trades} port trades!')
+    print(f'There were {self.num_trades} trades with the bank!')
+
+register_cli_accumulator(PortTradeCounter)
 ```
 
 Then `catanatron-play --code=mycode.py` will count the number of trades in all simulations.
@@ -153,20 +160,21 @@ print(game.play())  # returns winning color
 You can use the `open_link` helper function to open up the game (useful for debugging):
 
 ```python
-from catanatron_server.utils import open_link
+from catanatron.web.utils import open_link
 open_link(game)  # opens game in browser
 ```
 
 ## Architecture
 
-The code is divided in the following 5 components (folders):
+The code is divided in three main components (folders):
 
-- **catanatron**: A pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see `setup.py`) and can be used as a Python package. See the documentation for the package here: https://catanatron.readthedocs.io/.
+- **catanatron**: The pure python implementation of the game logic. Uses `networkx` for fast graph operations. Is pip-installable (see [pyproject.toml](pyproject.toml)) and can be used as a Python package. See the documentation for the package here: https://catanatron.readthedocs.io/.
 
-- **catanatron_server**: Contains a Flask web server in order to serve
-  game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. It defaults to using an ephemeral in-memory sqlite database. Also pip-installable (not publised in PyPi however).
+  - **catanatron.web**: An extension package (optionally installed) that contains a Flask web server in order to serve
+    game states from a database to a Web UI. The idea of using a database, is to ease watching games played in a different process. 
+    It defaults to using an ephemeral in-memory sqlite database. Also pip-installable with `pip install catanatron[web]`.
 
-- **catanatron_env**: Gymnasium interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. This can be pip-installed independently with `pip install catanatron_env`, for more information see [catanatron_env/README.md](catanatron_env/README.md).
+  - **catanatron.gym**: Gymnasium interface to Catan. Includes a 1v1 environment against a Random Bot and a vector-friendly representations of states and actions. This can be pip-installed independently with `pip install catanatron[gym]`, for more information see [catanatron/gym/README.md](catanatron/catanatron/gym/README.md).
 
 - **catantron_experimental**: A collection of unorganized scripts with contain many failed attempts at finding the best possible bot. Its ok to break these scripts. Its pip-installable. Exposes a `catanatron-play` command-line script that can be used to play games in bulk, create machine learning datasets of games, and more!
 
@@ -191,9 +199,10 @@ done by running 1000 (when possible) 1v1 games against previous in list.
 
 ## Developing for Catanatron
 
-To develop for Catanatron core logic you can use the following test suite:
+To develop for Catanatron core logic, install the dev dependencies and use the following test suite:
 
 ```bash
+pip install .[web,gym,dev]
 coverage run --source=catanatron -m pytest tests/ && coverage report
 ```
 
@@ -211,7 +220,7 @@ Generate JSON files with complete information about games and decisions by runni
 catanatron-play --num=100 --output=my-data-path/ --json
 ```
 
-Similarly (with Tensorflow installed) you can generate several GZIP CSVs of a basic set of features:
+Similarly you can generate several GZIP CSVs of a basic set of features:
 
 ```bash
 catanatron-play --num=100 --output=my-data-path/ --csv
@@ -251,10 +260,9 @@ use `flask run`.
 ```bash
 python3.8 -m venv venv
 source ./venv/bin/activate
-pip install -r requirements.txt
+pip install catanatron[web]
 
-cd catanatron_server/catanatron_server
-flask run
+FLASK_DEBUG=1 FLASK_APP=catanatron.web/catanatron.web flask run
 ```
 
 This can also be run via Docker independetly like (after building):
@@ -294,7 +302,7 @@ docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensor
 ### Testing Performance
 
 ```bash
-python -m cProfile -o profile.pstats catanatron_experimental/catanatron_experimental/play.py --num=5
+python -m cProfile -o profile.pstats catanatron/catanatron/cli/play.py --num=5
 snakeviz profile.pstats
 ```
 
@@ -315,17 +323,17 @@ In [3]: x.get_chunk(10)
 catanatron Package
 
 ```bash
-make build PACKAGE=catanatron_core
-make upload PACKAGE=catanatron_core
-make upload-production PACKAGE=catanatron_core
+make build PACKAGE=catanatron
+make upload PACKAGE=catanatron
+make upload-production PACKAGE=catanatron
 ```
 
-catanatron_env Package
+catanatron_gym Package
 
 ```bash
-make build PACKAGE=catanatron_env
-make upload PACKAGE=catanatron_env
-make upload-production PACKAGE=catanatron_env
+make build PACKAGE=catanatron_gym
+make upload PACKAGE=catanatron_gym
+make upload-production PACKAGE=catanatron_gym
 ```
 
 ### Building Docs
@@ -333,9 +341,7 @@ make upload-production PACKAGE=catanatron_env
 ```bash
 pip install -r docs/requirements.txt
 sphinx-quickstart docs
-sphinx-apidoc -o docs/source catanatron_core
-sphinx-apidoc -o docs/source catanatron_env
-sphinx-apidoc -o docs/source catanatron_server
+sphinx-apidoc -o docs/source catanatron
 sphinx-build -b html docs/source/ docs/build/html
 ```
 

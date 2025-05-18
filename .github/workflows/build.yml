@@ -35,21 +35,36 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip" # caching pip dependencies
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
+      - name: Install core
+        run: | # TODO: Move to python -m build and an automated release(?)
+          pip install .
       - name: Run sample catanatron-play
         run: |
           catanatron-play --players=R,W,F,AB:2 --num=2
-      - name: Install development dependencies
+      - name: Test Custom Bot
         run: |
-          pip install -r dev-requirements.txt
+          catanatron-play --code=examples/custom_player.py --players=F,FOO --num=1
+      - name: Test Custom Accumulator
+        run: |
+          catanatron-play --code=examples/custom_accumulator.py --players=F,R --num=1
+      - name: Test Library Example
+        run: |
+          python -W error examples/library_example.py
+      - name: Install Gym
+        run: |
+          pip install .[gym]
+      - name: Test Gym Inline
+        run: |
+          python -c "import gymnasium; import catanatron.gym; env = gymnasium.make('catanatron/Catanatron-v0')"
+      - name: Test README.md sample (and fail even on warnings)
+        run: |
+          python -W error examples/gym_example.py
+      - name: Install the rest of the dependencies
+        run: |
+          pip install .[web,dev]
       - name: Lint with black
         run: |
-          black catanatron_core --check
-          black catanatron_env --check
-          black catanatron_server --check
+          black catanatron --check
           black catanatron_experimental --check
       - name: Test with pytest
         run: |
@@ -59,31 +74,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           coveralls --service=github
-
-  build-gym:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip" # caching pip dependencies
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip setuptools wheel
-          pip install -e catanatron_core
-          pip install -e catanatron_env
-      - name: Inline test
-        run: |
-          python -c "import gymnasium; import catanatron_env; env = gymnasium.make('catanatron_env/Catanatron-v0')"
-      - name: Test README.md sample (and fail even on warnings)
-        run: |
-          python -W error catanatron_env/sample.py
 
   build-ui:
     runs-on: ubuntu-latest

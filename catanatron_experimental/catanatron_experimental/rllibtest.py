@@ -15,7 +15,7 @@ tf = try_import_tf()
 
 import tensorflow as tf
 
-from catanatron_env.envs.catanatron_env import CatanatronEnv
+from catanatron.gym.envs.catanatron_env import CatanatronEnv
 
 
 # https://towardsdatascience.com/action-masking-with-rllib-5e4bec5e7505
@@ -30,7 +30,7 @@ class KP0ActionMaskModel(TFModelV2):
         true_obs_shape=(11,),
         action_embed_size=5,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super(KP0ActionMaskModel, self).__init__(
             obs_space, action_space, num_outputs, model_config, name, *args, **kwargs

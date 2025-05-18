@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "catanatron"
+version = "3.3.0"
+authors = [{ name = "Bryan Collazo", email = "bcollazo2010@gmail.com" }]
+description = "Fast Settlers of Catan Python Implementation"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+keywords = ["catan", "settlers of catan", "board game", "python"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+dependencies = ["networkx", "click", "rich"]
+
+[project.optional-dependencies]
+gym = ["gymnasium<=0.29.1", "numpy", "pandas"]
+web = [
+    "flask",
+    "flask_cors",
+    "flask_sqlalchemy",
+    "sqlalchemy",
+    "psycopg2-binary",
+]
+dev = [
+    "black",
+    "pytest",
+    "pytest-benchmark",
+    "pytest-watch",
+    "coverage",
+    "coveralls",
+]
+
+[project.urls]
+Homepage = "https://github.com/bcollazo/catanatron"
+Repository = "https://github.com/bcollazo/catanatron"
+
+[project.scripts]
+catanatron-play = "catanatron.cli.play:simulate"
+
+[tool.setuptools.packages.find]
+where = ["catanatron"]

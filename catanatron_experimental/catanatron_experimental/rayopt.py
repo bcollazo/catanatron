@@ -1,14 +1,14 @@
 from ray import tune
 
 from catanatron.models.player import Color
-from catanatron_experimental.machine_learning.players.value import (
+from catanatron.players.value import (
     DEFAULT_WEIGHTS,
     ValueFunctionPlayer,
 )
 from ray.tune.suggest.bayesopt import BayesOptSearch
 from ray.tune.suggest.suggestion import ConcurrencyLimiter
 
-from catanatron_experimental.catanatron_experimental.play import play_batch
+from catanatron.cli.play import play_batch
 
 
 def objective(config):

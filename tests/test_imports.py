@@ -1,6 +1,6 @@
 from catanatron import Game, RandomPlayer, Color, GameAccumulator
 
-from catanatron_experimental.my_player import MyPlayer
+from examples.custom_player import FooPlayer
 
 
 def test_top_level_imports_work():
@@ -8,7 +8,7 @@ def test_top_level_imports_work():
         pass
 
     players = [
-        MyPlayer(Color.RED),
+        FooPlayer(Color.RED),
         RandomPlayer(Color.BLUE),
         RandomPlayer(Color.WHITE),
         RandomPlayer(Color.ORANGE),

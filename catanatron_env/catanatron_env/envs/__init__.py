@@ -1,1 +1,0 @@
-from catanatron_env.envs.catanatron_env import CatanatronEnv

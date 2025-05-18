@@ -3,10 +3,10 @@ import random
 import gymnasium
 from gymnasium.utils.env_checker import check_env
 
-from catanatron_env.features import get_feature_ordering
+from catanatron.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
-from catanatron_experimental.machine_learning.players.value import ValueFunctionPlayer
-from catanatron_env.envs.catanatron_env import CatanatronEnv
+from catanatron.players.value import ValueFunctionPlayer
+from catanatron.gym.envs.catanatron_env import CatanatronEnv
 
 features = get_feature_ordering(2)
 
@@ -29,16 +29,18 @@ def test_gym():
     env = CatanatronEnv()
 
     first_observation, _ = env.reset()  # this forces advanced until p0...
-    assert len(env.get_valid_actions()) >= 50  # first seat at most blocked 4 nodes
+    assert (
+        len(env.unwrapped.get_valid_actions()) >= 50
+    )  # first seat at most blocked 4 nodes
     assert get_p0_num_settlements(first_observation) == 0
 
-    action = random.choice(env.get_valid_actions())
+    action = random.choice(env.unwrapped.get_valid_actions())
     second_observation, reward, terminated, truncated, info = env.step(action)
     assert (first_observation != second_observation).any()
     assert reward == 0
     assert not terminated
     assert not truncated
-    assert len(env.get_valid_actions()) in [2, 3]
+    assert len(env.unwrapped.get_valid_actions()) in [2, 3]
 
     assert second_observation[features.index("BANK_DEV_CARDS")] == 25
     assert second_observation[features.index("BANK_SHEEP")] == 19
@@ -52,7 +54,7 @@ def test_gym():
 
 
 def test_gym_registration_and_api_works():
-    env = gymnasium.make("catanatron_env/Catanatron-v0")
+    env = gymnasium.make("catanatron/Catanatron-v0")
     observation, info = env.reset()
     done = False
     reward = 0
@@ -66,10 +68,12 @@ def test_gym_registration_and_api_works():
 
 def test_invalid_action_reward():
     env = gymnasium.make(
-        "catanatron_env/Catanatron-v0", config={"invalid_action_reward": -1234}
+        "catanatron/Catanatron-v0", config={"invalid_action_reward": -1234}
     )
     first_obs, _ = env.reset()
-    invalid_action = next(filter(lambda i: i not in env.get_valid_actions(), range(1000)))  # type: ignore
+    invalid_action = next(
+        filter(lambda i: i not in env.unwrapped.get_valid_actions(), range(1000))
+    )
     observation, reward, terminated, truncated, info = env.step(invalid_action)
     assert reward == -1234
     assert not terminated
@@ -87,25 +91,25 @@ def test_custom_reward():
         return 123
 
     env = gymnasium.make(
-        "catanatron_env/Catanatron-v0", config={"reward_function": custom_reward}
+        "catanatron/Catanatron-v0", config={"reward_function": custom_reward}
     )
     observation, info = env.reset()
-    action = random.choice(env.get_valid_actions())  # type: ignore
+    action = random.choice(env.unwrapped.get_valid_actions())
     observation, reward, terminated, truncated, info = env.step(action)
     assert reward == 123
 
 
 def test_custom_map():
-    env = gymnasium.make("catanatron_env/Catanatron-v0", config={"map_type": "MINI"})
+    env = gymnasium.make("catanatron/Catanatron-v0", config={"map_type": "MINI"})
     observation, info = env.reset()
-    assert len(env.get_valid_actions()) < 50  # type: ignore
+    assert len(env.unwrapped.get_valid_actions()) < 50
     assert len(observation) < 614
     # assert env.action_space.n == 260
 
 
 def test_enemies():
     env = gymnasium.make(
-        "catanatron_env/Catanatron-v0",
+        "catanatron/Catanatron-v0",
         config={
             "enemies": [
                 ValueFunctionPlayer(Color.RED),
@@ -120,19 +124,19 @@ def test_enemies():
     done = False
     reward = 0
     while not done:
-        action = random.choice(env.get_valid_actions())  # type: ignore
+        action = random.choice(env.unwrapped.get_valid_actions())
         observation, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
 
     # Virtually impossible for a Random bot to beat Value Function Player
-    assert env.game.winning_color() == Color.RED  # type: ignore
+    assert env.unwrapped.game.winning_color() == Color.RED
     assert reward - 1
     env.close()
 
 
 def test_mixed_rep():
     env = gymnasium.make(
-        "catanatron_env/Catanatron-v0",
+        "catanatron/Catanatron-v0",
         config={"representation": "mixed"},
     )
     observation, info = env.reset()

@@ -1,12 +1,13 @@
 from pathlib import Path
 
+import tensorflow as tf
 import pandas as pd
 
-from catanatron_env.features import (
+from catanatron.features import (
     create_sample_vector,
     get_feature_ordering,
 )
-from catanatron_env.board_tensor_features import (
+from catanatron.gym.board_tensor_features import (
     CHANNELS,
     HEIGHT,
     WIDTH,
@@ -29,8 +30,6 @@ class DataLogger:
         self.log_lines = []
 
     def consume(self, game, mcts_labels):
-        import tensorflow as tf  # lazy import tf so that catanatron simulator is usable without tf
-
         for color in game.state.colors:
             sample = create_sample_vector(game, color)
             flattened_board_tensor = tf.reshape(

@@ -1,8 +1,8 @@
 from catanatron import ActionType, Color, RandomPlayer, Game, GameAccumulator
+from catanatron.cli.simulation_accumulator import SimulationAccumulator
 from catanatron.state_functions import get_actual_victory_points
 from catanatron.game import TURNS_LIMIT
-from catanatron_experimental import SimulationAccumulator
-from catanatron_experimental.play import GameConfigOptions, play_batch_core
+from catanatron.cli.play import GameConfigOptions, play_batch_core
 
 
 def test_accumulators():
