@@ -21,6 +21,7 @@ dependencies = ["networkx", "click", "rich"]
 [project.optional-dependencies]
 gym = ["gymnasium<=0.29.1", "numpy", "pandas"]
 web = [
+    "gunicorn",
     "flask",
     "flask_cors",
     "flask_sqlalchemy",
