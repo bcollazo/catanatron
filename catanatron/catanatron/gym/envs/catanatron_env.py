@@ -1,3 +1,4 @@
+from typing import TypedDict, Union
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -122,13 +123,13 @@ def simple_reward(game, p0_color):
         return -1
 
 
+class MixedObservation(TypedDict):
+    board: np.ndarray
+    numeric: np.ndarray
+
+
 class CatanatronEnv(gym.Env):
     metadata = {"render_modes": []}
-
-    action_space = spaces.Discrete(ACTION_SPACE_SIZE)
-    # TODO: This could be smaller (there are many binary features). float b.c. TILE0_PROBA
-    observation_space = spaces.Box(low=0, high=HIGH, shape=(NUM_FEATURES,), dtype=float)
-    reward_range = (-1, 1)
 
     def __init__(self, config=None):
         self.config = config or dict()
@@ -148,19 +149,20 @@ class CatanatronEnv(gym.Env):
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
-        # TODO: Make self.action_space smaller if possible (per map_type)
-        # self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
+        # TODO: Make self.action_space tighter if possible (per map_type)
+        self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
 
         if self.representation == "mixed":
             channels = get_channels(len(self.players))
             board_tensor_space = spaces.Box(
-                low=0, high=1, shape=(channels, 21, 11), dtype=float
+                low=0, high=1, shape=(channels, 21, 11), dtype=np.float64
             )
             self.numeric_features = [
                 f for f in self.features if not is_graph_feature(f)
             ]
+            # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
             numeric_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=float
+                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=np.float64
             )
             mixed = spaces.Dict(
                 {
@@ -170,8 +172,9 @@ class CatanatronEnv(gym.Env):
             )
             self.observation_space = mixed
         else:
+            # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
             self.observation_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.features),), dtype=float
+                low=0, high=HIGH, shape=(len(self.features),), dtype=np.float64
             )
 
         self.reset()
@@ -241,7 +244,7 @@ class CatanatronEnv(gym.Env):
 
         return observation, info
 
-    def _get_observation(self):
+    def _get_observation(self) -> Union[np.ndarray, MixedObservation]:
         sample = create_sample(self.game, self.p0.color)
         if self.representation == "mixed":
             board_tensor = create_board_tensor(

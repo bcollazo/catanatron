@@ -17,7 +17,7 @@ env = gymnasium.make('catanatron.gym/Catanatron-v0')
 observation, info = env.reset()
 for _ in range(1000):
   # your agent here (this takes random actions)
-  action = random.choice(env.unwrapped.get_valid_actions())
+  action = random.choice(info['valid_actions'])
 
   observation, reward, terminated, truncated, info = env.step(action)
   done = terminated or truncated
@@ -54,12 +54,12 @@ def mask_fn(env) -> np.ndarray:
 
 
 # Init Environment and Model
-env = gymnasium.make("catanatron.gym/Catanatron-v0")
+env = gymnasium.make("catanatron/Catanatron-v0")
 env = ActionMasker(env, mask_fn)  # Wrap to enable masking
 model = MaskablePPO(MaskableActorCriticPolicy, env, verbose=1)
 
 # Train
-model.learn(total_timesteps=1_000_000)
+model.learn(total_timesteps=10_000)
 ```
 
 ## Configuration
