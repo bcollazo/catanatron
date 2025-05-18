@@ -82,7 +82,7 @@ def return_to_rewards(return_value, n):
     """
     Convert a return value to a rewards vector.
     """
-    rewards = np.zeros(n)
+    rewards = np.zeros(n, dtype=np.float64)
     rewards[-1] = return_value
     return rewards
 
@@ -155,13 +155,14 @@ def populate_matrices(
         index=False,
         compression="gzip",
     )
-    board_tensors_df.to_csv(
-        board_tensors_path,
-        mode="a",
-        header=is_first_training,
-        index=False,
-        compression="gzip",
-    )
+    if board_tensors_df is not None:
+        board_tensors_df.to_csv(
+            board_tensors_path,
+            mode="a",
+            header=is_first_training,
+            index=False,
+            compression="gzip",
+        )
     actions_df.to_csv(
         actions_path,
         mode="a",

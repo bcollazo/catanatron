@@ -88,6 +88,15 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     "--csv", default=False, is_flag=True, help="Save game data in CSV format."
 )
 @click.option(
+    "--parquet", default=False, is_flag=True, help="Save game data in Parquet format."
+)
+@click.option(
+    "--include-board-tensor",
+    default=False,
+    is_flag=True,
+    help="Wether to generate 3D Tensor of the Board for CNN Learning (slower) when using --csv or --parquet.",
+)
+@click.option(
     "--db",
     default=False,
     is_flag=True,
@@ -133,6 +142,8 @@ def simulate(
     output,
     json,
     csv,
+    parquet,
+    include_board_tensor,
     db,
     config_discard_limit,
     config_vps_to_win,
@@ -160,8 +171,8 @@ def simulate(
 
     if help_players:
         return Console().print(player_help_table())
-    if output and not (json or csv):
-        return print("--output requires either --json or --csv to be set")
+    if output and not (json or csv or parquet):
+        return print("--output requires either --json or --csv or --parquet to be set")
 
     player_keys = players.split(",")
     players = []
@@ -176,7 +187,7 @@ def simulate(
                 players.append(player)
                 break
 
-    output_options = OutputOptions(output, csv, json, db)
+    output_options = OutputOptions(output, csv, parquet, include_board_tensor, json, db)
     game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
         num,
@@ -193,6 +204,8 @@ class OutputOptions:
 
     output: Union[str, None] = None  # path to store files
     csv: bool = False
+    parquet: bool = False
+    include_board_tensor: bool = False
     json: bool = False
     db: bool = False
 
@@ -264,9 +277,22 @@ def play_batch(
         ensure_dir(output_options.output)
     if output_options.output and output_options.csv:
         # lazy load CsvDataAccumulator since depends on pandas / numpy
-        from catanatron.gym.csv_accumulator import CsvDataAccumulator
+        from catanatron.gym.accumulators import CsvDataAccumulator
 
-        accumulators.append(CsvDataAccumulator(output_options.output))
+        accumulators.append(
+            CsvDataAccumulator(
+                output_options.output, output_options.include_board_tensor
+            )
+        )
+    if output_options.output and output_options.parquet:
+        # lazy load ParquetDataAccumulator since depends on pandas / pyarrow
+        from catanatron.gym.accumulators import ParquetDataAccumulator
+
+        accumulators.append(
+            ParquetDataAccumulator(
+                output_options.output, output_options.include_board_tensor
+            )
+        )
     if output_options.output and output_options.json:
         accumulators.append(JsonDataAccumulator(output_options.output))
     if output_options.db:
@@ -386,8 +412,12 @@ def play_batch(
     table.add_row(avg_ticks, avg_turns, avg_duration)
     console.print(table)
 
+    if output_options.output and output_options.json:
+        console.print(f"JSON files saved at: [green]{output_options.output}[/green]")
     if output_options.output and output_options.csv:
         console.print(f"GZIP CSVs saved at: [green]{output_options.output}[/green]")
+    if output_options.output and output_options.parquet:
+        console.print(f"PARQUET files saved at: [green]{output_options.output}[/green]")
 
     return (
         dict(statistics_accumulator.wins),
