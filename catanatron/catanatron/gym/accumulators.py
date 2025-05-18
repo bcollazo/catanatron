@@ -12,20 +12,27 @@ from catanatron.gym.board_tensor_features import create_board_tensor
 from catanatron.gym.envs.catanatron_env import to_action_space, to_action_type_space
 from catanatron.gym.utils import (
     DISCOUNT_FACTOR,
-    get_discounted_returns,
-    get_main_path,
     get_tournament_total_return,
     get_victory_points_total_return,
     populate_matrices,
-    return_to_rewards,
-    simple_return,
+    simple_total_return,
 )
 
 
 class ReinforcementLearningAccumulator(GameAccumulator):
-    def __init__(self, output, include_board_tensor=True):
-        self.output = output
+    def __init__(
+        self,
+        include_board_tensor=True,
+        total_return_fns={
+            "RETURN": simple_total_return,
+            "TOURNAMENT_RETURN": get_tournament_total_return,
+            "VICTORY_POINTS_RETURN": get_victory_points_total_return,
+        },
+    ):
         self.include_board_tensor = include_board_tensor
+        # TODO: Generalize to "rewards_fn" that can yield intermediary rewards
+        #   while still rewarding big on terminal states.
+        self.total_return_fns = total_return_fns
 
     def before(self, game):
         self.data = {
@@ -55,63 +62,36 @@ class ReinforcementLearningAccumulator(GameAccumulator):
 
     def after(self, game):
         if game.winning_color() is None:
-            return  # drop game
+            return None  # drop game
 
         t1 = time.time()
-        # Get rewards vector. For now either -1 or 1.
-        all_full_returns = np.zeros(len(self.data["samples"]), dtype=np.float64)
-        all_discounted_returns = np.zeros(len(self.data["samples"]), dtype=np.float64)
-        all_tournament_returns = np.zeros(len(self.data["samples"]), dtype=np.float64)
-        all_discounted_tournament_returns = np.zeros(
-            len(self.data["samples"]), dtype=np.float64
-        )
-        all_victory_points_returns = np.zeros(
-            len(self.data["samples"]), dtype=np.float64
-        )
-        all_discounted_victory_points_returns = np.zeros(
-            len(self.data["samples"]), dtype=np.float64
-        )
+
+        # Now that the game is over, we can calculate the returns
+        # for each sample (so trajectories that lost still contribute data).
+        returns = {
+            name: np.zeros(len(self.data["samples"]), dtype=np.float64)
+            for name in self.total_return_fns.keys()
+        }
         for color, action_indices in self.data["color_action_indices"].items():
-            sparse_simple_rewards = return_to_rewards(
-                simple_return(game, color), len(action_indices)
-            )
-            sparse_tournament_rewards = return_to_rewards(
-                get_tournament_total_return(game, color), len(action_indices)
-            )
-            sparse_victory_points_rewards = return_to_rewards(
-                get_victory_points_total_return(game, color), len(action_indices)
-            )
+            # Set total return for the return of the perspective of this player
+            player_returns = {
+                name: np.full_like(
+                    action_indices, total_return_fn(game, color), dtype=np.float64
+                )
+                for name, total_return_fn in self.total_return_fns.items()
+            }
 
-            full_returns = get_discounted_returns(sparse_simple_rewards, 1)
-            discounted_returns = get_discounted_returns(
-                sparse_simple_rewards, DISCOUNT_FACTOR
-            )
-            full_tournament_returns = get_discounted_returns(
-                sparse_tournament_rewards, 1
-            )
-            discounted_tournament_returns = get_discounted_returns(
-                sparse_tournament_rewards, DISCOUNT_FACTOR
-            )
-            full_victory_points_returns = get_discounted_returns(
-                sparse_victory_points_rewards, 1
-            )
-            discounted_victory_points_returns = get_discounted_returns(
-                sparse_victory_points_rewards, DISCOUNT_FACTOR
-            )
+            # For each column, modify the indexes of this player
+            for column_name, step_returns in player_returns.items():
+                returns[column_name][action_indices] = step_returns
 
-            all_full_returns[action_indices] = full_returns
-            all_discounted_returns[action_indices] = discounted_returns
-            all_tournament_returns[action_indices] = full_tournament_returns
-            all_discounted_tournament_returns[action_indices] = (
-                discounted_tournament_returns
-            )
-            all_victory_points_returns[action_indices] = full_victory_points_returns
-            all_discounted_victory_points_returns[action_indices] = (
-                discounted_victory_points_returns
-            )
+        T = len(self.data["samples"])
+        discounts = DISCOUNT_FACTOR ** np.arange(T)[::-1]
+        discount_columns = dict()
+        for name, step_returns in returns.items():
+            discount_columns["DISCOUNTED_" + name] = step_returns * discounts
 
         # Build Q-learning Design Matrix
-
         samples = self.data["samples"]
         actions = self.data["actions"]
         samples_df = (
@@ -122,21 +102,12 @@ class ReinforcementLearningAccumulator(GameAccumulator):
         actions_df = pd.DataFrame(actions, columns=["ACTION", "ACTION_TYPE"]).astype(
             "int"
         )
-        rewards_df = pd.DataFrame(
-            {
-                "RETURN": all_full_returns,
-                "DISCOUNTED_RETURN": all_discounted_returns,
-                "TOURNAMENT_RETURN": all_tournament_returns,
-                "DISCOUNTED_TOURNAMENT_RETURN": all_discounted_tournament_returns,
-                "VICTORY_POINTS_RETURN": all_victory_points_returns,
-                "DISCOUNTED_VICTORY_POINTS_RETURN": all_discounted_victory_points_returns,
-            }
-        ).astype("float64")
+        returns_df = pd.DataFrame({**returns, **discount_columns}).astype("float64")
 
         results = {
-            "samples": samples_df,
-            "actions": actions_df,
-            "rewards": rewards_df,
+            "samples_df": samples_df,
+            "actions_df": actions_df,
+            "returns_df": returns_df,
         }
         if self.include_board_tensor:
             board_tensors = self.data["board_tensors"]
@@ -144,13 +115,13 @@ class ReinforcementLearningAccumulator(GameAccumulator):
                 pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
             )
             main_df = pd.concat(
-                [samples_df, board_tensors_df, actions_df, rewards_df], axis=1
+                [samples_df, board_tensors_df, actions_df, returns_df], axis=1
             )
-            results["board_tensors"] = board_tensors_df
-            results["main"] = main_df
+            results["board_tensors_df"] = board_tensors_df
+            results["main_df"] = main_df
         else:
-            main_df = pd.concat([samples_df, actions_df, rewards_df], axis=1)
-            results["main"] = main_df
+            main_df = pd.concat([samples_df, actions_df, returns_df], axis=1)
+            results["main_df"] = main_df
         print(
             "Building matrices at took",
             format_secs(time.time() - t1),
@@ -159,43 +130,51 @@ class ReinforcementLearningAccumulator(GameAccumulator):
 
 
 class CsvDataAccumulator(ReinforcementLearningAccumulator):
+    def __init__(self, output, include_board_tensor=True):
+        super().__init__(include_board_tensor)
+        self.output = output
+
     def after(self, game):
         data = super().after(game)
         if data is None:
             return
 
         t1 = time.time()
-        main_df = data["main"]
-        samples_df = data["samples"]
+        main_df = data["main_df"]
+        samples_df = data["samples_df"]
         board_tensors_df = (
-            None if not self.include_board_tensor else data["board_tensors"]
+            None if not self.include_board_tensor else data["board_tensors_df"]
         )
-        actions_df = data["actions"]
-        rewards_df = data["rewards"]
+        actions_df = data["actions_df"]
+        returns_df = data["returns_df"]
         populate_matrices(
             samples_df,
             board_tensors_df,
             actions_df,
-            rewards_df,
+            returns_df,
             main_df,
             self.output,
         )
         print(
-            f"Saved matrices to {self.output} {'(including board tensors)' if self.include_board_tensor else ''} with shapes: "
+            f"Saved matrices to {self.output}{' (including board tensors)' if self.include_board_tensor else ''} with shapes: "
             f"main={main_df.shape}, samples={samples_df.shape}, actions={actions_df.shape}, "
-            f"rewards={rewards_df.shape} in {format_secs(time.time() - t1)}"
+            f"rewards={returns_df.shape} in {format_secs(time.time() - t1)}"
         )
-        return samples_df, board_tensors_df, actions_df, rewards_df
+        return samples_df, board_tensors_df, actions_df, returns_df
 
 
 class ParquetDataAccumulator(ReinforcementLearningAccumulator):
+    def __init__(self, output, include_board_tensor=True):
+        super().__init__(include_board_tensor)
+        self.output = output
+
     def after(self, game):
         data = super().after(game)
         if data is None:
             return
 
         t1 = time.time()
-        main_df = data["main"]
+        main_df = data["main_df"]
         filepath = os.path.join(self.output, f"{game.id}.parquet")
         main_df.to_parquet(filepath, index=False)
         print(

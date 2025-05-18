@@ -61,7 +61,7 @@ def estimate_num_samples(games_directory):
     return estimate
 
 
-def simple_return(game, color):
+def simple_total_return(game, color):
     """
     Get the final return for the given color.
     Args:
@@ -78,12 +78,12 @@ def simple_return(game, color):
         return -1.0
 
 
-def return_to_rewards(return_value, n):
+def to_sparse_rewards(terminal_reward, n):
     """
-    Convert a return value to a rewards vector.
+    Create a sparse reward array with the terminal reward at the last index.
     """
     rewards = np.zeros(n, dtype=np.float64)
-    rewards[-1] = return_value
+    rewards[-1] = terminal_reward
     return rewards
 
 
@@ -94,7 +94,7 @@ def get_tournament_total_return(game, p0_color):
     won in less turns is better, and still a Game with 9vps is less
     than 10vps, no matter turns.
     """
-    sign = simple_return(game, p0_color)
+    sign = simple_total_return(game, p0_color)
     points = get_actual_victory_points(game.state, p0_color)
     return sign * 1000 + min(points, 10) * 0.9999**game.state.num_turns
 
