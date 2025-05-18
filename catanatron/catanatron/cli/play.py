@@ -79,13 +79,16 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Directory where to save game data.",
 )
 @click.option(
-    "--json",
+    "--output-format",
     default=None,
-    is_flag=True,
-    help="Save game data in JSON format.",
+    type=click.Choice(["csv", "parquet", "json"], case_sensitive=False),
+    help="Format to save game data: csv, parquet, or json.",
 )
 @click.option(
-    "--csv", default=False, is_flag=True, help="Save game data in CSV format."
+    "--include-board-tensor",
+    default=False,
+    is_flag=True,
+    help="Wether to generate 3D Tensor of the Board for CNN Learning (slower) when using --csv or --parquet.",
 )
 @click.option(
     "--db",
@@ -131,8 +134,8 @@ def simulate(
     players,
     code,
     output,
-    json,
-    csv,
+    output_format,
+    include_board_tensor,
     db,
     config_discard_limit,
     config_vps_to_win,
@@ -146,10 +149,10 @@ def simulate(
     and test bot strategies against each other.
 
     Examples:\n\n
-        catanatron-play --players=R,R,R,R --num=1000\n
-        catanatron-play --players=W,W,R,R --num=50000 --output=data/ --csv\n
-        catanatron-play --players=VP,F --num=10 --output=data/ --json\n
-        catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
+        catanatron-play --players R,R,R,R --num 1000\n
+        catanatron-play --players W,W,R,R --num 50000 --output data/ --output-format csv\n
+        catanatron-play --players VP,F --num 10 --output data/ --ouput-format json\n
+        catanatron-play --players W,F,AB:3 --num 1 --ouput-format csv --db --quiet
     """
     if code:
         abspath = os.path.abspath(code)
@@ -160,8 +163,8 @@ def simulate(
 
     if help_players:
         return Console().print(player_help_table())
-    if output and not (json or csv):
-        return print("--output requires either --json or --csv to be set")
+    if output and not output_format:
+        return print("--output requires --output-format")
 
     player_keys = players.split(",")
     players = []
@@ -176,7 +179,7 @@ def simulate(
                 players.append(player)
                 break
 
-    output_options = OutputOptions(output, csv, json, db)
+    output_options = OutputOptions(output, output_format, include_board_tensor, db)
     game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
         num,
@@ -192,8 +195,8 @@ class OutputOptions:
     """Class to keep track of output CLI flags"""
 
     output: Union[str, None] = None  # path to store files
-    csv: bool = False
-    json: bool = False
+    output_format: Union[Literal["csv", "parquet", "json"], None] = None
+    include_board_tensor: bool = False
     db: bool = False
 
 
@@ -262,13 +265,27 @@ def play_batch(
     accumulators = [statistics_accumulator, vp_accumulator]
     if output_options.output:
         ensure_dir(output_options.output)
-    if output_options.output and output_options.csv:
-        # lazy load CsvDataAccumulator since depends on pandas / numpy
-        from catanatron.gym.csv_accumulator import CsvDataAccumulator
+    if output_options.output:
+        if output_options.output_format == "csv":
+            # lazy load CsvDataAccumulator since depends on pandas / numpy
+            from catanatron.gym.accumulators import CsvDataAccumulator
 
-        accumulators.append(CsvDataAccumulator(output_options.output))
-    if output_options.output and output_options.json:
-        accumulators.append(JsonDataAccumulator(output_options.output))
+            accumulators.append(
+                CsvDataAccumulator(
+                    output_options.output, output_options.include_board_tensor
+                )
+            )
+        elif output_options.output_format == "parquet":
+            # lazy load ParquetDataAccumulator since depends on pandas / pyarrow
+            from catanatron.gym.accumulators import ParquetDataAccumulator
+
+            accumulators.append(
+                ParquetDataAccumulator(
+                    output_options.output, output_options.include_board_tensor
+                )
+            )
+        elif output_options.output_format == "json":
+            accumulators.append(JsonDataAccumulator(output_options.output))
     if output_options.db:
         # lazy load DatabaseAccumulator since depends on sqlalchemy
         from catanatron.web.database_accumulator import DatabaseAccumulator
@@ -386,8 +403,10 @@ def play_batch(
     table.add_row(avg_ticks, avg_turns, avg_duration)
     console.print(table)
 
-    if output_options.output and output_options.csv:
-        console.print(f"GZIP CSVs saved at: [green]{output_options.output}[/green]")
+    if output_options.output:
+        console.print(
+            f"{output_options.output_format} files saved at: [green]{output_options.output}[/green]"
+        )
 
     return (
         dict(statistics_accumulator.wins),

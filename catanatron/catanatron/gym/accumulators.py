@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 import time
 
@@ -12,6 +13,7 @@ from catanatron.gym.envs.catanatron_env import to_action_space, to_action_type_s
 from catanatron.gym.utils import (
     DISCOUNT_FACTOR,
     get_discounted_returns,
+    get_main_path,
     get_tournament_total_return,
     get_victory_points_total_return,
     populate_matrices,
@@ -20,9 +22,10 @@ from catanatron.gym.utils import (
 )
 
 
-class CsvDataAccumulator(GameAccumulator):
-    def __init__(self, output):
+class ReinforcementLearningAccumulator(GameAccumulator):
+    def __init__(self, output, include_board_tensor=True):
         self.output = output
+        self.include_board_tensor = include_board_tensor
 
     def before(self, game):
         self.data = {
@@ -30,9 +33,10 @@ class CsvDataAccumulator(GameAccumulator):
             "color_action_indices": defaultdict(list),
             "acting_color": [],
             "samples": [],
-            "board_tensors": [],
             "actions": [],
         }
+        if self.include_board_tensor:
+            self.data["board_tensors"] = []
 
     def step(self, game_before_action, action):
         self.data["color_action_indices"][action.color].append(
@@ -44,27 +48,29 @@ class CsvDataAccumulator(GameAccumulator):
             [to_action_space(action), to_action_type_space(action)]
         )
 
-        board_tensor = create_board_tensor(game_before_action, action.color)
-        flattened_tensor = board_tensor.reshape(-1)
-        self.data["board_tensors"].append(flattened_tensor)
+        if self.include_board_tensor:
+            board_tensor = create_board_tensor(game_before_action, action.color)
+            flattened_tensor = board_tensor.reshape(-1)
+            self.data["board_tensors"].append(flattened_tensor)
 
     def after(self, game):
         if game.winning_color() is None:
             return  # drop game
 
-        print("Flushing to matrices...")
         t1 = time.time()
-        samples = self.data["samples"]
-        actions = self.data["actions"]
-        board_tensors = self.data["board_tensors"]
-
         # Get rewards vector. For now either -1 or 1.
-        all_full_returns = np.zeros(len(self.data["samples"]))
-        all_discounted_returns = np.zeros(len(self.data["samples"]))
-        all_tournament_returns = np.zeros(len(self.data["samples"]))
-        all_discounted_tournament_returns = np.zeros(len(self.data["samples"]))
-        all_victory_points_returns = np.zeros(len(self.data["samples"]))
-        all_discounted_victory_points_returns = np.zeros(len(self.data["samples"]))
+        all_full_returns = np.zeros(len(self.data["samples"]), dtype=np.float64)
+        all_discounted_returns = np.zeros(len(self.data["samples"]), dtype=np.float64)
+        all_tournament_returns = np.zeros(len(self.data["samples"]), dtype=np.float64)
+        all_discounted_tournament_returns = np.zeros(
+            len(self.data["samples"]), dtype=np.float64
+        )
+        all_victory_points_returns = np.zeros(
+            len(self.data["samples"]), dtype=np.float64
+        )
+        all_discounted_victory_points_returns = np.zeros(
+            len(self.data["samples"]), dtype=np.float64
+        )
         for color, action_indices in self.data["color_action_indices"].items():
             sparse_simple_rewards = return_to_rewards(
                 simple_return(game, color), len(action_indices)
@@ -105,13 +111,13 @@ class CsvDataAccumulator(GameAccumulator):
             )
 
         # Build Q-learning Design Matrix
+
+        samples = self.data["samples"]
+        actions = self.data["actions"]
         samples_df = (
             pd.DataFrame.from_records(samples, columns=sorted(samples[0].keys()))
             .astype("float64")
             .add_prefix("F_")
-        )
-        board_tensors_df = (
-            pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
         )
         actions_df = pd.DataFrame(actions, columns=["ACTION", "ACTION_TYPE"]).astype(
             "int"
@@ -126,23 +132,46 @@ class CsvDataAccumulator(GameAccumulator):
                 "DISCOUNTED_VICTORY_POINTS_RETURN": all_discounted_victory_points_returns,
             }
         ).astype("float64")
-        main_df = pd.concat(
-            [samples_df, board_tensors_df, actions_df, rewards_df], axis=1
-        )
 
+        results = {
+            "samples": samples_df,
+            "actions": actions_df,
+            "rewards": rewards_df,
+        }
+        if self.include_board_tensor:
+            board_tensors = self.data["board_tensors"]
+            board_tensors_df = (
+                pd.DataFrame(board_tensors).astype("float64").add_prefix("BT_")
+            )
+            main_df = pd.concat(
+                [samples_df, board_tensors_df, actions_df, rewards_df], axis=1
+            )
+            results["board_tensors"] = board_tensors_df
+            results["main"] = main_df
+        else:
+            main_df = pd.concat([samples_df, actions_df, rewards_df], axis=1)
+            results["main"] = main_df
         print(
-            "Collected DataFrames. Data size:",
-            "Main:",
-            main_df.shape,
-            "Samples:",
-            samples_df.shape,
-            "Board Tensors:",
-            board_tensors_df.shape,
-            "Actions:",
-            actions_df.shape,
-            "Rewards:",
-            rewards_df.shape,
+            "Building matrices at took",
+            format_secs(time.time() - t1),
         )
+        return results
+
+
+class CsvDataAccumulator(ReinforcementLearningAccumulator):
+    def after(self, game):
+        data = super().after(game)
+        if data is None:
+            return
+
+        t1 = time.time()
+        main_df = data["main"]
+        samples_df = data["samples"]
+        board_tensors_df = (
+            None if not self.include_board_tensor else data["board_tensors"]
+        )
+        actions_df = data["actions"]
+        rewards_df = data["rewards"]
         populate_matrices(
             samples_df,
             board_tensors_df,
@@ -152,9 +181,24 @@ class CsvDataAccumulator(GameAccumulator):
             self.output,
         )
         print(
-            "Saved to matrices at:",
-            self.output,
-            ". Took",
-            format_secs(time.time() - t1),
+            f"Saved matrices to {self.output} {'(including board tensors)' if self.include_board_tensor else ''} with shapes: "
+            f"main={main_df.shape}, samples={samples_df.shape}, actions={actions_df.shape}, "
+            f"rewards={rewards_df.shape} in {format_secs(time.time() - t1)}"
         )
         return samples_df, board_tensors_df, actions_df, rewards_df
+
+
+class ParquetDataAccumulator(ReinforcementLearningAccumulator):
+    def after(self, game):
+        data = super().after(game)
+        if data is None:
+            return
+
+        t1 = time.time()
+        main_df = data["main"]
+        filepath = os.path.join(self.output, f"{game.id}.parquet")
+        main_df.to_parquet(filepath, index=False)
+        print(
+            f"Saved main_df to {self.output} with shapes {main_df.shape} in {format_secs(time.time() - t1)}"
+        )
+        return main_df

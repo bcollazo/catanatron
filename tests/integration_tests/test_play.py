@@ -16,7 +16,7 @@ def test_play():
 
 def test_play_strong():
     runner = CliRunner()
-    result = runner.invoke(simulate, ["--num=1", "--players=AB,SAB,M:3:True,G:3"])
+    result = runner.invoke(simulate, ["--num=1", "--players=AB,SAB,M:2:True,G:2"])
     assert result.exit_code == 0
     assert "Game Summary" in result.output
 
@@ -25,7 +25,16 @@ def test_csv_play():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdirname:
         result = runner.invoke(
-            simulate, ["--num=1", "--players=F,F", "--csv", "--output", tmpdirname]
+            simulate,
+            [
+                "--num=1",
+                "--players=F,F",
+                "--output",
+                tmpdirname,
+                "--output-format",
+                "csv",
+                "--include-board-tensor",
+            ],
         )
         assert result.exit_code == 0
 

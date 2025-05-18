@@ -212,18 +212,19 @@ Or you can run the suite in watch-mode with:
 ptw --ignore=tests/integration_tests/ --nobeep
 ```
 
-## Machine Learning
+## Data and Machine Learning
 
 Generate JSON files with complete information about games and decisions by running:
 
 ```bash
-catanatron-play --num=100 --output=my-data-path/ --json
+catanatron-play --num 100 --output my-data-path/ --output-format json
 ```
 
-Similarly you can generate several GZIP CSVs of a basic set of features:
+Similarly you can generate several GZIP CSVs of a basic set of features or in Parquet format:
 
 ```bash
-catanatron-play --num=100 --output=my-data-path/ --csv
+catanatron-play --num 100 --output my-data-path/ --output-format csv
+catanatron-play --num 100 --output my-data-path/ --output-format parquet
 ```
 
 You can then use this data to build a machine learning model, and then
