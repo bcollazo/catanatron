@@ -2,9 +2,11 @@ import os
 
 import numpy as np
 
-from catanatron.state import player_key
+from catanatron.state_functions import get_actual_victory_points
 from catanatron.utils import ensure_dir
 
+# DISCOUNT_FACTOR = 0 would mean only focus on immediate reward. Must be < 1. The closer to 1, the more
+#   important the future is. 0.99 means future is 100 times more important than immediate reward.
 DISCOUNT_FACTOR = 0.99
 DATA_DIRECTORY = "data"
 
@@ -121,34 +123,77 @@ def generate_arrays_from_file(
                     batchcount = 0
 
 
-def get_discounted_return(game, p0_color, discount_factor):
-    """G_t = d**1*r_1 + d**2*r_2 + ... + d**T*r_T.
-
-    Taking r_i = 0 for all i < T. And r_T = 1 if wins
+def simple_return(game, color):
     """
-    assert discount_factor <= 1
-    episode_return = p0_color == game.winning_color()
-    return episode_return * discount_factor**game.state.num_turns
+    Get the final return for the given color.
+    Args:
+        game: The game object.
+        color: The color of the player.
+    Returns:
+        float: The final return.
+    """
+    if game.winning_color() == color:
+        return 1.0
+    elif game.winning_color() is None:
+        return 0.0
+    else:
+        return -1.0
 
 
-def get_tournament_return(game, p0_color, discount_factor):
-    """A way to say winning is important, no matter how long it takes, and
-    getting close to winning is a secondary metric"""
-    episode_return = p0_color == game.winning_color()
-    key = player_key(game.state, p0_color)
-    points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-    episode_return = episode_return * 1000 + min(points, 10)
-    return episode_return * discount_factor**game.state.num_turns
+def return_to_rewards(return_value, n):
+    """
+    Convert a return value to a rewards vector.
+    """
+    rewards = np.zeros(n)
+    rewards[-1] = return_value
+    return rewards
 
 
-def get_victory_points_return(game, p0_color):
+def get_tournament_total_return(game, p0_color):
+    """
+    Winning is worth 1000 points, and the number of victory points
+    is worth 1 point. The factor (0.9999) ensures a game
+    won in less turns is better, and still a Game with 9vps is less
+    than 10vps, no matter turns.
+    """
+    sign = simple_return(game, p0_color)
+    points = get_actual_victory_points(game.state, p0_color)
+    return sign * 1000 + min(points, 10) * 0.9999**game.state.num_turns
+
+
+def get_victory_points_total_return(game, p0_color):
+    """
+    The final reward will be the number of victory points, no matter
+    if the game is won or not.
+    """
     # This discount factor (0.9999) ensures a game won in less turns
     #   is better, and still a Game with 9vps is less than 10vps,
     #   no matter turns.
-    key = player_key(game.state, p0_color)
-    points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    points = get_actual_victory_points(game.state, p0_color)
     episode_return = min(points, 10)
     return episode_return * 0.9999**game.state.num_turns
+
+
+def get_discounted_returns(rewards, gamma):
+    """
+    Compute discounted returns G_t for each timestep.
+    Args:
+        rewards (np.ndarray): Array of rewards [r_0, ..., r_T]
+            if sparse rewards, most should be 0, except for the last one
+        gamma (float): Discount factor (0 < gamma <= 1)
+    Returns:
+        np.ndarray: Discounted return G_t for each timestep t
+    """
+    T = len(rewards)
+
+    rewards = np.array(rewards, dtype=np.float32)
+    returns = np.zeros(T, dtype=np.float32)
+    running_return = 0.0
+    for t in reversed(range(T)):
+        running_return = rewards[t] + gamma * running_return
+        returns[t] = running_return
+
+    return returns
 
 
 def populate_matrices(

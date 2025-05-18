@@ -11,10 +11,12 @@ from catanatron.gym.board_tensor_features import create_board_tensor
 from catanatron.gym.envs.catanatron_env import to_action_space, to_action_type_space
 from catanatron.gym.utils import (
     DISCOUNT_FACTOR,
-    get_discounted_return,
-    get_tournament_return,
-    get_victory_points_return,
+    get_discounted_returns,
+    get_tournament_total_return,
+    get_victory_points_total_return,
     populate_matrices,
+    return_to_rewards,
+    simple_return,
 )
 
 
@@ -23,19 +25,28 @@ class CsvDataAccumulator(GameAccumulator):
         self.output = output
 
     def before(self, game):
-        self.data = defaultdict(
-            lambda: {"samples": [], "actions": [], "board_tensors": [], "games": []}
-        )
+        self.data = {
+            # e.g. {RED: [1,5]} if RED acted at tick 1 and 5
+            "color_action_indices": defaultdict(list),
+            "acting_color": [],
+            "samples": [],
+            "board_tensors": [],
+            "actions": [],
+        }
 
-    def step(self, game, action):
-        self.data[action.color]["samples"].append(create_sample(game, action.color))
-        self.data[action.color]["actions"].append(
+    def step(self, game_before_action, action):
+        self.data["color_action_indices"][action.color].append(
+            len(self.data["samples"])
+        )
+        self.data["acting_color"].append(action.color)
+        self.data["samples"].append(create_sample(game_before_action, action.color))
+        self.data["actions"].append(
             [to_action_space(action), to_action_type_space(action)]
         )
-        self.data[action.color]["games"].append(game.copy())
-        board_tensor = create_board_tensor(game, action.color)
+
+        board_tensor = create_board_tensor(game_before_action, action.color)
         flattened_tensor = board_tensor.reshape(-1)
-        self.data[action.color]["board_tensors"].append(flattened_tensor)
+        self.data["board_tensors"].append(flattened_tensor)
 
     def after(self, game):
         if game.winning_color() is None:
@@ -43,39 +54,55 @@ class CsvDataAccumulator(GameAccumulator):
 
         print("Flushing to matrices...")
         t1 = time.time()
-        samples = []
-        actions = []
-        board_tensors = []
-        labels = []
-        for color in game.state.colors:
-            player_data = self.data[color]
-            # TODO: return label, 2-ply search label, 1-play value function.
+        samples = self.data["samples"]
+        actions = self.data["actions"]
+        board_tensors = self.data["board_tensors"]
 
-            # Make matrix of (RETURN, DISCOUNTED_RETURN, TOURNAMENT_RETURN, DISCOUNTED_TOURNAMENT_RETURN)
-            episode_return = get_discounted_return(game, color, 1)
-            discounted_return = get_discounted_return(game, color, DISCOUNT_FACTOR)
-            tournament_return = get_tournament_return(game, color, 1)
-            vp_return = get_victory_points_return(game, color)
-            discounted_tournament_return = get_tournament_return(
-                game, color, DISCOUNT_FACTOR
+        # Get rewards vector. For now either -1 or 1.
+        all_full_returns = np.zeros(len(self.data["samples"]))
+        all_discounted_returns = np.zeros(len(self.data["samples"]))
+        all_tournament_returns = np.zeros(len(self.data["samples"]))
+        all_discounted_tournament_returns = np.zeros(len(self.data["samples"]))
+        all_victory_points_returns = np.zeros(len(self.data["samples"]))
+        all_discounted_victory_points_returns = np.zeros(len(self.data["samples"]))
+        for color, action_indices in self.data["color_action_indices"].items():
+            sparse_simple_rewards = return_to_rewards(
+                simple_return(game, color), len(action_indices)
+            )
+            sparse_tournament_rewards = return_to_rewards(
+                get_tournament_total_return(game, color), len(action_indices)
+            )
+            sparse_victory_points_rewards = return_to_rewards(
+                get_victory_points_total_return(game, color), len(action_indices)
             )
 
-            samples.extend(player_data["samples"])
-            actions.extend(player_data["actions"])
-            board_tensors.extend(player_data["board_tensors"])
-            return_matrix = np.tile(
-                [
-                    [
-                        episode_return,
-                        discounted_return,
-                        tournament_return,
-                        discounted_tournament_return,
-                        vp_return,
-                    ]
-                ],
-                (len(player_data["samples"]), 1),
+            full_returns = get_discounted_returns(sparse_simple_rewards, 1)
+            discounted_returns = get_discounted_returns(
+                sparse_simple_rewards, DISCOUNT_FACTOR
             )
-            labels.extend(return_matrix)
+            full_tournament_returns = get_discounted_returns(
+                sparse_tournament_rewards, 1
+            )
+            discounted_tournament_returns = get_discounted_returns(
+                sparse_tournament_rewards, DISCOUNT_FACTOR
+            )
+            full_victory_points_returns = get_discounted_returns(
+                sparse_victory_points_rewards, 1
+            )
+            discounted_victory_points_returns = get_discounted_returns(
+                sparse_victory_points_rewards, DISCOUNT_FACTOR
+            )
+
+            all_full_returns[action_indices] = full_returns
+            all_discounted_returns[action_indices] = discounted_returns
+            all_tournament_returns[action_indices] = full_tournament_returns
+            all_discounted_tournament_returns[action_indices] = (
+                discounted_tournament_returns
+            )
+            all_victory_points_returns[action_indices] = full_victory_points_returns
+            all_discounted_victory_points_returns[action_indices] = (
+                discounted_victory_points_returns
+            )
 
         # Build Q-learning Design Matrix
         samples_df = (
@@ -90,14 +117,14 @@ class CsvDataAccumulator(GameAccumulator):
             "int"
         )
         rewards_df = pd.DataFrame(
-            labels,
-            columns=[
-                "RETURN",
-                "DISCOUNTED_RETURN",
-                "TOURNAMENT_RETURN",
-                "DISCOUNTED_TOURNAMENT_RETURN",
-                "VICTORY_POINTS_RETURN",
-            ],
+            {
+                "RETURN": all_full_returns,
+                "DISCOUNTED_RETURN": all_discounted_returns,
+                "TOURNAMENT_RETURN": all_tournament_returns,
+                "DISCOUNTED_TOURNAMENT_RETURN": all_discounted_tournament_returns,
+                "VICTORY_POINTS_RETURN": all_victory_points_returns,
+                "DISCOUNTED_VICTORY_POINTS_RETURN": all_discounted_victory_points_returns,
+            }
         ).astype("float64")
         main_df = pd.concat(
             [samples_df, board_tensors_df, actions_df, rewards_df], axis=1
