@@ -149,10 +149,10 @@ def simulate(
     and test bot strategies against each other.
 
     Examples:\n\n
-        catanatron-play --players=R,R,R,R --num=1000\n
-        catanatron-play --players=W,W,R,R --num=50000 --output=data/ --csv\n
-        catanatron-play --players=VP,F --num=10 --output=data/ --json\n
-        catanatron-play --players=W,F,AB:3 --num=1 --csv --json --db --quiet
+        catanatron-play --players R,R,R,R --num 1000\n
+        catanatron-play --players W,W,R,R --num 50000 --output data/ --output-format csv\n
+        catanatron-play --players VP,F --num 10 --output data/ --ouput-format json\n
+        catanatron-play --players W,F,AB:3 --num 1 --ouput-format csv --db --quiet
     """
     if code:
         abspath = os.path.abspath(code)
