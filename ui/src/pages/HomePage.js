@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useHistory } from "react-router-dom";
 import { Button } from "@material-ui/core";
-import Loader from "react-loader-spinner";
+import { Grid } from "react-loader-spinner";
 import { createGame } from "../utils/apiClient";
 
 import "./HomePage.scss";
@@ -94,9 +94,8 @@ export default function HomePage() {
             </Button>
           </>
         ) : (
-          <Loader
+          <Grid
             className="loader"
-            type="Grid"
             color="#ffffff"
             height={60}
             width={60}
