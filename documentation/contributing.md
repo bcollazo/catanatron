@@ -6,7 +6,7 @@ icon: code
 
 Any and all contributions are more than welcome!
 
-### Running Tests
+## Running Tests
 
 To develop for Catanatron, install the development dependencies and use the following test suite:
 
@@ -21,7 +21,7 @@ Or you can run the suite in watch-mode with:
 ptw --ignore=tests/integration_tests/ --nobeep
 ```
 
-### Architecture
+## Architecture
 
 The code is divided in three main components (folders):
 
@@ -31,7 +31,107 @@ The code is divided in three main components (folders):
 * **catantron\_experimental**: A collection of unorganized scripts with contain many failed attempts at finding the best possible bot. Its ok to break these scripts. Its pip-installable. Exposes a `catanatron-play` command-line script that can be used to play games in bulk, create machine learning datasets of games, and more!
 * **ui**: A React web UI to render games. This is helpful for debugging the core implementation. We decided to use the browser as a randering engine (as opposed to the terminal or a desktop GUI) because of HTML/CSS's ubiquitousness and the ability to use modern animation libraries in the future ([https://www.framer.com/motion/](https://www.framer.com/motion/) or [https://www.react-spring.io/](https://www.react-spring.io/)).
 
-### Ideas for Contributions
+## Running Components Individually
+
+As an alternative to running the project with Docker, you can run the web client and server in two separate tabs.
+
+### React App
+
+```bash
+cd ui/
+npm install
+npm start
+```
+
+This can also be run via Docker independetly like (after building):
+
+```bash
+docker build -t bcollazo/catanatron-react-ui:latest ui/
+docker run -it -p 3000:3000 bcollazo/catanatron-react-ui
+```
+
+### Flask Web Server
+
+Ensure you are inside a virtual environment with all dependencies installed and&#x20;use `flask run`. This will use SQLite by default.
+
+```bash
+pip install -e .[web]
+FLASK_DEBUG=1 FLASK_APP=catanatron.web/catanatron.web flask run
+```
+
+This can also be run via Docker independetly like (after building):
+
+```bash
+docker build -t bcollazo/catanatron-server:latest . -f Dockerfile.web
+docker run -it -p 5000:5000 bcollazo/catanatron-server
+```
+
+## Useful Commands
+
+These are other potentially useful commands while developing catanatron
+
+#### TensorBoard
+
+For watching training progress, use `keras.callbacks.TensorBoard` and open TensorBoard:
+
+```bash
+tensorboard --logdir logs
+```
+
+#### Docker GPU TensorFlow
+
+```bash
+docker run -it tensorflow/tensorflow:latest-gpu-jupyter bash
+docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensorflow/tensorflow:latest-gpu-jupyter
+```
+
+#### Testing Performance
+
+```bash
+python -m cProfile -o profile.pstats catanatron/catanatron/cli/play.py --num=5
+snakeviz profile.pstats
+```
+
+```bash
+pytest --benchmark-compare=0001 --benchmark-compare-fail=mean:10% --benchmark-columns=min,max,mean,stddev
+```
+
+#### Head Large Datasets with Pandas
+
+```python
+import pandas as pd
+x = pd.read_csv("data/mcts-playouts-labeling-2/labels.csv.gzip", compression="gzip", iterator=True)
+x.get_chunk(10)
+```
+
+Building Sphinx Code Documentation Site
+
+```bash
+pip install -r docs/requirements.txt
+sphinx-quickstart docs
+sphinx-apidoc -o docs/source catanatron
+sphinx-build -b html docs/source/ docs/build/html
+```
+
+#### Publishing to PyPi (Outdated)
+
+catanatron Package
+
+```bash
+make build PACKAGE=catanatron
+make upload PACKAGE=catanatron
+make upload-production PACKAGE=catanatron
+```
+
+catanatron\_gym Package
+
+```bash
+make build PACKAGE=catanatron_gym
+make upload PACKAGE=catanatron_gym
+make upload-production PACKAGE=catanatron_gym
+```
+
+## Ideas for Contribution
 
 * Improve `catanatron` package running time performance.
   * Continue refactoring the State to be more and more like a primitive `dict` or `array`. (Copies are much faster if State is just a native python object).

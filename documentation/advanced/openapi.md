@@ -36,6 +36,8 @@ For `observation` documentation see [here](https://catanatron.readthedocs.io/en/
 
 You can access `env.unwrapped.game.state` and build your own "observation" (features) vector as well.
 
+For evaluation and using your model in the simulator for testing / benchmarking you might want to checkout: [https://github.com/bcollazo/catanatron/blob/master/catanatron\_experimental/catanatron\_experimental/machine\_learning/players/reinforcement.py](../../catanatron_experimental/catanatron_experimental/machine_learning/players/reinforcement.py)
+
 ### Stable-Baselines3 Example
 
 Catanatron works well with SB3, and better with the Maskable models of the [SB3 Contrib](https://stable-baselines3.readthedocs.io/en/master/guide/sb3_contrib.html) repo. Here a small example of how it may work.
