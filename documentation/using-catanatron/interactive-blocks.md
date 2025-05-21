@@ -78,10 +78,10 @@ catanatron-play --num 5 --players F,F,R,R --output data/ --output-format csv
 
 This generates 4 GZIP CSVs:
 
-* **samples.csv.gzip:** One row per game state at each [ply](../core-concepts.md).
-* **actions.csv.gzip:** Integers representing actions taken by each player at each ply.
-* **rewards.csv.gzip:** Some common returns and rewards with which to label how effective actions taken by bots where. See Reinforcement Learning section on [openapi.md](../advanced/openapi.md "mention")
-* **main.csv.gzip:** Simply a concatenation of the above 3 CSVs
+* **samples.csv.gz:** One row per game state at each [ply](../core-concepts.md).
+* **actions.csv.gz:** Integers representing actions taken by each player at each ply.
+* **rewards.csv.gz:** Some common returns and rewards with which to label how effective actions taken by bots where. See Reinforcement Learning section on [openapi.md](../advanced/openapi.md "mention")
+* **main.csv.gz:** Simply a concatenation of the above 3 CSVs
 
 Using `--output-format csv` will continuously simply append to these 4 files more and more plys even if from different games.
 
