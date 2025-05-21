@@ -2,7 +2,7 @@ from collections import namedtuple
 
 from rich.table import Table
 
-from catanatron.models.player import RandomPlayer
+from catanatron.models.player import HumanPlayer, RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
@@ -14,6 +14,9 @@ from catanatron.players.playouts import GreedyPlayoutsPlayer
 # Player must have a CODE, NAME, DESCRIPTION, CLASS.
 CliPlayer = namedtuple("CliPlayer", ["code", "name", "description", "import_fn"])
 CLI_PLAYERS = [
+    CliPlayer(
+        "H", "HumanPlayer", "Human player, uses input() to get action.", HumanPlayer
+    ),
     CliPlayer("R", "RandomPlayer", "Chooses actions at random.", RandomPlayer),
     CliPlayer(
         "W",
