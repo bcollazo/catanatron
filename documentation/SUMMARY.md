@@ -18,15 +18,11 @@
 ## Advanced
 
 * [Making Catanatron Stronger](advanced/making-catanatron-stronger.md)
-* [Custom Bots](advanced/editor.md)
-* [Data and Machine Learning](advanced/openapi.md)
-
-## Contributing
-
-* [Architecture Overview](contributing/architecture-overview.md)
+* [Creating Custom Bots](advanced/editor.md)
+* [Gymnasium Interface](advanced/openapi.md)
 
 ***
 
+* [Contributing](contributing.md)
 * [Core Concepts](core-concepts.md)
 * [Game Trees](game-trees.md)
-* [Contributing](contributing-1.md)
