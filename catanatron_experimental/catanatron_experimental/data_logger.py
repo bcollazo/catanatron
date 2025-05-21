@@ -67,10 +67,10 @@ class DataLogger:
         # Write to disk
         if not self.output_path.exists():
             self.output_path.mkdir(parents=True)
-        samples_path = Path(self.output_path, "samples.csv.gzip")
-        board_tensors_path = Path(self.output_path, "board_tensors.csv.gzip")
-        labels_path = Path(self.output_path, "labels.csv.gzip")
-        logs_path = Path(self.output_path, "logs.csv.gzip")
+        samples_path = Path(self.output_path, "samples.csv.gz")
+        board_tensors_path = Path(self.output_path, "board_tensors.csv.gz")
+        labels_path = Path(self.output_path, "labels.csv.gz")
+        logs_path = Path(self.output_path, "logs.csv.gz")
 
         is_first_training = not samples_path.is_file()
         samples_df.to_csv(

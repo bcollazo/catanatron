@@ -42,19 +42,19 @@ def test_csv_play():
         assert len(os.listdir(tmpdirname)) == 5
         # Assert they have the correct dimensions
         actions_df = pd.read_csv(
-            os.path.join(tmpdirname, "actions.csv.gzip"), compression="gzip"
+            os.path.join(tmpdirname, "actions.csv.gz"), compression="gzip"
         )
         board_tensors_df = pd.read_csv(
-            os.path.join(tmpdirname, "board_tensors.csv.gzip"), compression="gzip"
+            os.path.join(tmpdirname, "board_tensors.csv.gz"), compression="gzip"
         )
         main_df = pd.read_csv(
-            os.path.join(tmpdirname, "main.csv.gzip"), compression="gzip"
+            os.path.join(tmpdirname, "main.csv.gz"), compression="gzip"
         )
         rewards_df = pd.read_csv(
-            os.path.join(tmpdirname, "rewards.csv.gzip"), compression="gzip"
+            os.path.join(tmpdirname, "rewards.csv.gz"), compression="gzip"
         )
         samples_df = pd.read_csv(
-            os.path.join(tmpdirname, "samples.csv.gzip"), compression="gzip"
+            os.path.join(tmpdirname, "samples.csv.gz"), compression="gzip"
         )
         num_samples = len(samples_df)
 
