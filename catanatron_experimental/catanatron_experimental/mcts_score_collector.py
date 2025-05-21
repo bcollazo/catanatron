@@ -88,7 +88,7 @@ def simple_feature_vector(game, p0_color):
 NUM_SIMULATIONS = 100
 RECORDS = []
 DATA_DIRECTORY = "data/mcts-collector"
-DATASET_PATH = os.path.join(DATA_DIRECTORY, "simple.csv.gzip")
+DATASET_PATH = os.path.join(DATA_DIRECTORY, "simple.csv.gz")
 
 
 class MCTSScoreCollector(AlphaBetaPlayer):

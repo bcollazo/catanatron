@@ -88,16 +88,16 @@ This would execute five 4-player `RandomPlayer` games and output GZIP CSVs to th
 
 <p align="center">
  <img src="./source/_static/samples_df.png">
- samples.csv.gzip: A 1-D raw representation of game state.
+ samples.csv.gz: A 1-D raw representation of game state.
 
  <img src="./source/_static/board_tensors_df.png">
- board_tensors.csv.gzip: A 3-D tensor representation of the board state. Intented to be used for CNN-based approaches. Similar to the one described in [this](https://arxiv.org/abs/2008.07079) paper.
+ board_tensors.csv.gz: A 3-D tensor representation of the board state. Intented to be used for CNN-based approaches. Similar to the one described in [this](https://arxiv.org/abs/2008.07079) paper.
 
  <img src="./source/_static/actions_df.png">
- actions.csv.gzip: Hot-one-encoded actions taken by players in that state.
+ actions.csv.gz: Hot-one-encoded actions taken by players in that state.
 
  <img src="./source/_static/rewards_df.png">
- rewards.csv.gzip: Several "labels" we tried for each (state, action) pair. RETURN for example is 1 if player ultimately won, 0 otherwise.
+ rewards.csv.gz: Several "labels" we tried for each (state, action) pair. RETURN for example is 1 if player ultimately won, 0 otherwise.
 </p>
 
 For more information on these representations, look at the [action table](https://catanatron.readthedocs.io/en/latest/catanatron.gym.envs.html#catanatron.gym.envs.catanatron_env.CatanatronEnv.action_space) and [state table](https://catanatron.readthedocs.io/en/latest/catanatron.gym.envs.html#catanatron.gym.envs.catanatron_env.CatanatronEnv.observation_space).

@@ -12,23 +12,23 @@ DATA_DIRECTORY = "data"
 
 
 def get_samples_path(games_directory):
-    return os.path.join(games_directory, "samples.csv.gzip")
+    return os.path.join(games_directory, "samples.csv.gz")
 
 
 def get_board_tensors_path(games_directory):
-    return os.path.join(games_directory, "board_tensors.csv.gzip")
+    return os.path.join(games_directory, "board_tensors.csv.gz")
 
 
 def get_actions_path(games_directory):
-    return os.path.join(games_directory, "actions.csv.gzip")
+    return os.path.join(games_directory, "actions.csv.gz")
 
 
 def get_rewards_path(games_directory):
-    return os.path.join(games_directory, "rewards.csv.gzip")
+    return os.path.join(games_directory, "rewards.csv.gz")
 
 
 def get_main_path(games_directory):
-    return os.path.join(games_directory, "main.csv.gzip")
+    return os.path.join(games_directory, "main.csv.gz")
 
 
 def get_matrices_path(games_directory):
