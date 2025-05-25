@@ -117,10 +117,9 @@ export default function ZoomableBoard({ replayMode }) {
             action_coordinate.every((val, index) => val === coordinate[index])
         );
         if (matchingAction) {
-          postAction(gameId, matchingAction)
-            .then(gameState => {
-              dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-            });
+          postAction(gameId, matchingAction).then((gameState) => {
+            dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+          });
         }
       }
     }),
@@ -137,41 +136,25 @@ export default function ZoomableBoard({ replayMode }) {
   }, []);
 
   return (
-    <TransformWrapper
-      options={{
-        limitToBounds: true,
-      }}
-    >
-      {({
-        zoomIn,
-        zoomOut,
-        resetTransform,
-        positionX,
-        positionY,
-        scale,
-        previousScale,
-      }) => (
-        <React.Fragment>
-          <div className="board-container">
-            <TransformComponent>
-              <Board
-                width={width}
-                height={height}
-                buildOnNodeClick={buildOnNodeClick}
-                buildOnEdgeClick={buildOnEdgeClick}
-                handleTileClick={handleTileClick}
-                nodeActions={nodeActions}
-                edgeActions={edgeActions}
-                replayMode={replayMode}
-                show={show}
-                gameState={state.gameState}
-                isMobile={isMobile}
-                isMovingRobber={state.isMovingRobber}
-              ></Board>
-            </TransformComponent>
-          </div>
-        </React.Fragment>
-      )}
+    <TransformWrapper>
+      <div className="board-container">
+        <TransformComponent>
+          <Board
+            width={width}
+            height={height}
+            buildOnNodeClick={buildOnNodeClick}
+            buildOnEdgeClick={buildOnEdgeClick}
+            handleTileClick={handleTileClick}
+            nodeActions={nodeActions}
+            edgeActions={edgeActions}
+            replayMode={replayMode}
+            show={show}
+            gameState={state.gameState}
+            isMobile={isMobile}
+            isMovingRobber={state.isMovingRobber}
+          />
+        </TransformComponent>
+      </div>
     </TransformWrapper>
   );
 }

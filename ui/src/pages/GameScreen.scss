@@ -71,6 +71,10 @@ main {
 }
 
 .board-container {
+  .react-transform-wrapper {
+      height: 100%;
+      width: 100%;
+    }
   .react-transform-component {
     height: 100%;
     width: 100%;
