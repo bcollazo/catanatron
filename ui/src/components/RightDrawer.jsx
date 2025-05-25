@@ -84,7 +84,7 @@ function DrawerContent() {
 
 export default function RightDrawer() {
   const { state, dispatch } = useContext(store);
-  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openRightDrawer = useCallback(
     (event) => {

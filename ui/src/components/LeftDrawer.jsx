@@ -47,7 +47,7 @@ function DrawerContent({ gameState }) {
 
 export default function LeftDrawer() {
   const { state, dispatch } = useContext(store);
-  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openLeftDrawer = useCallback(
     (event) => {
