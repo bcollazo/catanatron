@@ -1,6 +1,6 @@
 import React from "react";
 import cn from "classnames";
-import Paper from "@material-ui/core/Paper";
+import Paper from "@mui/material/Paper";
 
 import "./Tile.scss";
 import brickTile from "../assets/tile_brick.svg";
@@ -59,7 +59,7 @@ export default function Tile({ center, coordinate, tile, size, onClick, flashing
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
     contents = (
-      <NumberToken 
+      <NumberToken
         size={size}
         flashing={flashing}
       >

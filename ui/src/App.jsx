@@ -1,9 +1,8 @@
-import React from "react";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
-import { createTheme, ThemeProvider } from "@material-ui/core/styles";
-import { blue, green } from "@material-ui/core/colors";
-import Fade from "@material-ui/core/Fade";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { blue, green } from "@mui/material/colors";
+import Fade from "@mui/material/Fade";
 
 import GameScreen from "./pages/GameScreen";
 import HomePage from "./pages/HomePage";

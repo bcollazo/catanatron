@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import memoize from "fast-memoize";
-import { useMediaQuery, useTheme } from "@material-ui/core";
+import { useMediaQuery, useTheme } from "@mui/material";
 
 import useWindowSize from "../utils/useWindowSize";
 
@@ -109,7 +109,7 @@ export default function ZoomableBoard({ replayMode }) {
     memoize((coordinate) => {
       console.log("Clicked Tile ", coordinate);
       if (state.isMovingRobber) {
-        // Find the "MOVE_ROBBER" action in current_playable_actions that 
+        // Find the "MOVE_ROBBER" action in current_playable_actions that
         // corresponds to the tile coordinate selected by the user
         const matchingAction = state.gameState.current_playable_actions.find(
           ([, action_type, [action_coordinate, ,]]) =>

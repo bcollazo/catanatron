@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import PropTypes from "prop-types";
-import { Grid } from "react-loader-spinner";
+import { GridLoader } from "react-spinners";
 import { useSnackbar } from "notistack";
 
 import ZoomableBoard from "./ZoomableBoard";
 import ActionsToolbar from "./ActionsToolbar";
 
-// CSS import for react-loader-spinner v5 is no longer needed
 import "./GameScreen.scss";
 import LeftDrawer from "../components/LeftDrawer";
 import RightDrawer from "../components/RightDrawer";
@@ -74,7 +73,7 @@ function GameScreen({ replayMode }) {
   if (!state.gameState) {
     return (
       <main>
-        <Grid
+        <GridLoader
           className="loader"
           color="#000000"
           height={100}

@@ -1,12 +1,12 @@
 import React, { useCallback, useContext } from "react";
 import cn from "classnames";
-import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
-import Divider from "@material-ui/core/Divider";
-import Drawer from "@material-ui/core/Drawer";
-import { Hidden } from "@material-ui/core";
+import SwipeableDrawer from "@mui/material/SwipeableDrawer";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
+import { Hidden } from "@mui/material";
 
-import PlayerStateBox from "../components/PlayerStateBox";
-import { humanizeAction } from "../components/Prompt";
+import PlayerStateBox from "./PlayerStateBox";
+import { humanizeAction } from "./Prompt";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";
