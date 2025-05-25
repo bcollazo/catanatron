@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { blue, green } from "@mui/material/colors";
@@ -33,7 +33,7 @@ function App() {
           TransitionProps={{ timeout: 100 }}
         >
           <Router>
-            <Switch>
+            <Routes>
               <Route path="/games/:gameId/states/:stateIndex">
                 <GameScreen replayMode={true} />
               </Route>
@@ -43,7 +43,7 @@ function App() {
               <Route path="/" exact={true}>
                 <HomePage />
               </Route>
-            </Switch>
+            </Routes>
           </Router>
         </SnackbarProvider>
       </StateProvider>
