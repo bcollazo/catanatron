@@ -34,15 +34,15 @@ function App() {
         >
           <Router>
             <Routes>
-              <Route path="/games/:gameId/states/:stateIndex">
-                <GameScreen replayMode={true} />
-              </Route>
-              <Route path="/games/:gameId">
-                <GameScreen replayMode={false} />
-              </Route>
-              <Route path="/" exact={true}>
-                <HomePage />
-              </Route>
+              <Route
+                path="/games/:gameId/states/:stateIndex"
+                element={<GameScreen replayMode={true} />}
+              />
+              <Route
+                path="/games/:gameId"
+                element={<GameScreen replayMode={false} />}
+              />
+              <Route path="/" exact={true} element={<HomePage />} />
             </Routes>
           </Router>
         </SnackbarProvider>
