@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import memoize from "fast-memoize";
-import { Button, Hidden } from "@mui/material";
+import { Button } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
@@ -21,6 +21,7 @@ import MenuList from "@mui/material/MenuList";
 import SimCardIcon from "@mui/icons-material/SimCard";
 import { useParams } from "react-router";
 
+import Hidden from "../components/Hidden";
 import { ResourceCards } from "../components/PlayerStateBox";
 import Prompt, { humanizeTradeAction } from "../components/Prompt";
 import ResourceSelector from "../components/ResourceSelector";
@@ -292,7 +293,7 @@ export default function ActionsToolbar({
   return (
     <>
       <div className="state-summary">
-        <Hidden mdUp>
+        <Hidden breakpoint={{ size: "md", direction: "up" }}>
           <Button className="open-drawer-btn" onClick={openLeftDrawer}>
             <ChevronLeftIcon />
           </Button>
@@ -303,7 +304,7 @@ export default function ActionsToolbar({
             playerKey={playerKey(state.gameState, humanColor)}
           />
         )}
-        <Hidden lgUp>
+        <Hidden breakpoint={{ size: "lg", direction: "up" }}>
           <Button className="open-drawer-btn" onClick={openRightDrawer} style={{ marginLeft: 'auto' }}>
             <ChevronRightIcon />
           </Button>

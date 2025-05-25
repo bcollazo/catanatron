@@ -1,12 +1,13 @@
-import React, { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import SwipeableDrawer from "@mui/material/SwipeableDrawer";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
-import { Hidden, CircularProgress, Button } from "@mui/material";
+import { CircularProgress, Button } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import { getMctsAnalysis } from "../utils/apiClient";
 import { useParams } from "react-router";
 
+import Hidden from "./Hidden";
 import { store } from "../store";
 import ACTIONS from "../actions";
 
@@ -117,7 +118,7 @@ export default function RightDrawer() {
 
   return (
     <>
-      <Hidden lgUp implementation="js">
+      <Hidden breakpoint={{ size: "lg", direction: "up" }} implementation="js">
         <SwipeableDrawer
           className="right-drawer"
           anchor="right"
@@ -131,7 +132,7 @@ export default function RightDrawer() {
           <DrawerContent />
         </SwipeableDrawer>
       </Hidden>
-      <Hidden mdDown implementation="css">
+      <Hidden breakpoint={{ size: "md", direction: "down" }} implementation="css">
         <Drawer
           className="right-drawer"
           anchor="right"
