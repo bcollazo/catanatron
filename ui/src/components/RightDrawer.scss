@@ -1,11 +1,11 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 $dark-divider: rgb(0 0 0 / 80%);
 
 .right-drawer {
   .MuiDrawer-paper {
     width: 280px;
-    background: $dark-gray;
+    background: variables.$dark-gray;
     color: white;
   }
 
@@ -14,7 +14,7 @@ $dark-divider: rgb(0 0 0 / 80%);
   }
 
   .analysis-box {
-    padding: $sm-gutter;
+    padding: variables.$sm-gutter;
 
     h3 {
       margin-bottom: 16px;
@@ -46,10 +46,10 @@ $dark-divider: rgb(0 0 0 / 80%);
         border-radius: 4px;
         background: rgba(255, 255, 255, 0.05);
     
-        &.red { color: $red; }
-        &.blue { color: $blue; }
-        &.white { color: $white; }
-        &.orange { color: $orange; }
+        &.red { color: variables.$red; }
+        &.blue { color: variables.$blue; }
+        &.white { color: variables.$white; }
+        &.orange { color: variables.$orange; }
     
         .player-color {
           min-width: 63px;

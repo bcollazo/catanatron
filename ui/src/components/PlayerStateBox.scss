@@ -1,11 +1,11 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 .resource-cards {
   height: 40px;
   display: flex;
   gap: 6px;
 
-  margin-bottom: $sm-gutter;
+  margin-bottom: variables.$sm-gutter;
 
   .card {
     border-radius: 4px;
@@ -26,19 +26,19 @@
     }
   }
   .wood-cards {
-    background: $wood;
+    background: variables.$wood;
   }
   .brick-cards {
-    background: $brick;
+    background: variables.$brick;
   }
   .wheat-cards {
-    background: $wheat;
+    background: variables.$wheat;
   }
   .sheep-cards {
-    background: $darker-sheep;
+    background: variables.$darker-sheep;
   }
   .ore-cards {
-    background: $ore;
+    background: variables.$ore;
   }
   .dev-cards {
     background: purple;
@@ -58,9 +58,9 @@
 }
 
 .player-state-box {
-  padding: $sm-gutter;
+  padding: variables.$sm-gutter;
 
-  max-width: $sm-breakpoint;
+  max-width: variables.$sm-breakpoint;
   margin: 0 auto;
   width: 100%;
 

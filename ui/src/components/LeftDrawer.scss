@@ -1,11 +1,11 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 $dark-divider: rgb(0 0 0 / 80%);
 
 .left-drawer {
   .MuiDrawer-paper {
     width: 280px;
-    background: $dark-gray;
+    background: variables.$dark-gray;
   }
 
   .MuiDivider-root {
@@ -24,9 +24,9 @@ $dark-divider: rgb(0 0 0 / 80%);
     display: flex;
     flex-direction: column-reverse;
     scrollbar-width: thin;
-    scrollbar-color: #454545 $dark-gray;
+    scrollbar-color: #454545 variables.$dark-gray;
     .action {
-      padding: $sm-gutter;
+      padding: variables.$sm-gutter;
     }
   }
 }

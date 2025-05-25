@@ -1,4 +1,4 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 .number-token {
     --scale-factor: 0.65;
@@ -30,7 +30,7 @@
     }
 }
 
-@media(max-width: $sm-breakpoint) {
+@media(max-width: variables.$sm-breakpoint) {
     .number-token {
         --base-font-size: 75%;
     }

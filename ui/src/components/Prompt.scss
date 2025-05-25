@@ -1,7 +1,7 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 .prompt {
-  padding: $sm-gutter;
+  padding: variables.$sm-gutter;
 
   height: 60px;
   width: 100%;

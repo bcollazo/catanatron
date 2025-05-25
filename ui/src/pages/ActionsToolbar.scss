@@ -1,29 +1,29 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 .state-summary {
   height: 60px;
   width: 100%;
-  max-width: $sm-breakpoint;
+  max-width: variables.$sm-breakpoint;
   margin: 0 auto;
   display: flex;
-  padding: $sm-gutter;
+  padding: variables.$sm-gutter;
   .open-drawer-btn {
     color: white;
-    margin-right: $sm-gutter;
+    margin-right: variables.$sm-gutter;
   }
 }
 
 $btn-height: 60px;
 .actions-toolbar {
-  height: $btn-height + 2 * $sm-gutter;
+  height: $btn-height + 2 * variables.$sm-gutter;
   width: 100%;
-  max-width: $sm-breakpoint;
+  max-width: variables.$sm-breakpoint;
   margin-left: auto;
   margin-right: auto;
-  padding: $sm-gutter;
+  padding: variables.$sm-gutter;
   display: flex;
   justify-content: space-between;
-  gap: $sm-gutter;
+  gap: variables.$sm-gutter;
 
   button {
     min-width: 60px;
