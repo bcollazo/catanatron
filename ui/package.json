@@ -16,8 +16,7 @@
     "react-router-dom": "^7.6.0",
     "react-spinners": "^0.17.0",
     "react-zoom-pan-pinch": "^3.7.0",
-    "sass": "^1.89.0",
-    "vite-plugin-svgr": "^4.3.0"
+    "sass": "^1.89.0"
   },
   "engines": {
     "npm": ">=11.0.0",
