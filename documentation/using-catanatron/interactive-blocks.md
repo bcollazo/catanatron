@@ -68,41 +68,6 @@ data/
 1 directory, 5 files
 ```
 
-#### CSV
+#### Other Formats
 
-With `--output-format csv` you can generate the CSVs suitable for Machine Learning and / or Data Analysis.
-
-```bash
-catanatron-play --num 5 --players F,F,R,R --output data/ --output-format csv
-```
-
-This generates 4 GZIP CSVs:
-
-* **samples.csv.gz:** One row per game state at each [ply](../core-concepts.md).
-* **actions.csv.gz:** Integers representing actions taken by each player at each ply.
-* **rewards.csv.gz:** Some common returns and rewards with which to label how effective actions taken by bots where. See Reinforcement Learning section on [openapi.md](../advanced/openapi.md "mention")
-* **main.csv.gz:** Simply a concatenation of the above 3 CSVs
-
-Using `--output-format csv` will continuously simply append to these 4 files more and more plys even if from different games.
-
-#### Parquet
-
-[Parquet format](https://parquet.apache.org/) is also supported. One file per game is generated (like in JSON format)
-
-```bash
-catanatron-play --num 5 --players F,R --output data/ --output-format parquet
-```
-
-#### Include Board Tensors
-
-Representing the Catan Board State for Machine Learning purposes is challenging using tabular data. The best we can often do is have many features like `TILE11_IS_BRICK` or `TILE3_PROBA` to represent what resource and what number lie in what tile. Similarly columns like `NODE9_P2_CITY` and so on to represent if Player 2 has a City in Node 9.
-
-To aid in this regard, you can also generate a 3D Tensor for each game state capturing the spatial relationship of these features. You can generate it when using `--output-format parquet` or `--output-format csv` by using the `--include-board-tensors` flag.
-
-For example:
-
-```bash
-catanatron-play --num 5 --players AB:2,AB:2 --output data/ --output-format csv --include-board-tensor
-```
-
-Its a dedicated flag since it makes simulations a bit slower.
+You can also generate data in **CSV** and **Parquet** for Machine Learning and similar applications. See more at [data-and-machine-learning.md](../advanced/data-and-machine-learning.md "mention").

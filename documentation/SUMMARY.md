@@ -20,6 +20,7 @@
 * [Making Catanatron Stronger](advanced/making-catanatron-stronger.md)
 * [Creating Custom Bots](advanced/editor.md)
 * [Gymnasium Interface](advanced/openapi.md)
+* [Data and Machine Learning](advanced/data-and-machine-learning.md)
 
 ***
 
