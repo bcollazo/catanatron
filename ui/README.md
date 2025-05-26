@@ -1,4 +1,4 @@
-Catanatron UI uses Node 23, React 19, and Vite.
+Catanatron UI uses Node 24, React 19, and Vite.
 
 
 ## Available Scripts

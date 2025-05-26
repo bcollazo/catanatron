@@ -1,4 +1,4 @@
-FROM node:23-alpine
+FROM node:24-alpine
 
 # Why do we install these?
 # RUN apk add --no-cache --virtual .gyp python make g++
