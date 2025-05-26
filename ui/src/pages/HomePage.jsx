@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { useHistory } from "react-router-dom";
-import { Button } from "@material-ui/core";
-import Loader from "react-loader-spinner";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@mui/material";
+import { GridLoader } from "react-spinners";
 import { createGame } from "../utils/apiClient";
 
 import "./HomePage.scss";
@@ -33,14 +33,14 @@ function getPlayers(gameMode, numPlayers) {
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [numPlayers, setNumPlayers] = useState(2);
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const handleCreateGame = async (gameMode) => {
     setLoading(true);
     const players = getPlayers(gameMode, numPlayers);
     const gameId = await createGame(players);
     setLoading(false);
-    history.push("/games/" + gameId);
+    navigate("/games/" + gameId);
   };
 
   return (
@@ -94,9 +94,8 @@ export default function HomePage() {
             </Button>
           </>
         ) : (
-          <Loader
+          <GridLoader
             className="loader"
-            type="Grid"
             color="#ffffff"
             height={60}
             width={60}

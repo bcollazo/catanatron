@@ -1,4 +1,4 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 .resource-selector {
   .MuiPaper-root {
@@ -27,7 +27,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     
-    @media (max-width: $sm-breakpoint) {
+    @media (max-width: variables.$sm-breakpoint) {
       grid-template-columns: 1fr;
     }
   }

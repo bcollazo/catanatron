@@ -1,12 +1,13 @@
-import React, { useCallback, useContext, useState } from "react";
-import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
-import Divider from "@material-ui/core/Divider";
-import Drawer from "@material-ui/core/Drawer";
-import { Hidden, CircularProgress, Button } from "@material-ui/core";
-import AssessmentIcon from "@material-ui/icons/Assessment";
+import { useCallback, useContext, useState } from "react";
+import SwipeableDrawer from "@mui/material/SwipeableDrawer";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
+import { CircularProgress, Button } from "@mui/material";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import { getMctsAnalysis } from "../utils/apiClient";
 import { useParams } from "react-router";
 
+import Hidden from "./Hidden";
 import { store } from "../store";
 import ACTIONS from "../actions";
 
@@ -21,7 +22,7 @@ function DrawerContent() {
 
   const handleAnalyzeClick = async () => {
     if (!gameId || !state.gameState || state.gameState.winning_color) return;
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -66,8 +67,8 @@ function DrawerContent() {
             <div key={color} className={`probability-row ${color.toLowerCase()}`}>
               <span className="player-color">{color}</span>
               <span className="probability-bar">
-                <div 
-                  className="bar-fill" 
+                <div
+                  className="bar-fill"
                   style={{ width: `${probability}%` }}
                 />
               </span>
@@ -83,7 +84,7 @@ function DrawerContent() {
 
 export default function RightDrawer() {
   const { state, dispatch } = useContext(store);
-  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openRightDrawer = useCallback(
     (event) => {
@@ -117,7 +118,7 @@ export default function RightDrawer() {
 
   return (
     <>
-      <Hidden lgUp implementation="js">
+      <Hidden breakpoint={{ size: "lg", direction: "up" }} implementation="js">
         <SwipeableDrawer
           className="right-drawer"
           anchor="right"
@@ -131,11 +132,11 @@ export default function RightDrawer() {
           <DrawerContent />
         </SwipeableDrawer>
       </Hidden>
-      <Hidden mdDown implementation="css">
-        <Drawer 
-          className="right-drawer" 
-          anchor="right" 
-          variant="permanent" 
+      <Hidden breakpoint={{ size: "md", direction: "down" }} implementation="css">
+        <Drawer
+          className="right-drawer"
+          anchor="right"
+          variant="permanent"
           open
         >
           <DrawerContent />

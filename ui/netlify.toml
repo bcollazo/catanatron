@@ -4,4 +4,4 @@
     to = "/index.html"
 
 [context.branch-deploy.environment]
-    REACT_APP_API_URL = "https://catanatron-staging.herokuapp.com"
+    CTRON_API_URL = "https://catanatron-staging.herokuapp.com"

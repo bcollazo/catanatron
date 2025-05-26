@@ -1,18 +1,18 @@
 import React from 'react';
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Button,
   Typography
-} from '@material-ui/core';
+} from '@mui/material';
 import './ResourceSelector.scss';
 
 const ResourceSelector = ({ open, onClose, options, onSelect, mode }) => {
   const sortedOptions = React.useMemo(() => {
     const resourceOrder = ['WOOD', 'BRICK', 'SHEEP', 'WHEAT', 'ORE'];
-    
+
     if (mode === 'monopoly') {
       return resourceOrder;
     }
@@ -45,16 +45,16 @@ const ResourceSelector = ({ open, onClose, options, onSelect, mode }) => {
       <DialogContent>
         <div className="resource-grid">
           {sortedOptions.map((option, index) => (
-            <Button 
+            <Button
               key={index}
               variant="contained"
               className="resource-button"
               onClick={() => onSelect(option)}
             >
               <Typography variant="body2">
-                {mode === 'monopoly' 
+                {mode === 'monopoly'
                   ? getResourceSpan(option)
-                  : option.length === 1 
+                  : option.length === 1
                     ? <>{getResourceSpan(option[0])}<span className='plus'>x1</span></>
                     : <>{getResourceSpan(option[0])}<span className='plus'>+</span>{getResourceSpan(option[1])}</>
                 }

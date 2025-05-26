@@ -1,6 +1,5 @@
-import React from "react";
 import cn from "classnames";
-import Paper from "@material-ui/core/Paper";
+import Paper from "@mui/material/Paper";
 
 import "./Tile.scss";
 import brickTile from "../assets/tile_brick.svg";
@@ -16,7 +15,7 @@ export function NumberToken({ className, children, style, size, flashing }) {
   return (
     <Paper
       elevation={3}
-      className={cn("number-token", className, {flashing: flashing })}
+      className={cn("number-token", className, { flashing: flashing })}
       style={{
         "--base-size": `${size}px`, // this var can be overrided via `style` prop
         ...style,
@@ -49,7 +48,14 @@ const numberToPips = (number) => {
   }
 };
 
-export default function Tile({ center, coordinate, tile, size, onClick, flashing }) {
+export default function Tile({
+  center,
+  coordinate,
+  tile,
+  size,
+  onClick,
+  flashing,
+}) {
   const w = SQRT3 * size;
   const h = 2 * size;
   const [centerX, centerY] = center;
@@ -59,10 +65,7 @@ export default function Tile({ center, coordinate, tile, size, onClick, flashing
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
     contents = (
-      <NumberToken 
-        size={size}
-        flashing={flashing}
-      >
+      <NumberToken size={size} flashing={flashing}>
         <div>{tile.number}</div>
         <div className="pips">{numberToPips(tile.number)}</div>
       </NumberToken>
@@ -104,7 +107,7 @@ export default function Tile({ center, coordinate, tile, size, onClick, flashing
           style={{
             left: x,
             top: y,
-            backgroundImage: `url('${maritimeTile}')`,
+            backgroundImage: `url("${maritimeTile}")`,
             height: 60,
             backgroundSize: "contain",
             width: 52,
@@ -128,7 +131,7 @@ export default function Tile({ center, coordinate, tile, size, onClick, flashing
           style={{
             left: x,
             top: y,
-            backgroundImage: `url('${portBackground}')`,
+            backgroundImage: `url("${portBackground}")`,
             height: 60,
             backgroundSize: "contain",
             width: 52,
@@ -150,7 +153,7 @@ export default function Tile({ center, coordinate, tile, size, onClick, flashing
         top: y - h / 2,
         width: w,
         height: h,
-        backgroundImage: `url('${resourceTile}')`,
+        backgroundImage: `url("${resourceTile}")`,
         backgroundSize: "contain",
       }}
       onClick={onClick}

@@ -1,7 +1,7 @@
-FROM node:16-alpine
+FROM node:24-alpine
 
 # Why do we install these?
-# RUN apk add --no-cache --virtual .gyp python make g++ 
+# RUN apk add --no-cache --virtual .gyp python make g++
 
 WORKDIR /app
 

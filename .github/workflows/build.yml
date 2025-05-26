@@ -81,9 +81,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Find Node.js version
+        id: node-version
+        run: echo "node-version=$(cat ui/.nvmrc)" >> $GITHUB_OUTPUT
       - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: ${{ steps.node-version.outputs.node-version }}
       - run: npm ci
         working-directory: ./ui
       - run: npm run build

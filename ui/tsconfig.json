@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": ["./vitest.setup.ts"]
+}

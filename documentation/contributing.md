@@ -43,7 +43,7 @@ npm install
 npm start
 ```
 
-This can also be run via Docker independetly like (after building):
+This can also be run via Docker independently (after building):
 
 ```bash
 docker build -t bcollazo/catanatron-react-ui:latest ui/
@@ -52,18 +52,19 @@ docker run -it -p 3000:3000 bcollazo/catanatron-react-ui
 
 ### Flask Web Server
 
-Ensure you are inside a virtual environment with all dependencies installed and&#x20;use `flask run`. This will use SQLite by default.
+Ensure you are inside a virtual environment with all dependencies installed and
+&#x20;use `flask run`. This will use SQLite by default.
 
 ```bash
 pip install -e .[web]
 FLASK_DEBUG=1 FLASK_APP=catanatron.web/catanatron.web flask run
 ```
 
-This can also be run via Docker independetly like (after building):
+This can also be run via Docker independently (after building):
 
 ```bash
 docker build -t bcollazo/catanatron-server:latest . -f Dockerfile.web
-docker run -it -p 5000:5000 bcollazo/catanatron-server
+docker run -it -p 5001:5001 bcollazo/catanatron-server
 ```
 
 ## Useful Commands

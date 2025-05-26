@@ -1,12 +1,12 @@
 import React, { useCallback, useContext } from "react";
 import cn from "classnames";
-import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
-import Divider from "@material-ui/core/Divider";
-import Drawer from "@material-ui/core/Drawer";
-import { Hidden } from "@material-ui/core";
+import SwipeableDrawer from "@mui/material/SwipeableDrawer";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
 
-import PlayerStateBox from "../components/PlayerStateBox";
-import { humanizeAction } from "../components/Prompt";
+import Hidden from "./Hidden";
+import PlayerStateBox from "./PlayerStateBox";
+import { humanizeAction } from "./Prompt";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";
@@ -47,7 +47,7 @@ function DrawerContent({ gameState }) {
 
 export default function LeftDrawer() {
   const { state, dispatch } = useContext(store);
-  const iOS = process.browser && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openLeftDrawer = useCallback(
     (event) => {
@@ -80,7 +80,7 @@ export default function LeftDrawer() {
 
   return (
     <>
-      <Hidden mdUp implementation="js">
+      <Hidden breakpoint={{ size: "md", direction: "up" }} implementation="js">
         <SwipeableDrawer
           className="left-drawer"
           anchor="left"
@@ -94,7 +94,7 @@ export default function LeftDrawer() {
           <DrawerContent gameState={state.gameState} />
         </SwipeableDrawer>
       </Hidden>
-      <Hidden smDown implementation="css">
+      <Hidden breakpoint={{size: "sm", direction: "down" }} implementation="css">
         <Drawer className="left-drawer" anchor="left" variant="permanent" open>
           <DrawerContent gameState={state.gameState} />
         </Drawer>

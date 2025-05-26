@@ -6,21 +6,22 @@ import React, {
   useCallback,
 } from "react";
 import memoize from "fast-memoize";
-import { Button, Hidden } from "@material-ui/core";
-import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import ChevronRightIcon from "@material-ui/icons/ChevronRight";
-import AccountBalanceIcon from "@material-ui/icons/AccountBalance";
-import BuildIcon from "@material-ui/icons/Build";
-import NavigateNextIcon from "@material-ui/icons/NavigateNext";
-import MenuItem from "@material-ui/core/MenuItem";
-import ClickAwayListener from "@material-ui/core/ClickAwayListener";
-import Grow from "@material-ui/core/Grow";
-import Paper from "@material-ui/core/Paper";
-import Popper from "@material-ui/core/Popper";
-import MenuList from "@material-ui/core/MenuList";
-import SimCardIcon from "@material-ui/icons/SimCard";
+import { Button } from "@mui/material";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import BuildIcon from "@mui/icons-material/Build";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import MenuItem from "@mui/material/MenuItem";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Grow from "@mui/material/Grow";
+import Paper from "@mui/material/Paper";
+import Popper from "@mui/material/Popper";
+import MenuList from "@mui/material/MenuList";
+import SimCardIcon from "@mui/icons-material/SimCard";
 import { useParams } from "react-router";
 
+import Hidden from "../components/Hidden";
 import { ResourceCards } from "../components/PlayerStateBox";
 import Prompt, { humanizeTradeAction } from "../components/Prompt";
 import ResourceSelector from "../components/ResourceSelector";
@@ -69,7 +70,7 @@ function PlayButtons() {
     return state.gameState.current_playable_actions
       .filter(action => action[1] === "PLAY_YEAR_OF_PLENTY")
       .map(action => action[2]);
-  }, [state.gameState.current_playable_actions]);  
+  }, [state.gameState.current_playable_actions]);
   const handleResourceSelection = useCallback(async (selectedResources) => {
     setResourceSelectorOpen(false);
     let action;
@@ -187,7 +188,7 @@ function PlayButtons() {
         onClick: carryOutAction(action),
       };
     });
-  
+
     return items.sort((a, b) => a.label.localeCompare(b.label));
   }, [tradeActions, carryOutAction]);
 
@@ -241,10 +242,10 @@ function PlayButtons() {
         }
       >
         {
-          isDiscard ? "DISCARD" : 
-          isMoveRobber ? "ROB" : 
-          isPlayingYearOfPlenty || isPlayingMonopoly ? "SELECT" : 
-          isRoll ? "ROLL" : 
+          isDiscard ? "DISCARD" :
+          isMoveRobber ? "ROB" :
+          isPlayingYearOfPlenty || isPlayingMonopoly ? "SELECT" :
+          isRoll ? "ROLL" :
           "END"
         }
       </Button>
@@ -292,7 +293,7 @@ export default function ActionsToolbar({
   return (
     <>
       <div className="state-summary">
-        <Hidden mdUp>
+        <Hidden breakpoint={{ size: "md", direction: "up" }}>
           <Button className="open-drawer-btn" onClick={openLeftDrawer}>
             <ChevronLeftIcon />
           </Button>
@@ -303,7 +304,7 @@ export default function ActionsToolbar({
             playerKey={playerKey(state.gameState, humanColor)}
           />
         )}
-        <Hidden lgUp>
+        <Hidden breakpoint={{ size: "lg", direction: "up" }}>
           <Button className="open-drawer-btn" onClick={openRightDrawer} style={{ marginLeft: 'auto' }}>
             <ChevronRightIcon />
           </Button>

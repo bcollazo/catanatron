@@ -1,9 +1,8 @@
-import React from "react";
-import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
-import { createTheme, ThemeProvider } from "@material-ui/core/styles";
-import { blue, green } from "@material-ui/core/colors";
-import Fade from "@material-ui/core/Fade";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { blue, green } from "@mui/material/colors";
+import Fade from "@mui/material/Fade";
 
 import GameScreen from "./pages/GameScreen";
 import HomePage from "./pages/HomePage";
@@ -34,17 +33,17 @@ function App() {
           TransitionProps={{ timeout: 100 }}
         >
           <Router>
-            <Switch>
-              <Route path="/games/:gameId/states/:stateIndex">
-                <GameScreen replayMode={true} />
-              </Route>
-              <Route path="/games/:gameId">
-                <GameScreen replayMode={false} />
-              </Route>
-              <Route path="/" exact={true}>
-                <HomePage />
-              </Route>
-            </Switch>
+            <Routes>
+              <Route
+                path="/games/:gameId/states/:stateIndex"
+                element={<GameScreen replayMode={true} />}
+              />
+              <Route
+                path="/games/:gameId"
+                element={<GameScreen replayMode={false} />}
+              />
+              <Route path="/" exact={true} element={<HomePage />} />
+            </Routes>
           </Router>
         </SnackbarProvider>
       </StateProvider>

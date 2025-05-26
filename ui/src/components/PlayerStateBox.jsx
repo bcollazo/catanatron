@@ -2,7 +2,7 @@ import React from "react";
 import cn from "classnames";
 
 import "./PlayerStateBox.scss";
-import { Paper } from "@material-ui/core";
+import { Paper } from "@mui/material";
 
 export function ResourceCards({ playerState, playerKey }) {
   const amount = (card) => playerState[`${playerKey}_${card}_IN_HAND`];

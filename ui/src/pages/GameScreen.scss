@@ -1,7 +1,7 @@
-@import "../variables.scss";
+@use "../variables.scss";
 
 .MuiToolbar-root {
-  background: $black;
+  background: variables.$black;
 }
 
 h6.MuiTypography-h6 {
@@ -20,7 +20,7 @@ h6.MuiTypography-h6 {
   left: 50% !important;
   bottom: 0px;
   transform: translateX(-50%);
-  max-width: $sm-breakpoint;
+  max-width: variables.$sm-breakpoint;
   width: 100%;
   .MuiCollapse-container {
     padding: 0 10px;
@@ -48,7 +48,7 @@ main {
     text-align: center;
   }
 
-  background: $black;
+  background: variables.$black;
   color: white;
   height: 100%;
   display: flex;
@@ -71,6 +71,10 @@ main {
 }
 
 .board-container {
+  .react-transform-wrapper {
+      height: 100%;
+      width: 100%;
+    }
   .react-transform-component {
     height: 100%;
     width: 100%;
@@ -93,7 +97,7 @@ main {
 }
 
 // Medium screens - Left drawer permanent
-@media (min-width: $md-breakpoint) {
+@media (min-width: variables.$md-breakpoint) {
   main {
     padding-left: 280px;
     .board-container {
@@ -103,7 +107,7 @@ main {
 }
 
 // Large screens - Both drawers permanent
-@media (min-width: $lg-breakpoint) {
+@media (min-width: variables.$lg-breakpoint) {
   main {
     padding-left: 0px;
     .board-container {
