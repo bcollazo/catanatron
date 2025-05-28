@@ -1,7 +1,7 @@
 // Helpers for implementing https://www.redblobgames.com/grids/hexagons/
 // TODO - is this still needed with new CSS features?
 
-type CubeCoordinate = [number, number, number];
+export type CubeCoordinate = [number, number, number];
 type RadialCoordinate = {
   q: number
   r: number
@@ -31,7 +31,7 @@ const DIRECTIONS = [
   "WEST",
 ] as const;
 
-type Direction = typeof DIRECTIONS[number];
+export type Direction = (typeof DIRECTIONS)[number];
 
 // TODO - why are EAST and WEST not included here?
 export function getNodeDelta(direction: Direction, w: number, h: number) {
