@@ -24,7 +24,6 @@ export default function Robber({ center, size, coordinate }: RobberProps) {
       elevation={3}
       className="robber"
       style={{
-        "--base-size": `${size}px`,
         left: x,
         top: y,
       }}

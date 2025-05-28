@@ -15,24 +15,20 @@ type NumberTokenProps = {
   number: number;
   className?: string;
   style?: Partial<React.CSSProperties>;
-  size?: number;
   flashing?: boolean;
 };
+
 export function NumberToken({
   number,
   className,
   style,
-  size,
   flashing,
 }: NumberTokenProps) {
   return (
     <Paper
       elevation={3}
       className={cn("number-token", className, { flashing: flashing })}
-      style={{
-        "--base-size": `${size}px`, // this var can be overrided via `style` prop // TODO - needed?
-        ...style,
-      }}
+      style={style}
     >
       <div>{number}</div>
       <div className="pips">{numberToPips(number)}</div>
@@ -161,9 +157,7 @@ export default function Tile({
   let contents;
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
-    contents = (
-      <NumberToken number={tile.number} size={size} flashing={flashing} />
-    );
+    contents = <NumberToken number={tile.number} flashing={flashing} />;
     resourceTile = RESOURCES[tile.resource];
   } else if (tile.type === "DESERT") {
     resourceTile = desertTile;
