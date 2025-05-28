@@ -1,7 +1,14 @@
 // Helpers for implementing https://www.redblobgames.com/grids/hexagons/
+// TODO - is this still needed with new CSS features?
+
+type CubeCoordinate = [number, number, number];
+type RadialCoordinate = {
+  q: number
+  r: number
+}
 
 // Gives center coordinate for tile.
-export function tilePixelVector(coordinate, size, centerX, centerY) {
+export function tilePixelVector(coordinate: CubeCoordinate, size: number, centerX: number, centerY: number) {
   const hex = cubeToAxial(coordinate);
   return [
     size * (SQRT3 * hex.q + (SQRT3 / 2) * hex.r) + centerX,
@@ -9,10 +16,25 @@ export function tilePixelVector(coordinate, size, centerX, centerY) {
   ];
 }
 
-export function cubeToAxial(cube) {
+export function cubeToAxial(cube: CubeCoordinate): RadialCoordinate {
   return { q: cube[0], r: cube[2] };
 }
-export function getNodeDelta(direction, w, h) {
+
+const DIRECTIONS = [
+  "NORTH",
+  "NORTHEAST",
+  "SOUTHEAST",
+  "SOUTH",
+  "SOUTHWEST",
+  "NORTHWEST",
+  "EAST",
+  "WEST",
+] as const;
+
+type Direction = typeof DIRECTIONS[number];
+
+// TODO - why are EAST and WEST not included here?
+export function getNodeDelta(direction: Direction, w: number, h: number) {
   switch (direction) {
     case "NORTH":
       return [0, -h / 2];
@@ -27,13 +49,13 @@ export function getNodeDelta(direction, w, h) {
     case "NORTHWEST":
       return [-w / 2, -h / 4];
     default:
-      throw Error("Unkown direction " + direction);
+      throw Error("Unknown direction " + direction);
   }
 }
 
-export function getEdgeTransform(direction, size) {
+export function getEdgeTransform(direction: Direction, size: number) {
   const distanceToEdge = size * 0.865;
-  const translate = (deg) =>
+  const translate = (deg: number) =>
     `translateX(-50%) translateY(-50%) rotate(${deg}deg) translateY(${-distanceToEdge}px)`;
   switch (direction) {
     case "NORTHEAST":
@@ -49,7 +71,7 @@ export function getEdgeTransform(direction, size) {
     case "NORTHWEST":
       return `${translate(330)}`;
     default:
-      throw Error("Unkown direction " + direction);
+      throw Error("Unknown direction " + direction);
   }
 }
 

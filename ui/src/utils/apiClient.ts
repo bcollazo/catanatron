@@ -2,12 +2,15 @@ import axios from "axios";
 
 import { API_URL } from "../configuration";
 
-export async function createGame(players) {
+type Player = "HUMAN" | "RANDOM" | "CATANATRON";
+type StateIndex = number | "latest";
+
+export async function createGame(players: Player[]) {
   const response = await axios.post(API_URL + "/api/games", { players });
   return response.data.game_id;
 }
 
-export async function getState(gameId, stateIndex = "latest") {
+export async function getState(gameId: string, stateIndex: StateIndex = "latest") {
   const response = await axios.get(
     `${API_URL}/api/games/${gameId}/states/${stateIndex}`
   );
@@ -15,7 +18,7 @@ export async function getState(gameId, stateIndex = "latest") {
 }
 
 /** action=undefined means bot action */
-export async function postAction(gameId, action = undefined) {
+export async function postAction(gameId: string, action = undefined) {
   const response = await axios.post(
     `${API_URL}/api/games/${gameId}/actions`,
     action
@@ -23,7 +26,18 @@ export async function postAction(gameId, action = undefined) {
   return response.data;
 }
 
-export async function getMctsAnalysis(gameId, stateIndex = 'latest') {
+type MCTSSuccessBody = {
+  success: true;
+  probabilities: any;
+  state_index: number;
+}
+type MCTSErrorBody = {
+  success: false;
+  error: string;
+  trace: string;
+}
+
+export async function getMctsAnalysis(gameId: string, stateIndex: StateIndex = 'latest') {
   try {
     console.log('Getting MCTS analysis for:', {
       gameId,
@@ -35,13 +49,14 @@ export async function getMctsAnalysis(gameId, stateIndex = 'latest') {
       throw new Error('No gameId provided to getMctsAnalysis');
     }
 
-    const response = await axios.get(
+    const response = await axios.get<MCTSSuccessBody | MCTSErrorBody>(
       `${API_URL}/api/games/${gameId}/states/${stateIndex}/mcts-analysis`
     );
-    
+
     console.log('MCTS analysis response:', response.data);
     return response.data;
   } catch (error) {
+    // TODO - figure out how this error is thrown, then fix types.
     console.error('MCTS analysis error:', {
       message: error.message,
       status: error.response?.status,
