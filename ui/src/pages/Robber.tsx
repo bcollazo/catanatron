@@ -22,7 +22,7 @@ export default function Robber({ center, size, coordinate }: RobberProps) {
   return (
     <Paper
       elevation={3}
-      className="robber"
+      className="robber number-token"
       style={{
         left: x,
         top: y,

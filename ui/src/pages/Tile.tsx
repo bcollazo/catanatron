@@ -113,7 +113,7 @@ const Port = ({ resource, style }: { resource: Resource; style: Partial<React.CS
     ratio = "2:1";
     tile = RESOURCES[resource];
   } else {
-    ratio = "2:1";
+    ratio = "3:1";
     tile = maritimeTile;
   }
 
