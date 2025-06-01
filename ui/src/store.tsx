@@ -1,7 +1,26 @@
 import React, { createContext, useReducer } from "react";
 import ACTIONS from "./actions";
 
-const initialState = {
+type CatanState = {
+  gameState: unknown | null; // TODO
+  freeRoadsAvailable: number;
+  isBuildingRoad: boolean;
+  isBuildingSettlement: boolean;
+  isBuildingCity: boolean;
+  isLeftDrawerOpen: boolean;
+  isRightDrawerOpen: boolean;
+  isPlayingMonopoly: boolean;
+  isPlayingYearOfPlenty: boolean;
+  isRoadBuilding: boolean;
+  isMovingRobber: boolean;
+}
+type ReducerAction = {
+  type: keyof typeof ACTIONS;
+  data: any; // TODO find exact types
+}
+
+
+const initialState: CatanState = {
   gameState: null,
   // UI
   isBuildingRoad: false,
@@ -14,12 +33,13 @@ const initialState = {
   isRoadBuilding: false,
   freeRoadsAvailable: 0,
   isMovingRobber: false,
-};
-const store = createContext(initialState);
+} as const;
+
+const store = createContext<{ state: CatanState;  dispatch?: React.ActionDispatch<[action: ReducerAction]>}>({ state: initialState });
 const { Provider } = store;
 
-const StateProvider = ({ children }) => {
-  const [state, dispatch] = useReducer((state, action) => {
+const StateProvider = ({ children }: { children: React.ReactNode }) => {
+  const [state, dispatch] = useReducer((state: CatanState, action: { type: string;  data: any }) => {
     switch (action.type) {
       case ACTIONS.SET_LEFT_DRAWER_OPENED:
         return { ...state, isLeftDrawerOpen: action.data };
@@ -55,9 +75,9 @@ const StateProvider = ({ children }) => {
         return { ...state, isPlayingYearOfPlenty: false };
       case ACTIONS.PLAY_ROAD_BUILDING:
         return {
-          ...state, 
-          isRoadBuilding: true, 
-          freeRoadsAvailable: 2 
+          ...state,
+          isRoadBuilding: true,
+          freeRoadsAvailable: 2
         };
       case ACTIONS.SET_IS_MOVING_ROBBER:
         return { ...state, isMovingRobber: true };
