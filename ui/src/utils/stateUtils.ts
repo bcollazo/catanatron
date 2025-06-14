@@ -22,6 +22,15 @@ export type PlacedTile = {
   tile: Tile;
 };
 
+export type PlayerState = any;
+type VictoryPointCard = "VICTORY_POINT";
+export type ResourceCard = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
+export type DevelopmentCard =
+  | "KNIGHT"
+  | "MONOPOLY"
+  | "YEAR_OF_PLENTY"
+  | "ROAD_BUILDING";
+export type Card = ResourceCard | DevelopmentCard | VictoryPointCard;
 export type GameState = {
   tiles: Record<string, PlacedTile>;
   adjacent_tiles: Record<string, Tile[]>;
@@ -30,6 +39,7 @@ export type GameState = {
   current_color: Color;
   winning_color?: Color;
   current_prompt: string;
+  player_state: Record<string, PlayerState>;
 };
 
 /**

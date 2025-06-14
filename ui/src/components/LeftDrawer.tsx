@@ -9,11 +9,11 @@ import PlayerStateBox from "./PlayerStateBox";
 import { humanizeAction } from "../utils/promptUtils";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { playerKey } from "../utils/stateUtils";
+import { playerKey, type GameState } from "../utils/stateUtils";
 
 import "./LeftDrawer.scss";
 
-function DrawerContent({ gameState }) {
+function DrawerContent({ gameState }: { gameState: GameState }) {
   const playerSections = gameState.colors.map((color) => {
     const key = playerKey(gameState, color);
     return (
