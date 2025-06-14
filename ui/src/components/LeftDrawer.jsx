@@ -6,7 +6,7 @@ import Drawer from "@mui/material/Drawer";
 
 import Hidden from "./Hidden";
 import PlayerStateBox from "./PlayerStateBox";
-import { humanizeAction } from "./Prompt";
+import { humanizeAction } from "../utils/promptUtils";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";

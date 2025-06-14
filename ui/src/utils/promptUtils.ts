@@ -1,30 +1,6 @@
-import React from "react";
-import { isPlayersTurn } from "../utils/stateUtils";
+import type { GameState, GameAction, Tile, PlacedTile } from "./stateUtils";
 
-import "./Prompt.scss";
-
-function findTileByCoordinate(gameState, coordinate) {
-  for (const tile of Object.values(gameState.tiles)) {
-    if (JSON.stringify(tile.coordinate) === JSON.stringify(coordinate)) {
-      return tile;
-    }
-  }
-}
-
-function findTileById(gameState, tileId) {
-  return gameState.tiles[tileId];
-}
-
-function getTileString(tile) {
-  const { number = "THE", resource = "DESERT" } = tile.tile;
-  return `${number} ${resource}`;
-}
-
-function getShortTileString(tileTile) {
-  return tileTile.number || tileTile.type;
-}
-
-export function humanizeAction(gameState, action) {
+export function humanizeAction(gameState: GameState, action: GameAction) {
   const botColors = gameState.bot_colors;
   const player = botColors.includes(action[0]) ? "BOT" : "YOU";
   switch (action[1]) {
@@ -58,7 +34,7 @@ export function humanizeAction(gameState, action) {
       return `${player} PLAYED KNIGHT CARD`;
     }
     case "PLAY_ROAD_BUILDING": {
-      return `${player} PLAYED ROAD BUILDING`
+      return `${player} PLAYED ROAD BUILDING`;
     }
     case "PLAY_MONOPOLY": {
       return `${player} MONOPOLIZED ${action[2]}`;
@@ -75,7 +51,8 @@ export function humanizeAction(gameState, action) {
     case "MOVE_ROBBER": {
       const tile = findTileByCoordinate(gameState, action[2][0]);
       const tileString = getTileString(tile);
-      const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : '';
+      // todo - what is the stolen resource action array type?
+      const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : "";
       return `${player} ROBBED ${tileString}${stolenResource}`;
     }
     case "MARITIME_TRADE": {
@@ -85,40 +62,30 @@ export function humanizeAction(gameState, action) {
     case "END_TURN":
       return `${player} ENDED TURN`;
     default:
-      return `${player} ${action.slice(1)}`;
+      throw new Error(`Unknown action type: ${action[1]}`);
   }
 }
-
-export function humanizeTradeAction(action) {
-  const out = action[2].slice(0, 4).filter((resource) => resource !== null);
+export function humanizeTradeAction(action: GameAction): string {
+  const out = action[2].slice(0, 4).filter((resource: unknown) => resource !== null);
   return `${out.length} ${out[0]} => ${action[2][4]}`;
 }
-
-function humanizePrompt(current_prompt) {
-  switch (current_prompt) {
-    case "ROLL":
-      return `YOUR TURN`;
-    case "PLAY_TURN":
-      return `YOUR TURN`;
-    case "BUILD_INITIAL_SETTLEMENT":
-    case "BUILD_INITIAL_ROAD":
-    default: {
-      const prompt = current_prompt.replaceAll("_", " ");
-      return `PLEASE ${prompt}`;
+export function findTileByCoordinate(gameState: GameState, coordinate: any) {
+  for (const tile of Object.values(gameState.tiles)) {
+    if (JSON.stringify(tile.coordinate) === JSON.stringify(coordinate)) {
+      return tile;
     }
   }
+  throw new Error(
+    `Tile not found for coordinate: ${JSON.stringify(coordinate)}`
+  );
 }
-
-export default function Prompt({ gameState, isBotThinking }) {
-  let prompt = "";
-  if (isBotThinking) {
-    // Do nothing, but still render.
-  } else if (gameState.winning_color) {
-    prompt = `Game Over. Congrats, ${gameState.winning_color}!`;
-  } else if (isPlayersTurn(gameState)) {
-    prompt = humanizePrompt(gameState.current_prompt);
-  } else {
-    // prompt = humanizeAction(gameState.actions[gameState.actions.length - 1], gameState.bot_colors);
-  }
-  return <div className="prompt">{prompt}</div>;
+export function getShortTileString(tile: Tile): string {
+  return tile.number || tile.type;
+}
+export function getTileString(tile: PlacedTile): string {
+  const { number = "THE", resource = "DESERT" } = tile.tile;
+  return `${number} ${resource}`;
+}
+export function findTileById(gameState: GameState, tileId: string): PlacedTile {
+  return gameState.tiles[tileId];
 }

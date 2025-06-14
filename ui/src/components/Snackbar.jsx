@@ -1,7 +1,6 @@
-import React from "react";
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { humanizeAction } from "./Prompt";
+import { humanizeAction } from "../utils/promptUtils";
 
 export const snackbarActions = (closeSnackbar) => (key) =>
   (

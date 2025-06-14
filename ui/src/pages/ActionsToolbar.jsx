@@ -23,12 +23,13 @@ import { useParams } from "react-router";
 
 import Hidden from "../components/Hidden";
 import { ResourceCards } from "../components/PlayerStateBox";
-import Prompt, { humanizeTradeAction } from "../components/Prompt";
+import Prompt from "../components/Prompt";
 import ResourceSelector from "../components/ResourceSelector";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
+import { humanizeTradeAction } from "../utils/promptUtils";
 
 import "./ActionsToolbar.scss";
 import { useSnackbar } from "notistack";
@@ -49,14 +50,20 @@ function PlayButtons() {
     [enqueueSnackbar, closeSnackbar]
   );
 
-  const { gameState, isPlayingMonopoly, isPlayingYearOfPlenty, isRoadBuilding } = state;
+  const {
+    gameState,
+    isPlayingMonopoly,
+    isPlayingYearOfPlenty,
+    isRoadBuilding,
+  } = state;
   const key = playerKey(gameState, gameState.current_color);
   const isRoll =
     gameState.current_prompt === "PLAY_TURN" &&
     !gameState.player_state[`${key}_HAS_ROLLED`];
   const isDiscard = gameState.current_prompt === "DISCARD";
   const isMoveRobber = gameState.current_prompt === "MOVE_ROBBER";
-  const isPlayingDevCard = isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding;
+  const isPlayingDevCard =
+    isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding;
   const playableDevCardTypes = new Set(
     gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
@@ -68,24 +75,35 @@ function PlayButtons() {
   }, [dispatch]);
   const getValidYearOfPlentyOptions = useCallback(() => {
     return state.gameState.current_playable_actions
-      .filter(action => action[1] === "PLAY_YEAR_OF_PLENTY")
-      .map(action => action[2]);
+      .filter((action) => action[1] === "PLAY_YEAR_OF_PLENTY")
+      .map((action) => action[2]);
   }, [state.gameState.current_playable_actions]);
-  const handleResourceSelection = useCallback(async (selectedResources) => {
-    setResourceSelectorOpen(false);
-    let action;
-    if (isPlayingMonopoly) {
-      action = [humanColor, "PLAY_MONOPOLY", selectedResources]
-    } else if (isPlayingYearOfPlenty) {
-      action = [humanColor, "PLAY_YEAR_OF_PLENTY", selectedResources];
-    } else {
-      console.error('Invalid resource selector mode');
-      return;
-    }
-    const gameState = await postAction(gameId, action);
-    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-    dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
-  }, [gameId, humanColor, dispatch, enqueueSnackbar, closeSnackbar, isPlayingMonopoly, isPlayingYearOfPlenty]);
+  const handleResourceSelection = useCallback(
+    async (selectedResources) => {
+      setResourceSelectorOpen(false);
+      let action;
+      if (isPlayingMonopoly) {
+        action = [humanColor, "PLAY_MONOPOLY", selectedResources];
+      } else if (isPlayingYearOfPlenty) {
+        action = [humanColor, "PLAY_YEAR_OF_PLENTY", selectedResources];
+      } else {
+        console.error("Invalid resource selector mode");
+        return;
+      }
+      const gameState = await postAction(gameId, action);
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+      dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+    },
+    [
+      gameId,
+      humanColor,
+      dispatch,
+      enqueueSnackbar,
+      closeSnackbar,
+      isPlayingMonopoly,
+      isPlayingYearOfPlenty,
+    ]
+  );
   const handleOpenResourceSelector = useCallback(() => {
     setResourceSelectorOpen(true);
   }, []);
@@ -241,13 +259,15 @@ function PlayButtons() {
             : endTurnAction
         }
       >
-        {
-          isDiscard ? "DISCARD" :
-          isMoveRobber ? "ROB" :
-          isPlayingYearOfPlenty || isPlayingMonopoly ? "SELECT" :
-          isRoll ? "ROLL" :
-          "END"
-        }
+        {isDiscard
+          ? "DISCARD"
+          : isMoveRobber
+          ? "ROB"
+          : isPlayingYearOfPlenty || isPlayingMonopoly
+          ? "SELECT"
+          : isRoll
+          ? "ROLL"
+          : "END"}
       </Button>
       <ResourceSelector
         open={resourceSelectorOpen}
@@ -258,7 +278,7 @@ function PlayButtons() {
         }}
         options={getValidYearOfPlentyOptions()}
         onSelect={handleResourceSelection}
-        mode={isPlayingMonopoly ? 'monopoly' : 'yearOfPlenty'}
+        mode={isPlayingMonopoly ? "monopoly" : "yearOfPlenty"}
       />
     </>
   );
@@ -305,7 +325,11 @@ export default function ActionsToolbar({
           />
         )}
         <Hidden breakpoint={{ size: "lg", direction: "up" }}>
-          <Button className="open-drawer-btn" onClick={openRightDrawer} style={{ marginLeft: 'auto' }}>
+          <Button
+            className="open-drawer-btn"
+            onClick={openRightDrawer}
+            style={{ marginLeft: "auto" }}
+          >
             <ChevronRightIcon />
           </Button>
         </Hidden>
