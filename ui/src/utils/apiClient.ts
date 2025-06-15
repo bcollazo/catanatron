@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { API_URL } from "../configuration";
+import type { GameAction, GameState } from "./api.types";
 
 type Player = "HUMAN" | "RANDOM" | "CATANATRON";
 type StateIndex = number | "latest";
@@ -21,8 +22,8 @@ export async function getState(
 }
 
 /** action=undefined means bot action */
-export async function postAction(gameId: string, action = undefined) {
-  const response = await axios.post(
+export async function postAction(gameId: string, action?: GameAction) {
+  const response = await axios.post<GameState>(
     `${API_URL}/api/games/${gameId}/actions`,
     action
   );

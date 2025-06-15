@@ -9,7 +9,7 @@ export type Color = "RED" | "BLUE" | "ORANGE" | "WHITE";
 export type TileCoordinate = [number, number, number];
 
 export type GameAction =
-  | [Color, "ROLL", [number, number]]
+  | [Color, "ROLL"]
   | [Color, "DISCARD"]
   | [Color, "BUY_DEVELOPMENT_CARD"]
   | [Color, "BUILD_SETTLEMENT", number]
@@ -17,13 +17,18 @@ export type GameAction =
   | [Color, "BUILD_ROAD", [number, number]]
   | [Color, "PLAY_KNIGHT_CARD"]
   | [Color, "PLAY_ROAD_BUILDING"]
-  | [Color, "PLAY_MONOPOLY", string]
-  | [Color, "PLAY_YEAR_OF_PLENTY", [string, string?]]
+  | [Color, "PLAY_MONOPOLY", ResourceCard]
+  | [Color, "PLAY_YEAR_OF_PLENTY", [ResourceCard, ResourceCard?]]
   | [Color, "MOVE_ROBBER", [TileCoordinate, string?, string?]]
   | [Color, "MARITIME_TRADE", any]
   | [Color, "END_TURN"]; // TODO - fix types
 
-export type Tile = { id: number;  number: string; resource: string; type: string };
+export type Tile = {
+  id: number;
+  number: string;
+  resource: string;
+  type: string;
+};
 export type PlacedTile = {
   coordinate: TileCoordinate;
   tile: Tile;
@@ -64,6 +69,7 @@ export type GameState = {
     }
   >;
   current_playable_actions: GameAction[];
+  is_initial_build_phase: boolean;
 };
 const DIRECTIONS = [
   "NORTH",

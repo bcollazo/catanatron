@@ -27,6 +27,7 @@ import ResourceCards from "../components/ResourceCards";
 import ResourceSelector from "../components/ResourceSelector";
 import { store } from "../store";
 import ACTIONS from "../actions";
+import type { GameAction, ResourceCard } from "../utils/api.types"; // Add this import, adjust path if needed
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 import { humanizeTradeAction } from "../utils/promptUtils";
@@ -37,12 +38,16 @@ import { dispatchSnackbar } from "../components/Snackbar";
 
 function PlayButtons() {
   const { gameId } = useParams();
+  if (!gameId) {
+    console.error("Game ID is not found in URL parameters.");
+    return null;
+  }
   const { state, dispatch } = useContext(store);
-  const { enqueueSnackbar, closeSnackFbar } = useSnackbar();
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [resourceSelectorOpen, setResourceSelectorOpen] = useState(false);
 
   const carryOutAction = useCallback(
-    memoize((action) => async () => {
+    memoize((action?: GameAction) => async () => {
       const gameState = await postAction(gameId, action);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
       dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -56,6 +61,9 @@ function PlayButtons() {
     isPlayingYearOfPlenty,
     isRoadBuilding,
   } = state;
+  if (gameState === null) {
+    return null;
+  }
   const key = playerKey(gameState, gameState.current_color);
   const isRoll =
     gameState.current_prompt === "PLAY_TURN" &&
@@ -69,23 +77,31 @@ function PlayButtons() {
       .filter((action) => action[1].startsWith("PLAY"))
       .map((action) => action[1])
   );
-  const humanColor = getHumanColor(state.gameState);
+  const humanColor = getHumanColor(gameState);
   const setIsPlayingMonopoly = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_MONOPOLY });
   }, [dispatch]);
   const getValidYearOfPlentyOptions = useCallback(() => {
-    return state.gameState.current_playable_actions
+    return gameState.current_playable_actions
       .filter((action) => action[1] === "PLAY_YEAR_OF_PLENTY")
       .map((action) => action[2]);
-  }, [state.gameState.current_playable_actions]);
+  }, [gameState.current_playable_actions]);
   const handleResourceSelection = useCallback(
-    async (selectedResources) => {
+    async (selectedResources: ResourceCard | ResourceCard[]) => {
       setResourceSelectorOpen(false);
-      let action;
+      let action: GameAction;
       if (isPlayingMonopoly) {
-        action = [humanColor, "PLAY_MONOPOLY", selectedResources];
+        action = [
+          humanColor,
+          "PLAY_MONOPOLY",
+          selectedResources as ResourceCard,
+        ];
       } else if (isPlayingYearOfPlenty) {
-        action = [humanColor, "PLAY_YEAR_OF_PLENTY", selectedResources];
+        action = [
+          humanColor,
+          "PLAY_YEAR_OF_PLENTY",
+          selectedResources as [ResourceCard, ResourceCard?],
+        ];
       } else {
         console.error("Invalid resource selector mode");
         return;
@@ -111,14 +127,14 @@ function PlayButtons() {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_YEAR_OF_PLENTY });
   }, [dispatch]);
   const playRoadBuilding = useCallback(async () => {
-    const action = [humanColor, "PLAY_ROAD_BUILDING", null];
+    const action: GameAction = [humanColor, "PLAY_ROAD_BUILDING"];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.PLAY_ROAD_BUILDING });
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
   }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
   const playKnightCard = useCallback(async () => {
-    const action = [humanColor, "PLAY_KNIGHT_CARD", null];
+    const action: GameAction = [humanColor, "PLAY_KNIGHT_CARD"];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -147,9 +163,9 @@ function PlayButtons() {
   ];
 
   const buildActionTypes = new Set(
-    state.gameState.is_initial_build_phase
+    gameState.is_initial_build_phase
       ? []
-      : state.gameState.current_playable_actions
+      : gameState.current_playable_actions
           .filter(
             (action) =>
               action[1].startsWith("BUY") || action[1].startsWith("BUILD")
@@ -157,7 +173,7 @@ function PlayButtons() {
           .map((a) => a[1])
   );
   const buyDevCard = useCallback(async () => {
-    const action = [humanColor, "BUY_DEVELOPMENT_CARD", null];
+    const action: GameAction = [humanColor, "BUY_DEVELOPMENT_CARD"];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -194,7 +210,7 @@ function PlayButtons() {
     },
   ];
 
-  const tradeActions = state.gameState.current_playable_actions.filter(
+  const tradeActions = gameState.current_playable_actions.filter(
     (action) => action[1] === "MARITIME_TRADE"
   );
   const tradeItems = React.useMemo(() => {
@@ -213,9 +229,9 @@ function PlayButtons() {
   const setIsMovingRobber = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_MOVING_ROBBER });
   }, [dispatch]);
-  const rollAction = carryOutAction([humanColor, "ROLL", null]);
+  const rollAction = carryOutAction([humanColor, "ROLL"]);
   const proceedAction = carryOutAction();
-  const endTurnAction = carryOutAction([humanColor, "END_TURN", null]);
+  const endTurnAction = carryOutAction([humanColor, "END_TURN"]);
   return (
     <>
       <OptionsButton

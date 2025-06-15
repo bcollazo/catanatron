@@ -13,8 +13,8 @@ export function playerKey(gameState: GameState, color: Color): string {
   return `P${gameState.colors.indexOf(color)}`;
 }
 
-export function getHumanColor(gameState: GameState): Color | undefined {
+export function getHumanColor(gameState: GameState): Color {
   return gameState.colors.find(
     (color) => !gameState.bot_colors.includes(color)
-  );
+  ) as Color;
 }
