@@ -11,6 +11,11 @@ import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";
 import { type GameState } from "../utils/api.types";
+import {
+  isKeyDownEvent,
+  isTabOrShift,
+  type InteractionEvent,
+} from "../utils/events";
 
 import "./LeftDrawer.scss";
 
@@ -46,22 +51,13 @@ function DrawerContent({ gameState }: { gameState: GameState }) {
   );
 }
 
-type KeydownEvent = React.KeyboardEvent & { type: "keydown" };
-
-const isKeyDownEvent = (
-  event: React.KeyboardEvent | React.MouseEvent
-): event is KeydownEvent => event && event.type === "keydown";
-
 export default function LeftDrawer() {
   const { state, dispatch } = useContext(store);
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openLeftDrawer = useCallback(
-    (event: React.KeyboardEvent | React.MouseEvent) => {
-      if (
-        isKeyDownEvent(event) &&
-        (event.key === "Tab" || event.key === "Shift")
-      ) {
+    (event: InteractionEvent) => {
+      if (isTabOrShift(event)) {
         return;
       }
 
@@ -71,10 +67,7 @@ export default function LeftDrawer() {
   );
   const closeLeftDrawer = useCallback(
     (event: React.KeyboardEvent | React.MouseEvent) => {
-      if (
-        isKeyDownEvent(event) &&
-        (event.key === "Tab" || event.key === "Shift")
-      ) {
+      if (isTabOrShift(event)) {
         return;
       }
 

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import { API_URL } from "../configuration";
-import type { GameAction, GameState } from "./api.types";
+import type { Color, GameAction, GameState } from "./api.types";
 
 type Player = "HUMAN" | "RANDOM" | "CATANATRON";
 type StateIndex = number | "latest";
@@ -30,9 +30,13 @@ export async function postAction(gameId: string, action?: GameAction) {
   return response.data;
 }
 
+export type MCTSProbabilities = {
+  [K in Color]: number;
+};
+
 type MCTSSuccessBody = {
   success: true;
-  probabilities: any;
+  probabilities: MCTSProbabilities;
   state_index: number;
 };
 type MCTSErrorBody = {
