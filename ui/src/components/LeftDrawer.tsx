@@ -11,11 +11,7 @@ import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";
 import { type GameState } from "../utils/api.types";
-import {
-  isKeyDownEvent,
-  isTabOrShift,
-  type InteractionEvent,
-} from "../utils/events";
+import { isTabOrShift, type InteractionEvent } from "../utils/events";
 
 import "./LeftDrawer.scss";
 

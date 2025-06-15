@@ -1,15 +1,29 @@
-import React from "react";
 import cn from "classnames";
 
-import { tilePixelVector, getNodeDelta, SQRT3 } from "../utils/coordinates";
+import { tilePixelVector, getNodeDelta, SQRT3, type CubeCoordinate } from "../utils/coordinates";
+import type { Building, Color, Direction } from "../utils/api.types";
 
-function Building({ building, color }) {
+type BuildingProps = {
+  building: Building;
+  color: Color;
+}
+
+function Building({ building, color }: BuildingProps) {
   const type = building === "CITY" ? "city" : "settlement";
   return <div className={cn(color, type)}></div>;
 }
 
+type NodeProps = {
+  center: [number, number];
+  size: number;
+  coordinate: CubeCoordinate;
+  direction: Direction;
+  building: Building;
+  color: Color;
+  flashing: boolean;
+  onClick: React.MouseEventHandler
+}
 export default function Node({
-  id,
   center,
   size,
   coordinate,
@@ -18,7 +32,7 @@ export default function Node({
   color,
   flashing,
   onClick,
-}) {
+}: NodeProps) {
   const [centerX, centerY] = center;
   const w = SQRT3 * size;
   const h = 2 * size;

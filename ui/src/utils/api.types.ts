@@ -41,6 +41,7 @@ export type PlacedTile = {
 export type PlayerState = any;
 export type VictoryPointCard = "VICTORY_POINT";
 export type ResourceCard = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
+export type Building = "SETTLEMENT" | "CITY";
 
 export type GameState = {
   tiles: Record<number, PlacedTile>;
@@ -59,7 +60,7 @@ export type GameState = {
       id: number;
       tile_coordinate: TileCoordinate;
       direction: Direction;
-      building: "SETTLEMENT" | "CITY" | null;
+      building: Building | null;
       color: Color | null;
     }
   >;
