@@ -27,7 +27,7 @@ import ResourceCards from "../components/ResourceCards";
 import ResourceSelector from "../components/ResourceSelector";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import type { GameAction, ResourceCard } from "../utils/api.types"; // Add this import, adjust path if needed
+import type { GameAction, ResourceCard, GameState } from "../utils/api.types"; // Add GameState to the import, adjust path if needed
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 import { humanizeTradeAction } from "../utils/promptUtils";
@@ -229,7 +229,7 @@ function PlayButtons() {
   const setIsMovingRobber = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_MOVING_ROBBER });
   }, [dispatch]);
-  const rollAction = carryOutAction([humanColor, "ROLL"]);
+  const rollAction = carryOutAction([humanColor, "ROLL", null]);
   const proceedAction = carryOutAction();
   const endTurnAction = carryOutAction([humanColor, "END_TURN"]);
   return (
@@ -307,7 +307,11 @@ export default function ActionsToolbar({
   replayMode,
 }) {
   const { state, dispatch } = useContext(store);
-
+  const { gameState } = state;
+  if (gameState === null) {
+    console.error("No gameState found...");
+    return null;
+  }
   const openLeftDrawer = useCallback(() => {
     dispatch({
       type: ACTIONS.SET_LEFT_DRAWER_OPENED,
@@ -322,10 +326,8 @@ export default function ActionsToolbar({
     });
   }, [dispatch]);
 
-  const botsTurn = state.gameState.bot_colors.includes(
-    state.gameState.current_color
-  );
-  const humanColor = getHumanColor(state.gameState);
+  const botsTurn = gameState.bot_colors.includes(gameState.current_color);
+  const humanColor = getHumanColor(gameState);
   return (
     <>
       <div className="state-summary">
@@ -336,8 +338,8 @@ export default function ActionsToolbar({
         </Hidden>
         {humanColor && (
           <ResourceCards
-            playerState={state.gameState.player_state}
-            playerKey={playerKey(state.gameState, humanColor)}
+            playerState={gameState.player_state}
+            playerKey={playerKey(gameState, humanColor)}
           />
         )}
         <Hidden breakpoint={{ size: "lg", direction: "up" }}>
@@ -351,11 +353,11 @@ export default function ActionsToolbar({
         </Hidden>
       </div>
       <div className="actions-toolbar">
-        {!(botsTurn || state.gameState.winning_color) && !replayMode && (
-          <PlayButtons gameState={state.gameState} />
+        {!(botsTurn || gameState.winning_color) && !replayMode && (
+          <PlayButtons />
         )}
-        {(botsTurn || state.gameState.winning_color) && (
-          <Prompt gameState={state.gameState} isBotThinking={isBotThinking} />
+        {(botsTurn || gameState.winning_color) && (
+          <Prompt gameState={gameState} isBotThinking={isBotThinking} />
         )}
         {/* <Button
           disabled={disabled}
@@ -376,12 +378,12 @@ export default function ActionsToolbar({
 
 function OptionsButton({ menuListId, icon, children, items, disabled }) {
   const [open, setOpen] = useState(false);
-  const anchorRef = useRef(null);
+  const anchorRef = useRef<React.HTMLElementType>(null);
 
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
   };
-  const handleClose = (onClick) => (event) => {
+  const handleClose = (onClick: React.MouseEventHandler) => (event: React.MouseEvent) => {
     if (anchorRef.current && anchorRef.current.contains(event.target)) {
       return;
     }
@@ -389,7 +391,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
     onClick && onClick();
     setOpen(false);
   };
-  function handleListKeyDown(event) {
+  function handleListKeyDown(event: React.KeyboardEvent) {
     if (event.key === "Tab") {
       event.preventDefault();
       setOpen(false);

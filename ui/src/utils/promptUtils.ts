@@ -2,6 +2,7 @@ import type { GameAction, Tile, PlacedTile } from "./api.types";
 import type { GameState } from "./api.types";
 
 export function humanizeAction(gameState: GameState, action: GameAction) {
+  console.log("action", action);
   const botColors = gameState.bot_colors;
   const player = botColors.includes(action[0]) ? "BOT" : "YOU";
   switch (action[1]) {

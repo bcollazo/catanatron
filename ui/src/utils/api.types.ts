@@ -9,7 +9,7 @@ export type Color = "RED" | "BLUE" | "ORANGE" | "WHITE";
 export type TileCoordinate = [number, number, number];
 
 export type GameAction =
-  | [Color, "ROLL"]
+  | [Color, "ROLL", [number, number] | null]
   | [Color, "DISCARD"]
   | [Color, "BUY_DEVELOPMENT_CARD"]
   | [Color, "BUILD_SETTLEMENT", number]
