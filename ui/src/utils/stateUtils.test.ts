@@ -4,57 +4,57 @@ import { type GameState } from "./api.types";
 
 describe("isPlayersTurn", () => {
   test("isTrue", () => {
-    const gameState: GameState = {
+    const gameState: Partial<GameState> = {
       bot_colors: ["BLUE"],
       colors: ["BLUE", "RED"],
       current_color: "RED",
     };
-    expect(isPlayersTurn(gameState)).toBeTruthy();
+    expect(isPlayersTurn(gameState as GameState)).toBeTruthy();
   });
   test("isFalse", () => {
-    const gameState: GameState = {
+    const gameState: Partial<GameState> = {
       bot_colors: ["BLUE"],
       colors: ["BLUE", "RED"],
       current_color: "BLUE",
     };
-    expect(isPlayersTurn(gameState)).toBeFalsy();
+    expect(isPlayersTurn(gameState as GameState)).toBeFalsy();
   });
 });
 
 describe("playerKey", () => {
   test("valid color", () => {
-    const gameState: GameState = {
+    const gameState: Partial<GameState> = {
       bot_colors: ["BLUE"],
       colors: ["BLUE", "RED"],
       current_color: "BLUE",
     };
-    expect(playerKey(gameState, "RED")).toBe("P1");
+    expect(playerKey(gameState as GameState, "RED")).toBe("P1");
   });
   test("bot color", () => {
-    const gameState: GameState = {
+    const gameState: Partial<GameState> = {
       bot_colors: ["BLUE"],
       colors: ["BLUE", "RED"],
       current_color: "BLUE",
     };
-    expect(playerKey(gameState, "BLUE")).toBe("P0");
+    expect(playerKey(gameState as GameState, "BLUE")).toBe("P0");
   });
 });
 
 describe("getHumanColor", () => {
   test("single human", () => {
-    const gameState: GameState = {
+    const gameState: Partial<GameState> = {
       bot_colors: ["BLUE"],
       colors: ["BLUE", "RED"],
       current_color: "BLUE",
     };
-    expect(getHumanColor(gameState)).toBe("RED");
+    expect(getHumanColor(gameState as GameState)).toBe("RED");
   });
   test("only bots", () => {
-    const gameState: GameState = {
+    const gameState: Partial<GameState> = {
       bot_colors: ["BLUE", "RED"],
       colors: ["BLUE", "RED"],
       current_color: "BLUE",
     };
-    expect(getHumanColor(gameState)).toBeUndefined();
+    expect(getHumanColor(gameState as GameState)).toBeUndefined();
   });
 });

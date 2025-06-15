@@ -34,7 +34,7 @@ export type VictoryPointCard = "VICTORY_POINT";
 export type ResourceCard = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
 
 export type GameState = {
-  tiles: Record<string, PlacedTile>;
+  tiles: Record<number, PlacedTile>;
   adjacent_tiles: Record<string, Tile[]>;
   bot_colors: Color[];
   colors: Color[];
@@ -44,8 +44,25 @@ export type GameState = {
   player_state: Record<string, PlayerState>;
   actions: GameAction[];
   robber_coordinate: TileCoordinate;
-  nodes: Record<number, { id: number; tile_coordinate: TileCoordinate; direction: Direction; building: "SETTLEMENT" | "CITY" | null; color: Color | null }>;
-  edges: Record<number, { id: [number, number]; color: Color | null; direction: Direction; tile_coordinate: TileCoordinate; }>;
+  nodes: Record<
+    number,
+    {
+      id: number;
+      tile_coordinate: TileCoordinate;
+      direction: Direction;
+      building: "SETTLEMENT" | "CITY" | null;
+      color: Color | null;
+    }
+  >;
+  edges: Record<
+    number,
+    {
+      id: [number, number];
+      color: Color | null;
+      direction: Direction;
+      tile_coordinate: TileCoordinate;
+    }
+  >;
   current_playable_actions: GameAction[];
 };
 const DIRECTIONS = [

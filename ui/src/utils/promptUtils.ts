@@ -90,6 +90,6 @@ export function getTileString(tile: PlacedTile): string {
   const { number = "THE", resource = "DESERT" } = tile.tile;
   return `${number} ${resource}`;
 }
-export function findTileById(gameState: GameState, tileId: string): PlacedTile {
+export function findTileById(gameState: GameState, tileId: number): PlacedTile {
   return gameState.tiles[tileId];
 }
