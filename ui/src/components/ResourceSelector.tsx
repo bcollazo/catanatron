@@ -74,7 +74,7 @@ const ResourceSelector = ({
 
   const isMonopolyOption = (
     option: ResourceSelectorProps["options"][number]
-  ): option is ResourceCard => mode === "monopoly";
+  ): option is ResourceCard => mode === "monopoly" && !!option;
   const optionToResourceSpan = (option: ResourceCard | ResourceCard[]) => {
     if (isMonopolyOption(option)) {
       return getResourceSpan(option);
