@@ -14,16 +14,9 @@ type ResourceSelectorProps = {
   open: boolean;
   onClose: () => void;
   onSelect: (option: ResourceCard | ResourceCard[]) => void;
-} & (
-  | {
-      options: ResourceCard[];
-      mode: "monopoly";
-    }
-  | {
-      options: ResourceCard[][];
-      mode: "yearOfPlenty";
-    }
-);
+  options: ResourceCard[][]; // this is only used when mode == "yearOfPlenty"
+  mode: "monopoly" | "yearOfPlenty";
+};
 
 const ResourceSelector = ({
   open,
@@ -73,7 +66,7 @@ const ResourceSelector = ({
   );
 
   const isMonopolyOption = (
-    option: ResourceSelectorProps["options"][number]
+    option: ResourceCard | ResourceCard[]
   ): option is ResourceCard => mode === "monopoly" && !!option;
   const optionToResourceSpan = (option: ResourceCard | ResourceCard[]) => {
     if (isMonopolyOption(option)) {
@@ -118,7 +111,9 @@ const ResourceSelector = ({
               className="resource-button"
               onClick={() => onSelect(option)}
             >
-              <Typography variant="body2">{optionToResourceSpan(option)}</Typography>
+              <Typography variant="body2">
+                {optionToResourceSpan(option)}
+              </Typography>
             </Button>
           ))}
         </div>

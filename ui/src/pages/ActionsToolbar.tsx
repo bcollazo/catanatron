@@ -27,7 +27,7 @@ import ResourceCards from "../components/ResourceCards";
 import ResourceSelector from "../components/ResourceSelector";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import type { GameAction, ResourceCard, GameState } from "../utils/api.types"; // Add GameState to the import, adjust path if needed
+import type { GameAction, ResourceCard } from "../utils/api.types"; // Add GameState to the import, adjust path if needed
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 import { humanizeTradeAction } from "../utils/promptUtils";
@@ -100,7 +100,7 @@ function PlayButtons() {
         action = [
           humanColor,
           "PLAY_YEAR_OF_PLENTY",
-          selectedResources as [ResourceCard, ResourceCard?],
+          selectedResources as [ResourceCard] | [ResourceCard, ResourceCard],
         ];
       } else {
         console.error("Invalid resource selector mode");
@@ -301,10 +301,11 @@ function PlayButtons() {
 }
 
 export default function ActionsToolbar({
-  zoomIn,
-  zoomOut,
   isBotThinking,
   replayMode,
+}: {
+  isBotThinking: boolean;
+  replayMode: boolean;
 }) {
   const { state, dispatch } = useContext(store);
   const { gameState } = state;
@@ -376,21 +377,46 @@ export default function ActionsToolbar({
   );
 }
 
-function OptionsButton({ menuListId, icon, children, items, disabled }) {
+type OptionItem = {
+  label: string;
+  disabled: boolean;
+  onClick: (event: MouseEvent | TouchEvent) => void;
+};
+
+type OptionsButtonProps = {
+  menuListId: string;
+  icon: any;
+  children: React.ReactNode;
+  items: OptionItem[];
+  disabled: boolean;
+};
+
+function OptionsButton({
+  menuListId,
+  icon,
+  children,
+  items,
+  disabled,
+}: OptionsButtonProps) {
   const [open, setOpen] = useState(false);
-  const anchorRef = useRef<React.HTMLElementType>(null);
+  const anchorRef = useRef<HTMLAnchorElement>(null);
 
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
   };
-  const handleClose = (onClick: React.MouseEventHandler) => (event: React.MouseEvent) => {
-    if (anchorRef.current && anchorRef.current.contains(event.target)) {
-      return;
-    }
+  const handleClose =
+    (onClick?: (event: MouseEvent | TouchEvent) => void) =>
+    (event: MouseEvent | TouchEvent) => {
+      if (
+        anchorRef.current &&
+        anchorRef.current.contains(event.target as Node)
+      ) {
+        return;
+      }
 
-    onClick && onClick();
-    setOpen(false);
-  };
+      onClick && onClick(event);
+      setOpen(false);
+    };
   function handleListKeyDown(event: React.KeyboardEvent) {
     if (event.key === "Tab") {
       event.preventDefault();
@@ -401,7 +427,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
   const prevOpen = useRef(open);
   useEffect(() => {
     if (prevOpen.current === true && open === false) {
-      anchorRef.current.focus();
+      anchorRef.current && anchorRef.current.focus();
     }
 
     prevOpen.current = open;
@@ -412,6 +438,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
       <Button
         disabled={disabled}
         ref={anchorRef}
+        href="#"
         aria-controls={open ? menuListId : undefined}
         aria-haspopup="true"
         variant="contained"
@@ -438,7 +465,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
             }}
           >
             <Paper>
-              <ClickAwayListener onClickAway={handleClose}>
+              <ClickAwayListener onClickAway={handleClose()}>
                 <MenuList
                   autoFocusItem={open}
                   id={menuListId}
@@ -447,7 +474,11 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
                   {items.map((item) => (
                     <MenuItem
                       key={item.label}
-                      onClick={handleClose(item.onClick)}
+                      onClick={
+                        handleClose(
+                          item.onClick
+                        ) as unknown as React.MouseEventHandler
+                      }
                       disabled={item.disabled}
                     >
                       {item.label}

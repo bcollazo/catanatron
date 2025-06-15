@@ -18,7 +18,11 @@ export type GameAction =
   | [Color, "PLAY_KNIGHT_CARD"]
   | [Color, "PLAY_ROAD_BUILDING"]
   | [Color, "PLAY_MONOPOLY", ResourceCard]
-  | [Color, "PLAY_YEAR_OF_PLENTY", [ResourceCard, ResourceCard?]]
+  | [
+      Color,
+      "PLAY_YEAR_OF_PLENTY",
+      [ResourceCard] | [ResourceCard, ResourceCard]
+    ]
   | [Color, "MOVE_ROBBER", [TileCoordinate, string?, string?]]
   | [Color, "MARITIME_TRADE", any]
   | [Color, "END_TURN"]; // TODO - fix types

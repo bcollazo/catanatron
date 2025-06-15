@@ -7,6 +7,10 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
   const player = botColors.includes(action[0]) ? "BOT" : "YOU";
   switch (action[1]) {
     case "ROLL":
+      if (!action[2])
+        throw new Error(
+          "did not get Rolling outcomes back from Server! output"
+        );
       return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
     case "DISCARD":
       return `${player} DISCARDED`;
