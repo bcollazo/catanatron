@@ -1,6 +1,6 @@
 import React, { createContext, useReducer } from "react";
 import ACTIONS from "./actions";
-import { GameState } from "./utils/api.types";
+import { type GameState } from "./utils/api.types";
 
 type CatanState = {
   gameState: GameState | null; // TODO

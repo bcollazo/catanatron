@@ -53,6 +53,7 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
       const tile = findTileByCoordinate(gameState, action[2][0]);
       const tileString = getTileString(tile);
       // todo - what is the stolen resource action array type?
+      console.log("action robber", action);
       const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : "";
       return `${player} ROBBED ${tileString}${stolenResource}`;
     }

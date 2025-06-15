@@ -22,8 +22,8 @@ import SimCardIcon from "@mui/icons-material/SimCard";
 import { useParams } from "react-router";
 
 import Hidden from "../components/Hidden";
-import { ResourceCards } from "../components/PlayerStateBox";
 import Prompt from "../components/Prompt";
+import ResourceCards from "../components/ResourceCards";
 import ResourceSelector from "../components/ResourceSelector";
 import { store } from "../store";
 import ACTIONS from "../actions";
@@ -38,7 +38,7 @@ import { dispatchSnackbar } from "../components/Snackbar";
 function PlayButtons() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
-  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const { enqueueSnackbar, closeSnackFbar } = useSnackbar();
   const [resourceSelectorOpen, setResourceSelectorOpen] = useState(false);
 
   const carryOutAction = useCallback(
