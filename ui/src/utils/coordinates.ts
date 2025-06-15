@@ -1,14 +1,21 @@
 // Helpers for implementing https://www.redblobgames.com/grids/hexagons/
 // TODO - is this still needed with new CSS features?
 
+import type { Direction } from "./api.types";
+
 export type CubeCoordinate = [number, number, number];
 type RadialCoordinate = {
-  q: number
-  r: number
-}
+  q: number;
+  r: number;
+};
 
 // Gives center coordinate for tile.
-export function tilePixelVector(coordinate: CubeCoordinate, size: number, centerX: number, centerY: number) {
+export function tilePixelVector(
+  coordinate: CubeCoordinate,
+  size: number,
+  centerX: number,
+  centerY: number
+) {
   const hex = cubeToAxial(coordinate);
   return [
     size * (SQRT3 * hex.q + (SQRT3 / 2) * hex.r) + centerX,
@@ -19,19 +26,6 @@ export function tilePixelVector(coordinate: CubeCoordinate, size: number, center
 export function cubeToAxial(cube: CubeCoordinate): RadialCoordinate {
   return { q: cube[0], r: cube[2] };
 }
-
-const DIRECTIONS = [
-  "NORTH",
-  "NORTHEAST",
-  "SOUTHEAST",
-  "SOUTH",
-  "SOUTHWEST",
-  "NORTHWEST",
-  "EAST",
-  "WEST",
-] as const;
-
-export type Direction = (typeof DIRECTIONS)[number];
 
 // TODO - why are EAST and WEST not included here?
 export function getNodeDelta(direction: Direction, w: number, h: number) {

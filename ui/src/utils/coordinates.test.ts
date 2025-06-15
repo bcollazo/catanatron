@@ -4,8 +4,8 @@ import {
   tilePixelVector,
   getNodeDelta,
   getEdgeTransform,
-  type Direction,
 } from "./coordinates";
+import { type Direction } from "./api.types";
 
 describe("tilePixelVector", () => {
   test("zeroed", () => {

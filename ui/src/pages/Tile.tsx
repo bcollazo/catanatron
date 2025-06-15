@@ -9,7 +9,8 @@ import lumberTile from "../assets/tile_wood.svg";
 import oreTile from "../assets/tile_ore.svg";
 import woolTile from "../assets/tile_sheep.svg";
 import maritimeTile from "../assets/tile_maritime.svg";
-import { SQRT3, tilePixelVector, type Direction } from "../utils/coordinates";
+import { SQRT3, tilePixelVector } from "../utils/coordinates";
+import { type Direction } from "../utils/api.types";
 
 type NumberTokenProps = {
   number: number;
