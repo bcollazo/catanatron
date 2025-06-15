@@ -9,7 +9,8 @@ import PlayerStateBox from "./PlayerStateBox";
 import { humanizeAction } from "../utils/promptUtils";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { playerKey, type GameState } from "../utils/stateUtils";
+import { playerKey } from "../utils/stateUtils";
+import { type GameState } from "../utils/api.types";
 
 import "./LeftDrawer.scss";
 
@@ -50,7 +51,7 @@ export default function LeftDrawer() {
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openLeftDrawer = useCallback(
-    (event) => {
+    (event: React.KeyboardEvent | React.MouseEvent) => {
       if (
         event &&
         event.type === "keydown" &&
@@ -64,7 +65,7 @@ export default function LeftDrawer() {
     [dispatch]
   );
   const closeLeftDrawer = useCallback(
-    (event) => {
+    (event: React.KeyboardEvent | React.MouseEvent) => {
       if (
         event &&
         event.type === "keydown" &&
@@ -91,12 +92,15 @@ export default function LeftDrawer() {
           disableDiscovery={iOS}
           onKeyDown={closeLeftDrawer}
         >
-          <DrawerContent gameState={state.gameState} />
+          <DrawerContent gameState={state.gameState as GameState} />
         </SwipeableDrawer>
       </Hidden>
-      <Hidden breakpoint={{size: "sm", direction: "down" }} implementation="css">
+      <Hidden
+        breakpoint={{ size: "sm", direction: "down" }}
+        implementation="css"
+      >
         <Drawer className="left-drawer" anchor="left" variant="permanent" open>
-          <DrawerContent gameState={state.gameState} />
+          <DrawerContent gameState={state.gameState as GameState} />
         </Drawer>
       </Hidden>
     </>

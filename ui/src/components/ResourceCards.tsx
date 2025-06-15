@@ -1,5 +1,6 @@
 import { Paper } from "@mui/material";
-import { type Card, type PlayerState } from "../utils/stateUtils";
+import { type PlayerState } from "../utils/api.types";
+import { type Card } from "../utils/api.types";
 
 // TODO - do we need to split the SCSS for this component?
 import "./PlayerStateBox.scss";

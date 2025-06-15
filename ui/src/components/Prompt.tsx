@@ -1,4 +1,5 @@
-import { isPlayersTurn, type GameState } from "../utils/stateUtils";
+import { isPlayersTurn } from "../utils/stateUtils";
+import { type GameState } from "../utils/api.types";
 
 import "./Prompt.scss";
 
@@ -17,9 +18,13 @@ function humanizePrompt(currentPrompt: string): string {
   }
 }
 
-export default function Prompt({ gameState, isBotThinking }: {
+export default function Prompt({
+  gameState,
+  isBotThinking,
+}: {
   gameState: GameState;
-  isBotThinking: boolean;}) {
+  isBotThinking: boolean;
+}) {
   let prompt = "";
   if (isBotThinking) {
     // Do nothing, but still render.

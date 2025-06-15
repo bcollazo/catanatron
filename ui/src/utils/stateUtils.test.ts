@@ -1,10 +1,6 @@
 import { describe, test, expect } from "vitest";
-import {
-  getHumanColor,
-  isPlayersTurn,
-  playerKey,
-  type GameState,
-} from "./stateUtils";
+import { getHumanColor, isPlayersTurn, playerKey } from "./stateUtils";
+import { type GameState } from "./api.types";
 
 describe("isPlayersTurn", () => {
   test("isTrue", () => {

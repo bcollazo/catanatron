@@ -1,8 +1,9 @@
 import React, { createContext, useReducer } from "react";
 import ACTIONS from "./actions";
+import { GameState } from "./utils/api.types";
 
 type CatanState = {
-  gameState: unknown | null; // TODO
+  gameState: GameState | null; // TODO
   freeRoadsAvailable: number;
   isBuildingRoad: boolean;
   isBuildingSettlement: boolean;
@@ -13,12 +14,11 @@ type CatanState = {
   isPlayingYearOfPlenty: boolean;
   isRoadBuilding: boolean;
   isMovingRobber: boolean;
-}
+};
 type ReducerAction = {
   type: keyof typeof ACTIONS;
   data: any; // TODO find exact types
-}
-
+};
 
 const initialState: CatanState = {
   gameState: null,
@@ -35,7 +35,10 @@ const initialState: CatanState = {
   isMovingRobber: false,
 } as const;
 
-const store = createContext<{ state: CatanState;  dispatch?: React.ActionDispatch<[action: ReducerAction]>}>({ state: initialState });
+const store = createContext<{
+  state: CatanState;
+  dispatch: React.ActionDispatch<[action: ReducerAction]>;
+}>({ state: initialState, dispatch: () => {} });
 const { Provider } = store;
 
 const StateProvider = ({ children }: { children: React.ReactNode }) => {

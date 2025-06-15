@@ -1,4 +1,5 @@
-import type { GameState, GameAction, Tile, PlacedTile } from "./stateUtils";
+import type { GameAction, Tile, PlacedTile } from "./api.types";
+import type { GameState } from "./api.types";
 
 export function humanizeAction(gameState: GameState, action: GameAction) {
   const botColors = gameState.bot_colors;
@@ -66,7 +67,9 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
   }
 }
 export function humanizeTradeAction(action: GameAction): string {
-  const out = action[2].slice(0, 4).filter((resource: unknown) => resource !== null);
+  const out = action[2]
+    .slice(0, 4)
+    .filter((resource: unknown) => resource !== null);
   return `${out.length} ${out[0]} => ${action[2][4]}`;
 }
 export function findTileByCoordinate(gameState: GameState, coordinate: any) {

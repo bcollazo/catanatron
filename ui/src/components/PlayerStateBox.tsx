@@ -1,7 +1,7 @@
 import cn from "classnames";
 
 import "./PlayerStateBox.scss";
-import { type Color, type PlayerState } from "../utils/stateUtils";
+import { type Color, type PlayerState } from "../utils/api.types";
 import ResourceCards from "./ResourceCards";
 
 export default function PlayerStateBox({ playerState, playerKey, color }: {
