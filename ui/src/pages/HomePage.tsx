@@ -13,7 +13,9 @@ const GameMode = Object.freeze({
   CATANATRON_BOTS: "CATANATRON_BOTS",
 });
 
-function getPlayers(gameMode, numPlayers) {
+type GameModeType = typeof GameMode[keyof typeof GameMode]
+
+function getPlayers(gameMode: GameModeType, numPlayers: number) {
   switch (gameMode) {
     case GameMode.HUMAN_VS_CATANATRON:
       const players = ["HUMAN"];
@@ -35,7 +37,7 @@ export default function HomePage() {
   const [numPlayers, setNumPlayers] = useState(2);
   const navigate = useNavigate();
 
-  const handleCreateGame = async (gameMode) => {
+  const handleCreateGame = async (gameMode: GameModeType) => {
     setLoading(true);
     const players = getPlayers(gameMode, numPlayers);
     const gameId = await createGame(players);
@@ -97,8 +99,7 @@ export default function HomePage() {
           <GridLoader
             className="loader"
             color="#ffffff"
-            height={60}
-            width={60}
+            size={60}
           />
         )}
       </div>
