@@ -1,9 +1,9 @@
-
 export type Card = ResourceCard | DevelopmentCard | VictoryPointCard;
-export type DevelopmentCard = "KNIGHT" |
-  "MONOPOLY" |
-  "YEAR_OF_PLENTY" |
-    "ROAD_BUILDING";
+export type DevelopmentCard =
+  | "KNIGHT"
+  | "MONOPOLY"
+  | "YEAR_OF_PLENTY"
+  | "ROAD_BUILDING";
 
 export type Color = "RED" | "BLUE" | "ORANGE" | "WHITE";
 export type TileCoordinate = [number, number, number];
@@ -33,24 +33,25 @@ export type ResourceCard = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
 export type Building = "SETTLEMENT" | "CITY";
 
 type ResourceTile = {
+  id: number;
   type: "RESOURCE_TILE";
   resource: ResourceCard;
   number: number;
 };
 
 type DesertTile = {
+  id: number;
   type: "DESERT";
 };
 
 type PortTile = {
+  id: number;
   type: "PORT";
   direction: Direction;
   resource: ResourceCard;
 };
 
-export type Tile = {
-  id: number;
-} & (ResourceTile | DesertTile | PortTile);
+export type Tile = ResourceTile | DesertTile | PortTile;
 
 export type PlacedTile = {
   coordinate: TileCoordinate;
@@ -98,5 +99,3 @@ const DIRECTIONS = [
 ] as const;
 
 export type Direction = (typeof DIRECTIONS)[number];
-
-

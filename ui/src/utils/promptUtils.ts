@@ -86,11 +86,20 @@ export function findTileByCoordinate(gameState: GameState, coordinate: any) {
   );
 }
 export function getShortTileString(tile: Tile): string {
-  return tile.number || tile.type;
+  return tile.type === "RESOURCE_TILE" ? tile.number.toString() : tile.type;
 }
 export function getTileString(tile: PlacedTile): string {
-  const { number = "THE", resource = "DESERT" } = tile.tile;
-  return `${number} ${resource}`;
+  const tileInfo = tile.tile;
+  switch (tileInfo.type) {
+    case "DESERT":
+      return "THE DESERT";
+    case "RESOURCE_TILE":
+      return `${tileInfo.number} ${tileInfo.resource}`;
+    default:
+      throw new Error(
+        "Tried to use TileString on a nonResource / non Desert tile"
+      );
+  }
 }
 export function findTileById(gameState: GameState, tileId: number): PlacedTile {
   return gameState.tiles[tileId];
