@@ -51,9 +51,12 @@ const HiddenCSS = ({ breakpoint, children }: HiddenProps) => {
  * See https://v5-0-6.mui.com/guides/migration-v4/#hidden
  *
  */
-const Hidden = ({ implementation, ...props }: { implementation: "js" | "css" } & HiddenProps) => {
-    const Component = implementation === "js" ? HiddenJS : HiddenCSS;
-    return <Component {...props} />
-}
+const Hidden = ({
+  implementation = "css",
+  ...props
+}: { implementation?: "js" | "css" } & HiddenProps) => {
+  const Component = implementation === "js" ? HiddenJS : HiddenCSS;
+  return <Component {...props} />;
+};
 
 export default Hidden;
