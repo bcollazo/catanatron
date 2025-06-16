@@ -4,7 +4,7 @@ import { API_URL } from "../configuration";
 import type { Color, GameAction, GameState } from "./api.types";
 
 type Player = "HUMAN" | "RANDOM" | "CATANATRON";
-type StateIndex = number | "latest";
+export type StateIndex = number | `${number}` | "latest";
 
 export async function createGame(players: Player[]) {
   const response = await axios.post(API_URL + "/api/games", { players });
