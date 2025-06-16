@@ -26,7 +26,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <StateProvider>
         <SnackbarProvider
-          classes={{ containerRoot: ["snackbar-container"] }}
+          classes={{ containerRoot: "snackbar-container" }}
           maxSnack={1}
           autoHideDuration={1000}
           TransitionComponent={Fade}
@@ -42,7 +42,7 @@ function App() {
                 path="/games/:gameId"
                 element={<GameScreen replayMode={false} />}
               />
-              <Route path="/" exact={true} element={<HomePage />} />
+              <Route path="/" element={<HomePage />} />
             </Routes>
           </Router>
         </SnackbarProvider>
