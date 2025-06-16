@@ -5,7 +5,7 @@ import Drawer from "@mui/material/Drawer";
 import { CircularProgress, Button } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import { type MCTSProbabilities, getMctsAnalysis } from "../utils/apiClient";
-import { isTabOrShift } from "../utils/events";
+import { isTabOrShift, type InteractionEvent } from "../utils/events";
 import { useParams } from "react-router";
 
 import Hidden from "./Hidden";
@@ -94,10 +94,8 @@ export default function RightDrawer() {
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openRightDrawer = useCallback(
-    (event: React.MouseEvent | React.KeyboardEvent) => {
-      if (
-        isTabOrShift(event)
-      ) {
+    (event: InteractionEvent) => {
+      if (isTabOrShift(event)) {
         return;
       }
 
@@ -107,10 +105,8 @@ export default function RightDrawer() {
   );
 
   const closeRightDrawer = useCallback(
-    (event: React.MouseEvent | React.KeyboardEvent) => {
-      if (
-        isTabOrShift(event)
-      ) {
+    (event: InteractionEvent) => {
+      if (isTabOrShift(event)) {
         return;
       }
 

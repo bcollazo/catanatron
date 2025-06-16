@@ -62,7 +62,7 @@ export default function LeftDrawer() {
     [dispatch]
   );
   const closeLeftDrawer = useCallback(
-    (event: React.KeyboardEvent | React.MouseEvent) => {
+    (event: InteractionEvent) => {
       if (isTabOrShift(event)) {
         return;
       }
