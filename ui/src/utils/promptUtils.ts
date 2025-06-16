@@ -75,6 +75,7 @@ export function humanizeTradeAction(action: GameAction): string {
     .filter((resource: unknown) => resource !== null);
   return `${out.length} ${out[0]} => ${action[2][4]}`;
 }
+
 export function findTileByCoordinate(gameState: GameState, coordinate: any) {
   for (const tile of Object.values(gameState.tiles)) {
     if (JSON.stringify(tile.coordinate) === JSON.stringify(coordinate)) {
@@ -85,9 +86,11 @@ export function findTileByCoordinate(gameState: GameState, coordinate: any) {
     `Tile not found for coordinate: ${JSON.stringify(coordinate)}`
   );
 }
+
 export function getShortTileString(tile: Tile): string {
   return tile.type === "RESOURCE_TILE" ? tile.number.toString() : tile.type;
 }
+
 export function getTileString(tile: PlacedTile): string {
   const tileInfo = tile.tile;
   switch (tileInfo.type) {
@@ -96,11 +99,10 @@ export function getTileString(tile: PlacedTile): string {
     case "RESOURCE_TILE":
       return `${tileInfo.number} ${tileInfo.resource}`;
     default:
-      throw new Error(
-        "Tried to use TileString on a nonResource / non Desert tile"
-      );
+      throw new Error("getTileString() only works on Desert or Resource tiles");
   }
 }
+
 export function findTileById(gameState: GameState, tileId: number): PlacedTile {
   return gameState.tiles[tileId];
 }
