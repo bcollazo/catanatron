@@ -1,13 +1,22 @@
-import React from "react";
 import cn from "classnames";
 
-import { tilePixelVector, getEdgeTransform } from "../utils/coordinates";
-import useWindowSize from "../utils/useWindowSize";
+import type { Color, Direction } from "../utils/api.types";
+import { tilePixelVector, getEdgeTransform, type CubeCoordinate } from "../utils/coordinates";
 
-function Road({ color }) {
+function Road({ color }: { color: Color}) {
   return <div className={cn("road", color)}></div>;
 }
 
+type EdgeProps = {
+  id: string;
+  center: [number, number];
+  coordinate: CubeCoordinate;
+  size: number;
+  direction: Direction;
+  color: Color;
+  flashing: boolean;
+  onClick: React.MouseEventHandler;
+}
 export default function Edge({
   id,
   center,
@@ -17,11 +26,10 @@ export default function Edge({
   color,
   flashing,
   onClick,
-}) {
-  const { width } = useWindowSize();
+}: EdgeProps) {
   const [centerX, centerY] = center;
   const [tileX, tileY] = tilePixelVector(coordinate, size, centerX, centerY);
-  const transform = getEdgeTransform(direction, size, width);
+  const transform = getEdgeTransform(direction, size); // TODO this used to include windowSize; should we bring that back?
 
   return (
     <div
