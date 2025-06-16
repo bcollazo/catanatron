@@ -27,24 +27,38 @@ export type GameAction =
   | [Color, "MARITIME_TRADE", any]
   | [Color, "END_TURN"]; // TODO - fix types
 
-export type Tile = {
-  id: number;
-  number: string;
-  resource: string;
-  type: string;
-};
-export type PlacedTile = {
-  coordinate: TileCoordinate;
-  tile: Tile;
-};
-
 export type PlayerState = any;
 export type VictoryPointCard = "VICTORY_POINT";
 export type ResourceCard = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
 export type Building = "SETTLEMENT" | "CITY";
 
+type ResourceTile = {
+  type: "RESOURCE_TILE";
+  resource: ResourceCard;
+  number: number;
+};
+
+type DesertTile = {
+  type: "DESERT";
+};
+
+type PortTile = {
+  type: "PORT";
+  direction: Direction;
+  resource: ResourceCard;
+};
+
+export type Tile = {
+  id: number;
+} & (ResourceTile | DesertTile | PortTile);
+
+export type PlacedTile = {
+  coordinate: TileCoordinate;
+  tile: Tile;
+};
+
 export type GameState = {
-  tiles: Record<number, PlacedTile>;
+  tiles: PlacedTile[];
   adjacent_tiles: Record<string, Tile[]>;
   bot_colors: Color[];
   colors: Color[];
@@ -54,27 +68,23 @@ export type GameState = {
   player_state: Record<string, PlayerState>;
   actions: GameAction[];
   robber_coordinate: TileCoordinate;
-  nodes: Record<
-    number,
-    {
-      id: number;
-      tile_coordinate: TileCoordinate;
-      direction: Direction;
-      building: Building | null;
-      color: Color | null;
-    }
-  >;
-  edges: Record<
-    number,
-    {
-      id: [number, number];
-      color: Color | null;
-      direction: Direction;
-      tile_coordinate: TileCoordinate;
-    }
-  >;
+  nodes: Array<{
+    id: number;
+    tile_coordinate: TileCoordinate;
+    direction: Direction;
+    building: Building | null;
+    color: Color | null;
+  }>;
+  edges: Array<{
+    id: [number, number];
+    color: Color | null;
+    direction: Direction;
+    tile_coordinate: TileCoordinate;
+  }>;
   current_playable_actions: GameAction[];
   is_initial_build_phase: boolean;
+  edgeActions?: GameAction[];
+  nodeActions?: GameAction[];
 };
 const DIRECTIONS = [
   "NORTH",

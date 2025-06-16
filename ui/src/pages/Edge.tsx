@@ -7,16 +7,21 @@ function Road({ color }: { color: Color}) {
   return <div className={cn("road", color)}></div>;
 }
 
+export type EdgeId = `${number},${number}`;
+
+export const toEdgeId = (id: [number, number]): EdgeId => `${id[0]},${id[1]}`;
+
 type EdgeProps = {
-  id: string;
+  id: `${number},${number}`;
   center: [number, number];
   coordinate: CubeCoordinate;
   size: number;
   direction: Direction;
-  color: Color;
+  color: Color | null;
   flashing: boolean;
   onClick: React.MouseEventHandler;
-}
+};
+
 export default function Edge({
   id,
   center,

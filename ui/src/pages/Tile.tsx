@@ -10,7 +10,11 @@ import oreTile from "../assets/tile_ore.svg";
 import woolTile from "../assets/tile_sheep.svg";
 import maritimeTile from "../assets/tile_maritime.svg";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
-import { type Direction } from "../utils/api.types";
+import {
+  type Direction,
+  type ResourceCard,
+  type Tile,
+} from "../utils/api.types";
 
 type NumberTokenProps = {
   number: number;
@@ -59,7 +63,7 @@ const numberToPips = (number: number) => {
   }
 };
 
-const RESOURCES = {
+const RESOURCES: { [K in ResourceCard]: string } = {
   BRICK: brickTile,
   SHEEP: woolTile,
   ORE: oreTile,
@@ -67,47 +71,38 @@ const RESOURCES = {
   WHEAT: grainTile,
 } as const;
 
-type Resource = keyof typeof RESOURCES;
-
-type ResourceTile = {
-  type: "RESOURCE_TILE";
-  resource: Resource;
-  number: number;
-};
-
-type DesertTile = {
-  type: "DESERT";
-};
-
-type PortTile = {
-  type: "PORT";
-  direction: Direction;
-  resource: Resource;
-};
-
-const calculatePortPosition = (direction: Direction, size: number): { x: number;  y : number } => {
-    let x = 0;
-    let y = 0;
-    if (direction.includes("SOUTH")) {
-      y += size / 3;
-    } else if (direction.includes("NORTH")) {
-      y -= size / 3;
+const calculatePortPosition = (
+  direction: Direction,
+  size: number
+): { x: number; y: number } => {
+  let x = 0;
+  let y = 0;
+  if (direction.includes("SOUTH")) {
+    y += size / 3;
+  } else if (direction.includes("NORTH")) {
+    y -= size / 3;
+  }
+  if (direction.includes("WEST")) {
+    x -= size / 4;
+    if (direction === "WEST") {
+      x = -size / 3;
     }
-    if (direction.includes("WEST")) {
-      x -= size / 4;
-      if (direction === "WEST") {
-        x = -size / 3;
-      }
-    } else if (direction.includes("EAST")) {
-      x += size / 4;
-      if (direction === "EAST") {
-        x = size / 3;
-      }
+  } else if (direction.includes("EAST")) {
+    x += size / 4;
+    if (direction === "EAST") {
+      x = size / 3;
     }
-    return { x, y }
-}
+  }
+  return { x, y };
+};
 
-const Port = ({ resource, style }: { resource: Resource; style: Partial<React.CSSProperties> }) => {
+const Port = ({
+  resource,
+  style,
+}: {
+  resource: ResourceCard;
+  style: Partial<React.CSSProperties>;
+}) => {
   let ratio;
   let tile;
   if (resource in RESOURCES) {
@@ -118,25 +113,27 @@ const Port = ({ resource, style }: { resource: Resource; style: Partial<React.CS
     tile = maritimeTile;
   }
 
-  return  <div
-          className="port"
-          style={{
-            ...style,
-            backgroundImage: `url("${tile}")`,
-            height: 60,
-            backgroundSize: "contain",
-            width: 52,
-            backgroundRepeat: "no-repeat",
-          }}
-        >
-          {ratio}
-        </div>
-}
+  return (
+    <div
+      className="port"
+      style={{
+        ...style,
+        backgroundImage: `url("${tile}")`,
+        height: 60,
+        backgroundSize: "contain",
+        width: 52,
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {ratio}
+    </div>
+  );
+};
 
 type TileProps = {
   center: any;
   coordinate: any;
-  tile: ResourceTile | PortTile | DesertTile;
+  tile: Tile;
   size: any;
   onClick: React.MouseEventHandler<HTMLDivElement>;
   flashing: boolean;

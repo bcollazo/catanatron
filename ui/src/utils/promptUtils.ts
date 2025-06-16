@@ -2,7 +2,6 @@ import type { GameAction, Tile, PlacedTile } from "./api.types";
 import type { GameState } from "./api.types";
 
 export function humanizeAction(gameState: GameState, action: GameAction) {
-  console.log("action", action);
   const botColors = gameState.bot_colors;
   const player = botColors.includes(action[0]) ? "BOT" : "YOU";
   switch (action[1]) {
@@ -57,8 +56,6 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
     case "MOVE_ROBBER": {
       const tile = findTileByCoordinate(gameState, action[2][0]);
       const tileString = getTileString(tile);
-      // todo - what is the stolen resource action array type?
-      console.log("action robber", action);
       const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : "";
       return `${player} ROBBED ${tileString}${stolenResource}`;
     }

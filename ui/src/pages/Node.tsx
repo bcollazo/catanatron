@@ -3,10 +3,10 @@ import cn from "classnames";
 import { tilePixelVector, getNodeDelta, SQRT3, type CubeCoordinate } from "../utils/coordinates";
 import type { Building, Color, Direction } from "../utils/api.types";
 
-type BuildingProps = {
-  building: Building;
-  color: Color;
-}
+type BuildingProps<T = Color | null> = {
+  color: T;
+  building: T extends Color ? Building : null;
+};
 
 function Building({ building, color }: BuildingProps) {
   const type = building === "CITY" ? "city" : "settlement";
@@ -18,11 +18,12 @@ type NodeProps = {
   size: number;
   coordinate: CubeCoordinate;
   direction: Direction;
-  building: Building;
-  color: Color;
+  building: Building | null;
+  color: Color | null;
   flashing: boolean;
-  onClick: React.MouseEventHandler
-}
+  onClick: React.MouseEventHandler<HTMLDivElement>;
+};
+
 export default function Node({
   center,
   size,

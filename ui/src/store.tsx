@@ -2,7 +2,7 @@ import React, { createContext, useReducer } from "react";
 import ACTIONS from "./actions";
 import { type GameState } from "./utils/api.types";
 
-type CatanState = {
+export type CatanState = {
   gameState: GameState | null; // TODO
   freeRoadsAvailable: number;
   isBuildingRoad: boolean;
