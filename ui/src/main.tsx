@@ -4,7 +4,10 @@ import './index.css';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
+const docRoot = document.getElementById("root");
+if (!docRoot)
+  throw new Error('FATAL: No document root element found! Please add an id="root" HTML element to your index.html');
+const root = ReactDOM.createRoot(docRoot);
 root.render(
   <React.StrictMode>
     <App />
