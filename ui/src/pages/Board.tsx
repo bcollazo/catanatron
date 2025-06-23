@@ -90,11 +90,13 @@ export default function Board({
         building={building}
         color={color}
         flashing={!replayMode && !!nodeActions && id in nodeActions}
-        onClick={buildOnNodeClick(id, nodeActions ? nodeActions[id] : undefined)}
+        onClick={buildOnNodeClick(
+          id,
+          nodeActions ? nodeActions[id] : undefined
+        )}
       />
     )
   );
-  console.log(gameState.nodes, "nodesss", nodeActions);
   const edges = Object.values(gameState.edges).map(
     ({ color, direction, tile_coordinate, id }) => (
       <Edge
