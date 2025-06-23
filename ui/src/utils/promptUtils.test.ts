@@ -175,14 +175,14 @@ describe("humanizeAction", () => {
   });
 
   test("DISCARD action", () => {
-    expect(humanizeAction(baseGameState, ["ORANGE", "DISCARD"])).toBe(
+    expect(humanizeAction(baseGameState, ["ORANGE", "DISCARD", null])).toBe(
       "YOU DISCARDED"
     );
   });
 
   test("BUY_DEVELOPMENT_CARD action", () => {
     expect(
-      humanizeAction(baseGameState, ["BLUE", "BUY_DEVELOPMENT_CARD"])
+      humanizeAction(baseGameState, ["BLUE", "BUY_DEVELOPMENT_CARD", null])
     ).toBe("BOT BOUGHT DEVELOPMENT CARD");
   });
 
@@ -205,15 +205,15 @@ describe("humanizeAction", () => {
   });
 
   test("PLAY_KNIGHT_CARD action", () => {
-    expect(humanizeAction(baseGameState, ["BLUE", "PLAY_KNIGHT_CARD"])).toBe(
-      "BOT PLAYED KNIGHT CARD"
-    );
+    expect(
+      humanizeAction(baseGameState, ["BLUE", "PLAY_KNIGHT_CARD", null])
+    ).toBe("BOT PLAYED KNIGHT CARD");
   });
 
   test("PLAY_ROAD_BUILDING action", () => {
-    expect(humanizeAction(baseGameState, ["ORANGE", "PLAY_ROAD_BUILDING"])).toBe(
-      "YOU PLAYED ROAD BUILDING"
-    );
+    expect(
+      humanizeAction(baseGameState, ["ORANGE", "PLAY_ROAD_BUILDING", null])
+    ).toBe("YOU PLAYED ROAD BUILDING");
   });
 
   test("PLAY_MONOPOLY action", () => {
@@ -234,7 +234,11 @@ describe("humanizeAction", () => {
 
   test("PLAY_YEAR_OF_PLENTY action with one resource", () => {
     expect(
-      humanizeAction(baseGameState, ["ORANGE", "PLAY_YEAR_OF_PLENTY", ["BRICK"]])
+      humanizeAction(baseGameState, [
+        "ORANGE",
+        "PLAY_YEAR_OF_PLENTY",
+        ["BRICK"],
+      ])
     ).toBe("YOU PLAYED YEAR OF PLENTY. CLAIMED BRICK");
   });
 
@@ -270,7 +274,7 @@ describe("humanizeAction", () => {
   });
 
   test("END_TURN action", () => {
-    expect(humanizeAction(baseGameState, ["RED", "END_TURN"])).toBe(
+    expect(humanizeAction(baseGameState, ["RED", "END_TURN", null])).toBe(
       "BOT ENDED TURN"
     );
   });

@@ -127,14 +127,14 @@ function PlayButtons() {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_YEAR_OF_PLENTY });
   }, [dispatch]);
   const playRoadBuilding = useCallback(async () => {
-    const action: GameAction = [humanColor, "PLAY_ROAD_BUILDING"];
+    const action: GameAction = [humanColor, "PLAY_ROAD_BUILDING", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.PLAY_ROAD_BUILDING });
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
   }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
   const playKnightCard = useCallback(async () => {
-    const action: GameAction = [humanColor, "PLAY_KNIGHT_CARD"];
+    const action: GameAction = [humanColor, "PLAY_KNIGHT_CARD", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -173,7 +173,7 @@ function PlayButtons() {
           .map((a) => a[1])
   );
   const buyDevCard = useCallback(async () => {
-    const action: GameAction = [humanColor, "BUY_DEVELOPMENT_CARD"];
+    const action: GameAction = [humanColor, "BUY_DEVELOPMENT_CARD", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -231,7 +231,7 @@ function PlayButtons() {
   }, [dispatch]);
   const rollAction = carryOutAction([humanColor, "ROLL", null]);
   const proceedAction = carryOutAction();
-  const endTurnAction = carryOutAction([humanColor, "END_TURN"]);
+  const endTurnAction = carryOutAction([humanColor, "END_TURN", null]);
   return (
     <>
       <OptionsButton

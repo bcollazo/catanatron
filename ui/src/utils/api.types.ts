@@ -10,13 +10,13 @@ export type TileCoordinate = [number, number, number];
 
 export type GameAction =
   | [Color, "ROLL", [number, number] | null]
-  | [Color, "DISCARD"]
-  | [Color, "BUY_DEVELOPMENT_CARD"]
+  | [Color, "DISCARD", null]
+  | [Color, "BUY_DEVELOPMENT_CARD", null]
   | [Color, "BUILD_SETTLEMENT", number]
   | [Color, "BUILD_CITY", number]
   | [Color, "BUILD_ROAD", [number, number]]
-  | [Color, "PLAY_KNIGHT_CARD"]
-  | [Color, "PLAY_ROAD_BUILDING"]
+  | [Color, "PLAY_KNIGHT_CARD", null]
+  | [Color, "PLAY_ROAD_BUILDING", null]
   | [Color, "PLAY_MONOPOLY", ResourceCard]
   | [
       Color,
@@ -25,7 +25,7 @@ export type GameAction =
     ]
   | [Color, "MOVE_ROBBER", [TileCoordinate, string?, string?]]
   | [Color, "MARITIME_TRADE", any]
-  | [Color, "END_TURN"]; // TODO - fix types
+  | [Color, "END_TURN", null];
 
 export type PlayerState = any;
 export type VictoryPointCard = "VICTORY_POINT";
