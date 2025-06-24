@@ -1,9 +1,10 @@
 import axios from "axios";
 
 import { API_URL } from "../configuration";
+import type { Color, GameAction, GameState } from "./api.types";
 
 type Player = "HUMAN" | "RANDOM" | "CATANATRON";
-type StateIndex = number | "latest";
+export type StateIndex = number | `${number}` | "latest";
 
 export async function createGame(players: Player[]) {
   const response = await axios.post(API_URL + "/api/games", { players });
@@ -21,17 +22,21 @@ export async function getState(
 }
 
 /** action=undefined means bot action */
-export async function postAction(gameId: string, action = undefined) {
-  const response = await axios.post(
+export async function postAction(gameId: string, action?: GameAction) {
+  const response = await axios.post<GameState>(
     `${API_URL}/api/games/${gameId}/actions`,
     action
   );
   return response.data;
 }
 
+export type MCTSProbabilities = {
+  [K in Color]: number;
+};
+
 type MCTSSuccessBody = {
   success: true;
-  probabilities: any;
+  probabilities: MCTSProbabilities;
   state_index: number;
 };
 type MCTSErrorBody = {

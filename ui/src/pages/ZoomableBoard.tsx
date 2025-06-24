@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import memoize from "fast-memoize";
 import { useMediaQuery, useTheme } from "@mui/material";
@@ -9,20 +9,25 @@ import "./Board.scss";
 import { store } from "../store";
 import { isPlayersTurn } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
+import type { CatanState } from "../store";
 import { useParams } from "react-router";
 import ACTIONS from "../actions";
 import Board from "./Board";
+import type { GameAction, TileCoordinate } from "../utils/api.types";
 
 /**
  * Returns object representing actions to be taken if click on node.
  * @returns {3 => ["BLUE", "BUILD_CITY", 3], ...}
  */
-function buildNodeActions(state) {
+function buildNodeActions(state: CatanState) {
+  if (!state.gameState)
+    throw new Error("GameState is not ready!");
+
   if (!isPlayersTurn(state.gameState)) {
     return {};
   }
 
-  const nodeActions = {};
+  const nodeActions: Record<number, GameAction> = {};
   const buildInitialSettlementActions = state.gameState.is_initial_build_phase
     ? state.gameState.current_playable_actions.filter(
         (action) => action[1] === "BUILD_SETTLEMENT"
@@ -49,12 +54,14 @@ function buildNodeActions(state) {
   return nodeActions;
 }
 
-function buildEdgeActions(state) {
+function buildEdgeActions(state: CatanState) {
+  if (!state.gameState)
+    throw new Error("GameState is not ready!");
   if (!isPlayersTurn(state.gameState)) {
     return {};
   }
 
-  const edgeActions = {};
+  const edgeActions: Record<`${number},${number}`, GameAction> = {};
   const buildInitialRoadActions = state.gameState.is_initial_build_phase
     ? state.gameState.current_playable_actions.filter(
         (action) => action[1] === "BUILD_ROAD"
@@ -63,25 +70,35 @@ function buildEdgeActions(state) {
   const inInitialBuildPhase = state.gameState.is_initial_build_phase;
   if (inInitialBuildPhase) {
     buildInitialRoadActions.forEach((action) => {
-      edgeActions[action[2]] = action;
+      edgeActions[`${action[2][0]},${action[2][1]}`] = action;
+      console.log(Object.keys(edgeActions), action);
     });
   } else if (state.isBuildingRoad || state.isRoadBuilding) {
     state.gameState.current_playable_actions
       .filter((action) => action[1] === "BUILD_ROAD")
       .forEach((action) => {
-        edgeActions[action[2]] = action;
+        edgeActions[`${action[2][0]},${action[2][1]}`] = action;
       });
   }
   return edgeActions;
 }
 
-export default function ZoomableBoard({ replayMode }) {
+type ZoomableBoardProps = {
+  replayMode: boolean;
+}
+
+export default function ZoomableBoard({ replayMode }: ZoomableBoardProps) {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
   const { width, height } = useWindowSize();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.up("md"));
   const [show, setShow] = useState(false);
+  const gameState = state.gameState
+  if (!gameState)
+    throw new Error("GameState is not ready!");
+  if (!gameId)
+    throw new Error("expecting gameId in URL");
 
   // TODO: Move these up to GameScreen and let Zoomable be presentational component
   // https://stackoverflow.com/questions/61255053/react-usecallback-with-parameter
@@ -106,15 +123,15 @@ export default function ZoomableBoard({ replayMode }) {
     []
   );
   const handleTileClick = useCallback(
-    memoize((coordinate) => {
+    memoize((coordinate: TileCoordinate) => {
       console.log("Clicked Tile ", coordinate);
       if (state.isMovingRobber) {
         // Find the "MOVE_ROBBER" action in current_playable_actions that
         // corresponds to the tile coordinate selected by the user
-        const matchingAction = state.gameState.current_playable_actions.find(
+        const matchingAction = gameState.current_playable_actions.find(
           ([, action_type, [action_coordinate, ,]]) =>
             action_type === "MOVE_ROBBER" &&
-            action_coordinate.every((val, index) => val === coordinate[index])
+            action_coordinate.every((val: number, index: number) => val === coordinate[index])
         );
         if (matchingAction) {
           postAction(gameId, matchingAction).then((gameState) => {
@@ -135,6 +152,8 @@ export default function ZoomableBoard({ replayMode }) {
     }, 300);
   }, []);
 
+  if (!width || !height) return;
+
   return (
     <TransformWrapper>
       <div className="board-container">
@@ -149,7 +168,7 @@ export default function ZoomableBoard({ replayMode }) {
             edgeActions={edgeActions}
             replayMode={replayMode}
             show={show}
-            gameState={state.gameState}
+            gameState={gameState}
             isMobile={isMobile}
             isMovingRobber={state.isMovingRobber}
           />

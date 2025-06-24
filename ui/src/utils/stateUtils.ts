@@ -1,10 +1,4 @@
-type Color = "RED" | "BLUE" | "ORANGE" | "WHITE";
-
-export type GameState = {
-  bot_colors: Color[];
-  colors: Color[];
-  current_color: Color;
-};
+import type { Color, GameState } from "./api.types";
 
 /**
  * Check if it's a human player's turn
@@ -19,8 +13,8 @@ export function playerKey(gameState: GameState, color: Color): string {
   return `P${gameState.colors.indexOf(color)}`;
 }
 
-export function getHumanColor(gameState: GameState): Color | undefined {
+export function getHumanColor(gameState: GameState): Color {
   return gameState.colors.find(
     (color) => !gameState.bot_colors.includes(color)
-  );
+  ) as Color;
 }

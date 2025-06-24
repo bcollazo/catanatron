@@ -22,13 +22,15 @@ import SimCardIcon from "@mui/icons-material/SimCard";
 import { useParams } from "react-router";
 
 import Hidden from "../components/Hidden";
-import { ResourceCards } from "../components/PlayerStateBox";
-import Prompt, { humanizeTradeAction } from "../components/Prompt";
+import Prompt from "../components/Prompt";
+import ResourceCards from "../components/ResourceCards";
 import ResourceSelector from "../components/ResourceSelector";
 import { store } from "../store";
 import ACTIONS from "../actions";
+import type { GameAction, ResourceCard } from "../utils/api.types"; // Add GameState to the import, adjust path if needed
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
+import { humanizeTradeAction } from "../utils/promptUtils";
 
 import "./ActionsToolbar.scss";
 import { useSnackbar } from "notistack";
@@ -36,12 +38,16 @@ import { dispatchSnackbar } from "../components/Snackbar";
 
 function PlayButtons() {
   const { gameId } = useParams();
+  if (!gameId) {
+    console.error("Game ID is not found in URL parameters.");
+    return null;
+  }
   const { state, dispatch } = useContext(store);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [resourceSelectorOpen, setResourceSelectorOpen] = useState(false);
 
   const carryOutAction = useCallback(
-    memoize((action) => async () => {
+    memoize((action?: GameAction) => async () => {
       const gameState = await postAction(gameId, action);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
       dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -49,43 +55,71 @@ function PlayButtons() {
     [enqueueSnackbar, closeSnackbar]
   );
 
-  const { gameState, isPlayingMonopoly, isPlayingYearOfPlenty, isRoadBuilding } = state;
+  const {
+    gameState,
+    isPlayingMonopoly,
+    isPlayingYearOfPlenty,
+    isRoadBuilding,
+  } = state;
+  if (gameState === null) {
+    return null;
+  }
   const key = playerKey(gameState, gameState.current_color);
   const isRoll =
     gameState.current_prompt === "PLAY_TURN" &&
     !gameState.player_state[`${key}_HAS_ROLLED`];
   const isDiscard = gameState.current_prompt === "DISCARD";
   const isMoveRobber = gameState.current_prompt === "MOVE_ROBBER";
-  const isPlayingDevCard = isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding;
+  const isPlayingDevCard =
+    isPlayingMonopoly || isPlayingYearOfPlenty || isRoadBuilding;
   const playableDevCardTypes = new Set(
     gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
       .map((action) => action[1])
   );
-  const humanColor = getHumanColor(state.gameState);
+  const humanColor = getHumanColor(gameState);
   const setIsPlayingMonopoly = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_MONOPOLY });
   }, [dispatch]);
   const getValidYearOfPlentyOptions = useCallback(() => {
-    return state.gameState.current_playable_actions
-      .filter(action => action[1] === "PLAY_YEAR_OF_PLENTY")
-      .map(action => action[2]);
-  }, [state.gameState.current_playable_actions]);
-  const handleResourceSelection = useCallback(async (selectedResources) => {
-    setResourceSelectorOpen(false);
-    let action;
-    if (isPlayingMonopoly) {
-      action = [humanColor, "PLAY_MONOPOLY", selectedResources]
-    } else if (isPlayingYearOfPlenty) {
-      action = [humanColor, "PLAY_YEAR_OF_PLENTY", selectedResources];
-    } else {
-      console.error('Invalid resource selector mode');
-      return;
-    }
-    const gameState = await postAction(gameId, action);
-    dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-    dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
-  }, [gameId, humanColor, dispatch, enqueueSnackbar, closeSnackbar, isPlayingMonopoly, isPlayingYearOfPlenty]);
+    return gameState.current_playable_actions
+      .filter((action) => action[1] === "PLAY_YEAR_OF_PLENTY")
+      .map((action) => action[2]);
+  }, [gameState.current_playable_actions]);
+  const handleResourceSelection = useCallback(
+    async (selectedResources: ResourceCard | ResourceCard[]) => {
+      setResourceSelectorOpen(false);
+      let action: GameAction;
+      if (isPlayingMonopoly) {
+        action = [
+          humanColor,
+          "PLAY_MONOPOLY",
+          selectedResources as ResourceCard,
+        ];
+      } else if (isPlayingYearOfPlenty) {
+        action = [
+          humanColor,
+          "PLAY_YEAR_OF_PLENTY",
+          selectedResources as [ResourceCard] | [ResourceCard, ResourceCard],
+        ];
+      } else {
+        console.error("Invalid resource selector mode");
+        return;
+      }
+      const gameState = await postAction(gameId, action);
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
+      dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+    },
+    [
+      gameId,
+      humanColor,
+      dispatch,
+      enqueueSnackbar,
+      closeSnackbar,
+      isPlayingMonopoly,
+      isPlayingYearOfPlenty,
+    ]
+  );
   const handleOpenResourceSelector = useCallback(() => {
     setResourceSelectorOpen(true);
   }, []);
@@ -93,14 +127,14 @@ function PlayButtons() {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_YEAR_OF_PLENTY });
   }, [dispatch]);
   const playRoadBuilding = useCallback(async () => {
-    const action = [humanColor, "PLAY_ROAD_BUILDING", null];
+    const action: GameAction = [humanColor, "PLAY_ROAD_BUILDING", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.PLAY_ROAD_BUILDING });
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
   }, [gameId, dispatch, enqueueSnackbar, closeSnackbar, humanColor]);
   const playKnightCard = useCallback(async () => {
-    const action = [humanColor, "PLAY_KNIGHT_CARD", null];
+    const action: GameAction = [humanColor, "PLAY_KNIGHT_CARD", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -129,9 +163,9 @@ function PlayButtons() {
   ];
 
   const buildActionTypes = new Set(
-    state.gameState.is_initial_build_phase
+    gameState.is_initial_build_phase
       ? []
-      : state.gameState.current_playable_actions
+      : gameState.current_playable_actions
           .filter(
             (action) =>
               action[1].startsWith("BUY") || action[1].startsWith("BUILD")
@@ -139,7 +173,7 @@ function PlayButtons() {
           .map((a) => a[1])
   );
   const buyDevCard = useCallback(async () => {
-    const action = [humanColor, "BUY_DEVELOPMENT_CARD", null];
+    const action: GameAction = [humanColor, "BUY_DEVELOPMENT_CARD", null];
     const gameState = await postAction(gameId, action);
     dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
@@ -176,7 +210,7 @@ function PlayButtons() {
     },
   ];
 
-  const tradeActions = state.gameState.current_playable_actions.filter(
+  const tradeActions = gameState.current_playable_actions.filter(
     (action) => action[1] === "MARITIME_TRADE"
   );
   const tradeItems = React.useMemo(() => {
@@ -241,13 +275,15 @@ function PlayButtons() {
             : endTurnAction
         }
       >
-        {
-          isDiscard ? "DISCARD" :
-          isMoveRobber ? "ROB" :
-          isPlayingYearOfPlenty || isPlayingMonopoly ? "SELECT" :
-          isRoll ? "ROLL" :
-          "END"
-        }
+        {isDiscard
+          ? "DISCARD"
+          : isMoveRobber
+          ? "ROB"
+          : isPlayingYearOfPlenty || isPlayingMonopoly
+          ? "SELECT"
+          : isRoll
+          ? "ROLL"
+          : "END"}
       </Button>
       <ResourceSelector
         open={resourceSelectorOpen}
@@ -258,20 +294,25 @@ function PlayButtons() {
         }}
         options={getValidYearOfPlentyOptions()}
         onSelect={handleResourceSelection}
-        mode={isPlayingMonopoly ? 'monopoly' : 'yearOfPlenty'}
+        mode={isPlayingMonopoly ? "monopoly" : "yearOfPlenty"}
       />
     </>
   );
 }
 
 export default function ActionsToolbar({
-  zoomIn,
-  zoomOut,
   isBotThinking,
   replayMode,
+}: {
+  isBotThinking: boolean;
+  replayMode: boolean;
 }) {
   const { state, dispatch } = useContext(store);
-
+  const { gameState } = state;
+  if (gameState === null) {
+    console.error("No gameState found...");
+    return null;
+  }
   const openLeftDrawer = useCallback(() => {
     dispatch({
       type: ACTIONS.SET_LEFT_DRAWER_OPENED,
@@ -286,10 +327,8 @@ export default function ActionsToolbar({
     });
   }, [dispatch]);
 
-  const botsTurn = state.gameState.bot_colors.includes(
-    state.gameState.current_color
-  );
-  const humanColor = getHumanColor(state.gameState);
+  const botsTurn = gameState.bot_colors.includes(gameState.current_color);
+  const humanColor = getHumanColor(gameState);
   return (
     <>
       <div className="state-summary">
@@ -300,22 +339,26 @@ export default function ActionsToolbar({
         </Hidden>
         {humanColor && (
           <ResourceCards
-            playerState={state.gameState.player_state}
-            playerKey={playerKey(state.gameState, humanColor)}
+            playerState={gameState.player_state}
+            playerKey={playerKey(gameState, humanColor)}
           />
         )}
         <Hidden breakpoint={{ size: "lg", direction: "up" }}>
-          <Button className="open-drawer-btn" onClick={openRightDrawer} style={{ marginLeft: 'auto' }}>
+          <Button
+            className="open-drawer-btn"
+            onClick={openRightDrawer}
+            style={{ marginLeft: "auto" }}
+          >
             <ChevronRightIcon />
           </Button>
         </Hidden>
       </div>
       <div className="actions-toolbar">
-        {!(botsTurn || state.gameState.winning_color) && !replayMode && (
-          <PlayButtons gameState={state.gameState} />
+        {!(botsTurn || gameState.winning_color) && !replayMode && (
+          <PlayButtons />
         )}
-        {(botsTurn || state.gameState.winning_color) && (
-          <Prompt gameState={state.gameState} isBotThinking={isBotThinking} />
+        {(botsTurn || gameState.winning_color) && (
+          <Prompt gameState={gameState} isBotThinking={isBotThinking} />
         )}
         {/* <Button
           disabled={disabled}
@@ -334,22 +377,47 @@ export default function ActionsToolbar({
   );
 }
 
-function OptionsButton({ menuListId, icon, children, items, disabled }) {
+type OptionItem = {
+  label: string;
+  disabled: boolean;
+  onClick: (event: MouseEvent | TouchEvent) => void;
+};
+
+type OptionsButtonProps = {
+  menuListId: string;
+  icon: any;
+  children: React.ReactNode;
+  items: OptionItem[];
+  disabled: boolean;
+};
+
+function OptionsButton({
+  menuListId,
+  icon,
+  children,
+  items,
+  disabled,
+}: OptionsButtonProps) {
   const [open, setOpen] = useState(false);
-  const anchorRef = useRef(null);
+  const anchorRef = useRef<HTMLAnchorElement>(null);
 
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
   };
-  const handleClose = (onClick) => (event) => {
-    if (anchorRef.current && anchorRef.current.contains(event.target)) {
-      return;
-    }
+  const handleClose =
+    (onClick?: (event: MouseEvent | TouchEvent) => void) =>
+    (event: MouseEvent | TouchEvent) => {
+      if (
+        anchorRef.current &&
+        anchorRef.current.contains(event.target as Node)
+      ) {
+        return;
+      }
 
-    onClick && onClick();
-    setOpen(false);
-  };
-  function handleListKeyDown(event) {
+      onClick && onClick(event);
+      setOpen(false);
+    };
+  function handleListKeyDown(event: React.KeyboardEvent) {
     if (event.key === "Tab") {
       event.preventDefault();
       setOpen(false);
@@ -359,7 +427,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
   const prevOpen = useRef(open);
   useEffect(() => {
     if (prevOpen.current === true && open === false) {
-      anchorRef.current.focus();
+      anchorRef.current && anchorRef.current.focus();
     }
 
     prevOpen.current = open;
@@ -370,6 +438,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
       <Button
         disabled={disabled}
         ref={anchorRef}
+        href="#"
         aria-controls={open ? menuListId : undefined}
         aria-haspopup="true"
         variant="contained"
@@ -396,7 +465,7 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
             }}
           >
             <Paper>
-              <ClickAwayListener onClickAway={handleClose}>
+              <ClickAwayListener onClickAway={handleClose()}>
                 <MenuList
                   autoFocusItem={open}
                   id={menuListId}
@@ -405,7 +474,11 @@ function OptionsButton({ menuListId, icon, children, items, disabled }) {
                   {items.map((item) => (
                     <MenuItem
                       key={item.label}
-                      onClick={handleClose(item.onClick)}
+                      onClick={
+                        handleClose(
+                          item.onClick
+                        ) as unknown as React.MouseEventHandler
+                      }
                       disabled={item.disabled}
                     >
                       {item.label}

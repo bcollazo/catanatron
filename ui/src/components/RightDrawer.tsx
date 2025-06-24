@@ -4,7 +4,8 @@ import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import { CircularProgress, Button } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
-import { getMctsAnalysis } from "../utils/apiClient";
+import { type MCTSProbabilities, getMctsAnalysis } from "../utils/apiClient";
+import { isTabOrShift, type InteractionEvent } from "../utils/events";
 import { useParams } from "react-router";
 
 import Hidden from "./Hidden";
@@ -16,16 +17,16 @@ import "./RightDrawer.scss";
 function DrawerContent() {
   const { gameId } = useParams();
   const { state } = useContext(store);
-  const [mctsResults, setMctsResults] = useState(null);
+  const [mctsResults, setMctsResults] = useState<MCTSProbabilities | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
 
   const handleAnalyzeClick = async () => {
     if (!gameId || !state.gameState || state.gameState.winning_color) return;
 
     try {
       setLoading(true);
-      setError(null);
+      setError('');
       const result = await getMctsAnalysis(gameId);
       if (result.success) {
         setMctsResults(result.probabilities);
@@ -34,7 +35,13 @@ function DrawerContent() {
       }
     } catch (err) {
       console.error("MCTS Analysis failed:", err);
-      setError(err.message);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof err === "string") {
+        setError(err);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -48,7 +55,7 @@ function DrawerContent() {
           variant="contained"
           color="primary"
           onClick={handleAnalyzeClick}
-          disabled={loading || state.gameState?.winning_color}
+          disabled={loading || !!state.gameState?.winning_color}
           startIcon={loading ? <CircularProgress size={20} /> : <AssessmentIcon />}
         >
           {loading ? "Analyzing..." : "Analyze"}
@@ -87,12 +94,8 @@ export default function RightDrawer() {
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openRightDrawer = useCallback(
-    (event) => {
-      if (
-        event &&
-        event.type === "keydown" &&
-        (event.key === "Tab" || event.key === "Shift")
-      ) {
+    (event: InteractionEvent) => {
+      if (isTabOrShift(event)) {
         return;
       }
 
@@ -102,12 +105,8 @@ export default function RightDrawer() {
   );
 
   const closeRightDrawer = useCallback(
-    (event) => {
-      if (
-        event &&
-        event.type === "keydown" &&
-        (event.key === "Tab" || event.key === "Shift")
-      ) {
+    (event: InteractionEvent) => {
+      if (isTabOrShift(event)) {
         return;
       }
 

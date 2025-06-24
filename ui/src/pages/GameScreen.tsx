@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import PropTypes from "prop-types";
 import { GridLoader } from "react-spinners";
@@ -12,13 +12,13 @@ import LeftDrawer from "../components/LeftDrawer";
 import RightDrawer from "../components/RightDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { getState, postAction } from "../utils/apiClient";
+import { type StateIndex, getState, postAction } from "../utils/apiClient";
 import { dispatchSnackbar } from "../components/Snackbar";
 import { getHumanColor } from "../utils/stateUtils";
 
 const ROBOT_THINKING_TIME = 300;
 
-function GameScreen({ replayMode }) {
+function GameScreen({ replayMode }: { replayMode: boolean }) {
   const { gameId, stateIndex } = useParams();
   const { state, dispatch } = useContext(store);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -31,14 +31,14 @@ function GameScreen({ replayMode }) {
     }
 
     (async () => {
-      const gameState = await getState(gameId, stateIndex);
+      const gameState = await getState(gameId, stateIndex as StateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
   }, [gameId, stateIndex, dispatch]);
 
   // Maybe kick off next query?
   useEffect(() => {
-    if (!state.gameState || replayMode) {
+    if (!state.gameState || replayMode || !gameId) {
       return;
     }
     if (
@@ -50,7 +50,7 @@ function GameScreen({ replayMode }) {
         setIsBotThinking(true);
         const start = new Date();
         const gameState = await postAction(gameId);
-        const requestTime = new Date() - start;
+        const requestTime = new Date().valueOf() - start.valueOf();
         setTimeout(() => {
           // simulate thinking
           setIsBotThinking(false);
@@ -76,8 +76,7 @@ function GameScreen({ replayMode }) {
         <GridLoader
           className="loader"
           color="#000000"
-          height={100}
-          width={100}
+          size={100}
         />
       </main>
     );

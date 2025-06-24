@@ -6,14 +6,16 @@ import Drawer from "@mui/material/Drawer";
 
 import Hidden from "./Hidden";
 import PlayerStateBox from "./PlayerStateBox";
-import { humanizeAction } from "./Prompt";
+import { humanizeAction } from "../utils/promptUtils";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";
+import { type GameState } from "../utils/api.types";
+import { isTabOrShift, type InteractionEvent } from "../utils/events";
 
 import "./LeftDrawer.scss";
 
-function DrawerContent({ gameState }) {
+function DrawerContent({ gameState }: { gameState: GameState }) {
   const playerSections = gameState.colors.map((color) => {
     const key = playerKey(gameState, color);
     return (
@@ -50,12 +52,8 @@ export default function LeftDrawer() {
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const openLeftDrawer = useCallback(
-    (event) => {
-      if (
-        event &&
-        event.type === "keydown" &&
-        (event.key === "Tab" || event.key === "Shift")
-      ) {
+    (event: InteractionEvent) => {
+      if (isTabOrShift(event)) {
         return;
       }
 
@@ -64,12 +62,8 @@ export default function LeftDrawer() {
     [dispatch]
   );
   const closeLeftDrawer = useCallback(
-    (event) => {
-      if (
-        event &&
-        event.type === "keydown" &&
-        (event.key === "Tab" || event.key === "Shift")
-      ) {
+    (event: InteractionEvent) => {
+      if (isTabOrShift(event)) {
         return;
       }
 
@@ -91,12 +85,15 @@ export default function LeftDrawer() {
           disableDiscovery={iOS}
           onKeyDown={closeLeftDrawer}
         >
-          <DrawerContent gameState={state.gameState} />
+          <DrawerContent gameState={state.gameState as GameState} />
         </SwipeableDrawer>
       </Hidden>
-      <Hidden breakpoint={{size: "sm", direction: "down" }} implementation="css">
+      <Hidden
+        breakpoint={{ size: "sm", direction: "down" }}
+        implementation="css"
+      >
         <Drawer className="left-drawer" anchor="left" variant="permanent" open>
-          <DrawerContent gameState={state.gameState} />
+          <DrawerContent gameState={state.gameState as GameState} />
         </Drawer>
       </Hidden>
     </>
