@@ -30,7 +30,7 @@ def test_mini_map_can_be_created():
     assert len(mini.tiles_by_id) == 7
     assert len(mini.ports_by_id) == 0
     assert len(mini.port_nodes) == 0
-    assert len(mini.adjacent_tiles) == 24
+    assert len(mini.node_to_tiles) == 24
     assert len(mini.node_production) == 24
 
     resources = [i.resource for i in mini.land_tiles.values()]
