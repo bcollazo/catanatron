@@ -93,7 +93,7 @@ def base_fn(params=DEFAULT_WEIGHTS):
         owned_nodes = buildings[SETTLEMENT] + buildings[CITY]
         owned_tiles = set()
         for n in owned_nodes:
-            owned_tiles.update(game.state.board.map.adjacent_tiles[n])
+            owned_tiles.update(game.state.board.map.node_to_tiles[n])
         num_tiles = len(owned_tiles)
 
         # TODO: Simplify to linear(?)
