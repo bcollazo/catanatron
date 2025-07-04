@@ -20,14 +20,14 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
       const parts = action[1].split("_");
       const building = parts[parts.length - 1];
       const tileId = action[2];
-      const tiles = gameState.adjacent_tiles[tileId];
+      const tiles = gameState.node_to_tiles[tileId];
       const tileString = tiles.map(getShortTileString).join("-");
       return `${player} BUILT ${building} ON ${tileString}`;
     }
     case "BUILD_ROAD": {
       const edge = action[2];
-      const a = gameState.adjacent_tiles[edge[0]].map((t) => t.id);
-      const b = gameState.adjacent_tiles[edge[1]].map((t) => t.id);
+      const a = gameState.node_to_tiles[edge[0]].map((t) => t.id);
+      const b = gameState.node_to_tiles[edge[1]].map((t) => t.id);
       const intersection = a.filter((t) => b.includes(t));
       const tiles = intersection.map(
         (tileId) => findTileById(gameState, tileId).tile
