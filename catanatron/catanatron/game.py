@@ -147,6 +147,8 @@ class Game:
         player = self.state.current_player()
         actions = self.state.playable_actions
 
+        # print(f"player: {player}")
+
         action = (
             decide_fn(player, self, actions)
             if decide_fn is not None

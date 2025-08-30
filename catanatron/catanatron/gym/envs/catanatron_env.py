@@ -131,19 +131,26 @@ class MixedObservation(TypedDict):
 class CatanatronEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, players=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
         self.representation = self.config.get("representation", "vector")
 
-        assert all(p.color != Color.BLUE for p in self.enemies)
+        if players is not None:
+            self.players = players
+        else:
+            self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
+            assert all(p.color != Color.BLUE for p in self.enemies)
+            self.p0 = Player(Color.BLUE)
+            self.players = [self.p0] + self.enemies  # type: ignore
+
         assert self.representation in ["mixed", "vector"]
-        self.p0 = Player(Color.BLUE)
-        self.players = [self.p0] + self.enemies  # type: ignore
+
+        self.current_player_idx = 0
+        self.p0 = self.players[self.current_player_idx]
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -207,6 +214,9 @@ class CatanatronEnv(gym.Env):
             return observation, self.invalid_action_reward, terminated, truncated, info
 
         self.game.execute(catan_action)
+        # switch to next player
+        self.current_player_idx = (self.current_player_idx + 1) % len(self.players)
+        self.p0 = self.players[self.current_player_idx]
         self._advance_until_p0_decision()
 
         observation = self._get_observation()
@@ -236,7 +246,8 @@ class CatanatronEnv(gym.Env):
             vps_to_win=self.vps_to_win,
         )
         self.invalid_actions_count = 0
-
+        self.current_player_idx = 0
+        self.p0 = self.players[self.current_player_idx]
         self._advance_until_p0_decision()
 
         observation = self._get_observation()
