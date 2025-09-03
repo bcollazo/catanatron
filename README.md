@@ -9,6 +9,8 @@ Catanatron is a high-performance simulator and strong AI player for Settlers of 
 
 Get Started with the Full Documentation: https://docs.catanatron.com
 
+Join our Discord: https://discord.gg/SKBx4Fnm!
+
 ## Command Line Interface
 Catanatron provides a `catanatron-play` CLI tool to run large scale simulations.
 
