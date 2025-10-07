@@ -4,7 +4,7 @@ import { GridLoader } from "react-spinners";
 
 import ZoomableBoard from "./ZoomableBoard";
 
-// import "./ReplayScreen.scss";
+import "./ReplayScreen.scss";
 import LeftDrawer from "../components/LeftDrawer";
 import RightDrawer from "../components/RightDrawer";
 import { store } from "../store";
