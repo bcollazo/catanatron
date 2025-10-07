@@ -123,7 +123,7 @@ def mcts_analysis_endpoint(game_id, state_index):
                 f"Game/state not found: {game_id}/{state_index}"
             )  # Use original state_index for logging
             abort(404, description="Game state not found")
-        
+
         game, _ = result
         analyzer = GameAnalyzer(num_simulations=100)
         probabilities = analyzer.analyze_win_probabilities(game)
