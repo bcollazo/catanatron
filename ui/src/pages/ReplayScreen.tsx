@@ -18,7 +18,7 @@ function ReplayScreen() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
   const [latestStateIndex, setLatestStateIndex] = useState<number>(0);
-  const [stateIndex, setStateIndex] = useState<number>(5);
+  const [stateIndex, setStateIndex] = useState<number>(0);
 
   const handlePrevState = () => setStateIndex((prev) => Math.max(prev - 1, 0));
   const handleNextState = () => setStateIndex((prev) => Math.min(prev + 1, latestStateIndex));
