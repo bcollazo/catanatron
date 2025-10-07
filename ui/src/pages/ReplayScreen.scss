@@ -1,0 +1,117 @@
+@use "../variables.scss";
+
+.MuiToolbar-root {
+  background: variables.$black;
+}
+
+h6.MuiTypography-h6 {
+  font-family: "Bungee Inline", sans-serif;
+}
+
+@media (min-width: 600px) {
+  #root .snackbar-container {
+    display: none;
+  }
+}
+
+// For Snackbar
+#root .snackbar-container {
+  z-index: 1200;
+  left: 50% !important;
+  bottom: 0px;
+  transform: translateX(-50%);
+  max-width: variables.$sm-breakpoint;
+  width: 100%;
+  .MuiCollapse-container {
+    padding: 0 10px;
+    width: 100%;
+    .MuiCollapse-wrapper {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      height: 60px;
+      padding: 0;
+
+      > div > div {
+        height: 100%;
+
+        > div {
+          height: 100%;
+        }
+      }
+    }
+  }
+}
+
+main {
+  .logo {
+    margin: 5px 20px 0 20px;
+    text-align: center;
+  }
+
+  background: variables.$black;
+  color: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .board-container,
+  .loader {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+.board-container {
+  .react-transform-wrapper {
+      height: 100%;
+      width: 100%;
+    }
+  .react-transform-component {
+    height: 100%;
+    width: 100%;
+
+    .react-transform-element {
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  .board {
+    position: relative;
+    opacity: 0;
+    height: 100%;
+    width: 100%;
+  }
+  .board.show {
+    opacity: 1;
+  }
+}
+
+// Medium screens - Left drawer permanent
+@media (min-width: variables.$md-breakpoint) {
+  main {
+    padding-left: 280px;
+    .board-container {
+      margin-right: 0;
+    }
+  }
+}
+
+// Large screens - Both drawers permanent
+@media (min-width: variables.$lg-breakpoint) {
+  main {
+    padding-left: 0px;
+    .board-container {
+      margin-left: 140px;
+    }
+  }
+}
