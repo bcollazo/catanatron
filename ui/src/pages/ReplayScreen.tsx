@@ -1,22 +1,26 @@
-import { useEffect, useContext } from "react";
+import { useEffect, useContext, useState } from "react";
 import { useParams } from "react-router-dom";
-import PropTypes from "prop-types";
 import { GridLoader } from "react-spinners";
 
 import ZoomableBoard from "./ZoomableBoard";
 import ActionsToolbar from "./ActionsToolbar";
 
-import "./ReplayScreen.scss";
+// import "./ReplayScreen.scss";
 import LeftDrawer from "../components/LeftDrawer";
 import RightDrawer from "../components/RightDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { type StateIndex, getState } from "../utils/apiClient";
+import AnalysisBox from "../components/AnalysisBox";
+import { Divider } from "@mui/material";
 
 function ReplayScreen() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
-  let stateIndex = 2
+  const [stateIndex, setStateIndex] = useState<number>(5);
+
+  const handlePrevState = () => setStateIndex((prev) => Math.max(prev - 1, 0));
+  const handleNextState = () => setStateIndex((prev) => prev + 1);
 
   useEffect(() => {
     if (!gameId) {
@@ -47,17 +51,12 @@ function ReplayScreen() {
       <ZoomableBoard replayMode={true} />
       <ActionsToolbar isBotThinking={false} replayMode={true} />
       <LeftDrawer />
-      <RightDrawer />
+      <RightDrawer>
+        <AnalysisBox />
+        <Divider />
+      </RightDrawer>
     </main>
   );
 }
-
-ReplayScreen.propTypes = {
-  /**
-   * Injected by the documentation to work in an iframe.
-   * You won't need it on your project.
-   */
-  window: PropTypes.func,
-};
 
 export default ReplayScreen;
