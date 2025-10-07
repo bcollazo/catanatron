@@ -1,13 +1,17 @@
 import { useContext, useState } from "react";
 import { CircularProgress, Button } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
-import { type MCTSProbabilities, getMctsAnalysis } from "../utils/apiClient";
+import { type MCTSProbabilities, type StateIndex, getMctsAnalysis } from "../utils/apiClient";
 import { useParams } from "react-router";
 
 import "./AnalysisBox.scss";
 import { store } from "../store";
 
-export default function AnalysisBox() {
+type AnalysisBoxProps = {
+    stateIndex: StateIndex;
+}
+
+export default function AnalysisBox( { stateIndex }: AnalysisBoxProps ) {
   const { gameId } = useParams();
   const { state } = useContext(store);
   const [mctsResults, setMctsResults] = useState<MCTSProbabilities | undefined>(undefined);
@@ -20,7 +24,7 @@ export default function AnalysisBox() {
     try {
       setLoading(true);
       setError('');
-      const result = await getMctsAnalysis(gameId);
+      const result = await getMctsAnalysis(gameId, stateIndex);
       if (result.success) {
         setMctsResults(result.probabilities);
       } else {

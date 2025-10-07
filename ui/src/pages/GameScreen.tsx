@@ -33,7 +33,7 @@ function GameScreen({ replayMode }: { replayMode: boolean }) {
     }
 
     (async () => {
-      const gameState = await getState(gameId, stateIndex as StateIndex);
+      const { state: gameState } = await getState(gameId, stateIndex as StateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
   }, [gameId, stateIndex, dispatch]);
@@ -91,7 +91,7 @@ function GameScreen({ replayMode }: { replayMode: boolean }) {
       <ActionsToolbar isBotThinking={isBotThinking} replayMode={replayMode} />
       <LeftDrawer />
       <RightDrawer>
-        <AnalysisBox />
+        <AnalysisBox stateIndex={"latest"}/>
         <Divider />
       </RightDrawer>
     </main>

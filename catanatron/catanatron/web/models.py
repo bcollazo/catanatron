@@ -2,6 +2,7 @@ import os
 import json
 import pickle
 from contextlib import contextmanager
+from typing import Any, Tuple
 
 from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -69,7 +70,11 @@ def upsert_game_state(game, session_param=None):
     return game_state
 
 
-def get_game_state(game_id, state_index=None):
+def get_game_state(game_id, state_index=None) -> Tuple[Any, int] | None:
+    """
+    Returns the pickled game state and the state index of that game state.
+    The state index is useful when frontend queries for the latest state
+    """
     if state_index is None:
         result = (
             db.session.query(GameState)
@@ -89,4 +94,7 @@ def get_game_state(game_id, state_index=None):
             abort(404)
     db.session.commit()
     game = pickle.loads(result.pickle_data)  # type: ignore
-    return game
+    if game is None:
+        return None
+
+    return game, result.state_index

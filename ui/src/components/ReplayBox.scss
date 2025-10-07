@@ -1,0 +1,10 @@
+.replay-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .button-container {
+    display: flex;
+    gap: 10px;
+  }
+}

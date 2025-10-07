@@ -3,24 +3,35 @@ import { useParams } from "react-router-dom";
 import { GridLoader } from "react-spinners";
 
 import ZoomableBoard from "./ZoomableBoard";
-import ActionsToolbar from "./ActionsToolbar";
 
 // import "./ReplayScreen.scss";
 import LeftDrawer from "../components/LeftDrawer";
 import RightDrawer from "../components/RightDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { type StateIndex, getState } from "../utils/apiClient";
+import { getState } from "../utils/apiClient";
 import AnalysisBox from "../components/AnalysisBox";
 import { Divider } from "@mui/material";
+import ReplayBox from "../components/ReplayBox";
 
 function ReplayScreen() {
   const { gameId } = useParams();
   const { state, dispatch } = useContext(store);
+  const [latestStateIndex, setLatestStateIndex] = useState<number>(0);
   const [stateIndex, setStateIndex] = useState<number>(5);
 
   const handlePrevState = () => setStateIndex((prev) => Math.max(prev - 1, 0));
-  const handleNextState = () => setStateIndex((prev) => prev + 1);
+  const handleNextState = () => setStateIndex((prev) => Math.min(prev + 1, latestStateIndex));
+
+  useEffect(() => {
+    if (!gameId) return;
+
+    (async () => {
+      const { state: latestState, state_index: latestIndex } = await getState(gameId, "latest");
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: latestState });
+      setLatestStateIndex(latestIndex);
+    })();
+  }, [gameId, dispatch]);
 
   useEffect(() => {
     if (!gameId) {
@@ -28,7 +39,7 @@ function ReplayScreen() {
     }
 
     (async () => {
-      const gameState = await getState(gameId, stateIndex as StateIndex);
+      const { state: gameState } = await getState(gameId, stateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
   }, [gameId, stateIndex, dispatch]);
@@ -49,11 +60,17 @@ function ReplayScreen() {
     <main>
       <h1 className="logo">Catanatron</h1>
       <ZoomableBoard replayMode={true} />
-      <ActionsToolbar isBotThinking={false} replayMode={true} />
       <LeftDrawer />
       <RightDrawer>
-        <AnalysisBox />
+        <AnalysisBox stateIndex={stateIndex}/>
         <Divider />
+        <ReplayBox
+          stateIndex={stateIndex}
+          latestStateIndex={latestStateIndex}
+          onNextMove={handleNextState}
+          onPrevMove={handlePrevState}
+          onSeekMove={(index) => setStateIndex(index)}
+        />
       </RightDrawer>
     </main>
   );
