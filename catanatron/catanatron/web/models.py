@@ -4,13 +4,12 @@ import pickle
 from contextlib import contextmanager
 from typing import Any, Tuple
 
+from catanatron.game import Game
 from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 from flask_sqlalchemy import SQLAlchemy
 from flask import abort
-
-from catanatron.json import GameEncoder
 
 # Using approach from: https://stackoverflow.com/questions/41004540/using-sqlalchemy-models-in-and-out-of-flask/41014157
 metadata = MetaData()
@@ -29,12 +28,19 @@ class GameState(Base):
     # TODO: unique uuid and state_index
 
     @staticmethod
-    def from_game(game):
+    def get_state_index(game: Game):
+        return len(game.state.actions)
+
+    @staticmethod
+    def from_game(game: Game):
+        # resolves circular import
+        from catanatron.json import GameEncoder
+
         state = json.dumps(game, cls=GameEncoder)
         pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
         return GameState(
             uuid=game.id,
-            state_index=len(game.state.actions),
+            state_index=GameState.get_state_index(game),
             state=state,
             pickle_data=pickle_data,
         )
@@ -62,7 +68,7 @@ def database_session():
         session.close()
 
 
-def upsert_game_state(game, session_param=None):
+def upsert_game_state(game: Game, session_param=None):
     game_state = GameState.from_game(game)
     session = session_param or db.session
     session.add(game_state)
@@ -70,10 +76,9 @@ def upsert_game_state(game, session_param=None):
     return game_state
 
 
-def get_game_state(game_id, state_index=None) -> Tuple[Any, int] | None:
+def get_game_state(game_id, state_index=None) -> Game | None:
     """
-    Returns the pickled game state and the state index of that game state.
-    The state index is useful when frontend queries for the latest state
+    Returns the game from database.
     """
     if state_index is None:
         result = (
@@ -97,4 +102,4 @@ def get_game_state(game_id, state_index=None) -> Tuple[Any, int] | None:
     if game is None:
         return None
 
-    return game, result.state_index
+    return game

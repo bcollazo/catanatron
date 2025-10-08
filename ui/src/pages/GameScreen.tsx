@@ -33,7 +33,7 @@ function GameScreen({ replayMode }: { replayMode: boolean }) {
     }
 
     (async () => {
-      const { state: gameState } = await getState(gameId, stateIndex as StateIndex);
+      const gameState = await getState(gameId, stateIndex as StateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
   }, [gameId, stateIndex, dispatch]);

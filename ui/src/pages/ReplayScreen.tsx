@@ -27,9 +27,9 @@ function ReplayScreen() {
     if (!gameId) return;
 
     (async () => {
-      const { state: latestState, state_index: latestIndex } = await getState(gameId, "latest");
+      const latestState = await getState(gameId, "latest");
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: latestState });
-      setLatestStateIndex(latestIndex);
+      setLatestStateIndex(latestState.state_index);
     })();
   }, [gameId, dispatch]);
 
@@ -39,7 +39,7 @@ function ReplayScreen() {
     }
 
     (async () => {
-      const { state: gameState } = await getState(gameId, stateIndex);
+      const gameState = await getState(gameId, stateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
   }, [gameId, stateIndex, dispatch]);

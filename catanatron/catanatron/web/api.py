@@ -42,18 +42,13 @@ def post_game_endpoint():
 @bp.route("/games/<string:game_id>/states/<string:state_index>", methods=("GET",))
 def get_game_endpoint(game_id, state_index):
     parsed_state_index = _parse_state_index(state_index)
-    result = get_game_state(game_id, parsed_state_index)
-    if result is None:
+    game = get_game_state(game_id, parsed_state_index)
+    if game is None:
         abort(404, description="Resource not found")
 
-    game, result_state_index = result
-    payload = {
-        "state_index": result_state_index,
-        "state": game,
-    }
-
+    payload = json.dumps(game, cls=GameEncoder)
     return Response(
-        response=json.dumps(payload, cls=GameEncoder),
+        response=payload,
         status=200,
         mimetype="application/json",
     )
@@ -61,11 +56,10 @@ def get_game_endpoint(game_id, state_index):
 
 @bp.route("/games/<string:game_id>/actions", methods=["POST"])
 def post_action_endpoint(game_id):
-    result = get_game_state(game_id)
-    if result is None:
+    game = get_game_state(game_id)
+    if game is None:
         abort(404, description="Resource not found")
 
-    game, _ = result
     if game.winning_color() is not None:
         return Response(
             response=json.dumps(game, cls=GameEncoder),
@@ -117,14 +111,13 @@ def mcts_analysis_endpoint(game_id, state_index):
     # Convert 'latest' to None for consistency with get_game_state
     parsed_state_index = _parse_state_index(state_index)
     try:
-        result = get_game_state(game_id, parsed_state_index)
-        if result is None:
+        game = get_game_state(game_id, parsed_state_index)
+        if game is None:
             logging.error(
                 f"Game/state not found: {game_id}/{state_index}"
             )  # Use original state_index for logging
             abort(404, description="Game state not found")
 
-        game, _ = result
         analyzer = GameAnalyzer(num_simulations=100)
         probabilities = analyzer.analyze_win_probabilities(game)
 
