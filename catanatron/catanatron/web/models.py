@@ -3,8 +3,10 @@ import json
 import pickle
 from contextlib import contextmanager
 from typing import Any, Tuple
+from catanatron.json import GameEncoder
 
 from catanatron.game import Game
+from catanatron.state_functions import get_state_index
 from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
@@ -26,21 +28,13 @@ class GameState(Base):
     pickle_data = Column(LargeBinary, nullable=False)
 
     # TODO: unique uuid and state_index
-
-    @staticmethod
-    def get_state_index(game: Game):
-        return len(game.state.actions)
-
     @staticmethod
     def from_game(game: Game):
-        # resolves circular import
-        from catanatron.json import GameEncoder
-
         state = json.dumps(game, cls=GameEncoder)
         pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
         return GameState(
             uuid=game.id,
-            state_index=GameState.get_state_index(game),
+            state_index=get_state_index(game.state),
             state=state,
             pickle_data=pickle_data,
         )
@@ -99,7 +93,4 @@ def get_game_state(game_id, state_index=None) -> Game | None:
             abort(404)
     db.session.commit()
     game = pickle.loads(result.pickle_data)  # type: ignore
-    if game is None:
-        return None
-
     return game
