@@ -1,0 +1,20 @@
+@use "../variables.scss";
+
+main {
+  background: variables.$black;
+  color: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .logo {
+    margin: 5px 20px 0 20px;
+    text-align: center;
+  }
+
+  .loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}

@@ -46,8 +46,9 @@ def get_game_endpoint(game_id, state_index):
     if game is None:
         abort(404, description="Resource not found")
 
+    payload = json.dumps(game, cls=GameEncoder)
     return Response(
-        response=json.dumps(game, cls=GameEncoder),
+        response=payload,
         status=200,
         mimetype="application/json",
     )

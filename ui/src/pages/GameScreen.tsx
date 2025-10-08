@@ -15,6 +15,8 @@ import ACTIONS from "../actions";
 import { type StateIndex, getState, postAction } from "../utils/apiClient";
 import { dispatchSnackbar } from "../components/Snackbar";
 import { getHumanColor } from "../utils/stateUtils";
+import AnalysisBox from "../components/AnalysisBox";
+import { Divider } from "@mui/material";
 
 const ROBOT_THINKING_TIME = 300;
 
@@ -88,7 +90,10 @@ function GameScreen({ replayMode }: { replayMode: boolean }) {
       <ZoomableBoard replayMode={replayMode} />
       <ActionsToolbar isBotThinking={isBotThinking} replayMode={replayMode} />
       <LeftDrawer />
-      <RightDrawer />
+      <RightDrawer>
+        <AnalysisBox stateIndex={"latest"}/>
+        <Divider />
+      </RightDrawer>
     </main>
   );
 }

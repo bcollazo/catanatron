@@ -14,7 +14,7 @@ export async function createGame(players: Player[]) {
 export async function getState(
   gameId: string,
   stateIndex: StateIndex = "latest"
-) {
+): Promise<GameState> {
   const response = await axios.get(
     `${API_URL}/api/games/${gameId}/states/${stateIndex}`
   );

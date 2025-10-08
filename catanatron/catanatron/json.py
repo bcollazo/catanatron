@@ -9,7 +9,7 @@ from catanatron.models.map import Water, Port, LandTile
 from catanatron.game import Game
 from catanatron.models.player import Color
 from catanatron.models.enums import RESOURCES, Action, ActionType
-from catanatron.state_functions import get_longest_road_length
+from catanatron.state_functions import get_longest_road_length, get_state_index
 
 
 def longest_roads_by_player(state):
@@ -100,6 +100,7 @@ class GameEncoder(json.JSONEncoder):
                 "current_playable_actions": obj.state.playable_actions,
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
                 "winning_color": obj.winning_color(),
+                "state_index": get_state_index(obj.state),
             }
         if isinstance(obj, Water):
             return {"type": "WATER"}

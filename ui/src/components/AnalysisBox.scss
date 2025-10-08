@@ -1,0 +1,63 @@
+@use "../variables.scss";
+
+$dark-divider: rgb(0 0 0 / 80%);
+
+.analysis-box {
+  .loading-indicator {
+    text-align: center;
+    padding: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .probability-bars {
+    margin-bottom: 16px;
+    .probability-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      margin: 4px 0;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+  
+      &.red { color: variables.$red; }
+      &.blue { color: variables.$blue; }
+      &.white { color: variables.$white; }
+      &.orange { color: variables.$orange; }
+  
+      .player-color {
+        min-width: 63px;
+      }
+  
+      .probability-bar {
+        flex-grow: 1;
+        height: 20px;
+        margin: 0 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+        
+        .bar-fill {
+          position: absolute;
+          height: 100%;
+          left: 0;
+          top: 0;
+          background-color: currentColor;
+          opacity: 0.6;
+          transition: width 0.3s ease;
+        }
+      }
+  
+      .probability-value {
+        font-weight: 500;
+        min-width: 43px;
+        text-align: right;
+      }
+    }
+  }
+}

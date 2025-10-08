@@ -158,6 +158,10 @@ def get_player_freqdeck(state, color):
     ]
 
 
+def get_state_index(state) -> int:
+    return len(state.actions)
+
+
 # ===== State Mutators
 def build_settlement(state, color, node_id, is_free):
     state.buildings_by_color[color][SETTLEMENT].append(node_id)
