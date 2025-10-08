@@ -238,7 +238,7 @@ def build_production_features(consider_robber):
 
 @functools.lru_cache(maxsize=1000)
 def get_node_production(catan_map, node_id, resource):
-    tiles = catan_map.adjacent_tiles[node_id]
+    tiles = catan_map.node_to_tiles[node_id]
     return sum([number_probability(t.number) for t in tiles if t.resource == resource])
 
 

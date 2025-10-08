@@ -345,7 +345,7 @@ def apply_action(state: State, action: Action):
             is_second_house = len(buildings) == 2
             if is_second_house:
                 key = player_key(state, action.color)
-                for tile in state.board.map.adjacent_tiles[node_id]:
+                for tile in state.board.map.node_to_tiles[node_id]:
                     if tile.resource != None:
                         freqdeck_draw(state.resource_freqdeck, 1, tile.resource)  # type: ignore
                         state.player_state[f"{key}_{tile.resource}_IN_HAND"] += 1

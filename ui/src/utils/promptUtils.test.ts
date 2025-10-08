@@ -133,7 +133,7 @@ describe("findTileByCoordinate", () => {
 describe("humanizeAction", () => {
   const baseGameState = {
     bot_colors: ["RED", "BLUE"],
-    adjacent_tiles: {
+    node_to_tiles: {
       0: [
         { id: 0, type: "RESOURCE_TILE", resource: "BRICK", number: 6 },
         { id: 1, type: "DESERT" },
