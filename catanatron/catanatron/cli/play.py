@@ -3,6 +3,7 @@ import importlib.util
 from dataclasses import dataclass
 from typing import Literal, Union
 
+from catanatron.web.database_accumulator import get_database_accumulator, get_step_database_accumulator
 import click
 from rich.console import Console
 from rich.table import Table
@@ -101,6 +102,17 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
         """,
 )
 @click.option(
+    "--step-db",
+    default=False,
+    is_flag=True,
+    help="""
+        Save the entire game in PGSQL database.
+        Expects docker-compose provided database to be up and running.
+        This allows games to be replayed.
+        WARNING: this reduces the simulation speed down to 1 game per minute.
+        """,
+)
+@click.option(
     "--config-discard-limit",
     default=7,
     help="Sets Discard Limit to use in games.",
@@ -137,6 +149,7 @@ def simulate(
     output_format,
     include_board_tensor,
     db,
+    step_db,
     config_discard_limit,
     config_vps_to_win,
     config_map,
@@ -179,7 +192,7 @@ def simulate(
                 players.append(player)
                 break
 
-    output_options = OutputOptions(output, output_format, include_board_tensor, db)
+    output_options = OutputOptions(output, output_format, include_board_tensor, db, step_db)
     game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
         num,
@@ -198,6 +211,7 @@ class OutputOptions:
     output_format: Union[Literal["csv", "parquet", "json"], None] = None
     include_board_tensor: bool = False
     db: bool = False
+    step_db: bool = False
 
 
 @dataclass(frozen=True)
@@ -291,6 +305,11 @@ def play_batch(
         from catanatron.web.database_accumulator import DatabaseAccumulator
 
         accumulators.append(DatabaseAccumulator())
+    if output_options.step_db:
+        # lazy load DatabaseAccumulator since depends on sqlalchemy
+        from catanatron.web.database_accumulator import StepDatabaseAccumulator
+
+        accumulators.append(StepDatabaseAccumulator())
     for accumulator_class in CUSTOM_ACCUMULATORS:
         accumulators.append(accumulator_class(players=players, game_config=game_config))
 
@@ -315,6 +334,8 @@ def play_batch(
     table.add_column("WINNER")
     if output_options.db:
         table.add_column("LINK", overflow="fold")
+    if output_options.step_db:
+        table.add_column("REPLAY LINK", overflow="fold")
 
     with Progress(
         "[progress.description]{task.description}",
@@ -347,8 +368,14 @@ def play_batch(
                     points = get_actual_victory_points(game.state, player.color)
                     row.append(str(points))
                 row.append(rich_color(winning_color))
+
                 if output_options.db:
-                    row.append(accumulators[-1].link)
+                    database_accumulator = get_database_accumulator(accumulators)
+                    row.append(database_accumulator.link)
+
+                if output_options.step_db:
+                    step_database_accumulator = get_step_database_accumulator(accumulators)
+                    row.append(step_database_accumulator.link)
 
                 table.add_row(*row)
 
