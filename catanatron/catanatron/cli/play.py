@@ -3,7 +3,6 @@ import importlib.util
 from dataclasses import dataclass
 from typing import Literal, Union
 
-from catanatron.web.database_accumulator import get_database_accumulator, get_step_database_accumulator
 import click
 from rich.console import Console
 from rich.table import Table
@@ -192,7 +191,9 @@ def simulate(
                 players.append(player)
                 break
 
-    output_options = OutputOptions(output, output_format, include_board_tensor, db, step_db)
+    output_options = OutputOptions(
+        output, output_format, include_board_tensor, db, step_db
+    )
     game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
     play_batch(
         num,
@@ -370,11 +371,31 @@ def play_batch(
                 row.append(rich_color(winning_color))
 
                 if output_options.db:
-                    database_accumulator = get_database_accumulator(accumulators)
+                    from catanatron.web.database_accumulator import DatabaseAccumulator
+
+                    database_accumulator = next(
+                        (
+                            accumulator
+                            for accumulator in accumulators
+                            if isinstance(accumulator, DatabaseAccumulator)
+                        ),
+                        None,
+                    )
                     row.append(database_accumulator.link)
 
                 if output_options.step_db:
-                    step_database_accumulator = get_step_database_accumulator(accumulators)
+                    from catanatron.web.database_accumulator import (
+                        StepDatabaseAccumulator,
+                    )
+
+                    step_database_accumulator = next(
+                        (
+                            accumulator
+                            for accumulator in accumulators
+                            if isinstance(accumulator, StepDatabaseAccumulator)
+                        ),
+                        None,
+                    )
                     row.append(step_database_accumulator.link)
 
                 table.add_row(*row)

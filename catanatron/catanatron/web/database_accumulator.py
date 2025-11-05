@@ -26,19 +26,3 @@ class DatabaseAccumulator(GameAccumulator):
 
     def after(self, game):
         self.link = ensure_link(game)
-
-
-def get_database_accumulator(accumulators: list[GameAccumulator]) -> DatabaseAccumulator:
-    for accumulator in accumulators:
-        if isinstance(accumulator, DatabaseAccumulator):
-            return accumulator
-
-    raise Exception("Database accumulator was not found!")
-
-
-def get_step_database_accumulator(accumulators: list[GameAccumulator]) -> DatabaseAccumulator | None:
-    for accumulator in accumulators:
-        if isinstance(accumulator, StepDatabaseAccumulator):
-            return accumulator
-
-    raise Exception("StepDatabase accumulator was not found!")
