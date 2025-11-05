@@ -1,7 +1,7 @@
 from enum import Enum
 from collections import namedtuple
 from typing import List, Literal, Final
-
+from catanatron.models.player import Color
 
 FastResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE"]
 FastDevCard = Literal[
