@@ -2,7 +2,6 @@ from enum import Enum
 from collections import namedtuple
 from typing import List, Literal, Final
 
-
 FastResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE"]
 FastDevCard = Literal[
     "KNIGHT", "YEAR_OF_PLENTY", "MONOPOLY", "ROAD_BUILDING", "VICTORY_POINT"

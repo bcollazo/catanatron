@@ -13,9 +13,12 @@ class StepDatabaseAccumulator(GameAccumulator):
         with database_session() as session:
             upsert_game_state(game, session)
 
-    def step(self, game):
+    def step(self, game_before_action, action):
         with database_session() as session:
-            upsert_game_state(game, session)
+            upsert_game_state(game_before_action, session)
+
+    def after(self, game):
+        self.link = ensure_link(game, get_replay_link=True)
 
 
 class DatabaseAccumulator(GameAccumulator):
