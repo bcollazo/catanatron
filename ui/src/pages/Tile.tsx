@@ -155,7 +155,8 @@ export default function Tile({
   let contents;
   let resourceTile;
   if (tile.type === "RESOURCE_TILE") {
-    contents = <NumberToken number={tile.number} flashing={flashing} />;
+    const isHotNumber = tile.number === 6 || tile.number === 8
+    contents = <NumberToken number={tile.number} flashing={flashing} style={{ color: isHotNumber ? "red" : "white" }}/>;
     resourceTile = RESOURCES[tile.resource];
   } else if (tile.type === "DESERT") {
     resourceTile = desertTile;

@@ -112,38 +112,19 @@ BASE_MAP_TEMPLATE = MapTemplate(
         SHEEP,
         WHEAT,
         ORE,
-        # These represet 3:1 ports
+        # These represent 3:1 ports
         None,
         None,
         None,
         None,
     ],
     [
-        # Four wood tiles
-        WOOD,
-        WOOD,
-        WOOD,
-        WOOD,
-        # Three brick tiles
-        BRICK,
-        BRICK,
-        BRICK,
-        # Four sheep tiles
-        SHEEP,
-        SHEEP,
-        SHEEP,
-        SHEEP,
-        # Four wheat tiles
-        WHEAT,
-        WHEAT,
-        WHEAT,
-        WHEAT,
-        # Three ore tiles
-        ORE,
-        ORE,
-        ORE,
-        # One desert
-        None,
+        *([WOOD] * 4), # Four wood tiles
+        *([BRICK] * 3), # Three brick tiles
+        *([SHEEP] * 4), # Four sheep tiles
+        *([WHEAT] * 4), # Four wheat tiles
+        *([ORE] * 3), # Three ore tiles
+        None,  # Desert
     ],
     # 3 layers, where last layer is water
     {
@@ -315,7 +296,6 @@ DICE_PROBAS = build_dice_probas()
 def number_probability(number):
     return DICE_PROBAS[number]
 
-
 def initialize_tiles(
     map_template: MapTemplate,
     shuffled_numbers_param=None,
@@ -352,12 +332,12 @@ def initialize_tiles(
     node_autoinc = 0
     tile_autoinc = 0
     port_autoinc = 0
+    # collect coordinates of non-desert land tiles so numbers can be assigned afterwards
+    coords_need_numbers: List[Coordinate] = []
     for coordinate, tile_type in map_template.topology.items():
         nodes, edges, node_autoinc = get_nodes_and_edges(
             all_tiles, coordinate, node_autoinc
         )
-
-        # create and save tile
         if isinstance(tile_type, tuple):  # is port
             (_, direction) = tile_type
             port = Port(
@@ -368,8 +348,9 @@ def initialize_tiles(
         elif tile_type == LandTile:
             resource = shuffled_tile_resources.pop()
             if resource != None:
-                number = shuffled_numbers.pop()
-                tile = LandTile(tile_autoinc, resource, number, nodes, edges)
+                # create tile without number for now, assign numbers afterwards
+                tile = LandTile(tile_autoinc, resource, None, nodes, edges)
+                coords_need_numbers.append(coordinate)
             else:
                 tile = LandTile(tile_autoinc, None, None, nodes, edges)  # desert
             all_tiles[coordinate] = tile
@@ -380,8 +361,63 @@ def initialize_tiles(
         else:
             raise ValueError("Invalid tile")
 
-    return all_tiles
+    if coords_need_numbers:
+        if shuffled_numbers_param is not None:
+            # Deterministic mode: use provided list order
+            numbers_list = list(shuffled_numbers)
+            for coord in coords_need_numbers:
+                num = numbers_list.pop()
+                all_tiles[coord].number = num
+        else:
+            # Deterministically assign numbers avoiding adjacent 6/8
+            nums = list(shuffled_numbers)
+            coords = list(coords_need_numbers)
+            random.shuffle(coords)
 
+            # Separate high-probability numbers (6/8) from others
+            hot_numbers = [n for n in nums if n in (6, 8)]
+            other_numbers = [n for n in nums if n not in (6, 8)]
+
+            # Sort coordinates by degree (fewer neighbors first) – helps spread out hot tiles
+            coords.sort(key=lambda c: sum(
+                1 for d in Direction if add(c, UNIT_VECTORS[d]) in all_tiles
+            ))
+
+            assigned = {}
+            used_coords = set()
+            # Place 6s and 8s in non-adjacent spots
+            for num in hot_numbers:
+                # pick a coord with no adjacent hot numbers
+                for coord in coords:
+                    if coord in used_coords:
+                        continue
+                    # check adjacency
+                    if any(
+                        add(coord, UNIT_VECTORS[d]) in used_coords and
+                        assigned.get(add(coord, UNIT_VECTORS[d])) in (6, 8)
+                        for d in Direction
+                    ):
+                        continue
+                    # found a safe spot
+                    assigned[coord] = num
+                    used_coords.add(coord)
+                    break
+                else:
+                    # fallback if all coords blocked
+                    coord = next(c for c in coords if c not in used_coords)
+                    assigned[coord] = num
+                    used_coords.add(coord)
+
+            # Fill remaining tiles with the rest of the numbers
+            remaining_coords = [c for c in coords if c not in assigned]
+            for coord, num in zip(remaining_coords, other_numbers):
+                assigned[coord] = num
+
+            # Apply mapping
+            for coord, num in assigned.items():
+                all_tiles[coord].number = num
+
+    return all_tiles
 
 def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):
     """Get pre-existing nodes and edges in board for given tile coordinate"""
