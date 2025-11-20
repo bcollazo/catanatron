@@ -42,6 +42,9 @@ def assert_states_equal(state1, state2, message="States should be equal"):
     # Compare actions log length (content might differ for the last action)
     assert len(state1.actions) == len(state2.actions), f"{message}: actions list length mismatch"
 
+    # Compare playable_actions_history
+    assert len(state1.playable_actions_history) == len(state2.playable_actions_history), f"{message}: playable_actions_history length mismatch"
+
     # Compare playable actions
     assert set(state1.playable_actions) == set(state2.playable_actions), f"{message}: playable_actions mismatch"
 
@@ -91,14 +94,14 @@ class TestMaritimeTradeUndo:
         state_before = game.state.copy()
 
         # Apply the action
-        fully_specified_action, undo_info = apply_action_undoable(game.state, trade_action)
+        fully_specified_action = apply_action_undoable(game.state, trade_action)
 
         # Verify the trade was applied
         assert game.state.player_state[f"{key}_WOOD_IN_HAND"] == 0, "WOOD should be traded away"
         assert game.state.player_state[f"{key}_WHEAT_IN_HAND"] == 1, "WHEAT should be received"
 
         # Unapply the action
-        unapply_action(game.state, fully_specified_action, undo_info)
+        unapply_action(game.state, fully_specified_action)
 
         # Verify state is restored
         assert_states_equal(game.state, state_before, "State after unapply should match original")
@@ -140,14 +143,14 @@ class TestMaritimeTradeUndo:
         state_before = game.state.copy()
 
         # Apply and unapply
-        fully_specified_action, undo_info = apply_action_undoable(game.state, trade_action)
+        fully_specified_action = apply_action_undoable(game.state, trade_action)
 
         # Verify trade was applied
         assert game.state.player_state[f"{key}_BRICK_IN_HAND"] == 0
         assert game.state.player_state[f"{key}_ORE_IN_HAND"] == 1
 
         # Unapply
-        unapply_action(game.state, fully_specified_action, undo_info)
+        unapply_action(game.state, fully_specified_action)
 
         # Verify restoration
         assert_states_equal(game.state, state_before, "State should be restored after 3:1 trade undo")
@@ -183,11 +186,11 @@ class TestMaritimeTradeUndo:
                 value=["SHEEP", "SHEEP", "SHEEP", "SHEEP", "WHEAT"]
             )
 
-            action, undo_info = apply_action_undoable(game.state, trade_action)
+            action = apply_action_undoable(game.state, trade_action)
             assert game.state.player_state[f"{key}_SHEEP_IN_HAND"] == 12 - 4
             assert game.state.player_state[f"{key}_WHEAT_IN_HAND"] == 1
 
-            unapply_action(game.state, action, undo_info)
+            unapply_action(game.state, action)
             assert_states_equal(game.state, initial_state, f"State should be restored after cycle {i+1}")
 
     def test_undoable_actions_set(self):

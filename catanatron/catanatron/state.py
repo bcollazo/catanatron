@@ -159,6 +159,9 @@ class State:
                 p.color: defaultdict(list) for p in players
             }
             self.actions: List[Action] = []  # log of all action taken by players
+            # Stack of playable_actions history, parallel to actions list.
+            # Used by state_undo module for efficient undo without regenerating playable actions.
+            self.playable_actions_history: List[List[Action]] = []
             self.num_turns = 0  # num_completed_turns
 
             # Current prompt / player
@@ -212,6 +215,9 @@ class State:
             pickle.dumps(self.buildings_by_color)
         )
         state_copy.actions = self.actions.copy()
+        state_copy.playable_actions_history = [
+            actions.copy() for actions in self.playable_actions_history
+        ]
         state_copy.num_turns = self.num_turns
 
         # Current prompt / player
