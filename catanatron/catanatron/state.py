@@ -323,6 +323,7 @@ def apply_action(state: State, action: Action):
         .current_prompt (and similars), .playable_actions.
 
     Appends given action to the list of actions, as fully-specified action.
+    Also pushes current playable_actions to playable_actions_history for undo support.
 
     Args:
         state (State): State to mutate
@@ -334,6 +335,8 @@ def apply_action(state: State, action: Action):
     Returns:
         Action: Fully-specified action
     """
+    # Save current playable_actions to history stack (for undo support)
+    state.playable_actions_history.append(state.playable_actions.copy())
 
     if action.action_type == ActionType.END_TURN:
         player_clean_turn(state, action.color)
