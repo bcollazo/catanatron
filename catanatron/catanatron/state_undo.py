@@ -69,17 +69,17 @@ def unapply_action(state: State, action: Action) -> None:
         player_freqdeck_add(state, action.color, offering)
 
         # Restore playable_actions from history stack
-        assert len(state.playable_actions_history) > 0, (
-            "playable_actions_history is empty, cannot undo"
-        )
+        assert (
+            len(state.playable_actions_history) > 0
+        ), "playable_actions_history is empty, cannot undo"
         state.playable_actions = state.playable_actions_history.pop()
 
         # Remove from action log
         assert len(state.actions) > 0, "actions list is empty, cannot undo"
         removed_action = state.actions.pop()
-        assert removed_action == action, (
-            f"Action log mismatch during undo: expected {action}, got {removed_action}"
-        )
+        assert (
+            removed_action == action
+        ), f"Action log mismatch during undo: expected {action}, got {removed_action}"
 
         return
 

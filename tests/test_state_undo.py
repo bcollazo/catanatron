@@ -24,7 +24,7 @@ def test_maritime_trade_4_to_1_undo():
     trade_action = Action(
         color=Color.RED,
         action_type=ActionType.MARITIME_TRADE,
-        value=[WOOD, WOOD, WOOD, WOOD, WHEAT]
+        value=[WOOD, WOOD, WOOD, WOOD, WHEAT],
     )
 
     # Save initial state values
@@ -38,6 +38,7 @@ def test_maritime_trade_4_to_1_undo():
 
     # Verify trade was applied
     from catanatron.state_functions import player_num_resource_cards
+
     assert player_num_resource_cards(state, Color.RED, WOOD) == 0
     assert player_num_resource_cards(state, Color.RED, WHEAT) == 1
     assert len(state.actions) == initial_actions_count + 1
@@ -65,7 +66,7 @@ def test_maritime_trade_3_to_1_undo():
     trade_action = Action(
         color=Color.RED,
         action_type=ActionType.MARITIME_TRADE,
-        value=[BRICK, BRICK, BRICK, None, ORE]
+        value=[BRICK, BRICK, BRICK, None, ORE],
     )
 
     # Save initial state
@@ -75,6 +76,7 @@ def test_maritime_trade_3_to_1_undo():
     # Apply and verify
     apply_action(state, trade_action)
     from catanatron.state_functions import player_num_resource_cards
+
     assert player_num_resource_cards(state, Color.RED, BRICK) == 0
     assert player_num_resource_cards(state, Color.RED, ORE) == 1
 
@@ -95,6 +97,7 @@ def test_multiple_apply_unapply_cycles():
 
     # Save initial state
     from catanatron.state_functions import player_num_resource_cards
+
     initial_sheep = player_num_resource_cards(state, Color.RED, SHEEP)
     initial_wheat = player_num_resource_cards(state, Color.RED, WHEAT)
     initial_actions_count = len(state.actions)
@@ -105,7 +108,7 @@ def test_multiple_apply_unapply_cycles():
         trade_action = Action(
             color=Color.RED,
             action_type=ActionType.MARITIME_TRADE,
-            value=[SHEEP, SHEEP, SHEEP, SHEEP, WHEAT]
+            value=[SHEEP, SHEEP, SHEEP, SHEEP, WHEAT],
         )
 
         apply_action(state, trade_action)
@@ -132,9 +135,7 @@ def test_non_undoable_action_raises_error():
 
     # Try to unapply an action that's not in UNDOABLE_ACTIONS
     non_undoable_action = Action(
-        color=Color.RED,
-        action_type=ActionType.ROLL,
-        value=(3, 4)
+        color=Color.RED, action_type=ActionType.ROLL, value=(3, 4)
     )
 
     with pytest.raises(ValueError, match="is not undoable"):
