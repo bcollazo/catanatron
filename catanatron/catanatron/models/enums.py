@@ -104,9 +104,8 @@ class ActionType(Enum):
 
     END_TURN = "END_TURN"  # value is None
 
-
-def __repr__(self):
-    return f"ActionType.{self.value}"
+    def __repr__(self):
+        return f"AT.{self.name}"
 
 
 # TODO: Distinguish between Action and ActionLog?
