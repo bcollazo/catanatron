@@ -149,5 +149,4 @@ make upload-production PACKAGE=catanatron_gym
   * Try simple flat CSV approach but with AlphaBeta-generated games.
 * Features
   * Continue implementing actions from the UI (not all implemented).
-  * Chess.com-like UI for watching game replays (with Play/Pause and Back/Forward).
-  * A terminal UI? (for ease of debugging)
+  * A Terminal UI? (for ease of debugging)
