@@ -52,7 +52,7 @@ class ReinforcementLearningAccumulator(GameAccumulator):
         self.data["acting_color"].append(action.color)
         self.data["samples"].append(create_sample(game_before_action, action.color))
         self.data["actions"].append(
-            [to_action_space(action), to_action_type_space(action)]
+            [to_action_space(action), to_action_type_space(action.action_type)]
         )
 
         if self.include_board_tensor:
