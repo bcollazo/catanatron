@@ -13,7 +13,7 @@ class Color(Enum):
     WHITE = "WHITE"
 
     def __repr__(self):
-        return f"Color.{self.name}"
+        return f"C.{self.name}"
 
 
 class Player:
