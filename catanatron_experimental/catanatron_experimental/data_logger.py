@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from catanatron.game import Game
+
 import tensorflow as tf
 import pandas as pd
 
@@ -29,7 +31,7 @@ class DataLogger:
         self.labels = []
         self.log_lines = []
 
-    def consume(self, game, mcts_labels):
+    def consume(self, game: Game, mcts_labels):
         for color in game.state.colors:
             sample = create_sample_vector(game, color)
             flattened_board_tensor = tf.reshape(
