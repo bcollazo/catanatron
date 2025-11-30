@@ -1,6 +1,7 @@
 import pytest
 
-from catanatron.state import State, apply_action
+from catanatron.state import State
+from catanatron.apply_action import apply_action
 from catanatron.state_functions import (
     buy_dev_card,
     get_actual_victory_points,

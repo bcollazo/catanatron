@@ -39,7 +39,7 @@ class MCTSPlayer(Player):
 
 
 class StateNode:
-    def __init__(self, color, game, parent, prunning=False):
+    def __init__(self, color, game: Game, parent, prunning=False):
         self.level = 0 if parent is None else parent.level + 1
         self.color = color  # color of player carrying out MCTS
         self.parent = parent
@@ -81,7 +81,7 @@ class StateNode:
 
     def expand(self):
         children = defaultdict(list)
-        playable_actions = self.game.state.playable_actions
+        playable_actions = self.game.playable_actions
         actions = list_prunned_actions(self.game) if self.prunning else playable_actions
         for action in actions:
             outcomes = execute_spectrum(self.game, action)
@@ -103,12 +103,12 @@ class StateNode:
 
     def choose_best_action(self):
         scores = []
-        for action in self.game.state.playable_actions:
+        for action in self.game.playable_actions:
             score = self.action_children_expected_score(action)
             scores.append(score)
 
         idx = max(range(len(scores)), key=lambda i: scores[i])
-        action = self.game.state.playable_actions[idx]
+        action = self.game.playable_actions[idx]
         return action
 
     def action_children_expected_score(self, action):

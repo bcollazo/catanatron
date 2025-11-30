@@ -160,7 +160,7 @@ def get_player_freqdeck(state: State, color):
 
 
 def get_state_index(state: State) -> int:
-    return len(state.action_records)
+    return len(state.actions)
 
 
 # ===== State Mutators

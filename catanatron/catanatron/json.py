@@ -97,7 +97,7 @@ class GameEncoder(json.JSONEncoder):
                 "robber_coordinate": obj.state.board.robber_coordinate,
                 "current_color": obj.state.current_color(),
                 "current_prompt": obj.state.current_prompt,
-                "current_playable_actions": obj.state.playable_actions,
+                "current_playable_actions": obj.playable_actions,
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
                 "winning_color": obj.winning_color(),
                 "state_index": get_state_index(obj.state),

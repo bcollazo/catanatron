@@ -50,7 +50,7 @@ class AlphaBetaPlayer(Player):
     def get_actions(self, game):
         if self.prunning:
             return list_prunned_actions(game)
-        return game.state.playable_actions
+        return game.playable_actions
 
     def decide(self, game: Game, playable_actions):
         actions = self.get_actions(game)

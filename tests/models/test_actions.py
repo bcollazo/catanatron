@@ -1,10 +1,4 @@
-from catanatron.state import (
-    State,
-    build_city,
-    build_settlement,
-    player_freqdeck_add,
-    player_deck_replenish,
-)
+from catanatron.state import State
 from catanatron.models.actions import (
     generate_playable_actions,
     monopoly_possibilities,
@@ -27,6 +21,12 @@ from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.decks import (
     SETTLEMENT_COST_FREQDECK,
     starting_resource_bank,
+)
+from catanatron.state_functions import (
+    build_city,
+    build_settlement,
+    player_deck_replenish,
+    player_freqdeck_add,
 )
 
 

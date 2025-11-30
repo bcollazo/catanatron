@@ -1,6 +1,7 @@
 import math
 from collections import defaultdict
 
+from catanatron.game import Game
 from catanatron.models.map import number_probability
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -120,9 +121,9 @@ def expand_spectrum(game, actions):
     return children  # action => (game, proba)[]
 
 
-def list_prunned_actions(game):
+def list_prunned_actions(game: Game):
     current_color = game.state.current_color()
-    playable_actions = game.state.playable_actions
+    playable_actions = game.playable_actions
     actions = playable_actions.copy()
     types = set(map(lambda a: a.action_type, playable_actions))
 

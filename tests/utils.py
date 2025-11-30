@@ -21,14 +21,14 @@ def build_initial_placements(
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, p0_actions[3]))
 
 
-def advance_to_play_turn(game):
+def advance_to_play_turn(game: Game):
     game.execute(Action(game.state.current_color(), ActionType.ROLL, None))
-    while game.state.playable_actions[0].action_type in [
+    while game.playable_actions[0].action_type in [
         ActionType.DISCARD,
         ActionType.MOVE_ROBBER,
     ]:
-        game.execute(game.state.playable_actions[0])
+        game.execute(game.playable_actions[0])
 
 
-def end_turn(game):
-    game.execute(Action(game.state.current_color(), ActionType.END_TURN, None))
+def end_turn(game: Game):
+    game.execute(Action(game.current_color(), ActionType.END_TURN, None))

@@ -1,6 +1,6 @@
 from catanatron.models.enums import Action, ActionType
-from catanatron.state import (
-    State,
+from catanatron.state import State
+from catanatron.state_functions import (
     player_clean_turn,
     player_can_play_dev,
     player_deck_replenish,

@@ -29,6 +29,7 @@ from catanatron.models.enums import (
     WHEAT,
     WOOD,
 )
+from catanatron.state import State
 from catanatron.state_functions import (
     get_player_buildings,
     get_player_freqdeck,
@@ -41,7 +42,7 @@ from catanatron.state_functions import (
 )
 
 
-def generate_playable_actions(state) -> List[Action]:
+def generate_playable_actions(state: State) -> List[Action]:
     action_prompt = state.current_prompt
     color = state.current_color()
 
