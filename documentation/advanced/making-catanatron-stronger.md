@@ -10,15 +10,15 @@ Catanatron will always refer to the best bot in this leaderboard.
 
 The best bot right now is `AlphaBetaPlayer` with n = 2. Here a list of bots strength. Experiments done by running 1000 (when possible) 1v1 games against previous in list.
 
-| Player               | % of wins in 1v1 games      | num games used for result |
-| -------------------- | --------------------------- | ------------------------- |
-| AlphaBeta(n=2)       | 80% vs ValueFunction        | 25                        |
-| ValueFunction        | 90% vs GreedyPlayouts(n=25) | 25                        |
-| GreedyPlayouts(n=25) | 100% vs MCTS(n=100)         | 25                        |
-| MCTS(n=100)          | 60% vs WeightedRandom       | 15                        |
-| WeightedRandom       | 53% vs WeightedRandom       | 1000                      |
-| VictoryPoint         | 60% vs Random               | 1000                      |
-| Random               | -                           | -                         |
+| Player               | % of wins in 1v1 games                      | num games used for result |
+| -------------------- | ------------------------------------------- | ------------------------- |
+| AlphaBeta(n=2)       | 80% vs ValueFunction                        | 25                        |
+| ValueFunction        | 90% vs GreedyPlayouts(n=25)                 | 25                        |
+| GreedyPlayouts(n=25) | 100% vs MCTS(n=100)                         | 25                        |
+| MCTS(n=100)          | 60% vs WeightedRandom                       | 15                        |
+| WeightedRandom       | <p>60% vs Random<br>50% vs VictoryPoint</p> | 1000                      |
+| VictoryPoint         | 60% vs Random                               | 1000                      |
+| Random               | -                                           | -                         |
 
 ### Making Catanatron Bot Stronger
 
