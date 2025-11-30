@@ -8,12 +8,12 @@ from catanatron.state_functions import (
     player_has_rolled,
 )
 from catanatron.game import Game, is_valid_trade
-from catanatron.state import (
-    apply_action,
+from catanatron.apply_action import apply_action
+from catanatron.state_functions import (
+    player_key,
     player_deck_replenish,
     player_num_resource_cards,
 )
-from catanatron.state_functions import player_key
 from catanatron.models.actions import generate_playable_actions
 from catanatron.models.enums import (
     BRICK,
@@ -35,9 +35,7 @@ def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
     actions = []
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         actions.append(game.play_tick())
 
     p0_color = game.state.colors[0]
@@ -106,16 +104,14 @@ def test_can_play_for_a_bit():  # assert no exception thrown
         game.play_tick()
 
 
-@patch("catanatron.state.roll_dice")
+@patch("catanatron.apply_action.roll_dice")
 def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
 
     # Play initial build phase
     game = Game(players)
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         game.play_tick()
 
     until_seven = 7 - player_num_resource_cards(game.state, players[1].color)
@@ -123,19 +119,15 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     assert player_num_resource_cards(game.state, players[1].color) == 7
     game.play_tick()  # should be player 0 rolling.
 
-    assert not any(
-        a.action_type == ActionType.DISCARD for a in game.state.playable_actions
-    )
+    assert not any(a.action_type == ActionType.DISCARD for a in game.playable_actions)
 
 
-@patch("catanatron.state.roll_dice")
+@patch("catanatron.apply_action.roll_dice")
 def test_rolling_a_seven_triggers_default_discard_limit(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         game.play_tick()
 
     until_nine = 9 - player_num_resource_cards(game.state, players[1].color)
@@ -143,16 +135,14 @@ def test_rolling_a_seven_triggers_default_discard_limit(fake_roll_dice):
     assert player_num_resource_cards(game.state, players[1].color) == 9
     game.play_tick()  # should be player 0 rolling.
 
-    assert len(game.state.playable_actions) == 1
-    assert game.state.playable_actions == [
-        Action(players[1].color, ActionType.DISCARD, None)
-    ]
+    assert len(game.playable_actions) == 1
+    assert game.playable_actions == [Action(players[1].color, ActionType.DISCARD, None)]
 
     game.play_tick()
     assert player_num_resource_cards(game.state, players[1].color) == 5
 
 
-@patch("catanatron.state.roll_dice")
+@patch("catanatron.apply_action.roll_dice")
 def test_all_players_discard_as_needed(fake_roll_dice):
     """Tests irrespective of who rolls the 7, all players discard"""
     players = [
@@ -162,9 +152,7 @@ def test_all_players_discard_as_needed(fake_roll_dice):
         SimplePlayer(Color.ORANGE),
     ]
     game = Game(players)
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         game.play_tick()
 
     ordered_players = game.state.players
@@ -186,49 +174,45 @@ def test_all_players_discard_as_needed(fake_roll_dice):
 
     # the following assumes, no matter who rolled 7, asking players
     #   to discard, happens in original seating-order.
-    assert len(game.state.playable_actions) == 1
-    assert game.state.playable_actions == [
+    assert len(game.playable_actions) == 1
+    assert game.playable_actions == [
         Action(ordered_players[0].color, ActionType.DISCARD, None)
     ]
 
     game.play_tick()  # p0 discards, places p1 in line to discard
     assert player_num_resource_cards(game.state, ordered_players[0].color) == 5
-    assert len(game.state.playable_actions) == 1
-    assert game.state.playable_actions == [
+    assert len(game.playable_actions) == 1
+    assert game.playable_actions == [
         Action(ordered_players[1].color, ActionType.DISCARD, None)
     ]
 
     game.play_tick()
     assert player_num_resource_cards(game.state, ordered_players[1].color) == 5
-    assert len(game.state.playable_actions) == 1
-    assert game.state.playable_actions == [
+    assert len(game.playable_actions) == 1
+    assert game.playable_actions == [
         Action(ordered_players[2].color, ActionType.DISCARD, None)
     ]
 
     game.play_tick()
     assert player_num_resource_cards(game.state, ordered_players[2].color) == 5
-    assert len(game.state.playable_actions) == 1
-    assert game.state.playable_actions == [
+    assert len(game.playable_actions) == 1
+    assert game.playable_actions == [
         Action(ordered_players[3].color, ActionType.DISCARD, None)
     ]
 
     game.play_tick()  # p3 discards, game goes back to p1 moving robber
     assert player_num_resource_cards(game.state, ordered_players[3].color) == 5
     assert game.state.is_moving_knight
-    assert all(a.color == ordered_players[1].color for a in game.state.playable_actions)
-    assert all(
-        a.action_type == ActionType.MOVE_ROBBER for a in game.state.playable_actions
-    )
+    assert all(a.color == ordered_players[1].color for a in game.playable_actions)
+    assert all(a.action_type == ActionType.MOVE_ROBBER for a in game.playable_actions)
 
 
-@patch("catanatron.state.roll_dice")
+@patch("catanatron.apply_action.roll_dice")
 def test_discard_is_configurable(fake_roll_dice):
     fake_roll_dice.return_value = (1, 6)
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players, discard_limit=10)
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         game.play_tick()
 
     until_nine = 9 - player_num_resource_cards(game.state, players[1].color)
@@ -236,21 +220,17 @@ def test_discard_is_configurable(fake_roll_dice):
     assert player_num_resource_cards(game.state, players[1].color) == 9
     game.play_tick()  # should be p0 rolling.
 
-    assert game.state.playable_actions != [
-        Action(players[1].color, ActionType.DISCARD, None)
-    ]
+    assert game.playable_actions != [Action(players[1].color, ActionType.DISCARD, None)]
 
 
-@patch("catanatron.state.roll_dice")
+@patch("catanatron.apply_action.roll_dice")
 def test_end_turn_goes_to_next_player(fake_roll_dice):
     fake_roll_dice.return_value = (1, 2)  # not a 7
 
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
     actions = []
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         actions.append(game.play_tick())
 
     p0_color = game.state.colors[0]
@@ -259,20 +239,20 @@ def test_end_turn_goes_to_next_player(fake_roll_dice):
         game.state.current_prompt == ActionPrompt.PLAY_TURN
         and game.state.current_color() == p0_color
     )
-    assert game.state.playable_actions == [Action(p0_color, ActionType.ROLL, None)]
+    assert game.playable_actions == [Action(p0_color, ActionType.ROLL, None)]
 
     game.execute(Action(p0_color, ActionType.ROLL, None))
     assert game.state.current_prompt == ActionPrompt.PLAY_TURN
     assert game.state.current_color() == p0_color
     assert player_has_rolled(game.state, p0_color)
-    assert Action(p0_color, ActionType.END_TURN, None) in game.state.playable_actions
+    assert Action(p0_color, ActionType.END_TURN, None) in game.playable_actions
 
     game.execute(Action(p0_color, ActionType.END_TURN, None))
     assert game.state.current_prompt == ActionPrompt.PLAY_TURN
     assert game.state.current_color() == p1_color
     assert not player_has_rolled(game.state, p0_color)
     assert not player_has_rolled(game.state, p1_color)
-    assert game.state.playable_actions == [Action(p1_color, ActionType.ROLL, None)]
+    assert game.playable_actions == [Action(p1_color, ActionType.ROLL, None)]
 
 
 # ===== Development Cards
@@ -315,7 +295,7 @@ def test_play_monopoly_no_monopoly_card():
         game.execute(action_to_execute)
 
 
-@patch("catanatron.state.roll_dice")
+@patch("catanatron.apply_action.roll_dice")
 def test_play_road_building(fake_roll_dice):
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
@@ -326,9 +306,7 @@ def test_play_road_building(fake_roll_dice):
     player_clean_turn(game.state, p0.color)
 
     # play initial phase
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         game.play_tick()
 
     game.execute(Action(p0.color, ActionType.PLAY_ROAD_BUILDING, None))
@@ -374,7 +352,7 @@ def test_longest_road_steal():
     game.state.current_prompt = ActionPrompt.PLAY_TURN
     game.state.is_initial_build_phase = False
     game.state.player_state[f"{p0_key}_HAS_ROLLED"] = True
-    game.state.playable_actions = generate_playable_actions(game.state)
+    game.playable_actions = generate_playable_actions(game.state)
 
     # Set up player0 to build two roads and steal longest road.
     road1 = (10, 11)
@@ -415,9 +393,7 @@ def test_second_placement_takes_cards_from_bank():
     game = Game(players)
     assert sum(game.state.resource_freqdeck) == 19 * 5
 
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         game.play_tick()
 
     assert sum(game.state.resource_freqdeck) < 19 * 5
@@ -487,7 +463,7 @@ def test_trade_offers_are_valid():
     assert is_valid_trade(action_value)
 
 
-@patch("catanatron.state.roll_dice")
+@patch("catanatron.apply_action.roll_dice")
 def test_trading_sequence(fake_roll_dice):
     # Play initial building phase
     players = [
@@ -497,9 +473,7 @@ def test_trading_sequence(fake_roll_dice):
     ]
     game = Game(players)
     [p0, p1, p2] = game.state.players
-    while not any(
-        a.action_type == ActionType.ROLL for a in game.state.playable_actions
-    ):
+    while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
         game.play_tick()
 
     # create 1:1 trade
@@ -533,10 +507,10 @@ def test_trading_sequence(fake_roll_dice):
     )
     game.execute(action)  # now you can offer trades
     assert game.state.is_resolving_trade
-    assert all(a.color == p1.color for a in game.state.playable_actions)
+    assert all(a.color == p1.color for a in game.playable_actions)
     assert all(
         a.action_type in [ActionType.ACCEPT_TRADE, ActionType.REJECT_TRADE]
-        for a in game.state.playable_actions
+        for a in game.playable_actions
     )
 
     # assert they asked players to accept/deny trade

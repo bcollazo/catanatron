@@ -476,7 +476,7 @@ def port_distance_features(game: Game, p0_color: Color):
 
 def game_features(game: Game, p0_color: Color):
     # BANK_WOODS, BANK_WHEATS, ..., BANK_DEV_CARDS
-    possibilities = set([a.action_type for a in game.state.playable_actions])
+    possibilities = set([a.action_type for a in game.playable_actions])
     features = {
         "BANK_DEV_CARDS": len(game.state.development_listdeck),
         "IS_MOVING_ROBBER": ActionType.MOVE_ROBBER in possibilities,

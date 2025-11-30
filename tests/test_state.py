@@ -1,6 +1,7 @@
 import pytest
 
-from catanatron.state import State, apply_action
+from catanatron.state import State
+from catanatron.apply_action import apply_action
 from catanatron.state_functions import (
     get_dev_cards_in_hand,
     player_clean_turn,
@@ -203,7 +204,4 @@ def test_sequence():
 
     p0_color = state.colors[0]
     assert state.current_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT
-    assert Action(p0_color, ActionType.BUILD_SETTLEMENT, 0) in state.playable_actions
-    assert Action(p0_color, ActionType.BUILD_SETTLEMENT, 50) in state.playable_actions
-
-    apply_action(state, state.playable_actions[0])
+    apply_action(state, Action(p0_color, ActionType.BUILD_SETTLEMENT, 0))
