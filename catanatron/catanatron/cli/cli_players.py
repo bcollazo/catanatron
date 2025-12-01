@@ -2,7 +2,7 @@ from collections import namedtuple
 
 from rich.table import Table
 
-from catanatron.models.player import HumanPlayer, RandomPlayer
+from catanatron.models.player import Color, HumanPlayer, RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
@@ -65,6 +65,22 @@ CLI_PLAYERS = [
         SameTurnAlphaBetaPlayer,
     ),
 ]
+
+
+def parse_cli_string(player_string):
+    players = []
+    player_keys = player_string.split(",")
+    colors = [c for c in Color]
+    for i, key in enumerate(player_keys):
+        parts = key.split(":")
+        code = parts[0]
+        for cli_player in CLI_PLAYERS:
+            if cli_player.code == code:
+                params = [colors[i]] + parts[1:]
+                player = cli_player.import_fn(*params)
+                players.append(player)
+                break
+    return players
 
 
 def register_cli_player(code, player_class):

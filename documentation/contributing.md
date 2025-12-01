@@ -89,7 +89,11 @@ docker run -it --rm -v $(realpath ./notebooks):/tf/notebooks -p 8888:8888 tensor
 #### Testing Performance
 
 ```bash
-python -m cProfile -o profile.pstats catanatron/catanatron/cli/play.py --num=5
+pyinstrument -r html --from-path catanatron-play --players AB:2,AB:2
+```
+
+```bash
+python -m cProfile -o profile.pstats examples/play_batch_example.py
 snakeviz profile.pstats
 ```
 
