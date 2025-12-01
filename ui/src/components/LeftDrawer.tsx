@@ -6,7 +6,7 @@ import Drawer from "@mui/material/Drawer";
 
 import Hidden from "./Hidden";
 import PlayerStateBox from "./PlayerStateBox";
-import { humanizeAction } from "../utils/promptUtils";
+import { humanizeActionRecord } from "../utils/promptUtils";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";
@@ -34,12 +34,15 @@ function DrawerContent({ gameState }: { gameState: GameState }) {
     <>
       {playerSections}
       <div className="log">
-        {gameState.actions
+        {gameState.action_records
           .slice()
           .reverse()
-          .map((action, i) => (
-            <div key={i} className={cn("action foreground", action[0])}>
-              {humanizeAction(gameState, action)}
+          .map((actionRecord, i) => (
+            <div
+              key={i}
+              className={cn("action foreground", actionRecord[0][0])}
+            >
+              {humanizeActionRecord(gameState, actionRecord)}
             </div>
           ))}
       </div>

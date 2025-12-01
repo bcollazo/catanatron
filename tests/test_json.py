@@ -25,7 +25,7 @@ def test_serialization():
     assert isinstance(result["tiles"], list)
     assert isinstance(result["edges"], list)
     assert isinstance(result["nodes"], dict)
-    assert isinstance(result["actions"], list)
+    assert isinstance(result["action_records"], list)
 
 
 def test_action_from_json_maritime_trade():

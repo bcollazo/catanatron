@@ -1,22 +1,34 @@
-import type { GameAction, Tile, PlacedTile } from "./api.types";
+import type {
+  Tile,
+  PlacedTile,
+  GameActionRecord,
+  MaritimeTradeAction,
+  BuildCityAction,
+  BuildRoadAction,
+  PlayYearOfPlentyAction,
+  MoveRobberAction,
+} from "./api.types";
 import type { GameState } from "./api.types";
 
-export function humanizeAction(gameState: GameState, action: GameAction) {
+export function humanizeActionRecord(
+  gameState: GameState,
+  actionRecord: GameActionRecord
+) {
   const botColors = gameState.bot_colors;
+  const action = actionRecord[0];
   const player = botColors.includes(action[0]) ? "BOT" : "YOU";
-  switch (action[1]) {
-    case "ROLL":
-      if (!action[2])
-        throw new Error(
-          "did not get Rolling outcomes back from Server! output"
-        );
-      return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
+  switch (actionRecord[0][1]) {
+    case "ROLL": {
+      const action = actionRecord[1] as [number, number];
+      return `${player} ROLLED A ${action[0] + action[1]}`;
+    }
     case "DISCARD":
       return `${player} DISCARDED`;
     case "BUY_DEVELOPMENT_CARD":
       return `${player} BOUGHT DEVELOPMENT CARD`;
     case "BUILD_SETTLEMENT":
     case "BUILD_CITY": {
+      const action = actionRecord[0] as BuildCityAction;
       const parts = action[1].split("_");
       const building = parts[parts.length - 1];
       const tileId = action[2];
@@ -25,6 +37,7 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
       return `${player} BUILT ${building} ON ${tileString}`;
     }
     case "BUILD_ROAD": {
+      const action = actionRecord[0] as BuildRoadAction;
       const edge = action[2];
       const a = gameState.adjacent_tiles[edge[0]].map((t) => t.id);
       const b = gameState.adjacent_tiles[edge[1]].map((t) => t.id);
@@ -45,6 +58,7 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
       return `${player} MONOPOLIZED ${action[2]}`;
     }
     case "PLAY_YEAR_OF_PLENTY": {
+      const action = actionRecord[0] as PlayYearOfPlentyAction;
       const firstResource = action[2][0];
       const secondResource = action[2][1];
       if (secondResource) {
@@ -54,13 +68,15 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
       }
     }
     case "MOVE_ROBBER": {
+      const action = actionRecord[0] as MoveRobberAction;
       const tile = findTileByCoordinate(gameState, action[2][0]);
       const tileString = getTileString(tile);
-      const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : "";
+      const robbedResource = actionRecord[1];
+      const stolenResource = robbedResource ? ` (STOLE ${robbedResource})` : "";
       return `${player} ROBBED ${tileString}${stolenResource}`;
     }
     case "MARITIME_TRADE": {
-      const label = humanizeTradeAction(action);
+      const label = humanizeTradeAction(action as MaritimeTradeAction);
       return `${player} TRADED ${label}`;
     }
     case "END_TURN":
@@ -69,7 +85,7 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
       throw new Error(`Unknown action type: ${action[1]}`);
   }
 }
-export function humanizeTradeAction(action: GameAction): string {
+export function humanizeTradeAction(action: MaritimeTradeAction): string {
   const out = action[2]
     .slice(0, 4)
     .filter((resource: unknown) => resource !== null);

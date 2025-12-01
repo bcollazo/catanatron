@@ -130,7 +130,7 @@ def mcts_analysis_endpoint(game_id, state_index):
                     "state_index": (
                         parsed_state_index
                         if parsed_state_index is not None
-                        else len(game.state.actions)
+                        else len(game.state.action_records)
                     ),
                 }
             ),

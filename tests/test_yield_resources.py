@@ -1,4 +1,4 @@
-from catanatron.state import yield_resources
+from catanatron.apply_action import yield_resources
 from catanatron.models.board import Board
 from catanatron.models.player import Color
 from catanatron.models.decks import (

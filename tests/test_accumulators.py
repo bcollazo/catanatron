@@ -37,14 +37,14 @@ def test_accumulators():
     game.play(accumulators=[accumulator])
 
     assert accumulator.initialized
-    assert len(accumulator.actions) == len(game.state.actions)
+    assert len(accumulator.actions) == len(game.state.action_records)
     assert accumulator.finalized
 
     # assert games in step() are before actions are taken
     discard_actions = [
-        (i, a)
-        for i, a in enumerate(game.state.actions)
-        if a.action_type == ActionType.DISCARD
+        (i, ar.action)
+        for i, ar in enumerate(game.state.action_records)
+        if ar.action.action_type == ActionType.DISCARD
     ]
     for index, action in discard_actions:
         game_snapshot = accumulator.games[index]

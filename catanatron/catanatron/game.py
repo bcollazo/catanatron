@@ -7,8 +7,10 @@ import random
 import sys
 from typing import Sequence, Union, Optional
 
-from catanatron.models.enums import Action, ActionPrompt, ActionType
-from catanatron.state import State, apply_action
+from catanatron.models.actions import generate_playable_actions
+from catanatron.models.enums import Action, ActionPrompt, ActionRecord, ActionType
+from catanatron.state import State
+from catanatron.apply_action import apply_action
 from catanatron.state_functions import player_key, player_has_rolled
 from catanatron.models.map import CatanMap
 from catanatron.models.player import Color, Player
@@ -17,7 +19,7 @@ from catanatron.models.player import Color, Player
 TURNS_LIMIT = 1000
 
 
-def is_valid_action(state, action):
+def is_valid_action(playable_actions, state: State, action: Action) -> bool:
     """True if its a valid action right now. An action is valid
     if its in playable_actions or if its a OFFER_TRADE in the right time."""
     if action.action_type == ActionType.OFFER_TRADE:
@@ -28,7 +30,7 @@ def is_valid_action(state, action):
             and is_valid_trade(action.value)
         )
 
-    return action in state.playable_actions
+    return action in playable_actions
 
 
 def is_valid_trade(action_value):
@@ -84,6 +86,10 @@ class Game:
     Initializes a map, decides player seating order, and exposes two main
     methods for executing the game (play and play_tick; to advance until
     completion or just by one decision by a player respectively).
+
+    Attributes:
+        state (State): Current game state.
+        playable_actions (List[Action]): List of playable actions by current player.
     """
 
     def __init__(
@@ -112,6 +118,7 @@ class Game:
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
             self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.playable_actions = generate_playable_actions(self.state)
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
@@ -142,30 +149,41 @@ class Game:
                 Defaults to None.
 
         Returns:
-            Action: Final action (modified to be used as Log)
+            ActionRecord: representing the executed action
         """
+        # Ask Player for action
         player = self.state.current_player()
-        actions = self.state.playable_actions
-
         action = (
-            decide_fn(player, self, actions)
+            decide_fn(player, self, self.playable_actions)
             if decide_fn is not None
-            else player.decide(self, actions)
+            else player.decide(self, self.playable_actions)
         )
+
         # Call accumulator.step here, because we want game_before_action, action
         if len(accumulators) > 0:
             for accumulator in accumulators:
                 accumulator.step(self, action)
+
+        # Apply Action, and do Move Generation
         return self.execute(action)
 
-    def execute(self, action: Action, validate_action: bool = True) -> Action:
+    def execute(
+        self,
+        action: Action,
+        validate_action: bool = True,
+        action_record: ActionRecord = None,
+    ) -> ActionRecord:
         """Internal call that carries out decided action by player"""
-        if validate_action and not is_valid_action(self.state, action):
+        if validate_action and not is_valid_action(
+            self.playable_actions, self.state, action
+        ):
             raise ValueError(
-                f"{action} not playable right now. playable_actions={self.state.playable_actions}"
+                f"{action} not playable right now. playable_actions={self.playable_actions}"
             )
 
-        return apply_action(self.state, action)
+        action_record = apply_action(self.state, action, action_record)
+        self.playable_actions = generate_playable_actions(self.state)
+        return action_record
 
     def winning_color(self) -> Union[Color, None]:
         """Gets winning color
@@ -196,4 +214,5 @@ class Game:
         game_copy.id = self.id
         game_copy.vps_to_win = self.vps_to_win
         game_copy.state = self.state.copy()
+        game_copy.playable_actions = self.playable_actions
         return game_copy
