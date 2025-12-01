@@ -11,6 +11,7 @@ from catanatron.models.enums import (
     CITY,
     Action,
     ActionPrompt,
+    ActionRecord,
     ActionType,
 )
 from catanatron.models.decks import (
@@ -40,9 +41,9 @@ from catanatron.state_functions import (
     player_can_afford_dev_card,
     player_can_play_dev,
     player_clean_turn,
+    player_deck_random_select,
     player_freqdeck_add,
     player_deck_draw,
-    player_deck_random_draw,
     player_deck_replenish,
     player_freqdeck_subtract,
     player_deck_to_array,
@@ -54,7 +55,9 @@ from catanatron.models.player import Color
 from catanatron.models.enums import FastResource
 
 
-def apply_action(state: State, action: Action):
+def apply_action(
+    state: State, action: Action, action_record: ActionRecord = None
+) -> ActionRecord:
     """Main controller call. Follows redux-like pattern and
     routes the given action to the appropiate state-changing calls.
 
@@ -68,55 +71,57 @@ def apply_action(state: State, action: Action):
     Args:
         state (State): State to mutate
         action (Action): Action to carry out
+        action_record (ActionRecord, optional): In case of replaying functionality.
+            Defaults to None.
 
     Raises:
         ValueError: If invalid action given
 
     Returns:
-        Action: Fully-specified action
+        ActionRecord: Fully-specified action
     """
 
     if action.action_type == ActionType.END_TURN:
-        apply_end_turn(state, action)
+        action_record = apply_end_turn(state, action)
     elif action.action_type == ActionType.BUILD_SETTLEMENT:
-        apply_build_settlement(state, action)
+        action_record = apply_build_settlement(state, action)
     elif action.action_type == ActionType.BUILD_ROAD:
-        apply_build_road(state, action)
+        action_record = apply_build_road(state, action)
     elif action.action_type == ActionType.BUILD_CITY:
-        apply_build_city(state, action)
+        action_record = apply_build_city(state, action)
     elif action.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-        apply_buy_development_card(state, action)
+        action_record = apply_buy_development_card(state, action, action_record)
     elif action.action_type == ActionType.ROLL:
-        apply_roll(state, action)
+        action_record = apply_roll(state, action, action_record)
     elif action.action_type == ActionType.DISCARD:
-        apply_discard(state, action)
+        action_record = apply_discard(state, action, action_record)
     elif action.action_type == ActionType.MOVE_ROBBER:
-        apply_move_robber(state, action)
+        action_record = apply_move_robber(state, action, action_record)
     elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
-        apply_play_knight_card(state, action)
+        action_record = apply_play_knight_card(state, action)
     elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
-        apply_play_year_of_plenty(state, action)
+        action_record = apply_play_year_of_plenty(state, action)
     elif action.action_type == ActionType.PLAY_MONOPOLY:
-        apply_play_monopoly(state, action)
+        action_record = apply_play_monopoly(state, action)
     elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
-        apply_play_road_building(state, action)
+        action_record = apply_play_road_building(state, action)
     elif action.action_type == ActionType.MARITIME_TRADE:
-        apply_maritime_trade(state, action)
+        action_record = apply_maritime_trade(state, action)
     elif action.action_type == ActionType.OFFER_TRADE:
-        apply_offer_trade(state, action)
+        action_record = apply_offer_trade(state, action)
     elif action.action_type == ActionType.ACCEPT_TRADE:
-        apply_accept_trade(state, action)
+        action_record = apply_accept_trade(state, action)
     elif action.action_type == ActionType.REJECT_TRADE:
-        apply_reject_trade(state, action)
+        action_record = apply_reject_trade(state, action)
     elif action.action_type == ActionType.CONFIRM_TRADE:
-        apply_confirm_trade(state, action)
+        action_record = apply_confirm_trade(state, action)
     elif action.action_type == ActionType.CANCEL_TRADE:
-        apply_cancel_trade(state, action)
+        action_record = apply_cancel_trade(state, action)
     else:
         raise ValueError("Unknown ActionType " + str(action.action_type))
 
-    state.actions.append(action)
-    return action
+    state.action_records.append(action_record)
+    return action_record
 
 
 # ===== Apply Action Handlers =====
@@ -124,6 +129,7 @@ def apply_end_turn(state: State, action: Action):
     player_clean_turn(state, action.color)
     advance_turn(state)
     state.current_prompt = ActionPrompt.PLAY_TURN
+    return ActionRecord(action=action, result=None)
 
 
 def apply_build_settlement(state: State, action: Action):
@@ -158,6 +164,7 @@ def apply_build_settlement(state: State, action: Action):
 
         # state.current_player_index stays the same
         # state.current_prompt stays as PLAY
+    return ActionRecord(action=action, result=None)
 
 
 def apply_build_road(state: State, action: Action):
@@ -210,6 +217,7 @@ def apply_build_road(state: State, action: Action):
 
         # state.current_player_index stays the same
         # state.current_prompt stays as PLAY
+    return ActionRecord(action=action, result=None)
 
 
 def apply_build_city(state: State, action: Action):
@@ -222,18 +230,20 @@ def apply_build_city(state: State, action: Action):
 
     # state.current_player_index stays the same
     # state.current_prompt stays as PLAY
+    return ActionRecord(action=action, result=None)
 
 
-def apply_buy_development_card(state: State, action: Action):
+def apply_buy_development_card(state: State, action: Action, action_record=None):
+    """Optionally takes action_record in case we want to support replay functionality."""
     if len(state.development_listdeck) == 0:
         raise ValueError("No more development cards")
     if not player_can_afford_dev_card(state, action.color):
         raise ValueError("No money to buy development card")
 
-    if action.value is None:
+    if action_record is None:
         card = state.development_listdeck.pop()  # already shuffled
     else:
-        card = action.value
+        card = action_record.result
         draw_from_listdeck(state.development_listdeck, 1, card)
 
     buy_dev_card(state, action.color, card)
@@ -244,13 +254,14 @@ def apply_buy_development_card(state: State, action: Action):
     action = Action(action.color, action.action_type, card)
     # state.current_player_index stays the same
     # state.current_prompt stays as PLAY
+    return ActionRecord(action=action, result=card)
 
 
-def apply_roll(state: State, action: Action):
+def apply_roll(state: State, action: Action, action_record=None):
     key = player_key(state, action.color)
     state.player_state[f"{key}_HAS_ROLLED"] = True
 
-    dices = action.value or roll_dice()
+    dices = action_record.result if action_record is not None else roll_dice()
     number = dices[0] + dices[1]
     action = Action(action.color, action.action_type, dices)
 
@@ -281,15 +292,17 @@ def apply_roll(state: State, action: Action):
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.PLAY_TURN
 
+    return ActionRecord(action=action, result=dices)
 
-def apply_discard(state: State, action: Action):
+
+def apply_discard(state: State, action: Action, action_record=None):
     hand = player_deck_to_array(state, action.color)
     num_to_discard = len(hand) // 2
-    if action.value is None:
+    if action_record is None:
         # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
         discarded = random.sample(hand, k=num_to_discard)
     else:
-        discarded = action.value  # for replay functionality
+        discarded = action_record.result  # for replay functionality
     to_discard = freqdeck_from_listdeck(discarded)
 
     player_freqdeck_subtract(state, action.color, to_discard)
@@ -310,24 +323,26 @@ def apply_discard(state: State, action: Action):
         state.is_discarding = False
         state.is_moving_knight = True
 
+    return ActionRecord(action=action, result=discarded)
 
-def apply_move_robber(state: State, action: Action):
-    (coordinate, robbed_color, robbed_resource) = action.value
-    state.board.robber_coordinate = coordinate
+
+def apply_move_robber(state: State, action: Action, action_record=None):
+    (coordinate, robbed_color) = action.value
+    robbed_resource = None
     if robbed_color is not None:
-        if robbed_resource is None:
-            robbed_resource = player_deck_random_draw(state, robbed_color)
-            action = Action(
-                action.color,
-                action.action_type,
-                (coordinate, robbed_color, robbed_resource),
-            )
-        else:  # for replay functionality
-            player_deck_draw(state, robbed_color, robbed_resource)
+        robbed_resource = (
+            action_record.result
+            if action_record is not None
+            else player_deck_random_select(state, robbed_color)
+        )
+        player_deck_draw(state, robbed_color, robbed_resource)
         player_deck_replenish(state, action.color, robbed_resource)
+    state.board.robber_coordinate = coordinate
 
     # state.current_player_index stays the same
     state.current_prompt = ActionPrompt.PLAY_TURN
+
+    return ActionRecord(action=action, result=robbed_resource)
 
 
 def apply_play_knight_card(state: State, action: Action):
@@ -338,6 +353,7 @@ def apply_play_knight_card(state: State, action: Action):
 
     # state.current_player_index stays the same
     state.current_prompt = ActionPrompt.MOVE_ROBBER
+    return ActionRecord(action=action, result=None)
 
 
 def apply_play_year_of_plenty(state: State, action: Action):
@@ -352,6 +368,7 @@ def apply_play_year_of_plenty(state: State, action: Action):
 
     # state.current_player_index stays the same
     state.current_prompt = ActionPrompt.PLAY_TURN
+    return ActionRecord(action=action, result=None)
 
 
 def apply_play_monopoly(state: State, action: Action):
@@ -372,6 +389,7 @@ def apply_play_monopoly(state: State, action: Action):
 
     # state.current_player_index stays the same
     state.current_prompt = ActionPrompt.PLAY_TURN
+    return ActionRecord(action=action, result=None)
 
 
 def apply_play_road_building(state: State, action: Action):
@@ -384,6 +402,7 @@ def apply_play_road_building(state: State, action: Action):
 
     # state.current_player_index stays the same
     state.current_prompt = ActionPrompt.PLAY_TURN
+    return ActionRecord(action=action, result=None)
 
 
 def apply_maritime_trade(state: State, action: Action):
@@ -401,6 +420,7 @@ def apply_maritime_trade(state: State, action: Action):
 
     # state.current_player_index stays the same
     state.current_prompt = ActionPrompt.PLAY_TURN
+    return ActionRecord(action=action, result=None)
 
 
 def apply_offer_trade(state: State, action: Action):
@@ -412,6 +432,7 @@ def apply_offer_trade(state: State, action: Action):
         i for i, c in enumerate(state.colors) if c != action.color
     )  # cant ask yourself
     state.current_prompt = ActionPrompt.DECIDE_TRADE
+    return ActionRecord(action=action, result=None)
 
 
 def apply_accept_trade(state: State, action: Action):
@@ -434,6 +455,8 @@ def apply_accept_trade(state: State, action: Action):
         # .is_resolving_trade, .current_trade, .acceptees stay the same
         state.current_player_index = state.current_turn_index
         state.current_prompt = ActionPrompt.DECIDE_ACCEPTEES
+
+    return ActionRecord(action=action, result=None)
 
 
 def apply_reject_trade(state: State, action: Action):
@@ -458,6 +481,8 @@ def apply_reject_trade(state: State, action: Action):
             state.current_player_index = state.current_turn_index
             state.current_prompt = ActionPrompt.DECIDE_ACCEPTEES
 
+    return ActionRecord(action=action, result=None)
+
 
 def apply_confirm_trade(state: State, action: Action):
     offering = action.value[:5]
@@ -472,6 +497,7 @@ def apply_confirm_trade(state: State, action: Action):
 
     state.current_player_index = state.current_turn_index
     state.current_prompt = ActionPrompt.PLAY_TURN
+    return ActionRecord(action=action, result=None)
 
 
 def apply_cancel_trade(state: State, action: Action):
@@ -479,6 +505,7 @@ def apply_cancel_trade(state: State, action: Action):
 
     state.current_player_index = state.current_turn_index
     state.current_prompt = ActionPrompt.PLAY_TURN
+    return ActionRecord(action=action, result=None)
 
 
 # ===== Helper Functions =====

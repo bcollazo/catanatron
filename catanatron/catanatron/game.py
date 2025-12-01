@@ -8,7 +8,7 @@ import sys
 from typing import Sequence, Union, Optional
 
 from catanatron.models.actions import generate_playable_actions
-from catanatron.models.enums import Action, ActionPrompt, ActionType
+from catanatron.models.enums import Action, ActionPrompt, ActionRecord, ActionType
 from catanatron.state import State
 from catanatron.apply_action import apply_action
 from catanatron.state_functions import player_key, player_has_rolled
@@ -149,7 +149,7 @@ class Game:
                 Defaults to None.
 
         Returns:
-            Action: Final action (modified to be used as Log)
+            ActionRecord: representing the executed action
         """
         # Ask Player for action
         player = self.state.current_player()
@@ -167,7 +167,12 @@ class Game:
         # Apply Action, and do Move Generation
         return self.execute(action)
 
-    def execute(self, action: Action, validate_action: bool = True) -> Action:
+    def execute(
+        self,
+        action: Action,
+        validate_action: bool = True,
+        action_record: ActionRecord = None,
+    ) -> ActionRecord:
         """Internal call that carries out decided action by player"""
         if validate_action and not is_valid_action(
             self.playable_actions, self.state, action
@@ -176,9 +181,9 @@ class Game:
                 f"{action} not playable right now. playable_actions={self.playable_actions}"
             )
 
-        action = apply_action(self.state, action)
+        action_record = apply_action(self.state, action, action_record)
         self.playable_actions = generate_playable_actions(self.state)
-        return action
+        return action_record
 
     def winning_color(self) -> Union[Color, None]:
         """Gets winning color

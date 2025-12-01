@@ -160,7 +160,7 @@ def get_player_freqdeck(state: State, color):
 
 
 def get_state_index(state: State) -> int:
-    return len(state.actions)
+    return len(state.action_records)
 
 
 # ===== State Mutators
@@ -319,11 +319,9 @@ def player_deck_replenish(state: State, color, resource, amount=1):
     state.player_state[f"{key}_{resource}_IN_HAND"] += amount
 
 
-def player_deck_random_draw(state: State, color):
+def player_deck_random_select(state: State, color):
     deck_array = player_deck_to_array(state, color)
-    resource = random.choice(deck_array)
-    player_deck_draw(state, color, resource)
-    return resource
+    return random.choice(deck_array)
 
 
 def play_dev_card(state: State, color, dev_card):

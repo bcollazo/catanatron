@@ -16,6 +16,7 @@ from catanatron.models.enums import (
     BRICK,
     MONOPOLY,
     ORE,
+    ActionRecord,
     ActionType,
     Action,
     SHEEP,
@@ -53,17 +54,19 @@ def test_moving_robber_steals_correctly():
     player_deck_replenish(state, players[1].color, WHEAT, 1)
     state.board.build_settlement(Color.BLUE, 3, initial_build_phase=True)
 
-    action = Action(players[0].color, ActionType.MOVE_ROBBER, ((2, 0, -2), None, None))
+    action = Action(players[0].color, ActionType.MOVE_ROBBER, ((2, 0, -2), None))
     apply_action(state, action)
     assert player_num_resource_cards(state, players[0].color) == 0
     assert player_num_resource_cards(state, players[1].color) == 1
 
+    # Test replaying functionality
     action = Action(
         players[0].color,
         ActionType.MOVE_ROBBER,
-        ((0, 0, 0), players[1].color, WHEAT),
+        ((0, 0, 0), players[1].color),
     )
-    apply_action(state, action)
+    action_record = ActionRecord(action=action, result=WHEAT)
+    apply_action(state, action, action_record)
     assert player_num_resource_cards(state, players[0].color) == 1
     assert player_num_resource_cards(state, players[1].color) == 0
 

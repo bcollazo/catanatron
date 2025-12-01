@@ -46,7 +46,7 @@ class DataLogger:
             self.log_lines.append(
                 [
                     game.id,
-                    len(game.state.actions),
+                    len(game.state.action_records),
                     "http://localhost:3000/games/" + game.id,
                 ]
             )
