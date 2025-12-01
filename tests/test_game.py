@@ -34,11 +34,12 @@ from catanatron.models.player import Color, RandomPlayer, SimplePlayer
 def test_initial_build_phase():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-    actions = []
+    action_records = []
     while not any(a.action_type == ActionType.ROLL for a in game.playable_actions):
-        actions.append(game.play_tick())
+        action_records.append(game.play_tick())
 
     p0_color = game.state.colors[0]
+    actions = [ar.action for ar in action_records]
     assert (
         actions[0].action_type == ActionType.BUILD_SETTLEMENT
         and actions[0].color == p0_color

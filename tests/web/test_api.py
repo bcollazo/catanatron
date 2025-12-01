@@ -97,7 +97,7 @@ def test_post_action_bot_turn(client):
     data_after = json.loads(after_action_res.data)
 
     # Check if game state progressed, e.g., turn changed or actions list grew
-    assert len(data_after["actions"]) > len(data_before["actions"])
+    assert len(data_after["action_records"]) > len(data_before["action_records"])
 
 
 def test_mcts_analysis_endpoint(client):

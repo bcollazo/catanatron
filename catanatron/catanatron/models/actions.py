@@ -224,15 +224,11 @@ def robber_possibilities(state, color) -> List[Action]:
                     to_steal_from.add(candidate_color)
 
         if len(to_steal_from) == 0:
-            actions.append(
-                Action(color, ActionType.MOVE_ROBBER, (coordinate, None, None))
-            )
+            actions.append(Action(color, ActionType.MOVE_ROBBER, (coordinate, None)))
         else:
             for enemy_color in to_steal_from:
                 actions.append(
-                    Action(
-                        color, ActionType.MOVE_ROBBER, (coordinate, enemy_color, None)
-                    )
+                    Action(color, ActionType.MOVE_ROBBER, (coordinate, enemy_color))
                 )
 
     return actions

@@ -8,8 +8,8 @@ from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
-    Action,
     ActionPrompt,
+    ActionRecord,
 )
 from catanatron.models.decks import (
     starting_devcard_bank,
@@ -66,7 +66,8 @@ class State:
         buildings_by_color (Dict[Color, Dict[FastBuildingType, List]]): Cache of
             buildings. Can be used like: `buildings_by_color[Color.RED][SETTLEMENT]`
             to get a list of all node ids where RED has settlements.
-        actions (List[Action]): Log of all actions taken. Fully-specified actions.
+        action_records (List[ActionRecord]): Log of all actions taken with their results if
+            non-deterministic.
         num_turns (int): number of turns thus far
         current_player_index (int): index per colors array of player that should be
             making a decision now. Not necesarilly the same as current_turn_index
@@ -112,7 +113,8 @@ class State:
             self.buildings_by_color: Dict[Color, Dict[Any, Any]] = {
                 p.color: defaultdict(list) for p in players
             }
-            self.actions: List[Action] = []  # log of all action taken by players
+            # for undo and to show in the UI the action log
+            self.action_records: List[ActionRecord] = []
             self.num_turns = 0  # num_completed_turns
 
             # Current prompt / player
@@ -163,7 +165,7 @@ class State:
         state_copy.buildings_by_color = pickle.loads(
             pickle.dumps(self.buildings_by_color)
         )
-        state_copy.actions = self.actions.copy()
+        state_copy.action_records = self.action_records.copy()
         state_copy.num_turns = self.num_turns
 
         # Current prompt / player
