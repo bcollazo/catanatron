@@ -23,8 +23,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from catanatron.utils import ensure_dir, format_secs
 from catanatron.cli.cli_players import (
     CUSTOM_ACCUMULATORS,
+    parse_cli_string,
     player_help_table,
-    CLI_PLAYERS,
 )
 from catanatron.cli.accumulators import (
     JsonDataAccumulator,
@@ -178,19 +178,7 @@ def simulate(
     if output and not output_format:
         return print("--output requires --output-format")
 
-    player_keys = players.split(",")
-    players = []
-    colors = [c for c in Color]
-    for i, key in enumerate(player_keys):
-        parts = key.split(":")
-        code = parts[0]
-        for cli_player in CLI_PLAYERS:
-            if cli_player.code == code:
-                params = [colors[i]] + parts[1:]
-                player = cli_player.import_fn(*params)
-                players.append(player)
-                break
-
+    players = parse_cli_string(players)
     output_options = OutputOptions(
         output, output_format, include_board_tensor, db, step_db
     )
