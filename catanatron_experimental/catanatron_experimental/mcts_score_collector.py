@@ -55,7 +55,7 @@ def simple_feature_vector(game, p0_color):
     owned_nodes = buildings[SETTLEMENT] + buildings[CITY]
     owned_tiles = set()
     for n in owned_nodes:
-        owned_tiles.update(game.state.board.map.adjacent_tiles[n])
+        owned_tiles.update(game.state.board.map.node_to_tiles[n])
     # f_num_tiles = len(owned_tiles)
 
     # f_num_buildable_nodes = len(game.state.board.buildable_node_ids(p0_color))

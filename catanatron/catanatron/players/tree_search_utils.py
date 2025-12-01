@@ -128,8 +128,10 @@ def list_prunned_actions(game):
 
     # Prune Initial Settlements at 1-tile places
     if ActionType.BUILD_SETTLEMENT in types and game.state.is_initial_build_phase:
-        actions = filter(
-            lambda a: len(game.state.board.map.adjacent_tiles[a.value]) != 1, actions
+        actions = list(
+            filter(
+                lambda a: len(game.state.board.map.node_to_tiles[a.value]) != 1, actions
+            )
         )
 
     # Prune Trading if can hold for resources. Only for rare resources.
@@ -160,9 +162,9 @@ def prune_robber_actions(current_color, game, actions):
     enemy_color = next(filter(lambda c: c != current_color, game.state.colors))
     enemy_owned_tiles = set()
     for node_id in get_player_buildings(game.state, enemy_color, SETTLEMENT):
-        enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
+        enemy_owned_tiles.update(game.state.board.map.node_to_tiles[node_id])
     for node_id in get_player_buildings(game.state, enemy_color, CITY):
-        enemy_owned_tiles.update(game.state.board.map.adjacent_tiles[node_id])
+        enemy_owned_tiles.update(game.state.board.map.node_to_tiles[node_id])
 
     robber_moves = set(
         filter(

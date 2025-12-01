@@ -82,7 +82,7 @@ class GameEncoder(json.JSONEncoder):
                     {"coordinate": coordinate, "tile": self.default(tile)}
                     for coordinate, tile in obj.state.board.map.tiles.items()
                 ],
-                "adjacent_tiles": obj.state.board.map.adjacent_tiles,
+                "node_to_tiles": obj.state.board.map.node_to_tiles,
                 "nodes": nodes,
                 "edges": list(edges.values()),
                 "actions": [self.default(a) for a in obj.state.actions],

@@ -201,7 +201,7 @@ class CatanMap:
         land_tiles: Dict[Coordinate, LandTile] = dict(),
         port_nodes: Dict[Union[FastResource, None], Set[int]] = dict(),
         land_nodes: FrozenSet[NodeId] = frozenset(),
-        adjacent_tiles: Dict[int, List[LandTile]] = dict(),
+        node_to_tiles: Dict[int, List[LandTile]] = dict(),
         node_production: Dict[NodeId, Counter] = dict(),
         tiles_by_id: Dict[int, LandTile] = dict(),
         ports_by_id: Dict[int, Port] = dict(),
@@ -210,7 +210,7 @@ class CatanMap:
         self.land_tiles = land_tiles
         self.port_nodes = port_nodes
         self.land_nodes = land_nodes
-        self.adjacent_tiles = adjacent_tiles
+        self.node_to_tiles = node_to_tiles
         self.node_production = node_production
         self.tiles_by_id = tiles_by_id
         self.ports_by_id = ports_by_id
@@ -236,9 +236,8 @@ class CatanMap:
         land_nodes_list = map(lambda t: set(t.nodes.values()), self.land_tiles.values())
         self.land_nodes = frozenset().union(*land_nodes_list)
 
-        # TODO: Rename to self.node_to_tiles
-        self.adjacent_tiles = init_adjacent_tiles(self.land_tiles)
-        self.node_production = init_node_production(self.adjacent_tiles)
+        self.node_to_tiles = init_node_to_tiles(self.land_tiles)
+        self.node_production = init_node_production(self.node_to_tiles)
         self.tiles_by_id = {
             t.id: t for t in self.tiles.values() if isinstance(t, LandTile)
         }
@@ -270,30 +269,30 @@ def init_port_nodes_cache(
     return port_nodes
 
 
-def init_adjacent_tiles(
+def init_node_to_tiles(
     land_tiles: Dict[Coordinate, LandTile],
 ) -> Dict[int, List[LandTile]]:
-    adjacent_tiles = defaultdict(list)  # node_id => tile[3]
+
+    node_to_tiles = defaultdict(list)  # node_id => tile[3]
     for tile in land_tiles.values():
         for node_id in tile.nodes.values():
-            adjacent_tiles[node_id].append(tile)
-    return adjacent_tiles
+            node_to_tiles[node_id].append(tile)
+    return node_to_tiles
 
 
 def init_node_production(
-    adjacent_tiles: Dict[int, List[LandTile]],
+    node_to_tiles: Dict[int, List[LandTile]],
 ) -> Dict[NodeId, Counter]:
-    """Returns node_id => Counter({WHEAT: 0.123, ...})"""
-    node_production = dict()
-    for node_id in adjacent_tiles.keys():
-        node_production[node_id] = get_node_counter_production(adjacent_tiles, node_id)
+    node_production = {}
+    for node_id in node_to_tiles.keys():
+        node_production[node_id] = get_node_counter_production(node_to_tiles, node_id)
     return node_production
 
 
 def get_node_counter_production(
-    adjacent_tiles: Dict[int, List[LandTile]], node_id: NodeId
+    node_to_tiles: Dict[int, List[LandTile]], node_id: NodeId
 ):
-    tiles = adjacent_tiles[node_id]
+    tiles = node_to_tiles[node_id]
     production = defaultdict(float)
     for tile in tiles:
         if tile.resource is not None:

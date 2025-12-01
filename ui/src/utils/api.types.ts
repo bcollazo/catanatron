@@ -60,7 +60,7 @@ export type PlacedTile = {
 
 export type GameState = {
   tiles: PlacedTile[];
-  adjacent_tiles: Record<string, Tile[]>;
+  node_to_tiles: Record<string, Tile[]>;
   bot_colors: Color[];
   colors: Color[];
   current_color: Color;
