@@ -66,6 +66,31 @@ class LLMPlayer(Player):
                 )
         return self._llm
 
+    def _describe_node_location(self, board, node_id):
+        """Describe a node location by its adjacent tiles.
+
+        Args:
+            board: The game board
+            node_id: The node ID to describe
+
+        Returns:
+            str: Description like "3 WHEAT - 5 ORE - 6 BRICK"
+        """
+        adjacent_tiles = board.map.adjacent_tiles.get(node_id, [])
+
+        # Build descriptions for each adjacent tile
+        tile_descriptions = []
+        for tile in adjacent_tiles:
+            if tile.resource is None:  # Desert tile
+                tile_descriptions.append(f"{tile.number or 0} DESERT")
+            else:
+                tile_descriptions.append(f"{tile.number or 0} {tile.resource}")
+
+        # Sort for consistency
+        tile_descriptions.sort()
+
+        return " - ".join(tile_descriptions) if tile_descriptions else "Unknown"
+
     def _extract_state_info(self, game):
         """Extract simplified state information from the game.
 
@@ -84,20 +109,57 @@ class LLMPlayer(Player):
         def get_player_stat(stat_name):
             return state.player_state.get(f"{player_key_prefix}{stat_name}", 0)
 
+        # Build resource hand as a list
+        resource_hand = []
+        for resource, stat_name in [
+            ("WOOD", "WOOD_IN_HAND"),
+            ("BRICK", "BRICK_IN_HAND"),
+            ("SHEEP", "SHEEP_IN_HAND"),
+            ("WHEAT", "WHEAT_IN_HAND"),
+            ("ORE", "ORE_IN_HAND"),
+        ]:
+            count = get_player_stat(stat_name)
+            resource_hand.extend([resource] * count)
+
+        # Build unused dev cards list
+        unused_dev_cards = []
+        for card, stat_name in [
+            ("KNIGHT", "KNIGHT_IN_HAND"),
+            ("YEAR_OF_PLENTY", "YEAR_OF_PLENTY_IN_HAND"),
+            ("MONOPOLY", "MONOPOLY_IN_HAND"),
+            ("ROAD_BUILDING", "ROAD_BUILDING_IN_HAND"),
+            ("VICTORY_POINT", "VICTORY_POINT_IN_HAND"),
+        ]:
+            count = get_player_stat(stat_name)
+            unused_dev_cards.extend([card] * count)
+
+        # Build used dev cards list (played cards)
+        used_dev_cards = []
+        for card, stat_name in [
+            ("KNIGHT", "PLAYED_KNIGHT"),
+            ("YEAR_OF_PLENTY", "PLAYED_YEAR_OF_PLENTY"),
+            ("MONOPOLY", "PLAYED_MONOPOLY"),
+            ("ROAD_BUILDING", "PLAYED_ROAD_BUILDING"),
+        ]:
+            count = get_player_stat(stat_name)
+            used_dev_cards.extend([card] * count)
+
+        # Get buildings with locations
+        buildings_info = []
+        for node_id, (building_color, building_type) in state.board.buildings.items():
+            if building_color == color:
+                location_desc = self._describe_node_location(state.board, node_id)
+                building_name = "Settlement" if building_type == 1 else "City"
+                buildings_info.append(f"- {building_name} at {location_desc}")
+
         # Extract own stats
         info = {
             "color": color.value,
             "your_vp": get_player_stat("VICTORY_POINTS"),
-            "your_wood": get_player_stat("WOOD_IN_HAND"),
-            "your_brick": get_player_stat("BRICK_IN_HAND"),
-            "your_sheep": get_player_stat("SHEEP_IN_HAND"),
-            "your_wheat": get_player_stat("WHEAT_IN_HAND"),
-            "your_ore": get_player_stat("ORE_IN_HAND"),
-            "your_knights": get_player_stat("KNIGHT_IN_HAND"),
-            "your_yop": get_player_stat("YEAR_OF_PLENTY_IN_HAND"),
-            "your_monopoly": get_player_stat("MONOPOLY_IN_HAND"),
-            "your_road_building": get_player_stat("ROAD_BUILDING_IN_HAND"),
-            "your_vp_cards": get_player_stat("VICTORY_POINT_IN_HAND"),
+            "your_hand": str(resource_hand),
+            "your_unused_dev_cards": str(unused_dev_cards),
+            "your_used_dev_cards": str(used_dev_cards),
+            "your_buildings": "\n".join(buildings_info) if buildings_info else "None",
             "your_roads_available": get_player_stat("ROADS_AVAILABLE"),
             "your_settlements_available": get_player_stat("SETTLEMENTS_AVAILABLE"),
             "your_cities_available": get_player_stat("CITIES_AVAILABLE"),

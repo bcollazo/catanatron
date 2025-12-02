@@ -7,11 +7,21 @@ You are an AI player in a game of Catan. Your goal is to make the best strategic
 
 ## Game State Summary
 
-### Your Stats
+### Your Hand & Cards
 - Victory Points: {your_vp}
-- Resources: Wood={your_wood}, Brick={your_brick}, Sheep={your_sheep}, Wheat={your_wheat}, Ore={your_ore}
-- Development Cards: Knight={your_knights}, YearOfPlenty={your_yop}, Monopoly={your_monopoly}, RoadBuilding={your_road_building}, VictoryPoint={your_vp_cards}
-- Buildings Available: Roads={your_roads_available}, Settlements={your_settlements_available}, Cities={your_cities_available}
+- Your Hand: {your_hand}
+- Unused Dev Cards: {your_unused_dev_cards}
+- Used Dev Cards: {your_used_dev_cards}
+
+### Your Buildings
+{your_buildings}
+
+### Buildings Available to Build
+- Roads: {your_roads_available}
+- Settlements: {your_settlements_available}
+- Cities: {your_cities_available}
+
+### Bonuses
 - Has Longest Road: {has_longest_road}
 - Has Largest Army: {has_largest_army}
 
