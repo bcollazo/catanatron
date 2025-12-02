@@ -12,6 +12,9 @@ class Color(Enum):
     ORANGE = "ORANGE"
     WHITE = "WHITE"
 
+    def __repr__(self):
+        return f"C.{self.name}"
+
 
 class Player:
     """Interface to represent a player's decision logic.

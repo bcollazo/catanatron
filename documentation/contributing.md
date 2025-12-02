@@ -142,7 +142,7 @@ make upload-production PACKAGE=catanatron_gym
 * Improve `catanatron` package running time performance.
   * Continue refactoring the State to be more and more like a primitive `dict` or `array`. (Copies are much faster if State is just a native python object).
   * Move RESOURCE to be ints. Python `enums` turned out to be slow for hashing and using.
-  * Move the `.actions` action log concept to the Game class. (to avoid copying when copying State)
+  * Move the `.action_records` action log concept to the Game class. This way MCTS algorithms that just need copy games for the purposes of rollouts, don't need to pay for copying the action_records, but AlphaBeta players can still use the log for undoing actions.
   * Remove `.current_prompt`. It seems its redundant with (is\_moving\_knight, etc...) and not needed.
 * Improve AlphaBetaPlayer
   * Explore and improve prunning
@@ -154,5 +154,4 @@ make upload-production PACKAGE=catanatron_gym
   * Try simple flat CSV approach but with AlphaBeta-generated games.
 * Features
   * Continue implementing actions from the UI (not all implemented).
-  * Chess.com-like UI for watching game replays (with Play/Pause and Back/Forward).
-  * A terminal UI? (for ease of debugging)
+  * A Terminal UI? (for ease of debugging)

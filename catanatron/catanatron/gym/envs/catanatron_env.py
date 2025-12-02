@@ -66,10 +66,11 @@ ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
 ACTION_TYPES = [i for i in ActionType]
 
 
-def to_action_type_space(action):
-    return ACTION_TYPES.index(action.action_type)
+def to_action_type_space(action_type: ActionType) -> int:
+    return ACTION_TYPES.index(action_type)
 
 
+# NOTE: I think I don't need this if we separate action and action_record nicely...
 def normalize_action(action):
     normalized = action
     if normalized.action_type == ActionType.ROLL:

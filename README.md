@@ -40,7 +40,7 @@ Catanatron provides a `catanatron-play` CLI tool to run large scale simulations.
 4. (Optional) Install developer and advanced dependencies 
 
     ```bash
-    pip install -e .[web,gym,dev]
+    pip install -e ".[web,gym,dev]"
     ```
 
 ### Usage
