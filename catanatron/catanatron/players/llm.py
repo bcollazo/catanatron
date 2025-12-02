@@ -107,7 +107,7 @@ class LLMPlayer(Player):
             "robber_active": "Yes" if hasattr(state.board, 'robber_coordinate') else "No",
         }
 
-        # Extract opponent stats
+        # Extract opponent stats (only public information)
         opponents_info = []
         for i, opponent_color in enumerate(state.colors):
             if opponent_color == color:
@@ -115,19 +115,31 @@ class LLMPlayer(Player):
 
             opp_prefix = f"P{i}_"
             opp_vp = state.player_state.get(f"{opp_prefix}VICTORY_POINTS", 0)
-            opp_resources = sum([
+
+            # Count total resource cards (public info - you can see hand size)
+            opp_resource_cards = sum([
                 state.player_state.get(f"{opp_prefix}WOOD_IN_HAND", 0),
                 state.player_state.get(f"{opp_prefix}BRICK_IN_HAND", 0),
                 state.player_state.get(f"{opp_prefix}SHEEP_IN_HAND", 0),
                 state.player_state.get(f"{opp_prefix}WHEAT_IN_HAND", 0),
                 state.player_state.get(f"{opp_prefix}ORE_IN_HAND", 0),
             ])
+
+            # Count total dev cards (public info)
+            opp_dev_cards = sum([
+                state.player_state.get(f"{opp_prefix}KNIGHT_IN_HAND", 0),
+                state.player_state.get(f"{opp_prefix}YEAR_OF_PLENTY_IN_HAND", 0),
+                state.player_state.get(f"{opp_prefix}MONOPOLY_IN_HAND", 0),
+                state.player_state.get(f"{opp_prefix}ROAD_BUILDING_IN_HAND", 0),
+                state.player_state.get(f"{opp_prefix}VICTORY_POINT_IN_HAND", 0),
+            ])
+
             opp_has_longest = "Yes" if state.player_state.get(f"{opp_prefix}HAS_ROAD", False) else "No"
             opp_has_largest = "Yes" if state.player_state.get(f"{opp_prefix}HAS_ARMY", False) else "No"
 
             opponents_info.append(
-                f"- {opponent_color.value}: {opp_vp} VP, {opp_resources} total resources, "
-                f"Longest Road: {opp_has_longest}, Largest Army: {opp_has_largest}"
+                f"- {opponent_color.value}: {opp_vp} VP, {opp_resource_cards} resource cards, "
+                f"{opp_dev_cards} dev cards, Longest Road: {opp_has_longest}, Largest Army: {opp_has_largest}"
             )
 
         info["opponents_stats"] = "\n".join(opponents_info)
