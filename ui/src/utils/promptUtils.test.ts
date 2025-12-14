@@ -4,10 +4,10 @@ import {
   getShortTileString,
   findTileById,
   findTileByCoordinate,
-  humanizeAction,
+  humanizeActionRecord,
   humanizeTradeAction,
 } from "./promptUtils";
-import type { GameState, GameAction } from "./api.types";
+import type { GameState, GameAction, GameActionRecord } from "./api.types";
 
 describe("getTileString", () => {
   test("Resource", () => {
@@ -169,131 +169,145 @@ describe("humanizeAction", () => {
   } as unknown as GameState;
 
   test("ROLL action", () => {
-    expect(humanizeAction(baseGameState, ["RED", "ROLL", [3, 4]])).toBe(
-      "BOT ROLLED A 7"
-    );
+    expect(
+      humanizeActionRecord(baseGameState, [
+        ["RED", "ROLL", null],
+        [3, 4],
+      ])
+    ).toBe("BOT ROLLED A 7");
   });
 
   test("DISCARD action", () => {
-    expect(humanizeAction(baseGameState, ["ORANGE", "DISCARD", null])).toBe(
-      "YOU DISCARDED"
-    );
+    expect(
+      humanizeActionRecord(baseGameState, [
+        ["ORANGE", "DISCARD", null],
+        ["WHEAT"],
+      ])
+    ).toBe("YOU DISCARDED");
   });
 
   test("BUY_DEVELOPMENT_CARD action", () => {
     expect(
-      humanizeAction(baseGameState, ["BLUE", "BUY_DEVELOPMENT_CARD", null])
+      humanizeActionRecord(baseGameState, [
+        ["BLUE", "BUY_DEVELOPMENT_CARD", null],
+        "KNIGHT",
+      ])
     ).toBe("BOT BOUGHT DEVELOPMENT CARD");
   });
 
   test("BUILD_SETTLEMENT action", () => {
-    expect(humanizeAction(baseGameState, ["RED", "BUILD_SETTLEMENT", 0])).toBe(
-      "BOT BUILT SETTLEMENT ON 6-DESERT"
-    );
+    expect(
+      humanizeActionRecord(baseGameState, [
+        ["RED", "BUILD_SETTLEMENT", 0],
+        null,
+      ])
+    ).toBe("BOT BUILT SETTLEMENT ON 6-DESERT");
   });
 
   test("BUILD_CITY action", () => {
-    expect(humanizeAction(baseGameState, ["ORANGE", "BUILD_CITY", 1])).toBe(
-      "YOU BUILT CITY ON DESERT-8"
-    );
+    expect(
+      humanizeActionRecord(baseGameState, [["ORANGE", "BUILD_CITY", 1], null])
+    ).toBe("YOU BUILT CITY ON DESERT-8");
   });
 
   test("BUILD_ROAD action", () => {
-    expect(humanizeAction(baseGameState, ["RED", "BUILD_ROAD", [0, 0]])).toBe(
-      "BOT BUILT ROAD ON 6-DESERT"
-    );
+    expect(
+      humanizeActionRecord(baseGameState, [["RED", "BUILD_ROAD", [0, 0]], null])
+    ).toBe("BOT BUILT ROAD ON 6-DESERT");
   });
 
   test("PLAY_KNIGHT_CARD action", () => {
     expect(
-      humanizeAction(baseGameState, ["BLUE", "PLAY_KNIGHT_CARD", null])
+      humanizeActionRecord(baseGameState, [
+        ["BLUE", "PLAY_KNIGHT_CARD", null],
+        null,
+      ])
     ).toBe("BOT PLAYED KNIGHT CARD");
   });
 
   test("PLAY_ROAD_BUILDING action", () => {
     expect(
-      humanizeAction(baseGameState, ["ORANGE", "PLAY_ROAD_BUILDING", null])
+      humanizeActionRecord(baseGameState, [
+        ["ORANGE", "PLAY_ROAD_BUILDING", null],
+        null,
+      ])
     ).toBe("YOU PLAYED ROAD BUILDING");
   });
 
   test("PLAY_MONOPOLY action", () => {
     expect(
-      humanizeAction(baseGameState, ["RED", "PLAY_MONOPOLY", "BRICK"])
+      humanizeActionRecord(baseGameState, [
+        ["RED", "PLAY_MONOPOLY", "BRICK"],
+        null,
+      ])
     ).toBe("BOT MONOPOLIZED BRICK");
   });
 
   test("PLAY_YEAR_OF_PLENTY action with two resources", () => {
     expect(
-      humanizeAction(baseGameState, [
-        "ORANGE",
-        "PLAY_YEAR_OF_PLENTY",
-        ["BRICK", "WHEAT"],
+      humanizeActionRecord(baseGameState, [
+        ["ORANGE", "PLAY_YEAR_OF_PLENTY", ["BRICK", "WHEAT"]],
+        null,
       ])
     ).toBe("YOU PLAYED YEAR OF PLENTY. CLAIMED BRICK AND WHEAT");
   });
 
   test("PLAY_YEAR_OF_PLENTY action with one resource", () => {
     expect(
-      humanizeAction(baseGameState, [
-        "ORANGE",
-        "PLAY_YEAR_OF_PLENTY",
-        ["BRICK"],
+      humanizeActionRecord(baseGameState, [
+        ["ORANGE", "PLAY_YEAR_OF_PLENTY", ["BRICK"]],
+        null,
       ])
     ).toBe("YOU PLAYED YEAR OF PLENTY. CLAIMED BRICK");
   });
 
   test("MOVE_ROBBER action with stolen resource", () => {
-    const action: GameAction = [
-      "RED",
-      "MOVE_ROBBER",
-      [[0, 0, 0], "BLUE", "BRICK"],
+    const actionRecord: GameActionRecord = [
+      ["RED", "MOVE_ROBBER", [[0, 0, 0], "BLUE"]],
+      "BRICK",
     ];
-    expect(humanizeAction(baseGameState, action)).toBe(
+    expect(humanizeActionRecord(baseGameState, actionRecord)).toBe(
       "BOT ROBBED 6 BRICK (STOLE BRICK)"
     );
   });
 
   test("MOVE_ROBBER action without stolen resource", () => {
-    const action: GameAction = [
-      "RED",
-      "MOVE_ROBBER",
-      [[0, 0, 0], undefined, undefined],
+    const actionRecord: GameActionRecord = [
+      ["RED", "MOVE_ROBBER", [[0, 0, 0], undefined]],
+      null,
     ];
-    expect(humanizeAction(baseGameState, action)).toBe("BOT ROBBED 6 BRICK");
+    expect(humanizeActionRecord(baseGameState, actionRecord)).toBe(
+      "BOT ROBBED 6 BRICK"
+    );
   });
 
   test("MARITIME_TRADE action", () => {
-    const action: GameAction = [
-      "ORANGE",
-      "MARITIME_TRADE",
-      ["BRICK", "BRICK", "BRICK", null, "WHEAT"],
+    const actionRecord: GameActionRecord = [
+      ["ORANGE", "MARITIME_TRADE", ["BRICK", "BRICK", "BRICK", null, "WHEAT"]],
+      null,
     ];
-    expect(humanizeAction(baseGameState, action)).toBe(
+    expect(humanizeActionRecord(baseGameState, actionRecord)).toBe(
       "YOU TRADED 3 BRICK => WHEAT"
     );
   });
 
   test("END_TURN action", () => {
-    expect(humanizeAction(baseGameState, ["RED", "END_TURN", null])).toBe(
-      "BOT ENDED TURN"
-    );
+    expect(
+      humanizeActionRecord(baseGameState, [["RED", "END_TURN", null], null])
+    ).toBe("BOT ENDED TURN");
   });
 
   test("Unknown action type throws", () => {
     expect(() =>
-      humanizeAction(baseGameState, [
-        "RED",
-        // @ts-expect-error
-        "UNKNOWN_ACTION",
+      humanizeActionRecord(baseGameState, [
+        [
+          "RED",
+          // @ts-expect-error
+          "UNKNOWN_ACTION",
+        ],
+        null,
       ])
     ).toThrowError("Unknown action type: UNKNOWN_ACTION");
-  });
-
-  test("ROLL action with missing outcomes throws", () => {
-    // @ts-expect-error
-    expect(() => humanizeAction(baseGameState, ["RED", "ROLL"])).toThrowError(
-      "did not get Rolling outcomes back from Server! output"
-    );
   });
 });
 

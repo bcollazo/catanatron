@@ -2,7 +2,6 @@ import os
 import json
 import pickle
 from contextlib import contextmanager
-from typing import Any, Tuple
 from catanatron.json import GameEncoder
 
 from catanatron.game import Game

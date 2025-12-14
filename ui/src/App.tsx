@@ -39,10 +39,7 @@ function App() {
                 path="/games/:gameId/states/:stateIndex"
                 element={<GameScreen replayMode={true} />}
               />
-              <Route
-                path="/replays/:gameId"
-                element={<ReplayScreen/>}
-              />
+              <Route path="/replays/:gameId" element={<ReplayScreen />} />
               <Route
                 path="/games/:gameId"
                 element={<GameScreen replayMode={false} />}

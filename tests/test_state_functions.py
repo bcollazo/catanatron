@@ -1,12 +1,13 @@
 import pytest
 
-from catanatron.state import State, apply_action
+from catanatron.state import State
+from catanatron.apply_action import apply_action
 from catanatron.state_functions import (
     buy_dev_card,
     get_actual_victory_points,
     get_largest_army,
     play_dev_card,
-    player_deck_random_draw,
+    player_deck_random_select,
     player_deck_replenish,
 )
 from catanatron.models.enums import (
@@ -31,7 +32,7 @@ def test_cant_steal_devcards():
 
     # Act: Attempt to steal a resource
     with pytest.raises(IndexError):  # no resource cards in hand
-        player_deck_random_draw(state, Color.RED)
+        player_deck_random_select(state, Color.RED)
 
 
 def test_defeating_your_own_largest_army_doesnt_give_more_vps():

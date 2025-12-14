@@ -185,11 +185,11 @@ class CatanatronEnv(gym.Env):
         Returns:
             List[int]: valid actions
         """
-        return list(map(to_action_space, self.game.state.playable_actions))
+        return list(map(to_action_space, self.game.playable_actions))
 
     def step(self, action):
         try:
-            catan_action = from_action_space(action, self.game.state.playable_actions)
+            catan_action = from_action_space(action, self.game.playable_actions)
         except Exception as e:
             self.invalid_actions_count += 1
 

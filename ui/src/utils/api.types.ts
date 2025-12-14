@@ -8,24 +8,63 @@ export type DevelopmentCard =
 export type Color = "RED" | "BLUE" | "ORANGE" | "WHITE";
 export type TileCoordinate = [number, number, number];
 
+export type GameActionRecord =
+  // These are the special cases
+  | [RollGameAction, [number, number]]
+  | [DiscardGameAction, ResourceCard[]]
+  | [MoveRobberAction, ResourceCard | null]
+  | [BuyDevelopmentCardAction, DevelopmentCard]
+  // These are deterministic and carry no extra info
+  | [BuildSettlementAction, null]
+  | [BuildCityAction, null]
+  | [BuildRoadAction, null]
+  | [PlayKnightCardAction, null]
+  | [PlayRoadBuildingAction, null]
+  | [PlayMonopolyAction, null]
+  | [PlayYearOfPlentyAction, null]
+  | [MaritimeTradeAction, null]
+  | [EndTurnAction, null];
+
+export type RollGameAction = [Color, "ROLL", null];
+export type DiscardGameAction = [Color, "DISCARD", null];
+export type BuyDevelopmentCardAction = [Color, "BUY_DEVELOPMENT_CARD", null];
+export type BuildSettlementAction = [Color, "BUILD_SETTLEMENT", number];
+export type BuildCityAction = [Color, "BUILD_CITY", number];
+export type BuildRoadAction = [Color, "BUILD_ROAD", [number, number]];
+export type PlayKnightCardAction = [Color, "PLAY_KNIGHT_CARD", null];
+export type PlayRoadBuildingAction = [Color, "PLAY_ROAD_BUILDING", null];
+export type PlayMonopolyAction = [Color, "PLAY_MONOPOLY", ResourceCard];
+export type PlayYearOfPlentyAction = [
+  Color,
+  "PLAY_YEAR_OF_PLENTY",
+  [ResourceCard] | [ResourceCard, ResourceCard]
+];
+export type MoveRobberAction = [
+  Color,
+  "MOVE_ROBBER",
+  [TileCoordinate, string?]
+];
+export type MaritimeTradeAction = [
+  Color,
+  "MARITIME_TRADE",
+  (ResourceCard | null)[]
+];
+export type EndTurnAction = [Color, "END_TURN", null];
+
 export type GameAction =
-  | [Color, "ROLL", [number, number] | null]
-  | [Color, "DISCARD", null]
-  | [Color, "BUY_DEVELOPMENT_CARD", null]
-  | [Color, "BUILD_SETTLEMENT", number]
-  | [Color, "BUILD_CITY", number]
-  | [Color, "BUILD_ROAD", [number, number]]
-  | [Color, "PLAY_KNIGHT_CARD", null]
-  | [Color, "PLAY_ROAD_BUILDING", null]
-  | [Color, "PLAY_MONOPOLY", ResourceCard]
-  | [
-      Color,
-      "PLAY_YEAR_OF_PLENTY",
-      [ResourceCard] | [ResourceCard, ResourceCard]
-    ]
-  | [Color, "MOVE_ROBBER", [TileCoordinate, string?, string?]]
-  | [Color, "MARITIME_TRADE", any]
-  | [Color, "END_TURN", null];
+  | RollGameAction
+  | DiscardGameAction
+  | BuyDevelopmentCardAction
+  | BuildSettlementAction
+  | BuildCityAction
+  | BuildRoadAction
+  | PlayKnightCardAction
+  | PlayRoadBuildingAction
+  | PlayMonopolyAction
+  | PlayYearOfPlentyAction
+  | MoveRobberAction
+  | MaritimeTradeAction
+  | EndTurnAction;
 
 export type PlayerState = any;
 export type VictoryPointCard = "VICTORY_POINT";
@@ -67,7 +106,7 @@ export type GameState = {
   winning_color?: Color;
   current_prompt: string;
   player_state: Record<string, PlayerState>;
-  actions: GameAction[];
+  action_records: GameActionRecord[];
   robber_coordinate: TileCoordinate;
   nodes: Array<{
     id: number;

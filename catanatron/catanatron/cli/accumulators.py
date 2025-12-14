@@ -102,7 +102,7 @@ class StatisticsAccumulator(GameAccumulator):
 
         self.wins[winning_color] += 1
         self.turns.append(game.state.num_turns)
-        self.ticks.append(len(game.state.actions))
+        self.ticks.append(len(game.state.action_records))
         self.durations.append(duration)
         self.games.append(game)
 

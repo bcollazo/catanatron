@@ -29,6 +29,7 @@ from catanatron.models.enums import (
     WHEAT,
     WOOD,
 )
+from catanatron.state import State
 from catanatron.state_functions import (
     get_player_buildings,
     get_player_freqdeck,
@@ -41,7 +42,7 @@ from catanatron.state_functions import (
 )
 
 
-def generate_playable_actions(state) -> List[Action]:
+def generate_playable_actions(state: State) -> List[Action]:
     action_prompt = state.current_prompt
     color = state.current_color()
 
@@ -223,15 +224,11 @@ def robber_possibilities(state, color) -> List[Action]:
                     to_steal_from.add(candidate_color)
 
         if len(to_steal_from) == 0:
-            actions.append(
-                Action(color, ActionType.MOVE_ROBBER, (coordinate, None, None))
-            )
+            actions.append(Action(color, ActionType.MOVE_ROBBER, (coordinate, None)))
         else:
             for enemy_color in to_steal_from:
                 actions.append(
-                    Action(
-                        color, ActionType.MOVE_ROBBER, (coordinate, enemy_color, None)
-                    )
+                    Action(color, ActionType.MOVE_ROBBER, (coordinate, enemy_color))
                 )
 
     return actions

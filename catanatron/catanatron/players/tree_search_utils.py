@@ -1,6 +1,7 @@
 import math
 from collections import defaultdict
 
+from catanatron.game import Game
 from catanatron.models.map import number_probability
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -8,6 +9,7 @@ from catanatron.models.enums import (
     SETTLEMENT,
     CITY,
     Action,
+    ActionRecord,
     ActionType,
 )
 from catanatron.state_functions import (
@@ -41,7 +43,7 @@ def execute_deterministic(game, action):
     return [(copy, 1)]
 
 
-def execute_spectrum(game, action):
+def execute_spectrum(game: Game, action: Action):
     """Returns [(game_copy, proba), ...] tuples for result of given action.
     Result probas should add up to 1. Does not modify self"""
     if action.action_type in DETERMINISTIC_ACTIONS:
@@ -80,7 +82,7 @@ def execute_spectrum(game, action):
             results.append((option_game, number_probability(roll)))
         return results
     elif action.action_type == ActionType.MOVE_ROBBER:
-        (coordinate, robbed_color, _) = action.value
+        (coordinate, robbed_color) = action.value
         if robbed_color is None:  # no one to steal, then deterministic
             return execute_deterministic(game, action)
 
@@ -95,11 +97,16 @@ def execute_spectrum(game, action):
             option_action = Action(
                 action.color,
                 action.action_type,
-                (coordinate, robbed_color, card),
+                (coordinate, robbed_color),
             )
+            option_action_record = ActionRecord(action=option_action, result=card)
             option_game = game.copy()
             try:
-                option_game.execute(option_action, validate_action=False)
+                option_game.execute(
+                    option_action,
+                    validate_action=False,
+                    action_record=option_action_record,
+                )
             except Exception:
                 # ignore exceptions, since player might imagine impossible outcomes.
                 # ignoring means the value function of this node will be flattened,
@@ -120,9 +127,9 @@ def expand_spectrum(game, actions):
     return children  # action => (game, proba)[]
 
 
-def list_prunned_actions(game):
+def list_prunned_actions(game: Game):
     current_color = game.state.current_color()
-    playable_actions = game.state.playable_actions
+    playable_actions = game.playable_actions
     actions = playable_actions.copy()
     types = set(map(lambda a: a.action_type, playable_actions))
 

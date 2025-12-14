@@ -8,7 +8,7 @@ from enum import Enum
 from catanatron.models.map import Water, Port, LandTile
 from catanatron.game import Game
 from catanatron.models.player import Color
-from catanatron.models.enums import RESOURCES, Action, ActionType
+from catanatron.models.enums import Action, ActionType
 from catanatron.state_functions import get_longest_road_length, get_state_index
 
 
@@ -85,7 +85,7 @@ class GameEncoder(json.JSONEncoder):
                 "adjacent_tiles": obj.state.board.map.adjacent_tiles,
                 "nodes": nodes,
                 "edges": list(edges.values()),
-                "actions": [self.default(a) for a in obj.state.actions],
+                "action_records": [self.default(a) for a in obj.state.action_records],
                 "player_state": obj.state.player_state,
                 "colors": obj.state.colors,
                 "bot_colors": list(
@@ -97,7 +97,7 @@ class GameEncoder(json.JSONEncoder):
                 "robber_coordinate": obj.state.board.robber_coordinate,
                 "current_color": obj.state.current_color(),
                 "current_prompt": obj.state.current_prompt,
-                "current_playable_actions": obj.state.playable_actions,
+                "current_playable_actions": obj.playable_actions,
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
                 "winning_color": obj.winning_color(),
                 "state_index": get_state_index(obj.state),
