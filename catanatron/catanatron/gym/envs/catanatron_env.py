@@ -114,7 +114,7 @@ NUM_FEATURES = len(FEATURES)
 HIGH = 19 * 5
 
 
-def simple_reward(game, p0_color):
+def simple_reward(action, game, p0_color):
     winning_color = game.winning_color()
     if p0_color == winning_color:
         return 1
@@ -133,6 +133,7 @@ class CatanatronEnv(gym.Env):
     metadata = {"render_modes": []}
 
     def __init__(self, config=None):
+        self.dtype = np.float32
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
         self.reward_function = self.config.get("reward_function", simple_reward)
@@ -156,14 +157,14 @@ class CatanatronEnv(gym.Env):
         if self.representation == "mixed":
             channels = get_channels(len(self.players))
             board_tensor_space = spaces.Box(
-                low=0, high=1, shape=(channels, 21, 11), dtype=np.float64
+                low=0, high=1, shape=(channels, 21, 11), dtype=self.dtype
             )
             self.numeric_features = [
                 f for f in self.features if not is_graph_feature(f)
             ]
             # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
             numeric_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=np.float64
+                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=self.dtype
             )
             mixed = spaces.Dict(
                 {
@@ -175,7 +176,7 @@ class CatanatronEnv(gym.Env):
         else:
             # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
             self.observation_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.features),), dtype=np.float64
+                low=0, high=HIGH, shape=(len(self.features),), dtype=self.dtype
             )
 
         self.reset()
@@ -216,7 +217,7 @@ class CatanatronEnv(gym.Env):
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
-        reward = self.reward_function(self.game, self.p0.color)
+        reward = self.reward_function(catan_action, self.game, self.p0.color)
 
         return observation, reward, terminated, truncated, info
 
@@ -251,10 +252,12 @@ class CatanatronEnv(gym.Env):
             board_tensor = create_board_tensor(
                 self.game, self.p0.color, channels_first=True
             )
-            numeric = np.array([float(sample[i]) for i in self.numeric_features])
+            numeric = np.array(
+                [sample[i] for i in self.numeric_features], dtype=self.dtype
+            )
             return {"board": board_tensor, "numeric": numeric}
 
-        return np.array([float(sample[i]) for i in self.features])
+        return np.array([sample[i] for i in self.features], dtype=self.dtype)
 
     def _advance_until_p0_decision(self):
         while (
@@ -264,7 +267,7 @@ class CatanatronEnv(gym.Env):
             self.game.play_tick()  # will play bot
 
 
-CatanatronEnv.__doc__ = f"""
+CatanatronEnv.__doc__ = """
 1v1 environment against a random player
 
 Attributes:
