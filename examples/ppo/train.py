@@ -10,6 +10,8 @@ Features:
 Configure by editing constants:
     NUM_LAYERS = 3              # Number of hidden layers
     NEURONS_PER_LAYER = 256     # Neurons in each layer
+    N_STEPS = 2048              # PPO rollout steps
+    BATCH_SIZE = 64             # PPO batch size
     USE_SHAPED_REWARD = True    # Incremental vs sparse rewards
 
 Usage:
@@ -51,6 +53,10 @@ CHECKPOINT_FREQ = 10_000
 NUM_LAYERS = 3
 NEURONS_PER_LAYER = 256
 USE_SHAPED_REWARD = True
+
+# PPO parameters
+N_STEPS = 2048  # Number of steps to collect before update (default: 2048)
+BATCH_SIZE = 128  # Batch size for training (default: 64)
 
 
 def main():
@@ -110,9 +116,12 @@ def main():
         policy_kwargs = dict(net_arch=net_arch)
 
         print(f"Creating new model with architecture: {net_arch}")
+        print(f"PPO config: n_steps={N_STEPS}, batch_size={BATCH_SIZE}")
         model = MaskablePPO(
             MaskableActorCriticPolicy,
             env,
+            n_steps=N_STEPS,
+            batch_size=BATCH_SIZE,
             verbose=1,
             tensorboard_log=TENSORBOARD_DIR,
             seed=SEED,
