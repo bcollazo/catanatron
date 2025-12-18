@@ -21,6 +21,9 @@ Usage:
     # Resume from checkpoint:
     python train.py --resume
 
+    # Train for custom timesteps:
+    python train.py --timesteps 500000
+
     # View TensorBoard:
     tensorboard --logdir ./tensorboard_logs
 """
@@ -48,20 +51,27 @@ from shaped_reward import shaped_reward
 SEED = 42
 CHECKPOINT_DIR = os.path.join(os.path.dirname(__file__), "checkpoints")
 TENSORBOARD_DIR = os.path.join(os.path.dirname(__file__), "tensorboard_logs")
-TOTAL_TIMESTEPS = 100_000
 CHECKPOINT_FREQ = 10_000
 NUM_LAYERS = 3
 NEURONS_PER_LAYER = 256
 USE_SHAPED_REWARD = True
 
 # PPO parameters
-N_STEPS = 2048  # Number of steps to collect before update (default: 2048)
-BATCH_SIZE = 128  # Batch size for training (default: 64)
+N_ENVS = 1  # We might add Vectorized Environments later
+N_STEPS = 8192  # Number of steps to collect before update (default: 2048)
+BATCH_SIZE = 512  # Batch size for training (default: 64)
+assert (N_ENVS * N_STEPS) % BATCH_SIZE == 0, "BATCH_SIZE must divide N_ENVS * N_STEPS"
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
+    parser.add_argument(
+        "--timesteps",
+        type=int,
+        default=100_000,
+        help=f"Number of timesteps to train for (default: {100_000:,})",
+    )
     args = parser.parse_args()
 
     # Seed everything for reproducibility
@@ -137,11 +147,11 @@ def main():
     )
 
     # Train
-    print(f"\nTraining for {TOTAL_TIMESTEPS:,} timesteps")
+    print(f"\nTraining for {args.timesteps:,} timesteps")
     print(f"TensorBoard: tensorboard --logdir {TENSORBOARD_DIR}\n")
 
     model.learn(
-        total_timesteps=TOTAL_TIMESTEPS,
+        total_timesteps=args.timesteps,
         callback=checkpoint_callback,
         reset_num_timesteps=not args.resume,
         tb_log_name="MaskablePPO",
