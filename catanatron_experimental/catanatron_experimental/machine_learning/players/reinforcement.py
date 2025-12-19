@@ -5,13 +5,16 @@ import tensorflow as tf
 from tensorflow import keras
 
 from catanatron.models.player import Player
-from catanatron.models.enums import Action, ActionType
 from catanatron.features import (
     create_sample,
     create_sample_vector,
     get_feature_ordering,
 )
-from catanatron.gym.envs.catanatron_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
+from catanatron.gym.envs.action_space import (
+    ACTIONS_ARRAY,
+    ACTION_SPACE_SIZE,
+    normalize_action,
+)
 from catanatron.gym.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
@@ -94,6 +97,8 @@ def p_model_path(version):
 def get_v_model(model_path):
     global V_MODEL
     if V_MODEL is None:
+        import autokeras as ak
+
         custom_objects = None if model_path[:2] != "ak" else ak.CUSTOM_OBJECTS
         V_MODEL = keras.models.load_model(model_path, custom_objects=custom_objects)
     return V_MODEL
@@ -113,22 +118,6 @@ def hot_one_encode_action(action):
     vector = np.zeros(ACTION_SPACE_SIZE, dtype=int)
     vector[index] = 1
     return vector
-
-
-def normalize_action(action):
-    normalized = action
-    if normalized.action_type == ActionType.ROLL:
-        return Action(action.color, action.action_type, None)
-    elif normalized.action_type == ActionType.MOVE_ROBBER:
-        return Action(action.color, action.action_type, action.value[0])
-    elif normalized.action_type == ActionType.BUILD_ROAD:
-        return Action(action.color, action.action_type, tuple(sorted(action.value)))
-    elif normalized.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-        return Action(action.color, action.action_type, None)
-    elif normalized.action_type == ActionType.DISCARD:
-        return Action(action.color, action.action_type, None)
-
-    return normalized
 
 
 class PRLPlayer(Player):
