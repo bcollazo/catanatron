@@ -12,6 +12,7 @@ Configure by editing constants:
     NEURONS_PER_LAYER = 256     # Neurons in each layer
     N_STEPS = 2048              # PPO rollout steps
     BATCH_SIZE = 64             # PPO batch size
+    ENT_COEF = 0.01             # Exploration (higher = more exploration)
     USE_SHAPED_REWARD = True    # Incremental vs sparse rewards
 
 Usage:
@@ -28,6 +29,7 @@ Usage:
     tensorboard --logdir ./tensorboard_logs
 """
 
+import random
 import argparse
 import os
 from pathlib import Path
@@ -57,6 +59,7 @@ NEURONS_PER_LAYER = 256
 USE_SHAPED_REWARD = True
 
 # PPO parameters
+ENT_COEF = 0.01  # Entropy coefficient for exploration (default: 0.0, try 0.01-0.1 for more exploration)
 N_ENVS = 1  # We might add Vectorized Environments later
 N_STEPS = 8192  # Number of steps to collect before update (default: 2048)
 BATCH_SIZE = 512  # Batch size for training (default: 64)
@@ -74,9 +77,13 @@ def main():
     )
     args = parser.parse_args()
 
-    # Seed everything for reproducibility
+    # Set random seeds for reproducibility
+    random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     # Set device (GPU if available)
     device = (
@@ -126,12 +133,15 @@ def main():
         policy_kwargs = dict(net_arch=net_arch)
 
         print(f"Creating new model with architecture: {net_arch}")
-        print(f"PPO config: n_steps={N_STEPS}, batch_size={BATCH_SIZE}")
+        print(
+            f"PPO config: n_steps={N_STEPS}, batch_size={BATCH_SIZE}, ent_coef={ENT_COEF}"
+        )
         model = MaskablePPO(
             MaskableActorCriticPolicy,
             env,
             n_steps=N_STEPS,
             batch_size=BATCH_SIZE,
+            ent_coef=ENT_COEF,
             verbose=1,
             tensorboard_log=TENSORBOARD_DIR,
             seed=SEED,
