@@ -9,7 +9,7 @@ import pandas as pd
 from catanatron.features import create_sample
 from catanatron.game import GameAccumulator
 from catanatron.gym.board_tensor_features import create_board_tensor
-from catanatron.gym.envs.catanatron_env import to_action_space, to_action_type_space
+from catanatron.gym.envs.action_space import to_action_space, to_action_type_space
 from catanatron.gym.utils import (
     DISCOUNT_FACTOR,
     get_tournament_total_return,

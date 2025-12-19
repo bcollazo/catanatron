@@ -10,7 +10,7 @@ from catanatron.features import (
     create_sample,
     get_feature_ordering,
 )
-from catanatron.gym.action_space import (
+from catanatron.gym.envs.action_space import (
     to_action_space,
     from_action_space,
     ACTION_SPACE_SIZE,

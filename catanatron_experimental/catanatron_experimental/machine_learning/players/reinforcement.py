@@ -13,7 +13,6 @@ from catanatron.features import (
 from catanatron.gym.envs.action_space import (
     ACTIONS_ARRAY,
     ACTION_SPACE_SIZE,
-    normalize_action,
 )
 from catanatron.gym.board_tensor_features import (
     NUMERIC_FEATURES,
@@ -113,8 +112,7 @@ def get_t_model(model_path):
 
 
 def hot_one_encode_action(action):
-    normalized = normalize_action(action)
-    index = ACTIONS_ARRAY.index((normalized.action_type, normalized.value))
+    index = ACTIONS_ARRAY.index((action.action_type, action.value))
     vector = np.zeros(ACTION_SPACE_SIZE, dtype=int)
     vector[index] = 1
     return vector
@@ -136,8 +134,7 @@ class PRLPlayer(Player):
         #     return playable_actions[index]
 
         # Create array like [0,0,1,0,0,0,1,...] representing possible actions
-        normalized_playable = [normalize_action(a) for a in playable_actions]
-        possibilities = [(a.action_type, a.value) for a in normalized_playable]
+        possibilities = [(a.action_type, a.value) for a in playable_actions]
         possible_indices = [ACTIONS_ARRAY.index(x) for x in possibilities]
         mask = np.zeros(ACTION_SPACE_SIZE, dtype=np.int)
         mask[possible_indices] = 1

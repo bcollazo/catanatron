@@ -74,7 +74,9 @@ class ActionType(Enum):
 
     ROLL = "ROLL"  # value is None
     MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None).
-    DISCARD = "DISCARD"  # value is None|Resource[]. TODO: Should always be Resource[].
+
+    # TODO: None for now to avoid complexity, but should be Resource[].
+    DISCARD = "DISCARD"  # value is None
 
     # Building/Buying
     BUILD_ROAD = "BUILD_ROAD"  # value is edge_id
