@@ -206,7 +206,7 @@ class OutputOptions:
 class GameConfigOptions:
     discard_limit: int = 7
     vps_to_win: int = 10
-    catan_map: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
+    map_type: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
 
 
 COLOR_TO_RICH_STYLE = {
@@ -237,7 +237,7 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        catan_map = build_map(game_config.catan_map)
+        catan_map = build_map(game_config.map_type)
         game = Game(
             players,
             discard_limit=game_config.discard_limit,
@@ -274,7 +274,9 @@ def play_batch(
 
             accumulators.append(
                 CsvDataAccumulator(
-                    output_options.output, output_options.include_board_tensor
+                    game_config.map_type,
+                    output_options.output,
+                    output_options.include_board_tensor,
                 )
             )
         elif output_options.output_format == "parquet":
@@ -283,7 +285,9 @@ def play_batch(
 
             accumulators.append(
                 ParquetDataAccumulator(
-                    output_options.output, output_options.include_board_tensor
+                    game_config.map_type,
+                    output_options.output,
+                    output_options.include_board_tensor,
                 )
             )
         elif output_options.output_format == "json":

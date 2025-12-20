@@ -11,13 +11,16 @@ from catanatron.features import (
     get_feature_ordering,
 )
 from catanatron.gym.envs.action_space import (
-    ACTIONS_ARRAY,
-    ACTION_SPACE_SIZE,
+    get_action_array,
 )
 from catanatron.gym.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
 )
+
+
+ACTIONS_ARRAY = get_action_array("BASE")
+ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
 
 # from catanatron_experimental.rep_b_model import build_model
 

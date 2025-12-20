@@ -13,8 +13,7 @@ from catanatron.features import (
 from catanatron.gym.envs.action_space import (
     to_action_space,
     from_action_space,
-    ACTION_SPACE_SIZE,
-    ACTIONS_ARRAY,
+    get_action_array,
 )
 from catanatron.gym.board_tensor_features import (
     create_board_tensor,
@@ -67,8 +66,10 @@ class CatanatronEnv(gym.Env):
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
-        # TODO: Make self.action_space tighter if possible (per map_type)
-        self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
+        # Build action space depending on map type
+        self.action_array = get_action_array(self.map_type)
+        self.action_space_size = len(self.action_array)
+        self.action_space = spaces.Discrete(self.action_space_size)
 
         if self.representation == "mixed":
             channels = get_channels(len(self.players))
@@ -102,7 +103,7 @@ class CatanatronEnv(gym.Env):
         Returns:
             List[int]: valid actions
         """
-        return list(map(to_action_space, self.game.playable_actions))
+        return [to_action_space(a, self.map_type) for a in self.game.playable_actions]
 
     def action_masks(self) -> list[bool]:
         """
@@ -113,20 +114,18 @@ class CatanatronEnv(gym.Env):
             List[bool]: action masks
         """
         valid = set(self.get_valid_actions())
-        return [action_int in valid for action_int in range(ACTION_SPACE_SIZE)]
+        return [action_int in valid for action_int in range(self.action_space_size)]
 
     def step(self, action):
         try:
-            catan_action = from_action_space(action, self.game.playable_actions)
-        except Exception as e:
+            catan_action = from_action_space(
+                action, self.game.playable_actions, self.map_type
+            )
+        except Exception:
             self.invalid_actions_count += 1
 
             observation = self._get_observation()
             winning_color = self.game.winning_color()
-            done = (
-                winning_color is not None
-                or self.invalid_actions_count > self.max_invalid_actions
-            )
             terminated = winning_color is not None
             truncated = (
                 self.invalid_actions_count > self.max_invalid_actions
@@ -225,7 +224,7 @@ Attributes:
    * - Integer
      - Catanatron Action
 """
-for i, v in enumerate(ACTIONS_ARRAY):
+for i, v in enumerate(get_action_array("BASE")):
     CatanatronEnv.__doc__ += f"   * - {i}\n     - {v}\n"
 
 CatanatronEnv.__doc__ += """
