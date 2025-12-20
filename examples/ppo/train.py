@@ -2,16 +2,18 @@
 Restartable Stable Baselines3 training example with TensorBoard logging.
 
 Features:
+- Vectorized environments (8 parallel games for ~8x speedup)
 - Shaped reward function (incremental rewards for progress)
 - GPU support (automatic detection)
 - Checkpoint saving/loading for resumable training
 - TensorBoard integration for monitoring
 
 Configure by editing constants:
+    N_ENVS = 8                  # Parallel environments
     NUM_LAYERS = 3              # Number of hidden layers
     NEURONS_PER_LAYER = 256     # Neurons in each layer
     N_STEPS = 2048              # PPO rollout steps
-    BATCH_SIZE = 64             # PPO batch size
+    BATCH_SIZE = 256            # PPO batch size
     ENT_COEF = 0.01             # Exploration (higher = more exploration)
     USE_SHAPED_REWARD = True    # Incremental vs sparse rewards
 
@@ -41,12 +43,14 @@ from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
 from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 import catanatron.gym
 from catanatron import Color
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.gym.envs.catanatron_env import simple_reward
-from shaped_reward import shaped_reward
+from shaped_reward import ShapedRewardFunction
 
 
 # Configuration
@@ -60,10 +64,26 @@ USE_SHAPED_REWARD = True
 
 # PPO parameters
 ENT_COEF = 0.01  # Entropy coefficient for exploration (default: 0.0, try 0.01-0.1 for more exploration)
-N_ENVS = 1  # We might add Vectorized Environments later
-N_STEPS = 8192  # Number of steps to collect before update (default: 2048)
-BATCH_SIZE = 512  # Batch size for training (default: 64)
+N_ENVS = 1  # Number of parallel environments
+N_STEPS = 2048  # Number of steps to collect before update (default: 2048)
+BATCH_SIZE = 256  # Batch size for training (default: 64)
 assert (N_ENVS * N_STEPS) % BATCH_SIZE == 0, "BATCH_SIZE must divide N_ENVS * N_STEPS"
+
+
+def make_catan_env():
+    """Factory function to create a Catan environment for vectorization."""
+    # Create fresh reward function instance for each environment
+    reward_fn = ShapedRewardFunction() if USE_SHAPED_REWARD else simple_reward
+
+    env = gymnasium.make(
+        "catanatron/Catanatron-v0",
+        config={
+            "enemies": [ValueFunctionPlayer(Color.RED)],
+            "reward_function": reward_fn,
+        },
+    )
+    env = ActionMasker(env, mask_fn)
+    return env
 
 
 def main():
@@ -97,20 +117,18 @@ def main():
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(TENSORBOARD_DIR, exist_ok=True)
 
-    # Create environment
-    reward_fn = shaped_reward if USE_SHAPED_REWARD else simple_reward
+    # Create vectorized environments
     print(
         f"Using reward function: {'shaped (incremental)' if USE_SHAPED_REWARD else 'simple (sparse)'}"
     )
-    env = gymnasium.make(
-        "catanatron/Catanatron-v0",
-        config={
-            "enemies": [ValueFunctionPlayer(Color.RED)],
-            "reward_function": reward_fn,
-        },
+    print(f"Creating {N_ENVS} parallel environments...")
+
+    env = make_vec_env(
+        make_catan_env,
+        n_envs=N_ENVS,
+        seed=SEED,
+        vec_env_cls=SubprocVecEnv,  # Use subprocesses for CPU-heavy environments
     )
-    env = ActionMasker(env, mask_fn)
-    env.reset(seed=SEED)
 
     # Load or create model
     if args.resume:
@@ -158,6 +176,7 @@ def main():
 
     # Train
     print(f"\nTraining for {args.timesteps:,} timesteps")
+    print(f"With {N_ENVS} parallel environments (~{N_ENVS}x speedup)")
     print(f"TensorBoard: tensorboard --logdir {TENSORBOARD_DIR}\n")
 
     model.learn(
@@ -171,6 +190,9 @@ def main():
     final_path = os.path.join(CHECKPOINT_DIR, "final_model.zip")
     model.save(final_path)
     print(f"\nDone! Final model: {final_path}")
+
+    # Clean up
+    env.close()
 
 
 def mask_fn(env) -> np.ndarray:
