@@ -367,7 +367,7 @@ def initialize_tiles(
             port_autoinc += 1
         elif tile_type == LandTile:
             resource = shuffled_tile_resources.pop()
-            if resource != None:
+            if resource is not None:
                 number = shuffled_numbers.pop()
                 tile = LandTile(tile_autoinc, resource, number, nodes, edges)
             else:
