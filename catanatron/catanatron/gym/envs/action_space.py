@@ -84,19 +84,11 @@ def to_action_space(
 
 def from_action_space(
     action_int,
-    playable_actions,
+    color: Color,
     player_colors: Tuple[Color],
     map_type: Literal["BASE", "TOURNAMENT", "MINI"],
 ):
     """maps action_int to catantron.models.actions.Action"""
-    # Get "catan_action" based on space action.
-    # i.e. Take first action in playable that matches actions_array blueprint
     actions_array = get_action_array(player_colors, map_type)
     (action_type, value) = actions_array[action_int]
-    catan_action = None
-    for action in playable_actions:
-        if action.action_type == action_type and action.value == value:
-            catan_action = action
-            break  # return the first one
-    assert catan_action is not None
-    return catan_action
+    return Action(color, action_type, value)

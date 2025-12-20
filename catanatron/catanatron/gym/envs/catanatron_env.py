@@ -125,9 +125,10 @@ class CatanatronEnv(gym.Env):
     def step(self, action):
         try:
             catan_action = from_action_space(
-                action, self.game.playable_actions, self.player_colors, self.map_type
+                action, self.p0.color, self.player_colors, self.map_type
             )
-        except Exception:
+            assert catan_action in self.game.playable_actions
+        except AssertionError:
             self.invalid_actions_count += 1
 
             observation = self._get_observation()
