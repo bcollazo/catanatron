@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from catanatron.models.player import Player
+from catanatron import Color, Player
 from catanatron.features import (
     create_sample,
     create_sample_vector,
@@ -19,7 +19,7 @@ from catanatron.gym.board_tensor_features import (
 )
 
 
-ACTIONS_ARRAY = get_action_array("BASE")
+ACTIONS_ARRAY = get_action_array((Color.BLUE, Color.RED), "BASE")
 ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
 
 # from catanatron_experimental.rep_b_model import build_model

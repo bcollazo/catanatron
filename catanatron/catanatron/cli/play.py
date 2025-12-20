@@ -274,6 +274,7 @@ def play_batch(
 
             accumulators.append(
                 CsvDataAccumulator(
+                    (p.color for p in players),
                     game_config.map_type,
                     output_options.output,
                     output_options.include_board_tensor,
@@ -285,6 +286,7 @@ def play_batch(
 
             accumulators.append(
                 ParquetDataAccumulator(
+                    (p.color for p in players),
                     game_config.map_type,
                     output_options.output,
                     output_options.include_board_tensor,

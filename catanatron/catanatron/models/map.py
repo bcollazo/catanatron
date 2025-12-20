@@ -192,15 +192,6 @@ BASE_MAP_TEMPLATE = MapTemplate(
 )
 
 
-def get_map_template(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
-    if map_type == "TOURNAMENT" or map_type == "BASE":
-        return BASE_MAP_TEMPLATE
-    elif map_type == "MINI":
-        return MINI_MAP_TEMPLATE
-    else:
-        raise ValueError(f"Invalid map_type: {map_type}")
-
-
 class CatanMap:
     """Represents a randomly initialized map."""
 

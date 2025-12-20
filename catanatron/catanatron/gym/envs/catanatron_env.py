@@ -54,11 +54,14 @@ class CatanatronEnv(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
-        self.representation = self.config.get("representation", "vector")
 
-        assert all(p.color != Color.BLUE for p in self.enemies)
+        self.representation = self.config.get("representation", "vector")
         assert self.representation in ["mixed", "vector"]
+
+        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
+        self.player_colors = tuple([Color.BLUE] + [p.color for p in self.enemies])
+        assert all(p.color != Color.BLUE for p in self.enemies)
+
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
         self.representation = "mixed" if self.representation == "mixed" else "vector"
@@ -67,7 +70,7 @@ class CatanatronEnv(gym.Env):
         self.max_invalid_actions = 10
 
         # Build action space depending on map type
-        self.action_array = get_action_array(self.map_type)
+        self.action_array = get_action_array(self.player_colors, self.map_type)
         self.action_space_size = len(self.action_array)
         self.action_space = spaces.Discrete(self.action_space_size)
 
@@ -103,7 +106,10 @@ class CatanatronEnv(gym.Env):
         Returns:
             List[int]: valid actions
         """
-        return [to_action_space(a, self.map_type) for a in self.game.playable_actions]
+        return [
+            to_action_space(a, self.player_colors, self.map_type)
+            for a in self.game.playable_actions
+        ]
 
     def action_masks(self) -> list[bool]:
         """
@@ -119,7 +125,7 @@ class CatanatronEnv(gym.Env):
     def step(self, action):
         try:
             catan_action = from_action_space(
-                action, self.game.playable_actions, self.map_type
+                action, self.game.playable_actions, self.player_colors, self.map_type
             )
         except Exception:
             self.invalid_actions_count += 1
@@ -224,7 +230,7 @@ Attributes:
    * - Integer
      - Catanatron Action
 """
-for i, v in enumerate(get_action_array("BASE")):
+for i, v in enumerate(get_action_array((Color.BLUE, Color.RED), "BASE")):
     CatanatronEnv.__doc__ += f"   * - {i}\n     - {v}\n"
 
 CatanatronEnv.__doc__ += """

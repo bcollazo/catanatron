@@ -1,23 +1,28 @@
-from typing import Literal
 from functools import lru_cache
+from typing import Tuple, Literal
 
 from catanatron.models.actions import Action
-from catanatron.models.map import get_map_template, NUM_NODES, LandTile
-from catanatron.models.enums import RESOURCES, ActionType
 from catanatron.models.board import get_edges
+from catanatron.models.enums import RESOURCES, ActionType
 from catanatron.models.player import Color
+from catanatron.models.map import build_map
 
 
 @lru_cache(maxsize=None)
-def get_action_array(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
-    map_template = get_map_template(map_type)
-    tile_coordinates = [x for x, y in map_template.topology.items() if y == LandTile]
+def get_action_array(
+    player_colors: Tuple[Color], map_type: Literal["BASE", "TOURNAMENT", "MINI"]
+):
+    catan_map = build_map(map_type)
+    num_nodes = len(catan_map.land_nodes)
     actions_array = [
         (ActionType.ROLL, None),
         (ActionType.DISCARD, None),
-        *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
-        *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
-        *[(ActionType.BUILD_CITY, node_id) for node_id in range(NUM_NODES)],
+        *[
+            (ActionType.BUILD_ROAD, tuple(sorted(edge)))
+            for edge in get_edges(catan_map.land_nodes)
+        ],
+        *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(num_nodes)],
+        *[(ActionType.BUILD_CITY, node_id) for node_id in range(num_nodes)],
         (ActionType.BUY_DEVELOPMENT_CARD, None),
         (ActionType.PLAY_KNIGHT_CARD, None),
         *[
@@ -30,9 +35,9 @@ def get_action_array(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
         *[(ActionType.PLAY_MONOPOLY, r) for r in RESOURCES],
         # Move Robber actions include to every tile and from each opponent
         *[
-            (ActionType.MOVE_ROBBER, (tile, victim_color))
-            for tile in tile_coordinates
-            for victim_color in [None] + [color for color in Color]
+            (ActionType.MOVE_ROBBER, (coordinates, victim_color))
+            for coordinates in catan_map.land_tiles.keys()
+            for victim_color in [None] + list(player_colors)
         ],
         # 4:1 with bank
         *[
@@ -67,19 +72,26 @@ def to_action_type_space(action_type: ActionType) -> int:
     return ACTION_TYPES.index(action_type)
 
 
-def to_action_space(action: Action, map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
+def to_action_space(
+    action: Action,
+    player_colors: Tuple[Color],
+    map_type: Literal["BASE", "TOURNAMENT", "MINI"],
+):
     """maps action to space_action equivalent integer"""
-    actions_array = get_action_array(map_type)
+    actions_array = get_action_array(player_colors, map_type)
     return actions_array.index((action.action_type, action.value))
 
 
 def from_action_space(
-    action_int, playable_actions, map_type: Literal["BASE", "TOURNAMENT", "MINI"]
+    action_int,
+    playable_actions,
+    player_colors: Tuple[Color],
+    map_type: Literal["BASE", "TOURNAMENT", "MINI"],
 ):
     """maps action_int to catantron.models.actions.Action"""
     # Get "catan_action" based on space action.
     # i.e. Take first action in playable that matches actions_array blueprint
-    actions_array = get_action_array(map_type)
+    actions_array = get_action_array(player_colors, map_type)
     (action_type, value) = actions_array[action_int]
     catan_action = None
     for action in playable_actions:
