@@ -4,18 +4,23 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from catanatron.models.player import Player
-from catanatron.models.enums import Action, ActionType
+from catanatron import Color, Player
 from catanatron.features import (
     create_sample,
     create_sample_vector,
     get_feature_ordering,
 )
-from catanatron.gym.envs.catanatron_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
+from catanatron.gym.envs.action_space import (
+    get_action_array,
+)
 from catanatron.gym.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,
 )
+
+
+ACTIONS_ARRAY = get_action_array((Color.BLUE, Color.RED), "BASE")
+ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
 
 # from catanatron_experimental.rep_b_model import build_model
 
@@ -110,27 +115,10 @@ def get_t_model(model_path):
 
 
 def hot_one_encode_action(action):
-    normalized = normalize_action(action)
-    index = ACTIONS_ARRAY.index((normalized.action_type, normalized.value))
+    index = ACTIONS_ARRAY.index((action.action_type, action.value))
     vector = np.zeros(ACTION_SPACE_SIZE, dtype=int)
     vector[index] = 1
     return vector
-
-
-def normalize_action(action):
-    normalized = action
-    if normalized.action_type == ActionType.ROLL:
-        return Action(action.color, action.action_type, None)
-    elif normalized.action_type == ActionType.MOVE_ROBBER:
-        return Action(action.color, action.action_type, action.value[0])
-    elif normalized.action_type == ActionType.BUILD_ROAD:
-        return Action(action.color, action.action_type, tuple(sorted(action.value)))
-    elif normalized.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-        return Action(action.color, action.action_type, None)
-    elif normalized.action_type == ActionType.DISCARD:
-        return Action(action.color, action.action_type, None)
-
-    return normalized
 
 
 class PRLPlayer(Player):
@@ -149,8 +137,7 @@ class PRLPlayer(Player):
         #     return playable_actions[index]
 
         # Create array like [0,0,1,0,0,0,1,...] representing possible actions
-        normalized_playable = [normalize_action(a) for a in playable_actions]
-        possibilities = [(a.action_type, a.value) for a in normalized_playable]
+        possibilities = [(a.action_type, a.value) for a in playable_actions]
         possible_indices = [ACTIONS_ARRAY.index(x) for x in possibilities]
         mask = np.zeros(ACTION_SPACE_SIZE, dtype=np.int)
         mask[possible_indices] = 1

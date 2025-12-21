@@ -5,106 +5,21 @@ import numpy as np
 
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
-from catanatron.models.enums import RESOURCES, Action, ActionType
-from catanatron.models.board import get_edges
+from catanatron.models.map import build_map
 from catanatron.features import (
     create_sample,
     get_feature_ordering,
+)
+from catanatron.gym.envs.action_space import (
+    to_action_space,
+    from_action_space,
+    get_action_array,
 )
 from catanatron.gym.board_tensor_features import (
     create_board_tensor,
     get_channels,
     is_graph_feature,
 )
-
-
-BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
-TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == LandTile]
-ACTIONS_ARRAY = [
-    (ActionType.ROLL, None),
-    # TODO: One for each tile (and abuse 1v1 setting).
-    *[(ActionType.MOVE_ROBBER, tile) for tile in TILE_COORDINATES],
-    (ActionType.DISCARD, None),
-    *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
-    *[(ActionType.BUILD_SETTLEMENT, node_id) for node_id in range(NUM_NODES)],
-    *[(ActionType.BUILD_CITY, node_id) for node_id in range(NUM_NODES)],
-    (ActionType.BUY_DEVELOPMENT_CARD, None),
-    (ActionType.PLAY_KNIGHT_CARD, None),
-    *[
-        (ActionType.PLAY_YEAR_OF_PLENTY, (first_card, RESOURCES[j]))
-        for i, first_card in enumerate(RESOURCES)
-        for j in range(i, len(RESOURCES))
-    ],
-    *[(ActionType.PLAY_YEAR_OF_PLENTY, (first_card,)) for first_card in RESOURCES],
-    (ActionType.PLAY_ROAD_BUILDING, None),
-    *[(ActionType.PLAY_MONOPOLY, r) for r in RESOURCES],
-    # 4:1 with bank
-    *[
-        (ActionType.MARITIME_TRADE, tuple(4 * [i] + [j]))
-        for i in RESOURCES
-        for j in RESOURCES
-        if i != j
-    ],
-    # 3:1 with port
-    *[
-        (ActionType.MARITIME_TRADE, tuple(3 * [i] + [None, j]))  # type: ignore
-        for i in RESOURCES
-        for j in RESOURCES
-        if i != j
-    ],
-    # 2:1 with port
-    *[
-        (ActionType.MARITIME_TRADE, tuple(2 * [i] + [None, None, j]))  # type: ignore
-        for i in RESOURCES
-        for j in RESOURCES
-        if i != j
-    ],
-    (ActionType.END_TURN, None),
-]
-ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
-ACTION_TYPES = [i for i in ActionType]
-
-
-def to_action_type_space(action_type: ActionType) -> int:
-    return ACTION_TYPES.index(action_type)
-
-
-# NOTE: I think I don't need this if we separate action and action_record nicely...
-def normalize_action(action):
-    normalized = action
-    if normalized.action_type == ActionType.ROLL:
-        return Action(action.color, action.action_type, None)
-    elif normalized.action_type == ActionType.MOVE_ROBBER:
-        return Action(action.color, action.action_type, action.value[0])
-    elif normalized.action_type == ActionType.BUILD_ROAD:
-        return Action(action.color, action.action_type, tuple(sorted(action.value)))
-    elif normalized.action_type == ActionType.BUY_DEVELOPMENT_CARD:
-        return Action(action.color, action.action_type, None)
-    elif normalized.action_type == ActionType.DISCARD:
-        return Action(action.color, action.action_type, None)
-    return normalized
-
-
-def to_action_space(action):
-    """maps action to space_action equivalent integer"""
-    normalized = normalize_action(action)
-    return ACTIONS_ARRAY.index((normalized.action_type, normalized.value))
-
-
-def from_action_space(action_int, playable_actions):
-    """maps action_int to catantron.models.actions.Action"""
-    # Get "catan_action" based on space action.
-    # i.e. Take first action in playable that matches ACTIONS_ARRAY blueprint
-    (action_type, value) = ACTIONS_ARRAY[action_int]
-    catan_action = None
-    for action in playable_actions:
-        normalized = normalize_action(action)
-        if normalized.action_type == action_type and normalized.value == value:
-            catan_action = action
-            break  # return the first one
-    assert catan_action is not None
-    return catan_action
 
 
 FEATURES = get_feature_ordering(num_players=2)
@@ -133,6 +48,7 @@ class CatanatronEnv(gym.Env):
     metadata = {"render_modes": []}
 
     def __init__(self, config=None):
+        self.dtype = np.float32
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
         self.reward_function = self.config.get("reward_function", simple_reward)
@@ -140,9 +56,12 @@ class CatanatronEnv(gym.Env):
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
         self.representation = self.config.get("representation", "vector")
-
-        assert all(p.color != Color.BLUE for p in self.enemies)
         assert self.representation in ["mixed", "vector"]
+
+        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
+        self.player_colors = tuple([Color.BLUE] + [p.color for p in self.enemies])
+        assert all(p.color != Color.BLUE for p in self.enemies)
+
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
         self.representation = "mixed" if self.representation == "mixed" else "vector"
@@ -150,20 +69,22 @@ class CatanatronEnv(gym.Env):
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
-        # TODO: Make self.action_space tighter if possible (per map_type)
-        self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
+        # Build action space depending on map type
+        self.action_array = get_action_array(self.player_colors, self.map_type)
+        self.action_space_size = len(self.action_array)
+        self.action_space = spaces.Discrete(self.action_space_size)
 
         if self.representation == "mixed":
             channels = get_channels(len(self.players))
             board_tensor_space = spaces.Box(
-                low=0, high=1, shape=(channels, 21, 11), dtype=np.float64
+                low=0, high=1, shape=(channels, 21, 11), dtype=self.dtype
             )
             self.numeric_features = [
                 f for f in self.features if not is_graph_feature(f)
             ]
             # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
             numeric_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=np.float64
+                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=self.dtype
             )
             mixed = spaces.Dict(
                 {
@@ -175,7 +96,7 @@ class CatanatronEnv(gym.Env):
         else:
             # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
             self.observation_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.features),), dtype=np.float64
+                low=0, high=HIGH, shape=(len(self.features),), dtype=self.dtype
             )
 
         self.reset()
@@ -185,20 +106,33 @@ class CatanatronEnv(gym.Env):
         Returns:
             List[int]: valid actions
         """
-        return list(map(to_action_space, self.game.playable_actions))
+        return [
+            to_action_space(a, self.player_colors, self.map_type)
+            for a in self.game.playable_actions
+        ]
+
+    def action_masks(self) -> list[bool]:
+        """
+        This method is to be compatible with SB3 SubprocVecEnv.
+        See https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
+
+        Returns:
+            List[bool]: action masks
+        """
+        valid = set(self.get_valid_actions())
+        return [action_int in valid for action_int in range(self.action_space_size)]
 
     def step(self, action):
         try:
-            catan_action = from_action_space(action, self.game.playable_actions)
-        except Exception as e:
+            catan_action = from_action_space(
+                action, self.p0.color, self.player_colors, self.map_type
+            )
+            assert catan_action in self.game.playable_actions
+        except AssertionError:
             self.invalid_actions_count += 1
 
             observation = self._get_observation()
             winning_color = self.game.winning_color()
-            done = (
-                winning_color is not None
-                or self.invalid_actions_count > self.max_invalid_actions
-            )
             terminated = winning_color is not None
             truncated = (
                 self.invalid_actions_count > self.max_invalid_actions
@@ -251,10 +185,12 @@ class CatanatronEnv(gym.Env):
             board_tensor = create_board_tensor(
                 self.game, self.p0.color, channels_first=True
             )
-            numeric = np.array([float(sample[i]) for i in self.numeric_features])
+            numeric = np.array(
+                [sample[i] for i in self.numeric_features], dtype=self.dtype
+            )
             return {"board": board_tensor, "numeric": numeric}
 
-        return np.array([float(sample[i]) for i in self.features])
+        return np.array([sample[i] for i in self.features], dtype=self.dtype)
 
     def _advance_until_p0_decision(self):
         while (
@@ -295,7 +231,7 @@ Attributes:
    * - Integer
      - Catanatron Action
 """
-for i, v in enumerate(ACTIONS_ARRAY):
+for i, v in enumerate(get_action_array((Color.BLUE, Color.RED), "BASE")):
     CatanatronEnv.__doc__ += f"   * - {i}\n     - {v}\n"
 
 CatanatronEnv.__doc__ += """

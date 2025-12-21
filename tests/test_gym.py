@@ -6,8 +6,14 @@ import numpy as np
 
 from catanatron.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
+from catanatron.models.enums import Action, ActionType, WHEAT, SHEEP, ORE
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.gym.envs.catanatron_env import CatanatronEnv
+from catanatron.gym.envs.action_space import (
+    get_action_array,
+    to_action_space,
+    from_action_space,
+)
 
 features = get_feature_ordering(2)
 
@@ -139,3 +145,89 @@ def test_mixed_rep():
     observation, info = env.reset()
     assert "board" in observation
     assert "numeric" in observation
+
+
+def test_move_robber_action_in_base_action_array():
+    """Test that a specific MOVE_ROBBER action is in the BASE action array for 2 players."""
+    player_colors = (Color.BLUE, Color.RED)
+    action_array = get_action_array(player_colors, "BASE")
+    target_action = (ActionType.MOVE_ROBBER, ((-1, 0, 1), Color.BLUE))
+    assert target_action in action_array, (
+        f"Action {target_action} not found in BASE action array for 2 players"
+    )
+
+    target_action = (ActionType.MOVE_ROBBER, ((-1, 0, 1), None))
+    assert target_action in action_array, (
+        f"Action {target_action} not found in BASE action array for 2 players"
+    )
+
+
+def test_there_are_54_build_nodes_in_base():
+    player_colors = (Color.BLUE, Color.RED)
+    action_array = get_action_array(player_colors, "BASE")
+    num_build_nodes = len(
+        [action for action in action_array if action[0] == ActionType.BUILD_SETTLEMENT]
+    )
+    assert num_build_nodes == 54
+
+
+def test_there_are_less_build_nodes_in_mini():
+    player_colors = (Color.BLUE, Color.RED)
+    action_array = get_action_array(player_colors, "MINI")
+    num_build_nodes = len(
+        [action for action in action_array if action[0] == ActionType.BUILD_SETTLEMENT]
+    )
+    assert num_build_nodes == 24
+
+
+def test_outside_tiles_not_in_mini():
+    player_colors = (Color.BLUE, Color.RED)
+    action_array = get_action_array(player_colors, "MINI")
+    target_action = (ActionType.MOVE_ROBBER, ((0, 2, -2), Color.BLUE))
+    assert target_action not in action_array, (
+        f"Action {target_action} found in MINI action array for 2 players"
+    )
+
+
+def test_action_space_conversion_roundtrip():
+    """Test converting actions to action space integers and back."""
+    player_colors = (Color.BLUE, Color.RED)
+    map_type = "BASE"
+
+    # Create various test actions
+    # Note: For PLAY_YEAR_OF_PLENTY with 2 resources, they must be in RESOURCES order
+    # RESOURCES = ['WOOD', 'BRICK', 'SHEEP', 'WHEAT', 'ORE']
+    test_actions = [
+        Action(Color.BLUE, ActionType.ROLL, None),
+        Action(Color.BLUE, ActionType.DISCARD, None),
+        Action(Color.BLUE, ActionType.BUILD_SETTLEMENT, 10),
+        Action(Color.BLUE, ActionType.BUILD_CITY, 5),
+        Action(Color.BLUE, ActionType.BUILD_ROAD, (0, 1)),
+        Action(Color.BLUE, ActionType.BUY_DEVELOPMENT_CARD, None),
+        Action(Color.BLUE, ActionType.PLAY_KNIGHT_CARD, None),
+        Action(Color.BLUE, ActionType.PLAY_YEAR_OF_PLENTY, (SHEEP, WHEAT)),
+        Action(Color.BLUE, ActionType.PLAY_YEAR_OF_PLENTY, (WHEAT, ORE)),
+        Action(Color.BLUE, ActionType.PLAY_YEAR_OF_PLENTY, (ORE,)),
+        Action(Color.BLUE, ActionType.PLAY_MONOPOLY, WHEAT),
+        Action(Color.BLUE, ActionType.PLAY_ROAD_BUILDING, None),
+        Action(Color.BLUE, ActionType.MOVE_ROBBER, ((-1, 0, 1), Color.RED)),
+        Action(Color.BLUE, ActionType.MOVE_ROBBER, ((0, -1, 1), None)),
+        Action(Color.BLUE, ActionType.MARITIME_TRADE, (WHEAT, WHEAT, WHEAT, WHEAT, ORE)),
+        Action(Color.BLUE, ActionType.MARITIME_TRADE, (SHEEP, SHEEP, SHEEP, None, WHEAT)),
+        Action(Color.BLUE, ActionType.MARITIME_TRADE, (ORE, ORE, None, None, WHEAT)),
+        Action(Color.BLUE, ActionType.END_TURN, None),
+    ]
+
+    for action in test_actions:
+        # Convert to action space integer
+        action_int = to_action_space(action, player_colors, map_type)
+
+        # Convert back from action space
+        recovered_action = from_action_space(
+            action_int, action.color, player_colors, map_type
+        )
+
+        # Assert they are the same
+        assert recovered_action == action, (
+            f"Action conversion failed: {action} -> {action_int} -> {recovered_action}"
+        )
