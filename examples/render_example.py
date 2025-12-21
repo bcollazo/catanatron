@@ -11,6 +11,7 @@ Usage:
     python render_example.py --record --video-folder ./my_videos
 """
 
+import random
 import argparse
 import gymnasium
 from gymnasium.wrappers import RecordVideo
@@ -78,8 +79,8 @@ def main():
         # Get valid actions
         valid_actions = info["valid_actions"]
 
-        # Take first valid action (simple strategy)
-        action = valid_actions[0]
+        # Take first valid action (random)
+        action = random.choice(valid_actions)
 
         # Step environment
         observation, reward, terminated, truncated, info = env.step(action)

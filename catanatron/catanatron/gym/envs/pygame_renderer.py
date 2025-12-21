@@ -88,7 +88,7 @@ class PygameRenderer:
         return (px, py)
 
     def hexagon_corners(self, center: Tuple[float, float], size: float) -> list:
-        """Get the 6 corner points of a flat-top hexagon.
+        """Get the 6 corner points of a pointy-top hexagon.
 
         Args:
             center: Center position (x, y)
@@ -100,7 +100,8 @@ class PygameRenderer:
         cx, cy = center
         corners = []
         for i in range(6):
-            angle = math.pi / 3 * i
+            # Pointy-top: vertices at 30°, 90°, 150°, 210°, 270°, 330°
+            angle = math.pi / 6 + math.pi / 3 * i
             x = cx + size * math.cos(angle)
             y = cy + size * math.sin(angle)
             corners.append((x, y))
@@ -155,6 +156,31 @@ class PygameRenderer:
         # White outline to make it visible on dark tiles
         pygame.draw.circle(self.surface, (255, 255, 255), (int(center[0]), int(center[1])), 15, 2)
 
+    def get_node_delta(self, direction: str, size: float) -> Tuple[float, float]:
+        """Get the offset from tile center to node based on direction.
+
+        Matches the frontend getNodeDelta function.
+
+        Args:
+            direction: NodeRef direction (NORTH, NORTHEAST, etc.)
+            size: Hexagon size
+
+        Returns:
+            (delta_x, delta_y) offset from tile center
+        """
+        w = math.sqrt(3) * size  # SQRT3 * size
+        h = 2 * size
+
+        deltas = {
+            "NORTH": (0, -h / 2),
+            "NORTHEAST": (w / 2, -h / 4),
+            "SOUTHEAST": (w / 2, h / 4),
+            "SOUTH": (0, h / 2),
+            "SOUTHWEST": (-w / 2, h / 4),
+            "NORTHWEST": (-w / 2, -h / 4),
+        }
+        return deltas.get(direction, (0, 0))
+
     def get_node_pixel_position(self, node_id: int, game: Game) -> Tuple[float, float]:
         """Get pixel position for a node.
 
@@ -165,31 +191,18 @@ class PygameRenderer:
         Returns:
             Pixel position (x, y)
         """
-        # Find which tiles contain this node and average their positions
         board = game.state.board
-        adjacent_tiles = board.map.adjacent_tiles.get(node_id, [])
 
-        if not adjacent_tiles:
-            return (0, 0)
+        # Find a tile that contains this node and get its direction
+        for coord, tile in board.map.land_tiles.items():
+            for node_ref, nid in tile.nodes.items():
+                if nid == node_id:
+                    # Found the tile and direction
+                    tile_center = self.cube_to_pixel(coord)
+                    delta = self.get_node_delta(node_ref.value, HEX_SIZE)
+                    return (tile_center[0] + delta[0], tile_center[1] + delta[1])
 
-        # Get coordinates of adjacent tiles
-        tile_coords = []
-        for tile in adjacent_tiles:
-            # Find the coordinate of this tile in the land_tiles dict
-            for coord, land_tile in board.map.land_tiles.items():
-                if land_tile.id == tile.id:
-                    tile_coords.append(coord)
-                    break
-
-        # Average the pixel positions of adjacent tiles
-        if not tile_coords:
-            return (0, 0)
-
-        pixel_positions = [self.cube_to_pixel(coord) for coord in tile_coords]
-        avg_x = sum(p[0] for p in pixel_positions) / len(pixel_positions)
-        avg_y = sum(p[1] for p in pixel_positions) / len(pixel_positions)
-
-        return (avg_x, avg_y)
+        return (0, 0)
 
     def draw_node(self, node_id: int, color: Color, building_type: str, game: Game):
         """Draw a settlement or city at a node.
@@ -223,8 +236,13 @@ class PygameRenderer:
             color: Player color
             game: Game object
         """
+        # Get positions of both nodes that define this edge
         node1_pos = self.get_node_pixel_position(edge_id[0], game)
         node2_pos = self.get_node_pixel_position(edge_id[1], game)
+
+        # Check if either position is invalid
+        if node1_pos == (0, 0) or node2_pos == (0, 0):
+            return
 
         player_color = PLAYER_COLORS.get(color, (128, 128, 128))
         pygame.draw.line(self.surface, player_color,
