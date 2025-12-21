@@ -2,24 +2,14 @@
 Restartable Stable Baselines3 training example with TensorBoard logging.
 
 Features:
-- Vectorized environments (8 parallel games for ~8x speedup)
+- Vectorized environments (parallel games for speedup)
 - VecNormalize (observation and reward normalization)
 - Shaped reward function (incremental rewards for progress)
 - Linear learning rate schedule (decreases over time)
 - GPU support (automatic detection)
 - Checkpoint saving/loading for resumable training
 - TensorBoard integration for monitoring
-
-Configure by editing constants:
-    N_ENVS = 8                      # Parallel environments
-    NUM_LAYERS = 3                  # Number of hidden layers
-    NEURONS_PER_LAYER = 256         # Neurons in each layer
-    N_STEPS = 2048                  # PPO rollout steps
-    BATCH_SIZE = 256                # PPO batch size
-    INITIAL_LR = 0.0003             # Initial learning rate
-    FINAL_LR = 0.00001              # Final learning rate
-    ENT_COEF = 0.05                 # Entropy coefficient for exploration
-    USE_SHAPED_REWARD = True        # Incremental vs sparse rewards
+- Wandb-ready configuration object
 
 Usage:
     # Start new training:
@@ -33,6 +23,10 @@ Usage:
 
     # View TensorBoard:
     tensorboard --logdir ./tensorboard_logs
+
+    # To use with wandb (add to main()):
+    import wandb
+    wandb.init(project="catan-ppo", config=config)
 """
 
 import random
@@ -57,24 +51,35 @@ from catanatron.gym.envs.catanatron_env import simple_reward
 from shaped_reward import ShapedRewardFunction
 
 
-# Configuration
-SEED = 42
+# Configuration object (compatible with wandb)
+config = {
+    # Environment parameters
+    "map_type": "MINI",  # Map type for Catan (BASE, MINI, etc.)
+    "vps_to_win": 6,  # Victory points needed to win
+    "use_shaped_reward": True,  # Use shaped vs simple reward function
+    # PPO hyperparameters
+    "n_envs": 32,  # Number of parallel environments
+    "n_steps": 2048,  # Number of steps to collect before update
+    "batch_size": 256,  # Batch size for training
+    "initial_lr": 0.01,  # Initial learning rate
+    "final_lr": 0.001,  # Final learning rate
+    "ent_coef": 0.01,  # Entropy coefficient for exploration
+    # Network architecture
+    "num_layers": 3,  # Number of hidden layers
+    "neurons_per_layer": 256,  # Neurons in each layer
+    # Training parameters
+    "seed": 42,  # Random seed
+    "checkpoint_freq": 10_000,  # Save checkpoint every N steps
+}
+
+# Validate configuration
+assert (config["n_envs"] * config["n_steps"]) % config["batch_size"] == 0, (
+    "BATCH_SIZE must divide N_ENVS * N_STEPS"
+)
+
+# Directories
 CHECKPOINT_DIR = os.path.join(os.path.dirname(__file__), "checkpoints")
 TENSORBOARD_DIR = os.path.join(os.path.dirname(__file__), "tensorboard_logs")
-CHECKPOINT_FREQ = 10_000
-NUM_LAYERS = 3
-NEURONS_PER_LAYER = 256
-USE_SHAPED_REWARD = True
-
-# PPO parameters
-N_ENVS = 32  # Number of parallel environments
-N_STEPS = 2048  # Number of steps to collect before update (default: 2048)
-BATCH_SIZE = 256  # Batch size for training (default: 64)
-assert (N_ENVS * N_STEPS) % BATCH_SIZE == 0, "BATCH_SIZE must divide N_ENVS * N_STEPS"
-# Learning rate schedule
-INITIAL_LR = 0.01  # Initial learning rate
-FINAL_LR = 0.0001  # Final learning rate
-ENT_COEF = 0.01  # Entropy coefficient for exploration
 
 
 def main():
@@ -90,10 +95,10 @@ def main():
     args = parser.parse_args()
 
     # Set random seeds for reproducibility
-    random.seed(SEED)
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
+    random.seed(config["seed"])
+    np.random.seed(config["seed"])
+    torch.manual_seed(config["seed"])
+    torch.cuda.manual_seed_all(config["seed"])
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -107,13 +112,14 @@ def main():
 
     # Create vectorized environments
     print(
-        f"Using reward function: {'shaped (incremental)' if USE_SHAPED_REWARD else 'simple (sparse)'}"
+        f"Using reward function: {'shaped (incremental)' if config['use_shaped_reward'] else 'simple (sparse)'}"
     )
-    print(f"Creating {N_ENVS} parallel environments...")
+    print(f"Using map type: {config['map_type']}, VPs to win: {config['vps_to_win']}")
+    print(f"Creating {config['n_envs']} parallel environments...")
     env = make_vec_env(
         make_catan_env,
-        n_envs=N_ENVS,
-        seed=SEED,
+        n_envs=config["n_envs"],
+        seed=config["seed"],
         vec_env_cls=SubprocVecEnv,  # Use subprocesses for CPU-heavy environments
     )
 
@@ -154,49 +160,53 @@ def main():
 
     if not args.resume:
         # Configure network architecture
-        net_arch = [NEURONS_PER_LAYER] * NUM_LAYERS
+        net_arch = [config["neurons_per_layer"]] * config["num_layers"]
         policy_kwargs = dict(net_arch=net_arch)
 
         # Create learning rate schedule
-        lr_schedule = linear_schedule(INITIAL_LR, FINAL_LR)
+        lr_schedule = linear_schedule(config["initial_lr"], config["final_lr"])
 
         print(f"Creating new model with architecture: {net_arch}")
         print(
-            f"PPO config: n_steps={N_STEPS}, batch_size={BATCH_SIZE}, ent_coef={ENT_COEF}"
+            f"PPO config: n_steps={config['n_steps']}, batch_size={config['batch_size']}, ent_coef={config['ent_coef']}"
         )
-        print(f"Learning rate schedule: {INITIAL_LR:.2e} → {FINAL_LR:.2e}")
+        print(
+            f"Learning rate schedule: {config['initial_lr']:.2e} → {config['final_lr']:.2e}"
+        )
         model = MaskablePPO(
             MaskableActorCriticPolicy,
             env,
             learning_rate=lr_schedule,
-            n_steps=N_STEPS,
-            batch_size=BATCH_SIZE,
-            ent_coef=ENT_COEF,
+            n_steps=config["n_steps"],
+            batch_size=config["batch_size"],
+            ent_coef=config["ent_coef"],
             verbose=1,
             tensorboard_log=TENSORBOARD_DIR,
-            seed=SEED,
+            seed=config["seed"],
             policy_kwargs=policy_kwargs,
             device=device,
         )
 
     # Setup checkpoint callback (also saves VecNormalize stats)
     checkpoint_callback = VecNormalizeCheckpointCallback(
-        save_freq=CHECKPOINT_FREQ,
+        save_freq=config["checkpoint_freq"],
         save_path=CHECKPOINT_DIR,
         name_prefix="rl_model",
     )
 
     # Train
     print(f"\nTraining for {args.timesteps:,} timesteps")
-    print(f"With {N_ENVS} parallel environments (~{N_ENVS}x speedup)")
+    print(
+        f"With {config['n_envs']} parallel environments (~{config['n_envs']}x speedup)"
+    )
     print(f"TensorBoard: tensorboard --logdir {TENSORBOARD_DIR}\n")
 
     # Create experiment name with parameters
-    reward_type = "shaped" if USE_SHAPED_REWARD else "simple"
+    reward_type = "shaped" if config["use_shaped_reward"] else "simple"
     experiment_name = (
-        f"MaskablePPO_envs{N_ENVS}_steps{N_STEPS}_batch{BATCH_SIZE}_"
-        f"lr{INITIAL_LR}-{FINAL_LR}_ent{ENT_COEF}_"
-        f"layers{NUM_LAYERS}x{NEURONS_PER_LAYER}_{reward_type}"
+        f"MaskablePPO_{config['map_type']}_vp{config['vps_to_win']}_envs{config['n_envs']}_steps{config['n_steps']}_batch{config['batch_size']}_"
+        f"lr{config['initial_lr']}-{config['final_lr']}_ent{config['ent_coef']}_"
+        f"layers{config['num_layers']}x{config['neurons_per_layer']}_{reward_type}"
     )
 
     model.learn(
@@ -267,11 +277,13 @@ class VecNormalizeCheckpointCallback(CheckpointCallback):
 def make_catan_env():
     """Factory function to create a Catan environment for vectorization."""
     # Create fresh reward function instance for each environment
-    reward_fn = ShapedRewardFunction() if USE_SHAPED_REWARD else simple_reward
+    reward_fn = ShapedRewardFunction() if config["use_shaped_reward"] else simple_reward
 
     env = gymnasium.make(
         "catanatron/Catanatron-v0",
         config={
+            "map_type": config["map_type"],
+            "vps_to_win": config["vps_to_win"],
             "enemies": [ValueFunctionPlayer(Color.RED)],
             "reward_function": reward_fn,
         },
