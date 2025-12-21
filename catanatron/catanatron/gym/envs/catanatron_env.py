@@ -45,7 +45,7 @@ class MixedObservation(TypedDict):
 
 
 class CatanatronEnv(gym.Env):
-    metadata = {"render_modes": []}
+    metadata = {"render_modes": ["rgb_array"]}
 
     def __init__(self, config=None):
         self.dtype = np.float32
@@ -54,6 +54,8 @@ class CatanatronEnv(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
+        self.render_mode = self.config.get("render_mode", None)
+        self.renderer = None  # Lazy init on first render()
 
         self.representation = self.config.get("representation", "vector")
         assert self.representation in ["mixed", "vector"]
@@ -198,6 +200,26 @@ class CatanatronEnv(gym.Env):
             and self.game.state.current_color() != self.p0.color
         ):
             self.game.play_tick()  # will play bot
+
+    def render(self):
+        """Render the game state.
+
+        Returns:
+            np.ndarray: RGB array (height, width, 3) if render_mode is "rgb_array", None otherwise
+        """
+        if self.render_mode == "rgb_array":
+            if self.renderer is None:
+                from catanatron.gym.envs.pygame_renderer import PygameRenderer
+
+                self.renderer = PygameRenderer()
+            return self.renderer.render(self.game)
+        return None
+
+    def close(self):
+        """Clean up resources."""
+        if self.renderer is not None:
+            self.renderer.close()
+            self.renderer = None
 
 
 CatanatronEnv.__doc__ = """
