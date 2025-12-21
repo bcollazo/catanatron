@@ -275,16 +275,17 @@ class PygameRenderer:
         player_color = PLAYER_COLORS.get(color, (128, 128, 128))
 
         if building_type == SETTLEMENT:
-            pygame.draw.circle(self.surface, player_color,
-                             (int(pos[0]), int(pos[1])), SETTLEMENT_RADIUS)
-            pygame.draw.circle(self.surface, OUTLINE_COLOR,
-                             (int(pos[0]), int(pos[1])), SETTLEMENT_RADIUS, 2)
+            # Draw settlement as a small square
+            size = SETTLEMENT_RADIUS * 2
+            rect = pygame.Rect(int(pos[0] - size/2), int(pos[1] - size/2), size, size)
+            pygame.draw.rect(self.surface, player_color, rect)
+            pygame.draw.rect(self.surface, OUTLINE_COLOR, rect, 2)
         elif building_type == CITY:
-            # Draw city as a larger circle
-            pygame.draw.circle(self.surface, player_color,
-                             (int(pos[0]), int(pos[1])), CITY_RADIUS)
-            pygame.draw.circle(self.surface, OUTLINE_COLOR,
-                             (int(pos[0]), int(pos[1])), CITY_RADIUS, 2)
+            # Draw city as a larger square
+            size = CITY_RADIUS * 2
+            rect = pygame.Rect(int(pos[0] - size/2), int(pos[1] - size/2), size, size)
+            pygame.draw.rect(self.surface, player_color, rect)
+            pygame.draw.rect(self.surface, OUTLINE_COLOR, rect, 2)
 
     def draw_edge(self, edge_id: Tuple[int, int], color: Color, game: Game):
         """Draw a road along an edge.
