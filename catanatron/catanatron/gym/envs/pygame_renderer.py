@@ -43,6 +43,8 @@ BACKGROUND_COLOR = (240, 240, 240)  # light gray
 OUTLINE_COLOR = (0, 0, 0)  # black
 ROBBER_COLOR = (0, 0, 0)  # black
 TEXT_COLOR = (0, 0, 0)  # black
+NUMBER_TOKEN_COLOR = (245, 222, 179)  # beige/wheat color like physical game
+RED_NUMBER_COLOR = (200, 0, 0)  # red for 6 and 8
 
 
 class PygameRenderer:
@@ -122,6 +124,64 @@ class PygameRenderer:
         if outline:
             pygame.draw.polygon(self.surface, OUTLINE_COLOR, corners, 2)
 
+    def get_number_pips(self, number: int) -> int:
+        """Get the number of probability pips for a dice number.
+
+        Args:
+            number: Dice number (2-12)
+
+        Returns:
+            Number of pips to display
+        """
+        pips = {
+            2: 1, 12: 1,
+            3: 2, 11: 2,
+            4: 3, 10: 3,
+            5: 4, 9: 4,
+            6: 5, 8: 5,
+        }
+        return pips.get(number, 0)
+
+    def draw_number_token(self, center: Tuple[float, float], number: int):
+        """Draw a number token like in the physical Catan game.
+
+        Args:
+            center: Center position (x, y)
+            number: The dice number (2-12)
+        """
+        # Token dimensions
+        token_radius = 20
+
+        # Determine if this is a red number (6 or 8)
+        is_red = number in [6, 8]
+        number_color = RED_NUMBER_COLOR if is_red else TEXT_COLOR
+
+        # Draw token circle (beige background with black border)
+        pygame.draw.circle(self.surface, NUMBER_TOKEN_COLOR,
+                          (int(center[0]), int(center[1])), token_radius)
+        pygame.draw.circle(self.surface, OUTLINE_COLOR,
+                          (int(center[0]), int(center[1])), token_radius, 2)
+
+        # Draw the number
+        number_font = pygame.font.Font(None, 32)
+        text = number_font.render(str(number), True, number_color)
+        text_rect = text.get_rect(center=(int(center[0]), int(center[1] - 5)))
+        self.surface.blit(text, text_rect)
+
+        # Draw pips below the number
+        num_pips = self.get_number_pips(number)
+        if num_pips > 0:
+            pip_size = 2
+            pip_spacing = 4
+            total_width = num_pips * pip_size + (num_pips - 1) * pip_spacing
+            start_x = center[0] - total_width / 2 + pip_size / 2
+            pip_y = center[1] + 8
+
+            for i in range(num_pips):
+                pip_x = start_x + i * (pip_size + pip_spacing)
+                pygame.draw.circle(self.surface, number_color,
+                                 (int(pip_x), int(pip_y)), pip_size)
+
     def draw_tile(self, coord: Tuple[int, int, int], tile, robber_coord: Tuple[int, int, int]):
         """Draw a single land tile.
 
@@ -136,11 +196,9 @@ class PygameRenderer:
         resource_color = COLORS.get(tile.resource, COLORS[None])
         self.draw_hexagon(center, HEX_SIZE, resource_color, outline=True)
 
-        # Draw number if not desert
+        # Draw number token if not desert
         if tile.number is not None:
-            text = self.font.render(str(tile.number), True, TEXT_COLOR)
-            text_rect = text.get_rect(center=center)
-            self.surface.blit(text, text_rect)
+            self.draw_number_token(center, tile.number)
 
         # Draw robber if present
         if coord == robber_coord:
