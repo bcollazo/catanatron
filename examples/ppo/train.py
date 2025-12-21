@@ -3,6 +3,7 @@ Restartable Stable Baselines3 training example with TensorBoard logging.
 
 Features:
 - Vectorized environments (8 parallel games for ~8x speedup)
+- VecNormalize (observation and reward normalization)
 - Shaped reward function (incremental rewards for progress)
 - Linear learning rate schedule (decreases over time)
 - GPU support (automatic detection)
@@ -47,7 +48,7 @@ from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 import catanatron.gym
 from catanatron import Color
@@ -71,8 +72,8 @@ N_STEPS = 2048  # Number of steps to collect before update (default: 2048)
 BATCH_SIZE = 256  # Batch size for training (default: 64)
 assert (N_ENVS * N_STEPS) % BATCH_SIZE == 0, "BATCH_SIZE must divide N_ENVS * N_STEPS"
 # Learning rate schedule
-INITIAL_LR = 0.0003  # Initial learning rate
-FINAL_LR = 0.00001  # Final learning rate
+INITIAL_LR = 0.03  # Initial learning rate
+FINAL_LR = 0.0001  # Final learning rate
 ENT_COEF = 0.05  # Entropy coefficient for exploration
 
 
@@ -116,6 +117,16 @@ def main():
         vec_env_cls=SubprocVecEnv,  # Use subprocesses for CPU-heavy environments
     )
 
+    # Wrap with VecNormalize for observation and reward normalization
+    print("Wrapping environments with VecNormalize (obs + reward normalization)")
+    env = VecNormalize(
+        env,
+        norm_obs=True,  # Normalize observations
+        norm_reward=True,  # Normalize rewards
+        clip_obs=10.0,  # Clip observations to [-10, 10] after normalization
+        clip_reward=10.0,  # Clip rewards to [-10, 10] after normalization
+    )
+
     # Load or create model
     # Create directories
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
@@ -124,6 +135,13 @@ def main():
         checkpoint = get_latest_checkpoint()
         if checkpoint:
             print(f"Loading checkpoint: {checkpoint}")
+
+            # Load VecNormalize stats if available
+            vec_normalize_path = checkpoint.replace(".zip", "_vecnormalize.pkl")
+            if os.path.exists(vec_normalize_path):
+                print(f"Loading VecNormalize stats from: {vec_normalize_path}")
+                env = VecNormalize.load(vec_normalize_path, env)
+
             model = MaskablePPO.load(
                 checkpoint,
                 env=env,
@@ -161,8 +179,8 @@ def main():
             device=device,
         )
 
-    # Setup checkpoint callback
-    checkpoint_callback = CheckpointCallback(
+    # Setup checkpoint callback (also saves VecNormalize stats)
+    checkpoint_callback = VecNormalizeCheckpointCallback(
         save_freq=CHECKPOINT_FREQ,
         save_path=CHECKPOINT_DIR,
         name_prefix="rl_model",
@@ -180,10 +198,15 @@ def main():
         tb_log_name="MaskablePPO",
     )
 
-    # Save final model
+    # Save final model and VecNormalize stats
     final_path = os.path.join(CHECKPOINT_DIR, "final_model.zip")
     model.save(final_path)
+
+    vec_normalize_path = os.path.join(CHECKPOINT_DIR, "final_model_vecnormalize.pkl")
+    env.save(vec_normalize_path)
+
     print(f"\nDone! Final model: {final_path}")
+    print(f"VecNormalize stats: {vec_normalize_path}")
 
     # Clean up
     env.close()
@@ -210,6 +233,27 @@ def linear_schedule(initial_value, final_value):
         return final_value + progress_remaining * (initial_value - final_value)
 
     return schedule
+
+
+class VecNormalizeCheckpointCallback(CheckpointCallback):
+    """Custom checkpoint callback that also saves VecNormalize statistics."""
+
+    def _on_step(self) -> bool:
+        # Save model checkpoint (parent class behavior)
+        result = super()._on_step()
+
+        # Also save VecNormalize stats if the model was just saved
+        if result and isinstance(self.model.get_env(), VecNormalize):
+            # Get the path of the most recently saved model
+            checkpoint_path = os.path.join(
+                self.save_path, f"{self.name_prefix}_{self.num_timesteps}_steps.zip"
+            )
+            vec_normalize_path = checkpoint_path.replace(".zip", "_vecnormalize.pkl")
+
+            # Save VecNormalize statistics
+            self.model.get_env().save(vec_normalize_path)
+
+        return result
 
 
 def make_catan_env():
