@@ -15,12 +15,12 @@ from catanatron.game import Game
 
 
 # Constants
-HEX_SIZE = 50  # pixels
+HEX_SIZE = 70  # pixels (balanced for both MINI and BASE maps)
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 800
-ROAD_WIDTH = 5
-SETTLEMENT_RADIUS = 10
-CITY_RADIUS = 15
+ROAD_WIDTH = 6  # Scaled proportionally
+SETTLEMENT_RADIUS = 12  # Scaled proportionally
+CITY_RADIUS = 18  # Scaled proportionally
 
 # Colors (RGB)
 COLORS = {
@@ -149,8 +149,8 @@ class PygameRenderer:
             center: Center position (x, y)
             number: The dice number (2-12)
         """
-        # Token dimensions
-        token_radius = 20
+        # Token dimensions (scaled proportionally with HEX_SIZE)
+        token_radius = 30
 
         # Determine if this is a red number (6 or 8)
         is_red = number in [6, 8]
@@ -163,19 +163,19 @@ class PygameRenderer:
                           (int(center[0]), int(center[1])), token_radius, 2)
 
         # Draw the number
-        number_font = pygame.font.Font(None, 32)
+        number_font = pygame.font.Font(None, 38)  # Scaled for 70px hexagons
         text = number_font.render(str(number), True, number_color)
-        text_rect = text.get_rect(center=(int(center[0]), int(center[1] - 5)))
+        text_rect = text.get_rect(center=(int(center[0]), int(center[1] - 6)))
         self.surface.blit(text, text_rect)
 
         # Draw pips below the number
         num_pips = self.get_number_pips(number)
         if num_pips > 0:
-            pip_size = 2
-            pip_spacing = 4
+            pip_size = 3
+            pip_spacing = 5
             total_width = num_pips * pip_size + (num_pips - 1) * pip_spacing
             start_x = center[0] - total_width / 2 + pip_size / 2
-            pip_y = center[1] + 8
+            pip_y = center[1] + 10
 
             for i in range(num_pips):
                 pip_x = start_x + i * (pip_size + pip_spacing)
@@ -210,9 +210,10 @@ class PygameRenderer:
         Args:
             center: Center position (x, y)
         """
-        pygame.draw.circle(self.surface, ROBBER_COLOR, (int(center[0]), int(center[1])), 15)
+        robber_radius = 18  # Scaled for 70px hexagons
+        pygame.draw.circle(self.surface, ROBBER_COLOR, (int(center[0]), int(center[1])), robber_radius)
         # White outline to make it visible on dark tiles
-        pygame.draw.circle(self.surface, (255, 255, 255), (int(center[0]), int(center[1])), 15, 2)
+        pygame.draw.circle(self.surface, (255, 255, 255), (int(center[0]), int(center[1])), robber_radius, 2)
 
     def get_node_delta(self, direction: str, size: float) -> Tuple[float, float]:
         """Get the offset from tile center to node based on direction.
