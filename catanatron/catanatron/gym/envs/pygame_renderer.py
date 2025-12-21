@@ -24,12 +24,12 @@ CITY_RADIUS = 18  # Scaled proportionally
 
 # Colors (RGB)
 COLORS = {
-    WOOD: (34, 139, 34),  # forest green
-    BRICK: (178, 34, 34),  # brick red
-    SHEEP: (144, 238, 144),  # light green
-    WHEAT: (255, 215, 0),  # gold
-    ORE: (128, 128, 128),  # gray
-    None: (194, 178, 128),  # tan (desert)
+    WOOD: (0, 86, 35),  # forest green
+    BRICK: (125, 45, 0),  # brick red
+    SHEEP: (46, 159, 53),  # light green
+    WHEAT: (250, 131, 11),  # gold
+    ORE: (93, 93, 93),  # gray
+    None: (246, 195, 104),  # tan (desert)
 }
 
 PLAYER_COLORS = {
@@ -39,7 +39,7 @@ PLAYER_COLORS = {
     Color.WHITE: (255, 255, 255),
 }
 
-BACKGROUND_COLOR = (173, 216, 230)  # light blue (water)
+BACKGROUND_COLOR = (90, 180, 215)  # light blue (water)
 OUTLINE_COLOR = (0, 0, 0)  # black
 ROBBER_COLOR = (0, 0, 0)  # black
 TEXT_COLOR = (0, 0, 0)  # black
@@ -392,7 +392,7 @@ class PygameRenderer:
             self.draw_node(node_id, color, building_type, game)
 
         # Watermark
-        watermark = self.font.render("Catanatron", True, TEXT_COLOR)
+        watermark = self.font.render("CATANATRON", True, TEXT_COLOR)
         margin = int(8 * self.render_scale)
         wm_rect = watermark.get_rect(
             bottomright=(self.render_width - margin, self.render_height - margin)
