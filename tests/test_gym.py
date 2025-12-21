@@ -90,7 +90,7 @@ def test_invalid_action_reward():
 
 
 def test_custom_reward():
-    def custom_reward(game, p0_color):
+    def custom_reward(action, game, p0_color):
         return 123
 
     env = gymnasium.make(

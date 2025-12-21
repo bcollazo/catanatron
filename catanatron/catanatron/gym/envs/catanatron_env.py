@@ -29,7 +29,7 @@ NUM_FEATURES = len(FEATURES)
 HIGH = 19 * 5
 
 
-def simple_reward(game, p0_color):
+def simple_reward(action, game, p0_color):
     winning_color = game.winning_color()
     if p0_color == winning_color:
         return 1
@@ -150,7 +150,7 @@ class CatanatronEnv(gym.Env):
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
-        reward = self.reward_function(self.game, self.p0.color)
+        reward = self.reward_function(catan_action, self.game, self.p0.color)
 
         return observation, reward, terminated, truncated, info
 
