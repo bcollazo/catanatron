@@ -391,6 +391,14 @@ class PygameRenderer:
         for node_id, (color, building_type) in board.buildings.items():
             self.draw_node(node_id, color, building_type, game)
 
+        # Watermark
+        watermark = self.font.render("Catanatron", True, TEXT_COLOR)
+        margin = int(8 * self.render_scale)
+        wm_rect = watermark.get_rect(
+            bottomright=(self.render_width - margin, self.render_height - margin)
+        )
+        self.surface.blit(watermark, wm_rect)
+
         # Convert surface to numpy array
         # pygame.surfarray.array3d returns (width, height, 3), we need (height, width, 3)
         if self.render_scale > 1.0:
