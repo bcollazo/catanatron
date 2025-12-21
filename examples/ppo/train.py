@@ -61,6 +61,7 @@ config = {
     "n_envs": 32,  # Number of parallel environments
     "n_steps": 2048,  # Number of steps to collect before update
     "batch_size": 256,  # Batch size for training
+    "gamma": 0.99,  # Discount factor for future rewards
     "initial_lr": 0.01,  # Initial learning rate
     "final_lr": 0.001,  # Final learning rate
     "ent_coef": 0.01,  # Entropy coefficient for exploration
@@ -168,7 +169,7 @@ def main():
 
         print(f"Creating new model with architecture: {net_arch}")
         print(
-            f"PPO config: n_steps={config['n_steps']}, batch_size={config['batch_size']}, ent_coef={config['ent_coef']}"
+            f"PPO config: n_steps={config['n_steps']}, batch_size={config['batch_size']}, gamma={config['gamma']}, ent_coef={config['ent_coef']}"
         )
         print(
             f"Learning rate schedule: {config['initial_lr']:.2e} → {config['final_lr']:.2e}"
@@ -179,6 +180,7 @@ def main():
             learning_rate=lr_schedule,
             n_steps=config["n_steps"],
             batch_size=config["batch_size"],
+            gamma=config["gamma"],
             ent_coef=config["ent_coef"],
             verbose=1,
             tensorboard_log=TENSORBOARD_DIR,
@@ -205,7 +207,7 @@ def main():
     reward_type = "shaped" if config["use_shaped_reward"] else "simple"
     experiment_name = (
         f"MaskablePPO_{config['map_type']}_vp{config['vps_to_win']}_envs{config['n_envs']}_steps{config['n_steps']}_batch{config['batch_size']}_"
-        f"lr{config['initial_lr']}-{config['final_lr']}_ent{config['ent_coef']}_"
+        f"gamma{config['gamma']}_lr{config['initial_lr']}-{config['final_lr']}_ent{config['ent_coef']}_"
         f"layers{config['num_layers']}x{config['neurons_per_layer']}_{reward_type}"
     )
 
