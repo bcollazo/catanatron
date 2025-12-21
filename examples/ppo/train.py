@@ -67,14 +67,14 @@ NEURONS_PER_LAYER = 256
 USE_SHAPED_REWARD = True
 
 # PPO parameters
-N_ENVS = 8  # Number of parallel environments
+N_ENVS = 32  # Number of parallel environments
 N_STEPS = 2048  # Number of steps to collect before update (default: 2048)
 BATCH_SIZE = 256  # Batch size for training (default: 64)
 assert (N_ENVS * N_STEPS) % BATCH_SIZE == 0, "BATCH_SIZE must divide N_ENVS * N_STEPS"
 # Learning rate schedule
-INITIAL_LR = 0.03  # Initial learning rate
+INITIAL_LR = 0.01  # Initial learning rate
 FINAL_LR = 0.0001  # Final learning rate
-ENT_COEF = 0.05  # Entropy coefficient for exploration
+ENT_COEF = 0.01  # Entropy coefficient for exploration
 
 
 def main():
@@ -122,7 +122,7 @@ def main():
     env = VecNormalize(
         env,
         norm_obs=True,  # Normalize observations
-        norm_reward=True,  # Normalize rewards
+        norm_reward=False,  # Normalize rewards
         clip_obs=10.0,  # Clip observations to [-10, 10] after normalization
         clip_reward=10.0,  # Clip rewards to [-10, 10] after normalization
     )
@@ -191,11 +191,19 @@ def main():
     print(f"With {N_ENVS} parallel environments (~{N_ENVS}x speedup)")
     print(f"TensorBoard: tensorboard --logdir {TENSORBOARD_DIR}\n")
 
+    # Create experiment name with parameters
+    reward_type = "shaped" if USE_SHAPED_REWARD else "simple"
+    experiment_name = (
+        f"MaskablePPO_envs{N_ENVS}_steps{N_STEPS}_batch{BATCH_SIZE}_"
+        f"lr{INITIAL_LR}-{FINAL_LR}_ent{ENT_COEF}_"
+        f"layers{NUM_LAYERS}x{NEURONS_PER_LAYER}_{reward_type}"
+    )
+
     model.learn(
         total_timesteps=args.timesteps,
         callback=checkpoint_callback,
         reset_num_timesteps=not args.resume,
-        tb_log_name="MaskablePPO",
+        tb_log_name=experiment_name,
     )
 
     # Save final model and VecNormalize stats
