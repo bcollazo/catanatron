@@ -39,7 +39,7 @@ PLAYER_COLORS = {
     Color.WHITE: (255, 255, 255),
 }
 
-BACKGROUND_COLOR = (240, 240, 240)  # light gray
+BACKGROUND_COLOR = (173, 216, 230)  # light blue (water)
 OUTLINE_COLOR = (0, 0, 0)  # black
 ROBBER_COLOR = (0, 0, 0)  # black
 TEXT_COLOR = (0, 0, 0)  # black
