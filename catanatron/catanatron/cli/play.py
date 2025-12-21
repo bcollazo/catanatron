@@ -7,9 +7,8 @@ import click
 from rich.console import Console
 from rich.table import Table
 from rich.progress import Progress
-from rich.progress import Progress, BarColumn, TimeRemainingColumn
+from rich.progress import BarColumn, TimeRemainingColumn
 from rich import box
-from rich.console import Console
 from rich.theme import Theme
 from rich.text import Text
 

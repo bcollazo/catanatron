@@ -94,6 +94,8 @@ def p_model_path(version):
 def get_v_model(model_path):
     global V_MODEL
     if V_MODEL is None:
+        import autokeras as ak
+
         custom_objects = None if model_path[:2] != "ak" else ak.CUSTOM_OBJECTS
         V_MODEL = keras.models.load_model(model_path, custom_objects=custom_objects)
     return V_MODEL
