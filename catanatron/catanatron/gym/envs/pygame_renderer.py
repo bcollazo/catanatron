@@ -18,7 +18,7 @@ from catanatron.game import Game
 HEX_SIZE = 70  # pixels (balanced for both MINI and BASE maps)
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 800
-ROAD_WIDTH = 6  # Scaled proportionally
+ROAD_WIDTH = 8  # Scaled proportionally
 SETTLEMENT_RADIUS = 12  # Scaled proportionally
 CITY_RADIUS = 18  # Scaled proportionally
 
@@ -33,16 +33,17 @@ COLORS = {
 }
 
 PLAYER_COLORS = {
-    Color.BLUE: (0, 0, 255),
-    Color.RED: (255, 0, 0),
+    Color.BLUE: (13, 78, 211),
+    Color.RED: (250, 0, 0),
     Color.ORANGE: (255, 165, 0),
-    Color.WHITE: (255, 255, 255),
+    Color.WHITE: (250, 250, 250),
 }
 
 BACKGROUND_COLOR = (90, 180, 215)  # light blue (water)
 OUTLINE_COLOR = (0, 0, 0)  # black
-ROBBER_COLOR = (0, 0, 0)  # black
-TEXT_COLOR = (0, 0, 0)  # black
+BORDER_COLOR = (0, 0, 0)  # black
+ROBBER_COLOR = (10, 10, 10)  # black
+TEXT_COLOR = (5, 5, 5)  # black
 NUMBER_TOKEN_COLOR = (245, 222, 179)  # beige/wheat color like physical game
 RED_NUMBER_COLOR = (200, 0, 0)  # red for 6 and 8
 
@@ -250,17 +251,21 @@ class PygameRenderer:
             center: Center position (x, y)
         """
         robber_radius = int(18 * self.render_scale)
-        pygame.draw.circle(
-            self.surface, ROBBER_COLOR, (int(center[0]), int(center[1])), robber_radius
-        )
+        offset_x = int(self.hex_size * 0.50)
+        robber_center = (int(center[0] + offset_x), int(center[1]))
+        pygame.draw.circle(self.surface, ROBBER_COLOR, robber_center, robber_radius)
         # White outline to make it visible on dark tiles
         pygame.draw.circle(
             self.surface,
-            (255, 255, 255),
-            (int(center[0]), int(center[1])),
+            BORDER_COLOR,
+            robber_center,
             robber_radius,
             self.outline_width,
         )
+        r_font = pygame.font.Font(None, int(24 * self.render_scale))
+        r_text = r_font.render("R", True, (255, 255, 255))
+        r_rect = r_text.get_rect(center=robber_center)
+        self.surface.blit(r_text, r_rect)
 
     def get_node_delta(self, direction: str, size: float) -> Tuple[float, float]:
         """Get the offset from tile center to node based on direction.
@@ -329,7 +334,7 @@ class PygameRenderer:
                 int(pos[0] - size / 2), int(pos[1] - size / 2), size, size
             )
             pygame.draw.rect(self.surface, player_color, rect)
-            pygame.draw.rect(self.surface, OUTLINE_COLOR, rect, self.outline_width)
+            pygame.draw.rect(self.surface, BORDER_COLOR, rect, self.outline_width)
         elif building_type == CITY:
             # Draw city as a larger square
             size = self.city_radius * 2
@@ -337,7 +342,7 @@ class PygameRenderer:
                 int(pos[0] - size / 2), int(pos[1] - size / 2), size, size
             )
             pygame.draw.rect(self.surface, player_color, rect)
-            pygame.draw.rect(self.surface, OUTLINE_COLOR, rect, self.outline_width)
+            pygame.draw.rect(self.surface, BORDER_COLOR, rect, self.outline_width)
 
     def draw_edge(self, edge_id: Tuple[int, int], color: Color, game: Game):
         """Draw a road along an edge.
@@ -355,13 +360,49 @@ class PygameRenderer:
         if node1_pos == (0, 0) or node2_pos == (0, 0):
             return
 
+        # Shorten road so borders do not overlap at node positions
+        dx = node2_pos[0] - node1_pos[0]
+        dy = node2_pos[1] - node1_pos[1]
+        length = math.hypot(dx, dy)
+        if length == 0:
+            return
+        pad = max(self.settlement_radius * 0.6, self.road_width * 0.9)
+        trim = min(pad, length * 0.4)
+        ux = dx / length
+        uy = dy / length
+        start = (node1_pos[0] + ux * trim, node1_pos[1] + uy * trim)
+        end = (node2_pos[0] - ux * trim, node2_pos[1] - uy * trim)
+
         player_color = PLAYER_COLORS.get(color, (128, 128, 128))
-        pygame.draw.line(
-            self.surface,
-            player_color,
-            (int(node1_pos[0]), int(node1_pos[1])),
-            (int(node2_pos[0]), int(node2_pos[1])),
-            self.road_width,
+        border_thickness = max(2, int(2 * self.render_scale))
+        half_width = self.road_width / 2
+        half_border_width = (self.road_width + 2 * border_thickness) / 2
+        border_start = (
+            start[0] - ux * border_thickness,
+            start[1] - uy * border_thickness,
+        )
+        border_end = (end[0] + ux * border_thickness, end[1] + uy * border_thickness)
+
+        # Perpendicular unit vector for rectangle width
+        nx = -uy
+        ny = ux
+
+        def rect_corners(p0, p1, half_w):
+            return [
+                (p0[0] + nx * half_w, p0[1] + ny * half_w),
+                (p0[0] - nx * half_w, p0[1] - ny * half_w),
+                (p1[0] - nx * half_w, p1[1] - ny * half_w),
+                (p1[0] + nx * half_w, p1[1] + ny * half_w),
+            ]
+
+        border_rect = rect_corners(border_start, border_end, half_border_width)
+        road_rect = rect_corners(start, end, half_width)
+
+        pygame.draw.polygon(
+            self.surface, BORDER_COLOR, [(int(x), int(y)) for x, y in border_rect]
+        )
+        pygame.draw.polygon(
+            self.surface, player_color, [(int(x), int(y)) for x, y in road_rect]
         )
 
     def render(self, game: Game) -> np.ndarray:

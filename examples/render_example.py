@@ -17,7 +17,8 @@ import gymnasium
 from gymnasium.wrappers import RecordVideo
 
 import catanatron.gym  # Register the environment
-from catanatron.models.player import RandomPlayer, Color
+from catanatron import Color
+from catanatron.players.value import ValueFunctionPlayer
 
 
 def main():
@@ -56,7 +57,11 @@ def main():
             "render_scale": 2.0,
             "map_type": args.map_type,
             "vps_to_win": args.vps_to_win,
-            "enemies": [RandomPlayer(Color.RED)],
+            "enemies": [
+                ValueFunctionPlayer(Color.RED),
+                ValueFunctionPlayer(Color.ORANGE),
+                ValueFunctionPlayer(Color.WHITE),
+            ],
         },
     )
 
