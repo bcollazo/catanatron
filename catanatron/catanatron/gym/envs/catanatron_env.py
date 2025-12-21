@@ -55,6 +55,7 @@ class CatanatronEnv(gym.Env):
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.render_mode = self.config.get("render_mode", None)
+        self.render_scale = self.config.get("render_scale", 1.0)
         self.renderer = None  # Lazy init on first render()
 
         self.representation = self.config.get("representation", "vector")
@@ -211,7 +212,7 @@ class CatanatronEnv(gym.Env):
             if self.renderer is None:
                 from catanatron.gym.envs.pygame_renderer import PygameRenderer
 
-                self.renderer = PygameRenderer()
+                self.renderer = PygameRenderer(render_scale=self.render_scale)
             return self.renderer.render(self.game)
         return None
 

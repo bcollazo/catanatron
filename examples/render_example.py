@@ -53,6 +53,7 @@ def main():
         "catanatron/Catanatron-v0",
         config={
             "render_mode": "rgb_array",  # Required for RecordVideo
+            "render_scale": 2.0,
             "map_type": args.map_type,
             "vps_to_win": args.vps_to_win,
             "enemies": [RandomPlayer(Color.RED)],
