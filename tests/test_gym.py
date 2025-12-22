@@ -1,10 +1,12 @@
 import random
+import json
 
 import gymnasium
 from gymnasium.utils.env_checker import check_env
 import numpy as np
 
 from catanatron.features import get_feature_ordering
+from catanatron.json import GameEncoder
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.models.enums import Action, ActionType, WHEAT, SHEEP, ORE
 from catanatron.players.value import ValueFunctionPlayer
@@ -247,3 +249,36 @@ def test_action_space_conversion_roundtrip():
         assert recovered_action == action, (
             f"Action conversion failed: {action} -> {action_int} -> {recovered_action}"
         )
+
+
+def test_gym_reproducibility():
+    # Play a game with the same seed, and ensure the game is the same
+    env = gymnasium.make(
+        "catanatron/Catanatron-v0",
+        config={
+            "enemies": [
+                ValueFunctionPlayer(Color.RED),
+            ]
+        },
+    )
+    observation, info = env.reset(seed=123)
+    env.action_space.seed(123)
+    game = env.unwrapped.game
+    center_tile = game.state.board.map.land_tiles[(0, 0, 0)]
+    assert center_tile.resource == ORE
+    assert center_tile.number == 8
+
+    done = False
+    reward = 0
+    while not done:
+        action_mask = env.action_masks()
+        valid_indices = np.flatnonzero(action_mask)
+        action = random.choice(valid_indices)
+
+        observation, reward, terminated, truncated, info = env.step(action)
+        done = terminated or truncated
+    game = env.unwrapped.game
+    game_json = json.loads(json.dumps(game, cls=GameEncoder))
+    env.close()
+
+    assert game_json["state_index"] == 126

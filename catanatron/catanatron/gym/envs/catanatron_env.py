@@ -1,4 +1,5 @@
 from typing import TypedDict, Union
+import random
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -107,12 +108,14 @@ class CatanatronEnv(gym.Env):
     def get_valid_actions(self):
         """
         Returns:
-            List[int]: valid actions
+            List[int]: valid actions (sorted for reproducibility)
         """
-        return [
-            to_action_space(a, self.player_colors, self.map_type)
-            for a in self.game.playable_actions
-        ]
+        return sorted(
+            [
+                to_action_space(a, self.player_colors, self.map_type)
+                for a in self.game.playable_actions
+            ]
+        )
 
     def action_masks(self) -> list[bool]:
         """
@@ -164,6 +167,9 @@ class CatanatronEnv(gym.Env):
     ):
         super().reset(seed=seed)
 
+        if seed is not None:
+            # Ensure map generation uses the same seed as the game.
+            random.seed(seed)
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
