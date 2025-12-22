@@ -45,7 +45,7 @@ class MixedObservation(TypedDict):
 
 
 class CatanatronEnv(gym.Env):
-    metadata = {"render_modes": ["rgb_array"], "render_fps": 30}
+    metadata = {"render_modes": ["rgb_array", "db"], "render_fps": 30}
 
     def __init__(self, config=None):
         self.dtype = np.float32
@@ -214,6 +214,13 @@ class CatanatronEnv(gym.Env):
 
                 self.renderer = PygameRenderer(render_scale=self.render_scale)
             return self.renderer.render(self.game)
+        if self.render_mode == "db":
+            from catanatron.web.utils import ensure_link
+
+            link = ensure_link(self.game, get_replay_link=True)
+            if self._is_done():
+                print(f"Replay link: {link}")
+            return None
         return None
 
     def close(self):
@@ -221,6 +228,13 @@ class CatanatronEnv(gym.Env):
         if self.renderer is not None:
             self.renderer.close()
             self.renderer = None
+
+    def _is_done(self) -> bool:
+        return (
+            self.game.winning_color() is not None
+            or self.game.state.num_turns >= TURNS_LIMIT
+            or self.invalid_actions_count > self.max_invalid_actions
+        )
 
 
 CatanatronEnv.__doc__ = """
