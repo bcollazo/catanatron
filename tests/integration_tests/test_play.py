@@ -62,3 +62,32 @@ def test_csv_play():
         assert len(board_tensors_df) == num_samples
         assert len(main_df) == num_samples
         assert len(rewards_df) == num_samples
+
+
+def test_parquet_output():
+    runner = CliRunner()
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        result = runner.invoke(
+            simulate,
+            [
+                "--num=1",
+                "--players=F,F",
+                "--output",
+                tmpdirname,
+                "--output-format",
+                "parquet",
+            ],
+        )
+        assert result.exit_code == 0
+
+        # Assert 1 parquet file is created in tmpdirname
+        files = os.listdir(tmpdirname)
+        assert len(files) == 1
+
+        file = files[0]
+        assert file.endswith(".parquet")
+        df = pd.read_parquet(os.path.join(tmpdirname, file))
+
+        assert "F_BANK_BRICK" in df.columns
+        assert "RETURN" in df.columns
+        assert "ACTION" in df.columns
