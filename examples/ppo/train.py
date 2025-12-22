@@ -56,10 +56,10 @@ config = {
     "vps_to_win": 6,  # Victory points needed to win
     "use_shaped_reward": True,  # Use shaped vs simple reward function
     # PPO hyperparameters
-    "n_envs": 2,  # Number of parallel environments
+    "n_envs": 4,  # Number of parallel environments
     "n_steps": 1024,  # Number of steps to collect before update
     "batch_size": 128,  # Batch size for training
-    "n_epochs": 5,  # Number of epochs for PPO update
+    "n_epochs": 10,  # Number of epochs for PPO update
     "gamma": 0.99,  # Discount factor for future rewards
     "initial_lr": 0.01,  # Initial learning rate
     "final_lr": 0.001,  # Final learning rate
@@ -220,6 +220,25 @@ def train_model(run, args):
 
     print(f"\nDone! Final model: {final_path}")
     print(f"VecNormalize stats: {vec_normalize_path}")
+
+    # Upload videos to wandb (seems native wandb integration doesn't work)
+    # https://github.com/DLR-RM/stable-baselines3/issues/2055
+    video_dir = Path(f"videos/{run.id}")
+    if video_dir.exists():
+        video_files = list(video_dir.glob("*.mp4"))
+        if video_files:
+            print(f"\nUploading {len(video_files)} videos to W&B...")
+            for video_file in video_files:
+                run.log(
+                    {
+                        f"video/{video_file.stem}": wandb.Video(
+                            str(video_file), format="mp4"
+                        )
+                    }
+                )
+            print("Videos uploaded successfully!")
+        else:
+            print(f"\nNo videos found in {video_dir}")
 
     # Clean up
     env.close()
