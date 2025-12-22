@@ -244,12 +244,14 @@ class CatanatronEnv(gym.Env):
 
 
 CatanatronEnv.__doc__ = """
-1v1 environment against a random player
+Configurable Catan Gym Environment.
+
+By default, it is a 1v1 environment against a random player in the BASE map.
 
 Attributes:
     reward_range: -1 if player lost, 1 if player won, 0 otherwise.
-    action_space: Integers from the [0, 289] interval. 
-        See Action Space table below.
+    action_space: Integers from the [0, 327] interval (in 1v1 BASE). 
+        It is smaller if the MINI map is used. See Action Space table below.
     observation_space: Numeric Feature Vector. See Observation Space table 
         below for quantities. They appear in vector in alphabetical order,
         from the perspective of "current" player (hiding/showing information
