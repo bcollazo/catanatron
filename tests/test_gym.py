@@ -147,6 +147,18 @@ def test_mixed_rep():
     assert "numeric" in observation
 
 
+def test_render_rgb_array():
+    env = gymnasium.make(
+        "catanatron/Catanatron-v0", config={"render_mode": "rgb_array"}
+    )
+    env.reset()
+    frame = env.render()
+    assert isinstance(frame, np.ndarray)
+    assert frame.shape == (800, 1000, 3)
+    assert frame.dtype == np.uint8
+    env.close()
+
+
 def test_move_robber_action_in_base_action_array():
     """Test that a specific MOVE_ROBBER action is in the BASE action array for 2 players."""
     player_colors = (Color.BLUE, Color.RED)
@@ -212,8 +224,12 @@ def test_action_space_conversion_roundtrip():
         Action(Color.BLUE, ActionType.PLAY_ROAD_BUILDING, None),
         Action(Color.BLUE, ActionType.MOVE_ROBBER, ((-1, 0, 1), Color.RED)),
         Action(Color.BLUE, ActionType.MOVE_ROBBER, ((0, -1, 1), None)),
-        Action(Color.BLUE, ActionType.MARITIME_TRADE, (WHEAT, WHEAT, WHEAT, WHEAT, ORE)),
-        Action(Color.BLUE, ActionType.MARITIME_TRADE, (SHEEP, SHEEP, SHEEP, None, WHEAT)),
+        Action(
+            Color.BLUE, ActionType.MARITIME_TRADE, (WHEAT, WHEAT, WHEAT, WHEAT, ORE)
+        ),
+        Action(
+            Color.BLUE, ActionType.MARITIME_TRADE, (SHEEP, SHEEP, SHEEP, None, WHEAT)
+        ),
         Action(Color.BLUE, ActionType.MARITIME_TRADE, (ORE, ORE, None, None, WHEAT)),
         Action(Color.BLUE, ActionType.END_TURN, None),
     ]
