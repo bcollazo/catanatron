@@ -1,5 +1,5 @@
 """
-Restartable Stable Baselines3 training example with TensorBoard logging.
+Restartable Stable Baselines3 training example with Weights & Biases logging.
 
 Features:
 - Vectorized environments (parallel games for speedup)
@@ -8,8 +8,7 @@ Features:
 - Linear learning rate schedule (decreases over time)
 - GPU support (automatic detection)
 - Checkpoint saving/loading for resumable training
-- TensorBoard integration for monitoring
-- Wandb-ready configuration object
+- Weights & Biases integration for monitoring
 
 Usage:
     # Start new training:
@@ -20,13 +19,6 @@ Usage:
 
     # Train for custom timesteps:
     python train.py --timesteps 500000
-
-    # View TensorBoard:
-    tensorboard --logdir ./tensorboard_logs
-
-    # To use with wandb (add to main()):
-    import wandb
-    wandb.init(project="catan-ppo", config=config)
 """
 
 import random
@@ -37,12 +29,18 @@ from pathlib import Path
 import gymnasium
 import numpy as np
 import torch
+import wandb
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import (
+    SubprocVecEnv,
+    VecNormalize,
+    VecVideoRecorder,
+)
+from wandb.integration.sb3 import WandbCallback
 
 import catanatron.gym
 from catanatron import Color
@@ -58,9 +56,9 @@ config = {
     "vps_to_win": 6,  # Victory points needed to win
     "use_shaped_reward": True,  # Use shaped vs simple reward function
     # PPO hyperparameters
-    "n_envs": 32,  # Number of parallel environments
-    "n_steps": 256,  # Number of steps to collect before update
-    "batch_size": 1024,  # Batch size for training
+    "n_envs": 2,  # Number of parallel environments
+    "n_steps": 1024,  # Number of steps to collect before update
+    "batch_size": 128,  # Batch size for training
     "n_epochs": 5,  # Number of epochs for PPO update
     "gamma": 0.99,  # Discount factor for future rewards
     "initial_lr": 0.01,  # Initial learning rate
@@ -81,21 +79,10 @@ assert (config["n_envs"] * config["n_steps"]) % config["batch_size"] == 0, (
 
 # Directories
 CHECKPOINT_DIR = os.path.join(os.path.dirname(__file__), "checkpoints")
-TENSORBOARD_DIR = os.path.join(os.path.dirname(__file__), "tensorboard_logs")
 
 
-def main():
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
-    parser.add_argument(
-        "--timesteps",
-        type=int,
-        default=100_000,
-        help=f"Number of timesteps to train for (default: {100_000:,})",
-    )
-    args = parser.parse_args()
-
+def train_model(run, args):
+    """Execute the training loop."""
     # Set random seeds for reproducibility
     random.seed(config["seed"])
     np.random.seed(config["seed"])
@@ -135,10 +122,16 @@ def main():
         clip_reward=10.0,  # Clip rewards to [-10, 10] after normalization
     )
 
+    # Wrap with VecVideoRecorder to record gameplay videos
+    env = VecVideoRecorder(
+        env,
+        f"videos/{run.id}",
+        record_video_trigger=lambda x: x % 2000 == 0,
+    )
+
     # Load or create model
     # Create directories
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-    os.makedirs(TENSORBOARD_DIR, exist_ok=True)
     if args.resume:
         checkpoint = get_latest_checkpoint()
         if checkpoint:
@@ -153,8 +146,8 @@ def main():
             model = MaskablePPO.load(
                 checkpoint,
                 env=env,
-                tensorboard_log=TENSORBOARD_DIR,
                 device=device,
+                tensorboard_log=f"runs/{run.id}",
             )
         else:
             print("No checkpoint found, starting fresh")
@@ -185,7 +178,7 @@ def main():
             n_epochs=config["n_epochs"],
             ent_coef=config["ent_coef"],
             verbose=1,
-            tensorboard_log=TENSORBOARD_DIR,
+            tensorboard_log=f"runs/{run.id}",
             seed=config["seed"],
             policy_kwargs=policy_kwargs,
             device=device,
@@ -198,26 +191,24 @@ def main():
         name_prefix="rl_model",
     )
 
+    # Setup wandb callback
+    wandb_callback = WandbCallback(
+        gradient_save_freq=100,
+        model_save_path=f"models/{run.id}",
+        verbose=2,
+    )
+
     # Train
     print(f"\nTraining for {args.timesteps:,} timesteps")
     print(
         f"With {config['n_envs']} parallel environments (~{config['n_envs']}x speedup)"
     )
-    print(f"TensorBoard: tensorboard --logdir {TENSORBOARD_DIR}\n")
-
-    # Create experiment name with parameters
-    reward_type = "shaped" if config["use_shaped_reward"] else "simple"
-    experiment_name = (
-        f"MaskablePPO_{config['map_type']}_vp{config['vps_to_win']}_envs{config['n_envs']}_steps{config['n_steps']}_batch{config['batch_size']}_"
-        f"gamma{config['gamma']}_epochs{config['n_epochs']}_lr{config['initial_lr']}-{config['final_lr']}_ent{config['ent_coef']}_"
-        f"layers{config['num_layers']}x{config['neurons_per_layer']}_{reward_type}"
-    )
+    print(f"Wandb run: {run.get_url()}\n")
 
     model.learn(
         total_timesteps=args.timesteps,
-        callback=checkpoint_callback,
+        callback=[checkpoint_callback, wandb_callback],
         reset_num_timesteps=not args.resume,
-        tb_log_name=experiment_name,
     )
 
     # Save final model and VecNormalize stats
@@ -232,6 +223,33 @@ def main():
 
     # Clean up
     env.close()
+
+
+def main():
+    """Main entry point."""
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
+    parser.add_argument(
+        "--timesteps",
+        type=int,
+        default=100_000,
+        help=f"Number of timesteps to train for (default: {100_000:,})",
+    )
+    args = parser.parse_args()
+
+    # Login to wandb
+    wandb.login()
+
+    # Initialize wandb with project and config
+    with wandb.init(
+        project="catan-ppo",
+        config=config,
+        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+        monitor_gym=True,  # auto-upload the videos of agents playing the game
+        save_code=True,  # save the code
+    ) as run:
+        train_model(run, args)
 
 
 def get_latest_checkpoint():
@@ -290,6 +308,7 @@ def make_catan_env():
             "vps_to_win": config["vps_to_win"],
             "enemies": [ValueFunctionPlayer(Color.RED)],
             "reward_function": reward_fn,
+            "render_mode": "rgb_array",
         },
     )
     env = ActionMasker(env, mask_fn)
