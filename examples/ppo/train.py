@@ -77,7 +77,7 @@ DEFAULT_CONFIG = {
 
 # Wandb sweep configuration
 SWEEP_CONFIG = {
-    "method": "grid",
+    "method": "random",
     "metric": {"name": "rollout/ep_rew_mean", "goal": "maximize"},
     "parameters": {
         "batch_size": {"values": [64, 128, 256, 512]},
