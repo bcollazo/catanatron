@@ -17,6 +17,9 @@ Usage:
     # Resume from checkpoint:
     python train.py --resume
 
+    # Run a wandb sweep:
+    python train.py --sweep
+
     # Train for custom timesteps:
     python train.py --timesteps 500000
 """
@@ -50,7 +53,7 @@ from shaped_reward import ShapedRewardFunction
 
 
 # Configuration object (compatible with wandb)
-config = {
+DEFAULT_CONFIG = {
     # Environment parameters
     "map_type": "MINI",  # Map type for Catan (BASE, MINI, etc.)
     "vps_to_win": 6,  # Victory points needed to win
@@ -72,22 +75,31 @@ config = {
     "checkpoint_freq": 10_000,  # Save checkpoint every N steps
 }
 
-# Validate configuration
-assert (config["n_envs"] * config["n_steps"]) % config["batch_size"] == 0, (
-    "BATCH_SIZE must divide N_ENVS * N_STEPS"
-)
+# Wandb sweep configuration
+SWEEP_CONFIG = {
+    "method": "grid",
+    "metric": {"name": "rollout/ep_rew_mean", "goal": "maximize"},
+    "parameters": {
+        "batch_size": {"values": [64, 128, 256, 512]},
+    },
+}
 
 # Directories
 CHECKPOINT_DIR = os.path.join(os.path.dirname(__file__), "checkpoints")
 
 
-def train_model(run, args):
+def train_model(run, args, cfg):
     """Execute the training loop."""
+    # Validate configuration
+    assert (cfg["n_envs"] * cfg["n_steps"]) % cfg["batch_size"] == 0, (
+        "BATCH_SIZE must divide N_ENVS * N_STEPS"
+    )
+
     # Set random seeds for reproducibility
-    random.seed(config["seed"])
-    np.random.seed(config["seed"])
-    torch.manual_seed(config["seed"])
-    torch.cuda.manual_seed_all(config["seed"])
+    random.seed(cfg["seed"])
+    np.random.seed(cfg["seed"])
+    torch.manual_seed(cfg["seed"])
+    torch.cuda.manual_seed_all(cfg["seed"])
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -101,14 +113,14 @@ def train_model(run, args):
 
     # Create vectorized environments
     print(
-        f"Using reward function: {'shaped (incremental)' if config['use_shaped_reward'] else 'simple (sparse)'}"
+        f"Using reward function: {'shaped (incremental)' if cfg['use_shaped_reward'] else 'simple (sparse)'}"
     )
-    print(f"Using map type: {config['map_type']}, VPs to win: {config['vps_to_win']}")
-    print(f"Creating {config['n_envs']} parallel environments...")
+    print(f"Using map type: {cfg['map_type']}, VPs to win: {cfg['vps_to_win']}")
+    print(f"Creating {cfg['n_envs']} parallel environments...")
     env = make_vec_env(
-        make_catan_env,
-        n_envs=config["n_envs"],
-        seed=config["seed"],
+        lambda: make_catan_env(cfg),
+        n_envs=cfg["n_envs"],
+        seed=cfg["seed"],
         vec_env_cls=SubprocVecEnv,  # Use subprocesses for CPU-heavy environments
     )
 
@@ -155,38 +167,38 @@ def train_model(run, args):
 
     if not args.resume:
         # Configure network architecture
-        net_arch = [config["neurons_per_layer"]] * config["num_layers"]
+        net_arch = [cfg["neurons_per_layer"]] * cfg["num_layers"]
         policy_kwargs = dict(net_arch=net_arch)
 
         # Create learning rate schedule
-        lr_schedule = linear_schedule(config["initial_lr"], config["final_lr"])
+        lr_schedule = linear_schedule(cfg["initial_lr"], cfg["final_lr"])
 
         print(f"Creating new model with architecture: {net_arch}")
         print(
-            f"PPO config: n_steps={config['n_steps']}, batch_size={config['batch_size']}, n_epochs={config['n_epochs']}, gamma={config['gamma']}, ent_coef={config['ent_coef']}"
+            f"PPO config: n_steps={cfg['n_steps']}, batch_size={cfg['batch_size']}, n_epochs={cfg['n_epochs']}, gamma={cfg['gamma']}, ent_coef={cfg['ent_coef']}"
         )
         print(
-            f"Learning rate schedule: {config['initial_lr']:.2e} → {config['final_lr']:.2e}"
+            f"Learning rate schedule: {cfg['initial_lr']:.2e} → {cfg['final_lr']:.2e}"
         )
         model = MaskablePPO(
             MaskableActorCriticPolicy,
             env,
             learning_rate=lr_schedule,
-            n_steps=config["n_steps"],
-            batch_size=config["batch_size"],
-            gamma=config["gamma"],
-            n_epochs=config["n_epochs"],
-            ent_coef=config["ent_coef"],
+            n_steps=cfg["n_steps"],
+            batch_size=cfg["batch_size"],
+            gamma=cfg["gamma"],
+            n_epochs=cfg["n_epochs"],
+            ent_coef=cfg["ent_coef"],
             verbose=1,
             tensorboard_log=f"runs/{run.id}",
-            seed=config["seed"],
+            seed=cfg["seed"],
             policy_kwargs=policy_kwargs,
             device=device,
         )
 
     # Setup checkpoint callback (also saves VecNormalize stats)
     checkpoint_callback = VecNormalizeCheckpointCallback(
-        save_freq=config["checkpoint_freq"],
+        save_freq=cfg["checkpoint_freq"],
         save_path=CHECKPOINT_DIR,
         name_prefix="rl_model",
     )
@@ -201,7 +213,7 @@ def train_model(run, args):
     # Train
     print(f"\nTraining for {args.timesteps:,} timesteps")
     print(
-        f"With {config['n_envs']} parallel environments (~{config['n_envs']}x speedup)"
+        f"With {cfg['n_envs']} parallel environments (~{cfg['n_envs']}x speedup)"
     )
     print(f"Wandb run: {run.get_url()}\n")
 
@@ -250,6 +262,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
     parser.add_argument(
+        "--sweep",
+        action="store_true",
+        help="Run a wandb sweep over the sweep configuration",
+    )
+    parser.add_argument(
         "--timesteps",
         type=int,
         default=100_000,
@@ -260,15 +277,21 @@ def main():
     # Login to wandb
     wandb.login()
 
-    # Initialize wandb with project and config
-    with wandb.init(
-        project="catan-ppo",
-        config=config,
-        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-        monitor_gym=True,  # auto-upload the videos of agents playing the game
-        save_code=True,  # save the code
-    ) as run:
-        train_model(run, args)
+    def run_training():
+        with wandb.init(
+            project="catan-ppo",
+            config=DEFAULT_CONFIG,
+            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+            monitor_gym=True,  # auto-upload the videos of agents playing the game
+            save_code=True,  # save the code
+        ) as run:
+            train_model(run, args, dict(wandb.config))
+
+    if args.sweep:
+        sweep_id = wandb.sweep(SWEEP_CONFIG, project="catan-ppo")
+        wandb.agent(sweep_id, function=run_training)
+    else:
+        run_training()
 
 
 def get_latest_checkpoint():
@@ -315,16 +338,16 @@ class VecNormalizeCheckpointCallback(CheckpointCallback):
         return result
 
 
-def make_catan_env():
+def make_catan_env(cfg):
     """Factory function to create a Catan environment for vectorization."""
     # Create fresh reward function instance for each environment
-    reward_fn = ShapedRewardFunction() if config["use_shaped_reward"] else simple_reward
+    reward_fn = ShapedRewardFunction() if cfg["use_shaped_reward"] else simple_reward
 
     env = gymnasium.make(
         "catanatron/Catanatron-v0",
         config={
-            "map_type": config["map_type"],
-            "vps_to_win": config["vps_to_win"],
+            "map_type": cfg["map_type"],
+            "vps_to_win": cfg["vps_to_win"],
             "enemies": [ValueFunctionPlayer(Color.RED)],
             "reward_function": reward_fn,
             "render_mode": "rgb_array",
