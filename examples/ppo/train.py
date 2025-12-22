@@ -65,7 +65,7 @@ DEFAULT_CONFIG = {
     "n_epochs": 10,  # Number of epochs for PPO update
     "gamma": 0.99,  # Discount factor for future rewards
     "initial_lr": 0.01,  # Initial learning rate
-    "final_lr": 0.001,  # Final learning rate
+    "lr_decay_orders": 1,  # Orders of magnitude to decay to (final = initial / 10^orders)
     "ent_coef": 0.01,  # Entropy coefficient for exploration
     # Network architecture
     "num_layers": 3,  # Number of hidden layers
@@ -81,6 +81,14 @@ SWEEP_CONFIG = {
     "metric": {"name": "rollout/ep_rew_mean", "goal": "maximize"},
     "parameters": {
         "batch_size": {"values": [64, 128, 256, 512]},
+        "n_steps": {"values": [512, 1024, 2048, 4096]},
+        "n_epochs": {"values": [5, 10, 15, 20]},
+        "gamma": {"values": [0.9, 0.95, 0.99, 0.999]},
+        "initial_lr": {"values": [1.0, 0.1, 0.01, 0.001, 0.0001]},
+        "lr_decay_orders": {"values": [1, 2, 3, 4]},
+        "ent_coef": {"values": [0.0, 0.005, 0.01, 0.02]},
+        "num_layers": {"values": [1, 3, 5, 10]},
+        "neurons_per_layer": {"values": [128, 256, 512, 1024]},
     },
 }
 
@@ -171,15 +179,14 @@ def train_model(run, args, cfg):
         policy_kwargs = dict(net_arch=net_arch)
 
         # Create learning rate schedule
-        lr_schedule = linear_schedule(cfg["initial_lr"], cfg["final_lr"])
+        final_lr = compute_final_lr(cfg["initial_lr"], cfg["lr_decay_orders"])
+        lr_schedule = linear_schedule(cfg["initial_lr"], final_lr)
 
         print(f"Creating new model with architecture: {net_arch}")
         print(
             f"PPO config: n_steps={cfg['n_steps']}, batch_size={cfg['batch_size']}, n_epochs={cfg['n_epochs']}, gamma={cfg['gamma']}, ent_coef={cfg['ent_coef']}"
         )
-        print(
-            f"Learning rate schedule: {cfg['initial_lr']:.2e} → {cfg['final_lr']:.2e}"
-        )
+        print(f"Learning rate schedule: {cfg['initial_lr']:.2e} → {final_lr:.2e}")
         model = MaskablePPO(
             MaskableActorCriticPolicy,
             env,
@@ -212,9 +219,7 @@ def train_model(run, args, cfg):
 
     # Train
     print(f"\nTraining for {args.timesteps:,} timesteps")
-    print(
-        f"With {cfg['n_envs']} parallel environments (~{cfg['n_envs']}x speedup)"
-    )
+    print(f"With {cfg['n_envs']} parallel environments (~{cfg['n_envs']}x speedup)")
     print(f"Wandb run: {run.get_url()}\n")
 
     model.learn(
@@ -315,6 +320,10 @@ def linear_schedule(initial_value, final_value):
         return final_value + progress_remaining * (initial_value - final_value)
 
     return schedule
+
+
+def compute_final_lr(initial_lr, lr_decay_orders):
+    return initial_lr / (10**lr_decay_orders)
 
 
 class VecNormalizeCheckpointCallback(CheckpointCallback):
