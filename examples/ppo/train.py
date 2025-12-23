@@ -29,27 +29,18 @@ import argparse
 import os
 from pathlib import Path
 
-import gymnasium
 import numpy as np
 import torch
 import wandb
 from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
-from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import (
-    SubprocVecEnv,
-    VecNormalize,
-    VecVideoRecorder,
-)
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from wandb.integration.sb3 import WandbCallback
 
 import catanatron.gym
-from catanatron import Color
-from catanatron.players.value import ValueFunctionPlayer
-from catanatron.gym.envs.catanatron_env import simple_reward
-from shaped_reward import ShapedRewardFunction
+from ppo_utils import make_catan_env
 
 
 # Configuration object (compatible with wandb)
@@ -142,13 +133,6 @@ def train_model(run, args, cfg):
         clip_reward=10.0,  # Clip rewards to [-10, 10] after normalization
     )
 
-    # Wrap with VecVideoRecorder to record gameplay videos
-    env = VecVideoRecorder(
-        env,
-        f"videos/{run.id}",
-        record_video_trigger=lambda x: x % 2000 == 0,
-    )
-
     # Load or create model
     # Create directories
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
@@ -238,25 +222,6 @@ def train_model(run, args, cfg):
     print(f"\nDone! Final model: {final_path}")
     print(f"VecNormalize stats: {vec_normalize_path}")
 
-    # Upload videos to wandb (seems native wandb integration doesn't work)
-    # https://github.com/DLR-RM/stable-baselines3/issues/2055
-    video_dir = Path(f"videos/{run.id}")
-    if video_dir.exists():
-        video_files = list(video_dir.glob("*.mp4"))
-        if video_files:
-            print(f"\nUploading {len(video_files)} videos to W&B...")
-            for video_file in video_files:
-                run.log(
-                    {
-                        f"video/{video_file.stem}": wandb.Video(
-                            str(video_file), format="mp4"
-                        )
-                    }
-                )
-            print("Videos uploaded successfully!")
-        else:
-            print(f"\nNo videos found in {video_dir}")
-
     # Clean up
     env.close()
 
@@ -287,7 +252,6 @@ def main():
             project="catan-ppo",
             config=DEFAULT_CONFIG,
             sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-            monitor_gym=True,  # auto-upload the videos of agents playing the game
             save_code=True,  # save the code
         ) as run:
             train_model(run, args, dict(wandb.config))
@@ -345,33 +309,6 @@ class VecNormalizeCheckpointCallback(CheckpointCallback):
             self.model.get_env().save(vec_normalize_path)
 
         return result
-
-
-def make_catan_env(cfg):
-    """Factory function to create a Catan environment for vectorization."""
-    # Create fresh reward function instance for each environment
-    reward_fn = ShapedRewardFunction() if cfg["use_shaped_reward"] else simple_reward
-
-    env = gymnasium.make(
-        "catanatron/Catanatron-v0",
-        config={
-            "map_type": cfg["map_type"],
-            "vps_to_win": cfg["vps_to_win"],
-            "enemies": [ValueFunctionPlayer(Color.RED)],
-            "reward_function": reward_fn,
-            "render_mode": "rgb_array",
-        },
-    )
-    env = ActionMasker(env, mask_fn)
-    return env
-
-
-def mask_fn(env) -> np.ndarray:
-    """Create action mask for valid actions."""
-    valid_actions = env.unwrapped.get_valid_actions()
-    mask = np.zeros(env.action_space.n, dtype=np.float32)
-    mask[valid_actions] = 1
-    return np.array([bool(i) for i in mask])
 
 
 if __name__ == "__main__":
