@@ -125,8 +125,9 @@ class CatanatronEnv(gym.Env):
         Returns:
             List[bool]: action masks
         """
-        valid = set(self.get_valid_actions())
-        return [action_int in valid for action_int in range(self.action_space_size)]
+        mask = np.zeros(self.action_space_size, dtype=bool)
+        mask[self.get_valid_actions()] = True
+        return mask
 
     def step(self, action):
         try:
