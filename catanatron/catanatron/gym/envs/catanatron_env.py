@@ -46,7 +46,7 @@ class MixedObservation(TypedDict):
 
 
 class CatanatronEnv(gym.Env):
-    metadata = {"render_modes": ["rgb_array", "db"], "render_fps": 30}
+    metadata = {"render_modes": ["rgb_array", "db"], "render_fps": 10}
 
     def __init__(self, config=None):
         self.dtype = np.float32

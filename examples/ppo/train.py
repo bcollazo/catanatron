@@ -50,7 +50,7 @@ DEFAULT_CONFIG = {
     "vps_to_win": 6,  # Victory points needed to win
     "use_shaped_reward": True,  # Use shaped vs simple reward function
     # PPO hyperparameters
-    "n_envs": 4,  # Number of parallel environments
+    "n_envs": 8,  # Number of parallel environments
     "n_steps": 1024,  # Number of steps to collect before update
     "batch_size": 128,  # Batch size for training
     "n_epochs": 10,  # Number of epochs for PPO update
@@ -68,18 +68,18 @@ DEFAULT_CONFIG = {
 
 # Wandb sweep configuration
 SWEEP_CONFIG = {
-    "method": "random",
+    "method": "bayes",
     "metric": {"name": "rollout/ep_rew_mean", "goal": "maximize"},
     "parameters": {
-        "batch_size": {"values": [64, 128, 256, 512]},
-        "n_steps": {"values": [512, 1024, 2048, 4096]},
-        "n_epochs": {"values": [5, 10, 15, 20]},
-        "gamma": {"values": [0.9, 0.95, 0.99, 0.999]},
-        "initial_lr": {"values": [1.0, 0.1, 0.01, 0.001, 0.0001]},
-        "lr_decay_orders": {"values": [1, 2, 3, 4]},
+        "batch_size": {"values": [128, 256, 512]},
+        "n_steps": {"values": [128, 256, 512, 1024, 2048]},
+        "n_epochs": {"values": [5, 10]},
+        "gamma": {"values": [0.95, 0.99, 0.999]},
+        "initial_lr": {"values": [0.01, 0.001, 0.0001, 0.00001]},
+        "lr_decay_orders": {"values": [3, 4, 5]},
         "ent_coef": {"values": [0.0, 0.005, 0.01, 0.02]},
-        "num_layers": {"values": [1, 3, 5, 10]},
-        "neurons_per_layer": {"values": [128, 256, 512, 1024]},
+        "num_layers": {"values": [1, 3, 5, 10, 20]},
+        "neurons_per_layer": {"values": [64, 128, 256, 512, 1024]},
     },
 }
 
