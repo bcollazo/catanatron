@@ -1,9 +1,10 @@
-from typing import TypedDict, Union
+from typing import TypedDict, Literal, Callable, List, Any
 import random
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
+from catanatron import Action
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import build_map
@@ -22,86 +23,66 @@ from catanatron.gym.board_tensor_features import (
     is_graph_feature,
 )
 
-
-FEATURES = get_feature_ordering(num_players=2)
-NUM_FEATURES = len(FEATURES)
-
 # Highest features is NUM_RESOURCES_IN_HAND which in theory is all resource cards
 HIGH = 19 * 5
 
 
-def simple_reward(action, game, p0_color):
-    winning_color = game.winning_color()
-    if p0_color == winning_color:
-        return 1
-    elif winning_color is None:
-        return 0
-    else:
-        return -1
+class ObservationSpec(TypedDict):
+    encode: Callable[[Game, Color], Any]
+    space: gym.Space
 
 
-class MixedObservation(TypedDict):
-    board: np.ndarray
-    numeric: np.ndarray
+class CatanatronEnvConfig(TypedDict):
+    # Game Config
+    map_type: Literal["BASE", "MINI"]
+    vps_to_win: int
+    enemies: List[Player]
+
+    # Env Config
+    observation_spec: ObservationSpec
+    invalid_action_reward: float
+    reward_function: Callable[[Action, Game, Color], float]
+
+    # Render Config
+    render_mode: Literal["rgb_array", "db"]
+    render_scale: float
 
 
 class CatanatronEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array", "db"], "render_fps": 10}
 
-    def __init__(self, config=None):
+    def __init__(self, config: CatanatronEnvConfig = None):
         self.dtype = np.float32
+
         self.config = config or dict()
-        self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.render_mode = self.config.get("render_mode", None)
-        self.render_scale = self.config.get("render_scale", 1.0)
-        self.renderer = None  # Lazy init on first render()
-
-        self.representation = self.config.get("representation", "vector")
-        assert self.representation in ["mixed", "vector"]
-
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
         self.player_colors = tuple([Color.BLUE] + [p.color for p in self.enemies])
         assert all(p.color != Color.BLUE for p in self.enemies)
-
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
-        self.representation = "mixed" if self.representation == "mixed" else "vector"
-        self.features = get_feature_ordering(len(self.players), self.map_type)
-        self.invalid_actions_count = 0
-        self.max_invalid_actions = 10
+
+        self.observation_spec = self.config.get("observation_spec", None)
+        if self.observation_spec is None:
+            self.observation_spec = build_vector_obs_spec(
+                len(self.player_colors), self.map_type
+            )
+        self.observation_space = self.observation_spec["space"]
 
         # Build action space depending on map type
         self.action_array = get_action_array(self.player_colors, self.map_type)
         self.action_space_size = len(self.action_array)
         self.action_space = spaces.Discrete(self.action_space_size)
+        self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
+        self.reward_function = self.config.get("reward_function", simple_reward)
+        self.invalid_actions_count = 0
+        self.max_invalid_actions = 10
 
-        if self.representation == "mixed":
-            channels = get_channels(len(self.players))
-            board_tensor_space = spaces.Box(
-                low=0, high=1, shape=(channels, 21, 11), dtype=self.dtype
-            )
-            self.numeric_features = [
-                f for f in self.features if not is_graph_feature(f)
-            ]
-            # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
-            numeric_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=self.dtype
-            )
-            mixed = spaces.Dict(
-                {
-                    "board": board_tensor_space,
-                    "numeric": numeric_space,
-                }
-            )
-            self.observation_space = mixed
-        else:
-            # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
-            self.observation_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.features),), dtype=self.dtype
-            )
+        # Render config
+        self.render_mode = self.config.get("render_mode", None)
+        self.render_scale = self.config.get("render_scale", 1.0)
+        self.renderer = None  # Lazy init on first render()
 
         self.reset()
 
@@ -189,18 +170,8 @@ class CatanatronEnv(gym.Env):
 
         return observation, info
 
-    def _get_observation(self) -> Union[np.ndarray, MixedObservation]:
-        sample = create_sample(self.game, self.p0.color)
-        if self.representation == "mixed":
-            board_tensor = create_board_tensor(
-                self.game, self.p0.color, channels_first=True
-            )
-            numeric = np.array(
-                [sample[i] for i in self.numeric_features], dtype=self.dtype
-            )
-            return {"board": board_tensor, "numeric": numeric}
-
-        return np.array([sample[i] for i in self.features], dtype=self.dtype)
+    def _get_observation(self) -> Any:
+        return self.observation_spec["encode"](self.game, self.p0.color)
 
     def _advance_until_p0_decision(self):
         while (
@@ -242,6 +213,64 @@ class CatanatronEnv(gym.Env):
             or self.game.state.num_turns >= TURNS_LIMIT
             or self.invalid_actions_count > self.max_invalid_actions
         )
+
+
+# Default Reward and Feature Encoders
+def simple_reward(action, game, p0_color):
+    winning_color = game.winning_color()
+    if p0_color == winning_color:
+        return 1
+    elif winning_color is None:
+        return 0
+    else:
+        return -1
+
+
+def build_vector_obs_spec(
+    num_players: int, map_type: Literal["BASE", "MINI"], dtype: np.dtype = np.float32
+) -> ObservationSpec:
+    features = get_feature_ordering(num_players, map_type)
+
+    def vector_encode(game, p0_color):
+        sample = create_sample(game, p0_color)
+        return np.array([sample[i] for i in features], dtype=dtype)
+
+    return ObservationSpec(
+        encode=vector_encode,
+        space=spaces.Box(low=0, high=HIGH, shape=(len(features),), dtype=dtype),
+    )
+
+
+def build_mixed_obs_spec(
+    num_players: int, map_type: Literal["BASE", "MINI"], dtype: np.dtype = np.float32
+) -> ObservationSpec:
+    features = get_feature_ordering(num_players, map_type)
+    numeric_features = [f for f in features if not is_graph_feature(f)]
+
+    channels = get_channels(num_players)
+    board_tensor_space = spaces.Box(
+        low=0, high=1, shape=(channels, 21, 11), dtype=dtype
+    )
+    # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
+    numeric_space = spaces.Box(
+        low=0, high=HIGH, shape=(len(numeric_features),), dtype=dtype
+    )
+
+    def mixed_encode(game, p0_color):
+        sample = create_sample(game, p0_color)
+        board_tensor = create_board_tensor(game, p0_color, channels_first=True)
+        numeric = np.array([sample[i] for i in numeric_features], dtype=dtype)
+        return {"board": board_tensor, "numeric": numeric}
+
+    return ObservationSpec(
+        encode=mixed_encode,
+        space=spaces.Dict(
+            {
+                "board": board_tensor_space,
+                "numeric": numeric_space,
+            }
+        ),
+    )
 
 
 CatanatronEnv.__doc__ = """
