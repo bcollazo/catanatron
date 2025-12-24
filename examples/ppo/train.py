@@ -39,7 +39,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from wandb.integration.sb3 import WandbCallback
 
-import catanatron.gym
+import catanatron.gym  # noqa: F401
 from ppo_utils import make_catan_env
 
 
