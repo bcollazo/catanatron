@@ -42,5 +42,5 @@ def make_catan_env(config):
             "render_mode": config.get("render_mode", "rgb_array"),
         },
     )
-    env = ActionMasker(env, lambda env: env.get_action_mask())
+    env = ActionMasker(env, lambda env: env.unwrapped.action_masks())
     return env
