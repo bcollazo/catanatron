@@ -204,7 +204,7 @@ def train_model(run, args, cfg):
     # Train
     print(f"\nTraining for {args.timesteps:,} timesteps")
     print(f"With {cfg['n_envs']} parallel environments (~{cfg['n_envs']}x speedup)")
-    print(f"Wandb run: {run.get_url()}\n")
+    print(f"Wandb run: {run.url}\n")
 
     model.learn(
         total_timesteps=args.timesteps,
