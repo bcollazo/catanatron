@@ -1,0 +1,6 @@
+tensorboard_logs
+checkpoints
+wandb
+videos
+models
+runs
