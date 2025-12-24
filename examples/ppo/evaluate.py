@@ -17,7 +17,6 @@ Usage:
 
 import argparse
 import os
-from pathlib import Path
 
 import numpy as np
 from sb3_contrib.ppo_mask import MaskablePPO
@@ -30,7 +29,7 @@ from catanatron.cli.play import play_batch, GameConfigOptions
 from catanatron.gym.envs.action_space import to_action_space, from_action_space
 
 import catanatron.gym
-from ppo_utils import make_catan_env
+from ppo_utils import autodetect_vecnormalize_path, make_catan_env
 
 
 class PPOPlayer(Player):
@@ -242,13 +241,11 @@ def main():
         parser.error(f"Model file not found: {args.model_path}")
 
     # Auto-detect VecNormalize stats if not provided
-    vecnorm_path = args.vecnorm_path
-    if not vecnorm_path:
-        model_path = Path(args.model_path)
-        potential_vecnorm = model_path.parent / f"{model_path.stem}_vecnormalize.pkl"
-        if potential_vecnorm.exists():
-            vecnorm_path = str(potential_vecnorm)
-            print(f"Auto-detected VecNormalize stats: {vecnorm_path}")
+    vecnorm_path, auto_detected = autodetect_vecnormalize_path(
+        args.model_path, args.vecnorm_path
+    )
+    if auto_detected:
+        print(f"Auto-detected VecNormalize stats: {vecnorm_path}")
 
     # Run evaluation
     evaluate_model(

@@ -2,6 +2,8 @@
 Shared utilities for creating Catanatron environments.
 """
 
+from pathlib import Path
+
 import gymnasium
 from sb3_contrib.common.wrappers import ActionMasker
 
@@ -10,6 +12,24 @@ from catanatron import Color
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.gym.envs.catanatron_env import simple_reward
 from shaped_reward import ShapedRewardFunction
+
+
+def autodetect_vecnormalize_path(model_path, vecnorm_path=None):
+    """
+    Resolve VecNormalize stats path from args or a matching file next to the model.
+
+    Returns:
+        Tuple of (vecnorm_path or None, auto_detected_bool).
+    """
+    if vecnorm_path:
+        return vecnorm_path, False
+
+    model_path = Path(model_path)
+    potential_vecnorm = model_path.parent / f"{model_path.stem}_vecnormalize.pkl"
+    if potential_vecnorm.exists():
+        return str(potential_vecnorm), True
+
+    return None, False
 
 
 def make_catan_env(config):
