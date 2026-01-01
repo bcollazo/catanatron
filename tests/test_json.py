@@ -61,19 +61,19 @@ def test_action_from_json_play_year_of_plenty_invalid():
 
 
 def test_action_from_json_move_robber_with_victim():
-    data = ["ORANGE", "MOVE_ROBBER", [[0, 0, 0], "RED", None]]
+    data = ["ORANGE", "MOVE_ROBBER", [[0, 0, 0], "RED"]]
     action = action_from_json(data)
     assert action.color == Color.ORANGE
     assert action.action_type == ActionType.MOVE_ROBBER
-    assert action.value == ((0, 0, 0), Color.RED, None)
+    assert action.value == ((0, 0, 0), Color.RED)
 
 
 def test_action_from_json_move_robber_without_victim():
-    data = ["RED", "MOVE_ROBBER", [[1, -1, 0], None, None]]
+    data = ["RED", "MOVE_ROBBER", [[1, -1, 0], None]]
     action = action_from_json(data)
     assert action.color == Color.RED
     assert action.action_type == ActionType.MOVE_ROBBER
-    assert action.value == ((1, -1, 0), None, None)
+    assert action.value == ((1, -1, 0), None)
 
 
 def test_action_from_json_build_road():
