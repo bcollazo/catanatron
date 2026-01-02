@@ -344,7 +344,7 @@ def initialize_tiles(
     shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
         map_template.tile_resources, len(map_template.tile_resources)
     )
-    numbers = shuffled_numbers_param or map_template.numbers
+    numbers = shuffled_numbers_param or map_template.numbers.copy()
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles: Dict[Coordinate, Tile] = {}
@@ -398,11 +398,11 @@ def spiral_coordinates(radius: int, directions: List[Direction]) -> List[Coordin
         return [(0, 0, 0)]
 
     coordinate = scale(radius, UNIT_VECTORS[directions[4]])
-    results = [coordinate]
+    results = []
     for direction in directions:
-        for _ in range(radius):
-            coordinate = add(UNIT_VECTORS[direction], coordinate)
+        for _ in range(0, radius):
             results.append(coordinate)
+            coordinate = add(UNIT_VECTORS[direction], coordinate)
 
     return results + spiral_coordinates(radius - 1, directions)
 
