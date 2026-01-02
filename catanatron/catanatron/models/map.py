@@ -2,7 +2,7 @@ import typing
 from dataclasses import dataclass
 import random
 from collections import Counter, defaultdict
-from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
+from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union, cast
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.enums import (
@@ -346,6 +346,7 @@ def initialize_tiles(
     shuffled_numbers = shuffled_numbers_param or random.sample(
         map_template.numbers, len(map_template.numbers)
     )
+    use_predetermined_numbers = shuffled_numbers_param is not None
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles: Dict[Coordinate, Tile] = {}
@@ -368,7 +369,8 @@ def initialize_tiles(
         elif tile_type == LandTile:
             resource = shuffled_tile_resources.pop()
             if resource != None:
-                number = shuffled_numbers.pop()
+                # if numbers are not predetermined, place them after board has been constructed
+                number = shuffled_numbers.pop() if use_predetermined_numbers else 0
                 tile = LandTile(tile_autoinc, resource, number, nodes, edges)
             else:
                 tile = LandTile(tile_autoinc, None, None, nodes, edges)  # desert
@@ -379,6 +381,32 @@ def initialize_tiles(
             all_tiles[coordinate] = water_tile
         else:
             raise ValueError("Invalid tile")
+
+    if not use_predetermined_numbers:
+        # Place numbers according to the rule that 6's and 8's cannot be neighbours.
+        resouce_coordinates = [c for c, t in all_tiles.items() if isinstance(t, LandTile) and t.number is not None and t.number == 0]
+        # First place 6's and 8's individually, ensuring none neighbour existing placements
+        for n in [n for n in shuffled_numbers if n == 6 or n == 8]:
+            # print(f"possible placements: {resouce_coordinates}", flush=True)
+            placement_coordinate = random.choice(resouce_coordinates)
+            tile = cast(LandTile, all_tiles[placement_coordinate])
+            tile.number = n
+            # Remove placed coordinate and neighbours
+            resouce_coordinates.remove(placement_coordinate)
+            neighbors = [
+                add(placement_coordinate, UNIT_VECTORS[d]) for d in Direction
+            ]
+            resouce_coordinates = [
+                x for x in resouce_coordinates if x not in neighbors
+            ]
+
+        # Place remaining numbers
+        shuffled_numbers = [n for n in shuffled_numbers if n != 6 and n != 8]
+        for coordinate in [
+            c for c, t in all_tiles.items() if isinstance(t, LandTile) and t.number == 0
+        ]:
+            tile = cast(LandTile, all_tiles[coordinate])
+            tile.number = shuffled_numbers.pop()
 
     return all_tiles
 
