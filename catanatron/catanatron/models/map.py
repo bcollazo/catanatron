@@ -69,6 +69,7 @@ class MapTemplate:
     topology: Mapping[
         Coordinate, Union[Type[LandTile], Type[Water], Tuple[Type[Port], Direction]]
     ]
+    possible_numbers_start_placements: List[Tuple[Coordinate, Direction]]
 
 
 # Small 7-tile map, no ports.
@@ -100,6 +101,14 @@ MINI_MAP_TEMPLATE = MapTemplate(
         (2, 0, -2): Water,
         (2, -1, -1): Water,
     },
+    [
+        ((1, -1, 0), Direction.NORTHWEST),
+        ((1, 0, -1), Direction.WEST),
+        ((0, 1, -1), Direction.SOUTHWEST),
+        ((-1, 1, 0), Direction.SOUTHEAST),
+        ((-1, 0, 1), Direction.EAST),
+        ((0, -1, 1), Direction.NORTHEAST)
+    ]
 )
 
 """Standard 4-player map"""
@@ -190,6 +199,14 @@ BASE_MAP_TEMPLATE = MapTemplate(
         (3, -1, -2): (Port, Direction.SOUTHWEST),
         (3, -2, -1): Water,
     },
+    [
+        ((2, -2, 0), Direction.NORTHWEST),
+        ((2, 0, -2), Direction.WEST),
+        ((0, 2, -2), Direction.SOUTHWEST),
+        ((-2, 2, 0), Direction.SOUTHEAST),
+        ((-2, 0, 2), Direction.EAST),
+        ((0, -2, 2), Direction.NORTHEAST)
+    ]
 )
 
 
@@ -322,6 +339,7 @@ def initialize_tiles(
     shuffled_numbers_param=None,
     shuffled_port_resources_param=None,
     shuffled_tile_resources_param=None,
+    number_start_placement_param=None,
 ) -> Dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
@@ -345,6 +363,7 @@ def initialize_tiles(
         map_template.tile_resources, len(map_template.tile_resources)
     )
     numbers = shuffled_numbers_param or map_template.numbers.copy()
+    numbers_start = number_start_placement_param or random.choice(map_template.possible_numbers_start_placements)
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles: Dict[Coordinate, Tile] = {}
@@ -379,32 +398,28 @@ def initialize_tiles(
             raise ValueError("Invalid tile")
 
 
-    # Place numbers in a spiral pattern, starting with a random corner
-    start_index = random.randint(0, 5)
-    directions = deque(Direction)
+    # Place numbers in a spiral pattern
+    coord, dir = numbers_start
+    tile = cast(LandTile, all_tiles[coord])
+    numbers.reverse()
+    directions = list(Direction)
     directions.reverse()
-    directions.rotate(start_index)
-    coordinates = spiral_coordinates(2, list(directions))
-
-    while coordinates:
-        tile = all_tiles.get(coordinates.pop())
-        if tile is not None and isinstance(tile, LandTile) and tile.resource is not None:
+    processed_coords = []
+    while numbers:
+        print(f"coord: {coord}, dir: {dir}")
+        if tile.resource is not None:
             tile.number = numbers.pop()
+        processed_coords.append(coord)
+
+        next_coord = add(coord, UNIT_VECTORS[dir])
+        if isinstance(all_tiles[next_coord], Water) or next_coord in processed_coords:
+            dir = directions[(directions.index(dir) + 1) % len(directions)]
+            next_coord = add(coord, UNIT_VECTORS[dir])
+
+        coord = next_coord
+        tile = cast(LandTile, all_tiles[coord])
 
     return all_tiles
-
-def spiral_coordinates(radius: int, directions: List[Direction]) -> List[Coordinate]:
-    if radius < 1:
-        return [(0, 0, 0)]
-
-    coordinate = scale(radius, UNIT_VECTORS[directions[4]])
-    results = []
-    for direction in directions:
-        for _ in range(0, radius):
-            results.append(coordinate)
-            coordinate = add(UNIT_VECTORS[direction], coordinate)
-
-    return results + spiral_coordinates(radius - 1, directions)
 
 def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):
     """Get pre-existing nodes and edges in board for given tile coordinate"""

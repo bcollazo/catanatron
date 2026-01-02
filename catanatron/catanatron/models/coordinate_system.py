@@ -29,10 +29,6 @@ def add(acoord, bcoord):
     (u, v, w) = bcoord
     return (x + u, y + v, z + w)
 
-def scale(factor, coord):
-    (x, y, z) = coord
-    return (factor * x, factor * y, factor * z)
-
 def num_tiles_for(layer):
     """Including inner-layer tiles"""
     if layer == 0:
