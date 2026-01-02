@@ -391,20 +391,14 @@ def initialize_tiles(
             placement_coordinate = random.choice(resouce_coordinates)
             tile = cast(LandTile, all_tiles[placement_coordinate])
             tile.number = n
-            # Remove placed coordinate and neighbours
+            # Remove placed coordinate and neighbors
             resouce_coordinates.remove(placement_coordinate)
-            neighbors = [
-                add(placement_coordinate, UNIT_VECTORS[d]) for d in Direction
-            ]
-            resouce_coordinates = [
-                x for x in resouce_coordinates if x not in neighbors
-            ]
+            neighbors = [add(placement_coordinate, UNIT_VECTORS[d]) for d in Direction]
+            resouce_coordinates = [x for x in resouce_coordinates if x not in neighbors]
 
         # Place remaining numbers
         shuffled_numbers = [n for n in shuffled_numbers if n != 6 and n != 8]
-        for coordinate in [
-            c for c, t in all_tiles.items() if isinstance(t, LandTile) and t.number == 0
-        ]:
+        for coordinate in [c for c, t in all_tiles.items() if isinstance(t, LandTile) and t.number == 0]:
             tile = cast(LandTile, all_tiles[coordinate])
             tile.number = shuffled_numbers.pop()
 
