@@ -1,10 +1,10 @@
 import typing
 from dataclasses import dataclass
 import random
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union, cast
 
-from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
+from catanatron.models.coordinate_system import Direction, add, scale, UNIT_VECTORS
 from catanatron.models.enums import (
     FastResource,
     WOOD,
@@ -104,7 +104,8 @@ MINI_MAP_TEMPLATE = MapTemplate(
 
 """Standard 4-player map"""
 BASE_MAP_TEMPLATE = MapTemplate(
-    [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12],
+    # Number tokens are ordered according to the letters on their back side
+    [5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4, 5, 6, 3, 11],
     [
         # These are 2:1 ports
         WOOD,
@@ -324,7 +325,7 @@ def initialize_tiles(
 ) -> Dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
-    It first shuffles tiles, ports, and numbers. Then goes satisfying the
+    It first shuffles tiles and ports. Then goes satisfying the
     topology (i.e. placing tiles on coordinates); ensuring to "attach" these to
     neighbor tiles (so as to not repeat nodes or edges objects).
 
@@ -343,10 +344,7 @@ def initialize_tiles(
     shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
         map_template.tile_resources, len(map_template.tile_resources)
     )
-    shuffled_numbers = shuffled_numbers_param or random.sample(
-        map_template.numbers, len(map_template.numbers)
-    )
-    use_predetermined_numbers = shuffled_numbers_param is not None
+    numbers = shuffled_numbers_param or map_template.numbers
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles: Dict[Coordinate, Tile] = {}
@@ -369,9 +367,7 @@ def initialize_tiles(
         elif tile_type == LandTile:
             resource = shuffled_tile_resources.pop()
             if resource != None:
-                # if numbers are not predetermined, place them after board has been constructed
-                number = shuffled_numbers.pop() if use_predetermined_numbers else 0
-                tile = LandTile(tile_autoinc, resource, number, nodes, edges)
+                tile = LandTile(tile_autoinc, resource, 0, nodes, edges)
             else:
                 tile = LandTile(tile_autoinc, None, None, nodes, edges)  # desert
             all_tiles[coordinate] = tile
@@ -382,28 +378,33 @@ def initialize_tiles(
         else:
             raise ValueError("Invalid tile")
 
-    if not use_predetermined_numbers:
-        # Place numbers according to the rule that 6's and 8's cannot be neighbours.
-        resouce_coordinates = [c for c, t in all_tiles.items() if isinstance(t, LandTile) and t.number is not None and t.number == 0]
-        # First place 6's and 8's individually, ensuring none neighbour existing placements
-        for n in [n for n in shuffled_numbers if n == 6 or n == 8]:
-            # print(f"possible placements: {resouce_coordinates}", flush=True)
-            placement_coordinate = random.choice(resouce_coordinates)
-            tile = cast(LandTile, all_tiles[placement_coordinate])
-            tile.number = n
-            # Remove placed coordinate and neighbors
-            resouce_coordinates.remove(placement_coordinate)
-            neighbors = [add(placement_coordinate, UNIT_VECTORS[d]) for d in Direction]
-            resouce_coordinates = [x for x in resouce_coordinates if x not in neighbors]
 
-        # Place remaining numbers
-        shuffled_numbers = [n for n in shuffled_numbers if n != 6 and n != 8]
-        for coordinate in [c for c, t in all_tiles.items() if isinstance(t, LandTile) and t.number == 0]:
-            tile = cast(LandTile, all_tiles[coordinate])
-            tile.number = shuffled_numbers.pop()
+    # Place numbers in a spiral pattern, starting with a random corner
+    start_index = random.randint(0, 5)
+    directions = deque(Direction)
+    directions.reverse()
+    directions.rotate(start_index)
+    coordinates = spiral_coordinates(2, list(directions))
+
+    while coordinates:
+        tile = all_tiles.get(coordinates.pop())
+        if tile is not None and isinstance(tile, LandTile) and tile.resource is not None:
+            tile.number = numbers.pop()
 
     return all_tiles
 
+def spiral_coordinates(radius: int, directions: List[Direction]) -> List[Coordinate]:
+    if radius < 1:
+        return [(0, 0, 0)]
+
+    coordinate = scale(radius, UNIT_VECTORS[directions[4]])
+    results = [coordinate]
+    for direction in directions:
+        for _ in range(radius):
+            coordinate = add(direction, coordinate)
+            results.append(coordinate)
+
+    return results + spiral_coordinates(radius - 1, directions)
 
 def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):
     """Get pre-existing nodes and edges in board for given tile coordinate"""
