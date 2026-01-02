@@ -401,7 +401,7 @@ def spiral_coordinates(radius: int, directions: List[Direction]) -> List[Coordin
     results = [coordinate]
     for direction in directions:
         for _ in range(radius):
-            coordinate = add(direction, coordinate)
+            coordinate = add(UNIT_VECTORS[direction], coordinate)
             results.append(coordinate)
 
     return results + spiral_coordinates(radius - 1, directions)
