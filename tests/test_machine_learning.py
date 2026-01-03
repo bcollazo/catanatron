@@ -132,45 +132,45 @@ def test_reachability_features():
 
     game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 5))
     features = reachability_features(game, p0_color)
-    assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
+    assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(5)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
-    assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(6)
+    assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(11)
     assert features["P0_0_ROAD_REACHABLE_WHEAT"] == 0
     # these are 0 since cant build at distance 1
     assert features["P0_1_ROAD_REACHABLE_ORE"] == 0
     assert features["P0_1_ROAD_REACHABLE_WHEAT"] == 0
     # whats available at distance 0 should also be available at distance 1
-    assert features["P0_1_ROAD_REACHABLE_WOOD"] == number_probability(3)
+    assert features["P0_1_ROAD_REACHABLE_WOOD"] == number_probability(5)
     assert features["P0_1_ROAD_REACHABLE_BRICK"] == number_probability(4)
-    assert features["P0_1_ROAD_REACHABLE_SHEEP"] == number_probability(6)
+    assert features["P0_1_ROAD_REACHABLE_SHEEP"] == number_probability(11)
 
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (0, 5)))
     features = reachability_features(game, p0_color)
-    assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(3)
+    assert features["P0_0_ROAD_REACHABLE_WOOD"] == number_probability(5)
     assert features["P0_0_ROAD_REACHABLE_BRICK"] == number_probability(4)
-    assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(6)
+    assert features["P0_0_ROAD_REACHABLE_SHEEP"] == number_probability(11)
     assert features["P0_0_ROAD_REACHABLE_WHEAT"] == 0
     assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(
-        8
-    ) + number_probability(5)
+        2
+    ) + number_probability(3)
     assert features["P0_1_ROAD_REACHABLE_WHEAT"] == 2 * number_probability(9)
 
     # Test distance 2
     assert math.isclose(
         features["P0_2_ROAD_REACHABLE_ORE"],
-        2 * number_probability(10)
-        + 3 * number_probability(8)
-        + 3 * number_probability(5),
+        2 * number_probability(6)
+        + 3 * number_probability(2)
+        + 3 * number_probability(3),
     )
 
     # Test enemy making building removes buildability
     p1_color = game.state.colors[1]
     game.execute(Action(p1_color, ActionType.BUILD_SETTLEMENT, 1))
     features = reachability_features(game, p0_color)
-    assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(8)
+    assert features["P0_1_ROAD_REACHABLE_ORE"] == number_probability(2)
     assert math.isclose(
         features["P0_2_ROAD_REACHABLE_ORE"],
-        2 * number_probability(10) + 3 * number_probability(8),
+        2 * number_probability(6) + 3 * number_probability(2),
     )
 
 
@@ -392,18 +392,18 @@ def test_resource_proba_planes():
     # Assert ten sheep left edge looks good
     sheep_channel = 10
     ten_sheep_left_edge = tensor[4, 0:3, sheep_channel]
-    ten_proba = number_probability(10)
+    ten_proba = number_probability(6)
     assert np.sum(ten_sheep_left_edge) == ten_proba * 2  # 2 nodes
 
     # assert 5 wood top node has sheep too.
     wood_channel = 8
-    five_proba = number_probability(5)
+    five_proba = number_probability(3)
     five_wood_top_node = tensor[4, 2]
     assert np.all(np.equal(five_wood_top_node[sheep_channel], ten_proba))
     assert np.all(np.equal(five_wood_top_node[wood_channel], five_proba))
 
     # assert wood node adds up
-    total_proba = five_proba + number_probability(11) + number_probability(3)
+    total_proba = five_proba + number_probability(8) + number_probability(5)
     middle_wood_node = tensor[4, 4]
     assert np.all(np.equal(middle_wood_node[wood_channel], total_proba))
 
