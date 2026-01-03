@@ -4,7 +4,7 @@ import random
 from collections import Counter, defaultdict, deque
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union, cast
 
-from catanatron.models.coordinate_system import Direction, add, scale, UNIT_VECTORS
+from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.enums import (
     FastResource,
     WOOD,
@@ -74,7 +74,7 @@ class MapTemplate:
 
 # Small 7-tile map, no ports.
 MINI_MAP_TEMPLATE = MapTemplate(
-    [3, 4, 5, 6, 8, 9, 10],
+    [3, 4, 5, 6, 8, 9],
     [],
     [WOOD, None, BRICK, SHEEP, WHEAT, WHEAT, ORE],
     {
@@ -399,25 +399,28 @@ def initialize_tiles(
 
 
     # Place numbers in a spiral pattern
-    coord, dir = numbers_start
-    tile = cast(LandTile, all_tiles[coord])
     numbers.reverse()
     directions = list(Direction)
     directions.reverse()
-    processed_coords = []
-    while numbers:
-        print(f"coord: {coord}, dir: {dir}")
-        if tile.resource is not None:
-            tile.number = numbers.pop()
-        processed_coords.append(coord)
+    coord, dir = numbers_start
+    tile = cast(LandTile, all_tiles[coord])
+    if tile.resource is not None:
+        tile.number = numbers.pop()
 
+    processed_coords = [coord]
+
+    while numbers:
         next_coord = add(coord, UNIT_VECTORS[dir])
-        if isinstance(all_tiles[next_coord], Water) or next_coord in processed_coords:
+        if not isinstance(all_tiles[next_coord], LandTile) or next_coord in processed_coords:
             dir = directions[(directions.index(dir) + 1) % len(directions)]
-            next_coord = add(coord, UNIT_VECTORS[dir])
+            continue
 
         coord = next_coord
         tile = cast(LandTile, all_tiles[coord])
+
+        if tile.resource is not None:
+            tile.number = numbers.pop()
+        processed_coords.append(coord)
 
     return all_tiles
 
