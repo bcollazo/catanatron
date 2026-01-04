@@ -1,7 +1,7 @@
 import typing
 from dataclasses import dataclass
 import random
-from collections import Counter, defaultdict, deque
+from collections import Counter, defaultdict
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union, cast
 
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
@@ -69,7 +69,7 @@ class MapTemplate:
     topology: Mapping[
         Coordinate, Union[Type[LandTile], Type[Water], Tuple[Type[Port], Direction]]
     ]
-    possible_numbers_start_placements: List[Tuple[Coordinate, Direction]]
+    possible_numbers_start_placements: List[Coordinate]
 
 
 # Small 7-tile map, no ports.
@@ -101,14 +101,7 @@ MINI_MAP_TEMPLATE = MapTemplate(
         (2, 0, -2): Water,
         (2, -1, -1): Water,
     },
-    [
-        ((1, -1, 0), Direction.NORTHWEST),
-        ((1, 0, -1), Direction.WEST),
-        ((0, 1, -1), Direction.SOUTHWEST),
-        ((-1, 1, 0), Direction.SOUTHEAST),
-        ((-1, 0, 1), Direction.EAST),
-        ((0, -1, 1), Direction.NORTHEAST)
-    ]
+    [(1, -1, 0), (1, 0, -1), (0, 1, -1), (-1, 1, 0), (-1, 0, 1), (0, -1, 1)]
 )
 
 """Standard 4-player map"""
@@ -199,14 +192,7 @@ BASE_MAP_TEMPLATE = MapTemplate(
         (3, -1, -2): (Port, Direction.SOUTHWEST),
         (3, -2, -1): Water,
     },
-    [
-        ((2, -2, 0), Direction.NORTHWEST),
-        ((2, 0, -2), Direction.WEST),
-        ((0, 2, -2), Direction.SOUTHWEST),
-        ((-2, 2, 0), Direction.SOUTHEAST),
-        ((-2, 0, 2), Direction.EAST),
-        ((0, -2, 2), Direction.NORTHEAST)
-    ]
+    [(2, -2, 0), (2, 0, -2), (0, 2, -2), (-2, 2, 0), (-2, 0, 2), (0, -2, 2)]
 )
 
 
@@ -402,7 +388,16 @@ def initialize_tiles(
     numbers.reverse()
     directions = list(Direction)
     directions.reverse()
-    coord, dir = numbers_start
+
+    # Find direction along coast in counter-clockwise direction
+    for i, direction in enumerate(directions):
+        if isinstance(all_tiles[add(numbers_start, UNIT_VECTORS[direction])], LandTile) and not isinstance(all_tiles[add(numbers_start, UNIT_VECTORS[directions[i - 1]])], LandTile):
+            dir = direction
+            break
+    else:
+        raise Exception("No direction found from stard coordination that is along a water tile.")
+    
+    coord = numbers_start
     tile = cast(LandTile, all_tiles[coord])
     if tile.resource is not None:
         tile.number = numbers.pop()
