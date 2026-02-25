@@ -1,3 +1,4 @@
+import os
 from collections import namedtuple
 
 from rich.table import Table
@@ -13,6 +14,56 @@ from catanatron.players.playouts import GreedyPlayoutsPlayer
 
 # Player must have a CODE, NAME, DESCRIPTION, CLASS.
 CliPlayer = namedtuple("CliPlayer", ["code", "name", "description", "import_fn"])
+
+
+# ============= LLM Player Factory Functions =============
+# These are lazy-loaded to avoid import errors when pydantic-ai is not installed
+
+
+def _get_default_model():
+    """Get default LLM model from environment or use Claude."""
+    return os.environ.get("CATAN_LLM_MODEL", "anthropic:claude-sonnet-4-20250514")
+
+
+def create_llm_player(color, model=None):
+    """Factory for pure LLM player."""
+    from catanatron.players.llm_player import PydanticAIPlayer
+
+    model = model or _get_default_model()
+    return PydanticAIPlayer(color, model=model)
+
+
+def create_llm_alphabeta_player(color, model=None, depth="2", prunning="False"):
+    """Factory for LLM + AlphaBeta hybrid player."""
+    from catanatron.players.llm_player import LLMAlphaBetaPlayer
+
+    model = model or _get_default_model()
+    return LLMAlphaBetaPlayer(
+        color,
+        model=model,
+        depth=int(depth),
+        prunning=prunning.lower() == "true",
+    )
+
+
+def create_llm_mcts_player(color, model=None, num_simulations="10"):
+    """Factory for LLM + MCTS hybrid player."""
+    from catanatron.players.llm_player import LLMMCTSPlayer
+
+    model = model or _get_default_model()
+    return LLMMCTSPlayer(
+        color,
+        model=model,
+        num_simulations=int(num_simulations),
+    )
+
+
+def create_llm_value_player(color, model=None):
+    """Factory for LLM + Value Function hybrid player."""
+    from catanatron.players.llm_player import LLMValuePlayer
+
+    model = model or _get_default_model()
+    return LLMValuePlayer(color, model=model)
 CLI_PLAYERS = [
     CliPlayer(
         "H", "HumanPlayer", "Human player, uses input() to get action.", HumanPlayer
@@ -63,6 +114,35 @@ CLI_PLAYERS = [
         "SameTurnAlphaBetaPlayer",
         "AlphaBeta but searches only within turn",
         SameTurnAlphaBetaPlayer,
+    ),
+    # LLM Players (require pydantic-ai, anthropic, or openai packages)
+    CliPlayer(
+        "LLM",
+        "PydanticAIPlayer",
+        "Pure LLM player using PydanticAI. Set ANTHROPIC_API_KEY or OPENAI_API_KEY env var. "
+        "Optional param: MODEL (e.g., LLM:openai:gpt-4o)",
+        create_llm_player,
+    ),
+    CliPlayer(
+        "LLMAB",
+        "LLMAlphaBetaPlayer",
+        "LLM with AlphaBeta strategy advisor. Params: MODEL, DEPTH, PRUNNING. "
+        "Example: LLMAB:anthropic:claude-sonnet-4-20250514:3:True or LLMAB::3 to use default model",
+        create_llm_alphabeta_player,
+    ),
+    CliPlayer(
+        "LLMM",
+        "LLMMCTSPlayer",
+        "LLM with MCTS strategy advisor. Params: MODEL, NUM_SIMULATIONS. "
+        "Example: LLMM:openai:gpt-4o:20 or LLMM::20 to use default model",
+        create_llm_mcts_player,
+    ),
+    CliPlayer(
+        "LLMV",
+        "LLMValuePlayer",
+        "LLM with Value Function strategy advisor. Params: MODEL. "
+        "Example: LLMV:anthropic:claude-sonnet-4-20250514 or just LLMV for default",
+        create_llm_value_player,
     ),
 ]
 

@@ -16,7 +16,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = ["networkx", "click", "rich"]
+dependencies = [
+    "networkx",
+    "click",
+    "rich",
+]
 
 [project.optional-dependencies]
 gym = ["gymnasium<=0.29.1", "numpy", "pandas", "fastparquet"]
@@ -27,6 +31,14 @@ web = [
     "flask_sqlalchemy",
     "sqlalchemy",
     "psycopg2-binary",
+    "dill",
+]
+llm = [
+    "anthropic>=0.40.0",
+    "openai>=1.50.0",
+    "pydantic-ai>=1.41.0",
+    "logfire>=4.17.0",
+    "tenacity>=9.1.2",
 ]
 dev = [
     "black",

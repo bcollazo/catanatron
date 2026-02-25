@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "catanatron": {
+      "type": "sse",
+      "url": "https://docs.catanatron.com/~gitbook/mcp"
+    }
+  }
+}

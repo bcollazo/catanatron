@@ -6,6 +6,7 @@ data/
 profile.pstats
 catanatron-venv
 .DS_Store
+catanatron.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

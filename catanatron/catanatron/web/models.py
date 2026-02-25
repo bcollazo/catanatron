@@ -30,7 +30,32 @@ class GameState(Base):
     @staticmethod
     def from_game(game: Game):
         state = json.dumps(game, cls=GameEncoder)
-        pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
+        # Use game.copy() to create a clean copy
+        game_copy = game.copy()
+        
+        # Try standard pickle first (fastest and most compatible)
+        try:
+            pickle_data = pickle.dumps(game_copy, pickle.HIGHEST_PROTOCOL)
+        except (TypeError, AttributeError) as e:
+            # If standard pickle fails, try dill as fallback
+            # This handles more complex objects but is slower
+            try:
+                import dill
+                pickle_data = dill.dumps(game_copy)
+            except ImportError:
+                raise ValueError(
+                    "Unable to pickle game. Standard pickle failed, and 'dill' is not installed. "
+                    "Install dill for better serialization: pip install dill"
+                ) from e
+            except Exception as dill_error:
+                # If even dill fails, provide helpful error message
+                raise ValueError(
+                    f"Unable to pickle game. Original error: {str(e)}. "
+                    f"Dill also failed: {str(dill_error)}. "
+                    "This may be due to unpickleable objects in player classes. "
+                    "Ensure player classes implement __getstate__ and __setstate__ if needed."
+                ) from e
+        
         return GameState(
             uuid=game.id,
             state_index=get_state_index(game.state),
@@ -91,5 +116,17 @@ def get_game_state(game_id, state_index=None) -> Game | None:
         if result is None:
             abort(404)
     db.session.commit()
-    game = pickle.loads(result.pickle_data)  # type: ignore
+    # Try standard pickle first, fall back to dill if needed
+    try:
+        game = pickle.loads(result.pickle_data)  # type: ignore
+    except (TypeError, pickle.UnpicklingError):
+        # If standard unpickler fails, try dill
+        try:
+            import dill
+            game = dill.loads(result.pickle_data)  # type: ignore
+        except ImportError:
+            raise ValueError(
+                "Unable to unpickle game. "
+                "Install 'dill' package for better lock handling: pip install dill"
+            )
     return game
