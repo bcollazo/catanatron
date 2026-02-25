@@ -1,0 +1,133 @@
+import json
+import os
+
+class CatanArena:
+    def __init__(self, k_factor=15, save_file="catan_ratings.json"):
+        self.k_factor = k_factor
+        self.save_file = save_file
+        self.ratings = {} 
+        self.h2h = {}
+        
+        # Automatically load previous ratings if the file exists
+        self._load_state()
+
+    def save_state(self):
+        """Saves the current Elo ratings to a JSON file."""
+        with open(self.save_file, 'w') as f:
+            # We are just saving the ratings here for the leaderboard. 
+            # You could also save self.h2h if you want persistent match histories!
+            json.dump(self.ratings, f, indent=4)
+        print(f"💾 State successfully saved to {self.save_file}")
+
+    def _load_state(self):
+        """Loads existing Elo ratings from the JSON file on startup."""
+        if os.path.exists(self.save_file):
+            with open(self.save_file, 'r') as f:
+                self.ratings = json.load(f)
+            print(f"📂 Loaded existing ratings from {self.save_file}")
+
+    def _ensure_player_exists(self, name):
+        """Helper to initialize a new player in our trackers."""
+        if name not in self.ratings:
+            self.ratings[name] = 1500.0
+            self.h2h[name] = {}
+
+    def record_match(self, match_results):
+        """
+        Processes a single 4-player match, updating Elo and head-to-head stats.
+        :param match_results: List of dicts, e.g., [{'name': 'GPT-4o', 'vp': 10}, ...]
+        """
+        num_players = len(match_results)
+        rating_shifts = {p['name']: 0.0 for p in match_results}
+        
+        # Ensure all players in this match exist in the system
+        for p in match_results:
+            self._ensure_player_exists(p['name'])
+            
+        winning_score = max(p['vp'] for p in match_results)
+        baseline = max(10.0, winning_score)
+
+        # Loop through every 1v1 combination
+        for i in range(num_players):
+            for j in range(i + 1, num_players):
+                p1_name = match_results[i]['name']
+                p2_name = match_results[j]['name']
+                p1_vp = match_results[i]['vp']
+                p2_vp = match_results[j]['vp']
+                
+                # Initialize H2H matchup if it hasn't happened before
+                if p2_name not in self.h2h[p1_name]:
+                    self.h2h[p1_name][p2_name] = {'wins': 0, 'losses': 0, 'ties': 0}
+                    self.h2h[p2_name][p1_name] = {'wins': 0, 'losses': 0, 'ties': 0}
+
+                # 1. Update Head-to-Head Stats & Determine 1v1 Score
+                if p1_vp > p2_vp:
+                    s1, s2 = 1.0, 0.0
+                    self.h2h[p1_name][p2_name]['wins'] += 1
+                    self.h2h[p2_name][p1_name]['losses'] += 1
+                elif p1_vp < p2_vp:
+                    s1, s2 = 0.0, 1.0
+                    self.h2h[p1_name][p2_name]['losses'] += 1
+                    self.h2h[p2_name][p1_name]['wins'] += 1
+                else:
+                    s1, s2 = 0.5, 0.5
+                    self.h2h[p1_name][p2_name]['ties'] += 1
+                    self.h2h[p2_name][p1_name]['ties'] += 1
+
+                # 2. Calculate Expected Scores
+                r1 = self.ratings[p1_name]
+                r2 = self.ratings[p2_name]
+                exp1 = 1 / (1 + 10 ** ((r2 - r1) / 400))
+                exp2 = 1 / (1 + 10 ** ((r1 - r2) / 400))
+
+                # 3. Calculate MOV Multiplier
+                vp_diff = abs(p1_vp - p2_vp)
+                mov_multiplier = (vp_diff / baseline) + 1.0
+
+                # 4. Calculate Rating Deltas
+                delta1 = self.k_factor * mov_multiplier * (s1 - exp1)
+                delta2 = self.k_factor * mov_multiplier * (s2 - exp2)
+
+                rating_shifts[p1_name] += delta1
+                rating_shifts[p2_name] += delta2
+
+        # Apply the averaged rating shifts to the master tracker
+        for name in rating_shifts:
+            self.ratings[name] += (rating_shifts[name] / (num_players - 1))
+
+    def print_h2h_report(self, p1_name, p2_name):
+        """Prints a clean summary of the matchup between two models."""
+        try:
+            stats = self.h2h[p1_name][p2_name]
+            total = stats['wins'] + stats['losses'] + stats['ties']
+            winrate = (stats['wins'] / total) * 100 if total > 0 else 0
+            
+            print(f"--- {p1_name} vs {p2_name} ---")
+            print(f"Games played simultaneously: {total}")
+            print(f"{p1_name} Record: {stats['wins']}W - {stats['losses']}L - {stats['ties']}T")
+            print(f"{p1_name} Winrate vs {p2_name}: {winrate:.1f}%\n")
+        except KeyError:
+            print(f"No match data found between {p1_name} and {p2_name}.\n")
+
+    def generate_leaderboard_from_json(filepath="catan_ratings.json"):
+        """Opens the saved JSON ratings and prints a formatted leaderboard."""
+        try:
+            with open(filepath, 'r') as f:
+                ratings = json.load(f)
+        except FileNotFoundError:
+            print(f"❌ Error: Could not find '{filepath}'. Have any games been saved yet?")
+            return
+    
+        # Sort the dictionary by Elo rating, highest to lowest
+        sorted_ratings = sorted(ratings.items(), key=lambda item: item[1], reverse=True)
+    
+        # Print a clean, formatted table
+        print("\n🏆 CATAN LLM LEADERBOARD 🏆")
+        print("-" * 40)
+        print(f"{'Rank':<5} | {'Model Name':<15} | {'Elo Rating':<10}")
+        print("-" * 40)
+        
+        for rank, (bot_name, rating) in enumerate(sorted_ratings, start=1):
+            print(f"{rank:<5} | {bot_name:<15} | {rating:.1f}")
+            
+        print("-" * 40 + "\n")
