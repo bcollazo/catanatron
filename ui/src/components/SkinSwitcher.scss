@@ -1,0 +1,33 @@
+@use "../variables.scss";
+
+.skin-switcher {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 1300;
+
+  .MuiButtonGroup-root {
+    .MuiButton-root {
+      color: rgba(255, 255, 255, 0.85);
+      border-color: rgba(255, 255, 255, 0.4);
+      text-transform: capitalize;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      min-width: unset;
+      background-color: rgba(0, 0, 0, 0.35);
+
+      &.MuiButton-contained {
+        background-color: rgba(0, 0, 0, 0.6);
+        color: #fff;
+      }
+    }
+  }
+}
+
+// On large screens the right drawer is permanently visible (280px wide),
+// keep the switcher to the left of it.
+@media (min-width: variables.$lg-breakpoint) {
+  .skin-switcher {
+    right: 292px;
+  }
+}

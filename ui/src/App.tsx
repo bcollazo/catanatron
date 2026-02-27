@@ -7,6 +7,7 @@ import Fade from "@mui/material/Fade";
 import GameScreen from "./pages/GameScreen";
 import HomePage from "./pages/HomePage";
 import { StateProvider } from "./store";
+import { SkinProvider } from "./SkinContext";
 
 import "./App.scss";
 import ReplayScreen from "./pages/ReplayScreen";
@@ -25,7 +26,8 @@ const theme = createTheme({
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <StateProvider>
+      <SkinProvider>
+        <StateProvider>
         <SnackbarProvider
           classes={{ containerRoot: "snackbar-container" }}
           maxSnack={1}
@@ -49,6 +51,7 @@ function App() {
           </Router>
         </SnackbarProvider>
       </StateProvider>
+      </SkinProvider>
     </ThemeProvider>
   );
 }

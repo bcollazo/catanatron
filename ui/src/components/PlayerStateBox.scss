@@ -46,6 +46,54 @@
       font-size: 0.7rem;
     }
   }
+
+  // Classic skin: resource cards
+  .classic-card {
+    background: #f5e6c8;
+    border-radius: 4px;
+    width: 28px;
+    height: 40px;
+
+    div {
+      background: #f5e6c8;
+      color: #333;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    }
+
+    .card-symbol {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      margin-top: 2px;
+    }
+
+    .card-count {
+      font-size: 0.75rem;
+      font-weight: bold;
+      line-height: 1;
+      padding-bottom: 2px;
+    }
+  }
+
+  // Classic skin: dev cards
+  .classic-dev-card {
+    background: #f5e6c8;
+    border-radius: 4px;
+
+    div {
+      background: #f5e6c8;
+      color: #333;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      font-size: 0.7rem;
+    }
+  }
 }
 
 .center-text {

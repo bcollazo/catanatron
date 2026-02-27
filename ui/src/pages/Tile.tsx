@@ -2,19 +2,23 @@ import cn from "classnames";
 import Paper from "@mui/material/Paper";
 
 import "./Tile.scss";
-import brickTile from "../assets/tile_brick.svg";
-import desertTile from "../assets/tile_desert.svg";
-import grainTile from "../assets/tile_wheat.svg";
-import lumberTile from "../assets/tile_wood.svg";
-import oreTile from "../assets/tile_ore.svg";
-import woolTile from "../assets/tile_sheep.svg";
-import maritimeTile from "../assets/tile_maritime.svg";
 import { SQRT3, tilePixelVector } from "../utils/coordinates";
 import {
   type Direction,
   type ResourceCard,
   type Tile,
 } from "../utils/api.types";
+import { useSkin, type SkinAssets, type SkinName } from "../SkinContext";
+
+type ResourceType = "WOOD" | "BRICK" | "SHEEP" | "WHEAT" | "ORE";
+
+const RESOURCE_SYMBOL_KEYS: Record<ResourceType, "WOOD_SYMBOL" | "BRICK_SYMBOL" | "SHEEP_SYMBOL" | "WHEAT_SYMBOL" | "ORE_SYMBOL"> = {
+  WOOD: "WOOD_SYMBOL",
+  BRICK: "BRICK_SYMBOL",
+  SHEEP: "SHEEP_SYMBOL",
+  WHEAT: "WHEAT_SYMBOL",
+  ORE: "ORE_SYMBOL",
+};
 
 type NumberTokenProps = {
   number: number;
@@ -29,10 +33,11 @@ export function NumberToken({
   style,
   flashing,
 }: NumberTokenProps) {
+  const isHot = number === 6 || number === 8;
   return (
     <Paper
       elevation={3}
-      className={cn("number-token", className, { flashing: flashing })}
+      className={cn("number-token", className, { flashing, hot: isHot })}
       style={style}
     >
       <div>{number}</div>
@@ -63,34 +68,37 @@ const numberToPips = (number: number) => {
   }
 };
 
-const RESOURCES: { [K in ResourceCard]: string } = {
-  BRICK: brickTile,
-  SHEEP: woolTile,
-  ORE: oreTile,
-  WOOD: lumberTile,
-  WHEAT: grainTile,
-} as const;
+const getResourceTiles = (assets: SkinAssets): { [K in ResourceCard]: string } => ({
+  BRICK: assets.BRICK,
+  SHEEP: assets.SHEEP,
+  ORE: assets.ORE,
+  WOOD: assets.WOOD,
+  WHEAT: assets.WHEAT,
+});
 
 const calculatePortPosition = (
   direction: Direction,
-  size: number
+  size: number,
+  skin: SkinName = "catanatron"
 ): { x: number; y: number } => {
+  // Classic ports are pushed further toward the vertices they serve
+  const factor = skin === "classic" ? 1.25 : 1;
   let x = 0;
   let y = 0;
   if (direction.includes("SOUTH")) {
-    y += size / 3;
+    y += (size / 3) * factor;
   } else if (direction.includes("NORTH")) {
-    y -= size / 3;
+    y -= (size / 3) * factor;
   }
   if (direction.includes("WEST")) {
-    x -= size / 4;
+    x -= (size / 4) * factor;
     if (direction === "WEST") {
-      x = -size / 3;
+      x = (-size / 3) * factor;
     }
   } else if (direction.includes("EAST")) {
-    x += size / 4;
+    x += (size / 4) * factor;
     if (direction === "EAST") {
-      x = size / 3;
+      x = (size / 3) * factor;
     }
   }
   return { x, y };
@@ -99,19 +107,43 @@ const calculatePortPosition = (
 const Port = ({
   resource,
   style,
+  assets,
+  skin,
 }: {
   resource: ResourceCard;
   style: Partial<React.CSSProperties>;
+  assets: SkinAssets;
+  skin: SkinName;
 }) => {
-  let ratio;
-  let tile;
-  if (resource in RESOURCES) {
-    ratio = "2:1";
-    tile = RESOURCES[resource];
-  } else {
-    ratio = "3:1";
-    tile = maritimeTile;
+  const RESOURCES = getResourceTiles(assets);
+  const isSpecific = resource in RESOURCES;
+
+  if (skin === "classic" && assets.TRADING_PORT) {
+    const symbolKey = isSpecific
+      ? RESOURCE_SYMBOL_KEYS[resource as ResourceType]
+      : undefined;
+    const symbolSrc = symbolKey ? assets[symbolKey] : undefined;
+
+    return (
+      <div className="port classic-port" style={style}>
+        <img
+          src={assets.TRADING_PORT}
+          alt="port"
+          className="classic-port-boat"
+        />
+        <div className="classic-port-sail">
+          {symbolSrc ? (
+            <img src={symbolSrc} alt={resource} className="classic-port-resource" />
+          ) : (
+            <span className="classic-port-ratio">3:1</span>
+          )}
+        </div>
+      </div>
+    );
   }
+
+  const tile = isSpecific ? RESOURCES[resource] : assets.MARITIME;
+  const ratio = isSpecific ? "2:1" : "3:1";
 
   return (
     <div
@@ -147,6 +179,8 @@ export default function Tile({
   onClick,
   flashing,
 }: TileProps) {
+  const { skin, assets } = useSkin();
+  const RESOURCES = getResourceTiles(assets);
   const w = SQRT3 * size;
   const h = 2 * size;
   const [centerX, centerY] = center;
@@ -154,27 +188,32 @@ export default function Tile({
 
   let contents;
   let resourceTile;
+  let tileType = "";
   if (tile.type === "RESOURCE_TILE") {
+    tileType = "tile-resource";
     contents = <NumberToken number={tile.number} flashing={flashing} />;
     resourceTile = RESOURCES[tile.resource];
   } else if (tile.type === "DESERT") {
-    resourceTile = desertTile;
+    tileType = "tile-desert";
+    resourceTile = assets.DESERT;
   } else if (tile.type === "PORT") {
-    const { x, y } = calculatePortPosition(tile.direction, size);
-    contents = (<Port resource={tile.resource} style={{ left: x, top: y }}  />)
+    tileType = "tile-port";
+    const { x, y } = calculatePortPosition(tile.direction, size, skin);
+    contents = (<Port resource={tile.resource} style={{ left: x, top: y }} assets={assets} skin={skin} />)
     }
 
   return (
     <div
       key={coordinate}
-      className="tile"
+      className={cn("tile", `skin-${skin}`, tileType)}
       style={{
         left: x - w / 2,
         top: y - h / 2,
         width: w,
         height: h,
-        backgroundImage: `url("${resourceTile}")`,
-        backgroundSize: "contain",
+        ...(resourceTile
+          ? { backgroundImage: `url("${resourceTile}")`, backgroundSize: "contain" }
+          : {}),
       }}
       onClick={onClick}
     >
