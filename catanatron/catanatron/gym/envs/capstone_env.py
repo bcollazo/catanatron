@@ -1,4 +1,3 @@
-from typing import TypedDict, Union
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -8,15 +7,7 @@ from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
-from catanatron.features import (
-    create_sample,
-    get_feature_ordering,
-)
-from catanatron.gym.board_tensor_features import (
-    create_board_tensor,
-    get_channels,
-    is_graph_feature,
-)
+from catanatron.gym.envs.capstone_features import get_capstone_observation
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
@@ -100,11 +91,6 @@ def from_action_space(action_int, playable_actions):
     return catan_action
 
 
-FEATURES = get_feature_ordering(num_players=2)
-NUM_FEATURES = len(FEATURES)
-
-# Highest features is NUM_RESOURCES_IN_HAND which in theory is all resource cards
-HIGH = 19 * 5
 
 # TODO -> need to come up with our own reward scheme
 def simple_reward(game, p0_color):
@@ -117,9 +103,8 @@ def simple_reward(game, p0_color):
         return -1
 
 
-class MixedObservation(TypedDict):
-    board: np.ndarray
-    numeric: np.ndarray
+# hex(114) + vertex(756) + edge(288) + hand(27) + strategic(44) + game(28)
+OBSERVATION_SIZE = 1257
 
 
 class CapstoneCatanatronEnv(gym.Env):
@@ -127,55 +112,24 @@ class CapstoneCatanatronEnv(gym.Env):
 
     def __init__(self, config=None):
         self.config = config or dict()
-        # TODO -> need to create the configuration we need for our environment
-        # TODO -> custom reward function, custom map type (built in tournament), enemy is self, what is representation?
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
-        self.representation = self.config.get("representation", "vector")
 
-        # Note -> SELF P0 is blue ig
         assert all(p.color != Color.BLUE for p in self.enemies)
-        assert self.representation in ["mixed", "vector"]
         self.p0 = Player(Color.BLUE)
+        self.opp_color = self.enemies[0].color
         self.players = [self.p0] + self.enemies  # type: ignore
-        # TODO -> need to understand what this representation is
-        self.representation = "mixed" if self.representation == "mixed" else "vector"
-        # TODO -> need to dive into these features
-        self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
-        # TODO: Make self.action_space tighter if possible (per map_type)
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
-
-        # TODO -> dive into mixed vs vector to understand what is happening
-        if self.representation == "mixed":
-            channels = get_channels(len(self.players))
-            board_tensor_space = spaces.Box(
-                low=0, high=1, shape=(channels, 21, 11), dtype=np.float64
-            )
-            self.numeric_features = [
-                f for f in self.features if not is_graph_feature(f)
-            ]
-            # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
-            numeric_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=np.float64
-            )
-            mixed = spaces.Dict(
-                {
-                    "board": board_tensor_space,
-                    "numeric": numeric_space,
-                }
-            )
-            self.observation_space = mixed
-        else:
-            # TODO: This could be tigher (e.g. _ROADS_AVAILABLE <= 15)
-            self.observation_space = spaces.Box(
-                low=0, high=HIGH, shape=(len(self.features),), dtype=np.float64
-            )
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf,
+            shape=(OBSERVATION_SIZE,), dtype=np.float64,
+        )
 
         self.reset()
 
@@ -246,16 +200,11 @@ class CapstoneCatanatronEnv(gym.Env):
 
         return observation, info
 
-    def _get_observation(self) -> Union[np.ndarray, MixedObservation]:
-        sample = create_sample(self.game, self.p0.color)
-        if self.representation == "mixed":
-            board_tensor = create_board_tensor(
-                self.game, self.p0.color, channels_first=True
-            )
-            numeric = np.array([float(sample[i]) for i in self.numeric_features])
-            return {"board": board_tensor, "numeric": numeric}
-
-        return np.array([float(sample[i]) for i in self.features])
+    def _get_observation(self) -> np.ndarray:
+        features = get_capstone_observation(
+            self.game, self.p0.color, self.opp_color
+        )
+        return np.array(features, dtype=np.float64)
 
     def _advance_until_p0_decision(self):
         while (
