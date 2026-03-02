@@ -11,7 +11,7 @@ from catanatron.features import (
     create_sample_vector,
     get_feature_ordering,
 )
-from catanatron.gym.envs.catanatron_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
+from catanatron.gym.envs.capstone_env import ACTIONS_ARRAY, ACTION_SPACE_SIZE
 from catanatron.gym.board_tensor_features import (
     NUMERIC_FEATURES,
     create_board_tensor,

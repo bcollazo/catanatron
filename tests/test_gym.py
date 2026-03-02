@@ -7,7 +7,7 @@ import numpy as np
 from catanatron.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.players.value import ValueFunctionPlayer
-from catanatron.gym.envs.catanatron_env import CatanatronEnv
+from catanatron.gym.envs.capstone_env import CapstoneCatanatronEnv
 
 features = get_feature_ordering(2)
 
@@ -22,12 +22,12 @@ def get_p0_num_settlements(obs):
 
 
 def test_check_env():
-    env = CatanatronEnv()
+    env = CapstoneCatanatronEnv()
     check_env(env)
 
 
 def test_gym():
-    env = CatanatronEnv()
+    env = CapstoneCatanatronEnv()
 
     first_observation, info = env.reset()  # this forces advanced until p0...
     assert len(info["valid_actions"]) >= 50  # first seat at most blocked 4 nodes

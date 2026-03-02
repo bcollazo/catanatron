@@ -7,5 +7,5 @@ register(
 
 register(
     id="catanatron/CapstoneCatanatron-v0",
-    entry_point="catanatron.gym.envs:CapstoneCatanatronEnv"
+    entry_point="catanatron.gym.envs.capstone_env:CapstoneCatanatronEnv",
 )

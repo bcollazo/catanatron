@@ -122,6 +122,7 @@ class CapstoneCatanatronEnv(gym.Env):
         self.p0 = Player(Color.BLUE)
         self.opp_color = self.enemies[0].color
         self.players = [self.p0] + self.enemies  # type: ignore
+        self.representation = "vector"
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
