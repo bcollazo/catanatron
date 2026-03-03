@@ -27,8 +27,9 @@ ACTIONS_ARRAY = [
     *[(ActionType.MOVE_ROBBER, tile) for tile in TILE_COORDINATES],
 
     # Card Discard
-    *[(ActionType.DISCARD, resource) for resource in RESOURCES],
-
+    # *[(ActionType.DISCARD, resource) for resource in RESOURCES],
+    (ActionType.DISCARD, None),
+    
     # Bank Trade
     *[(ActionType.MARITIME_TRADE, (resource_give, resource_take)) for resource_give in RESOURCES for resource_take in RESOURCES if resource_give != resource_take],
 
@@ -142,7 +143,7 @@ class CapstoneCatanatronEnv(gym.Env):
         # TODO -> this is going to need to be rewritten/morphed from playable actions
         return list(map(to_action_space, self.game.playable_actions))
 
-    def step(self, action):
+    def step(self, action: int):
         # TODO -> e3nsure our own action space is working in here
         try:
             catan_action = from_action_space(action, self.game.playable_actions)
