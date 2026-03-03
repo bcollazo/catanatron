@@ -126,7 +126,7 @@ class CapstoneModel(torch.nn.Module):
                     )
         
 
-    def forward(self, x):
+    def forward(self, x, mask):
 
         x = self.linear_compressor(x)
 
@@ -168,6 +168,12 @@ class CapstoneModel(torch.nn.Module):
             trading, monopoly_resource, yop_resource, turn_management
         ], dim=-1)
 
-        probs = torch.softmax(policy_logits, dim=-1)
+        if not isinstance(mask, torch.Tensor):
+            mask_tensor = torch.as_tensor(mask, device=policy_logits.device)
+        else:
+            mask_tensor = mask
+
+        masked_logits = policy_logits.masked_fill(mask == 0, -1e9)
+        probs = torch.softmax(masked_logits, dim=-1)
 
         return probs, state_value
