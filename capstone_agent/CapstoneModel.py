@@ -18,53 +18,53 @@ class CapstoneModel(torch.nn.Module):
     def __init__(self, obs_size, hidden_size):
         super(CapstoneModel, self).__init__()
 
-        self.activation = nn.ReLU()
-        self.softmax = nn.Softmax()
+        # ReLU activation
+        # Softmax and Tanh final activations for policy and value functions
 
         self.linear_compressor = torch.nn.Linear(obs_size, hidden_size)
 
         self.residual1 = torch.nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation
+                        nn.ReLU()
                     )
 
         self.residual2 = torch.nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation
+                        nn.ReLU()
                     )
         
         self.residual3 = torch.nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation
+                        nn.ReLU()
                     )
         
         self.residual4 = torch.nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, hidden_size),
                         nn.LayerNorm(hidden_size),
-                        self.activation
+                        nn.ReLU()
                     )
         
         # Value head
         self.value_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.VALUE_SIZE),
                         nn.Tanh()
                     )
@@ -72,79 +72,79 @@ class CapstoneModel(torch.nn.Module):
         # Policy Heads
         self.full_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, hidden_size)
                     )
 
         # Each action type gets a couple of layers to learn
         self.robber_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.ROBBER_ACTION_SIZE)
                     )
         self.settlement_vertex_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.VERTEX_ACTION_SIZE)
                     )
         self.city_vertex_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.VERTEX_ACTION_SIZE)
                     )
         
         self.edge_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.EDGE_ACTION_SIZE)
                     )
         
         self.dev_card_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.PLAY_DEV_ACTION_SIZE)
                     )
         self.trading_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.TRADING_ACTION_SIZE)
                     )
         self.monopoly_resource_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.NUM_RESOURCES)
                     )
         self.yop_resource_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.NUM_RESOURCE_PAIRS)
                     )
         self.turn_management_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
-                        self.activation,
+                        nn.ReLU(),
                         nn.Linear(hidden_size, self.TURN_MANAGEMENT_ACTION_SIZE)
                     )
         
 
-    def forward(self, x, mask):
+    def forward(self, x, mask: torch.Tensor):
 
         x = self.linear_compressor(x)
 
         # Residual Block 1
         result1 = self.residual1(x)
-        x = self.activation(x + result1)
+        x = nn.ReLU()(x + result1)
 
         # Residual Block 2
         result2 = self.residual2(x)
-        x = self.activation(x + result2)
+        x = nn.ReLU()(x + result2)
 
         # Residual Block 3
         result3 = self.residual3(x)
-        x = self.activation(x + result3)
+        x = nn.ReLU()(x + result3)
 
         # Residual Block 4
         result4 = self.residual4(x)
-        x = self.activation(x + result4)
+        x = nn.ReLU()(x + result4)
 
 
         # Value Head
@@ -168,12 +168,10 @@ class CapstoneModel(torch.nn.Module):
             trading, monopoly_resource, yop_resource, turn_management
         ], dim=-1)
 
-        if not isinstance(mask, torch.Tensor):
-            mask_tensor = torch.as_tensor(mask, device=policy_logits.device)
-        else:
-            mask_tensor = mask
+        # ensure mask is on right device
+        mask_tensor = torch.as_tensor(mask, device=policy_logits.device)
 
-        masked_logits = policy_logits.masked_fill(mask == 0, -1e9)
+        masked_logits = policy_logits.masked_fill(mask_tensor == 0, -1e9)
         probs = torch.softmax(masked_logits, dim=-1)
 
         return probs, state_value
