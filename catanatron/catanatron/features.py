@@ -212,6 +212,9 @@ def build_production_features(consider_robber):
     def production_features(game: Game, p0_color: Color):
         # P0_WHEAT_PRODUCTION, P0_ORE_PRODUCTION, ..., P1_WHEAT_PRODUCTION, ...
         features = {}
+        # TODO -> HORRIBLE ROBBER BUG HERE
+        # IF CONSIDERING THE ROBBER, IT REMOVES ALL PRODUCTION FROM TILES TOUCHING A VERTEX, NOT JUST THE TILE THE ROBBER IS ON
+
         board = game.state.board
         robbed_nodes = set(board.map.tiles[board.robber_coordinate].nodes.values())
         for resource in RESOURCES:

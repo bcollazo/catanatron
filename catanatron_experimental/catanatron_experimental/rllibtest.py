@@ -15,7 +15,7 @@ tf = try_import_tf()
 
 import tensorflow as tf
 
-from catanatron.gym.envs.catanatron_env import CatanatronEnv
+from catanatron.gym.envs.capstone_env import CapstoneCatanatronEnv
 
 
 # https://towardsdatascience.com/action-masking-with-rllib-5e4bec5e7505
@@ -37,7 +37,7 @@ class KP0ActionMaskModel(TFModelV2):
         )
 
         self.action_embed_model = FullyConnectedNetwork(
-            CatanatronEnv.observation_space,
+            CapstoneCatanatronEnv.observation_space,
             action_space,
             action_embed_size,
             model_config,
@@ -87,7 +87,7 @@ def train_ppo(config, reporter):
 
 
 config = {
-    "env": CatanatronEnv,
+    "env": CapstoneCatanatronEnv,
     "num_workers": 4,
     # "model": {"custom_model": "kp_mask"},
 }

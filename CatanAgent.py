@@ -2,7 +2,6 @@ from catanatron import Player
 from catanatron.cli import register_cli_player
 
 class RLCatanPlayer(Player):
-
     def __init__(self):
         # Our custom init to pass in the correct model for playing
         pass

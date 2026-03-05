@@ -7,7 +7,7 @@ import numpy as np
 from catanatron.features import get_feature_ordering
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.players.value import ValueFunctionPlayer
-from catanatron.gym.envs.catanatron_env import CatanatronEnv
+from catanatron.gym.envs.capstone_env import CapstoneCatanatronEnv
 
 features = get_feature_ordering(2)
 
@@ -22,12 +22,12 @@ def get_p0_num_settlements(obs):
 
 
 def test_check_env():
-    env = CatanatronEnv()
+    env = CapstoneCatanatronEnv()
     check_env(env)
 
 
 def test_gym():
-    env = CatanatronEnv()
+    env = CapstoneCatanatronEnv()
 
     first_observation, info = env.reset()  # this forces advanced until p0...
     assert len(info["valid_actions"]) >= 50  # first seat at most blocked 4 nodes
@@ -50,6 +50,23 @@ def test_gym():
     assert get_p0_num_settlements(reset_obs) == 0
 
     env.close()
+
+
+def test_valid_actions_accepted_by_step():
+    """Every index from get_valid_actions() should be accepted by step()."""
+    env = CapstoneCatanatronEnv()
+    _, info = env.reset(seed=42)
+
+    for _ in range(50):
+        valid = info["valid_actions"]
+        assert len(valid) > 0
+        action = valid[0]
+        _, reward, terminated, truncated, info = env.step(action)
+        assert reward != env.invalid_action_reward, (
+            f"Capstone index {action} was in valid_actions but rejected by step()"
+        )
+        if terminated or truncated:
+            break
 
 
 def test_gym_registration_and_api_works():
