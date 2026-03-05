@@ -8,6 +8,9 @@ from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
 from catanatron.gym.envs.capstone_features import get_capstone_observation
+from catanatron.gym.envs.catanatron_env import (
+    to_action_space as to_catanatron_action_space,
+)
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
@@ -48,6 +51,13 @@ ACTIONS_ARRAY = [
 ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
 ACTION_TYPES = [i for i in ActionType]
 
+# Imported after ACTIONS_ARRAY is defined to break the circular dependency
+# (action_translator imports ACTIONS_ARRAY from this module at load time).
+from catanatron.gym.envs.action_translator import (  # noqa: E402
+    batch_catanatron_to_capstone,
+    capstone_to_action,
+)
+
 
 def to_action_type_space(action_type: ActionType) -> int:
     return ACTION_TYPES.index(action_type)
@@ -66,6 +76,15 @@ def normalize_action(action):
         return Action(action.color, action.action_type, None)
     elif normalized.action_type == ActionType.DISCARD:
         return Action(action.color, action.action_type, None)
+    elif (
+        normalized.action_type == ActionType.PLAY_YEAR_OF_PLENTY
+        and isinstance(action.value, tuple)
+        and len(action.value) == 1
+    ):
+        # Capstone action space only encodes two-card YOP choices.
+        return Action(
+            action.color, action.action_type, (action.value[0], action.value[0])
+        )
     elif normalized.action_type == ActionType.MARITIME_TRADE:
         # Accept both:
         # - engine playable-actions format: (give, give, give/None, give/None, take)
@@ -155,15 +174,18 @@ class CapstoneCatanatronEnv(gym.Env):
     def get_valid_actions(self):
         """
         Returns:
-            List[int]: valid actions
+            List[int]: valid actions in capstone action-space indices
         """
-        # TODO -> this is going to need to be rewritten/morphed from playable actions
-        return list(map(to_action_space, self.game.playable_actions))
+        catanatron_indices = list(
+            map(to_catanatron_action_space, self.game.playable_actions)
+        )
+        return batch_catanatron_to_capstone(catanatron_indices)
 
     def step(self, action: int):
-        # TODO -> e3nsure our own action space is working in here
         try:
-            catan_action = from_action_space(action, self.game.playable_actions)
+            catan_action = capstone_to_action(
+                action, self.game.playable_actions
+            )
         except Exception as e:
             self.invalid_actions_count += 1
 

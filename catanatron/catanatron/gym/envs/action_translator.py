@@ -8,6 +8,7 @@ a 5-tuple; Capstone uses a simplified (give, take) pair).
 Public API:
     catanatron_to_capstone(cat_idx) -> cap_idx
     capstone_to_catanatron(cap_idx, playable_actions) -> cat_idx
+    capstone_to_action(cap_idx, playable_actions) -> Action
     capstone_to_catanatron_from_state(cap_idx, game, color) -> cat_idx
     catanatron_action_to_capstone_index(action) -> cap_idx
     batch_catanatron_to_capstone(cat_indices) -> list[cap_idx]
@@ -144,6 +145,26 @@ def capstone_to_catanatron(cap_idx: int, playable_actions: List[Action]) -> int:
             "No playable maritime trade matches "
             f"give={give}, take={take}"
         )
+
+    raise ValueError(
+        f"No playable action matches Capstone action index {cap_idx}"
+    )
+
+
+def capstone_to_action(cap_idx: int, playable_actions: List[Action]) -> Action:
+    """Map a Capstone action index directly to an engine Action object.
+
+    Single-pass alternative to capstone_to_catanatron() followed by
+    catanatron_env.from_action_space().  Scans *playable_actions* once
+    and returns the matching Action without an intermediate index.
+    """
+    if cap_idx < 0 or cap_idx >= CAP_ACTION_SPACE_SIZE:
+        raise KeyError(f"Invalid Capstone action index: {cap_idx}")
+
+    desired_key = CAP_ACTIONS[cap_idx]
+    for action in playable_actions:
+        if _to_capstone_action_key_from_catan_action(action) == desired_key:
+            return action
 
     raise ValueError(
         f"No playable action matches Capstone action index {cap_idx}"

@@ -52,6 +52,23 @@ def test_gym():
     env.close()
 
 
+def test_valid_actions_accepted_by_step():
+    """Every index from get_valid_actions() should be accepted by step()."""
+    env = CapstoneCatanatronEnv()
+    _, info = env.reset(seed=42)
+
+    for _ in range(50):
+        valid = info["valid_actions"]
+        assert len(valid) > 0
+        action = valid[0]
+        _, reward, terminated, truncated, info = env.step(action)
+        assert reward != env.invalid_action_reward, (
+            f"Capstone index {action} was in valid_actions but rejected by step()"
+        )
+        if terminated or truncated:
+            break
+
+
 def test_gym_registration_and_api_works():
     env = gymnasium.make("catanatron/Catanatron-v0")
     observation, info = env.reset()
