@@ -355,6 +355,8 @@ def get_game_features(game, self_color: Color, opp_color: Color) -> list:
     si, oi = c2i[self_color], c2i[opp_color]
 
     turn_num = game.state.num_turns
+    is_player_2 = game.state.color_to_index[self_color] # NOTE -> works for 2 player game
+    
     dev_feats = _get_dev_card_features(game)
 
     self_res = [ps[f"P{si}_{r}_IN_HAND"] for r in RESOURCES]
@@ -389,6 +391,7 @@ def get_game_features(game, self_color: Color, opp_color: Color) -> list:
 
     return [
         turn_num / 100,
+        is_player_2,
         *dev_feats,
         self_can_place_sett, self_can_place_road, self_can_place_city,
         float(sa_road), float(sa_sett), float(sa_city), float(sa_dev),
