@@ -127,6 +127,28 @@ def normalize_action(action):
         return Action(action.color, action.action_type, None)
     elif normalized.action_type == ActionType.DISCARD:
         return Action(action.color, action.action_type, None)
+    elif (
+        normalized.action_type == ActionType.PLAY_YEAR_OF_PLENTY
+        and isinstance(action.value, tuple)
+        and len(action.value) == 1
+    ):
+        return Action(
+            action.color, action.action_type, (action.value[0], action.value[0])
+        )
+    elif normalized.action_type == ActionType.MARITIME_TRADE:
+        if len(action.value) == 5:
+            give_resource = action.value[0]
+            take_resource = action.value[4]
+        elif len(action.value) == 2:
+            give_resource = action.value[0]
+            take_resource = action.value[1]
+        else:
+            raise ValueError(
+                f"Unexpected MARITIME_TRADE value shape: {action.value}"
+            )
+        return Action(
+            action.color, action.action_type, (give_resource, take_resource)
+        )
 
     return normalized
 
