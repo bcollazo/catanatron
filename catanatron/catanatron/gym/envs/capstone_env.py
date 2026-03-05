@@ -66,6 +66,23 @@ def normalize_action(action):
         return Action(action.color, action.action_type, None)
     elif normalized.action_type == ActionType.DISCARD:
         return Action(action.color, action.action_type, None)
+    elif normalized.action_type == ActionType.MARITIME_TRADE:
+        # Accept both:
+        # - engine playable-actions format: (give, give, give/None, give/None, take)
+        # - capstone action-space format: (give, take)
+        if len(action.value) == 5:
+            give_resource = action.value[0]
+            take_resource = action.value[4]
+        elif len(action.value) == 2:
+            give_resource = action.value[0]
+            take_resource = action.value[1]
+        else:
+            raise ValueError(
+                f"Unexpected MARITIME_TRADE value shape: {action.value}"
+            )
+        return Action(
+            action.color, action.action_type, (give_resource, take_resource)
+        )
     return normalized
 
 
