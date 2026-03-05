@@ -13,7 +13,7 @@ class CapstoneAgent:
 
     def __init__(self):
 
-        self.model = CapstoneModel(obs_size=1257, hidden_size=512)
+        self.model = CapstoneModel(obs_size=1258, hidden_size=512)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyperparams.lr)
         self.buffer = RolloutBuffer()
         self.hyperparams = PPOHyperparams()

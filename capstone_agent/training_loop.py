@@ -2,7 +2,7 @@ from CapstoneAgent import CapstoneAgent
 import torch
 import gymnasium
 
-OBS_SIZE = 1257
+OBS_SIZE = 1258
 HIDDEN_SIZE = 512
 agent = CapstoneAgent(obs_size=OBS_SIZE, hidden_size=512)
 env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
