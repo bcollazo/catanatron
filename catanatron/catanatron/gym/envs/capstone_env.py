@@ -19,8 +19,8 @@ TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == LandTile]
 
 # TODO -> Ensure the new actions array is good to go
 
-# Our Rendition of the actions array (will need to translate them into actual actions)
-# 249 total actions
+# Our rendition of the Capstone action array.
+# 245 total actions
 ACTIONS_ARRAY = [
     # Road, Settlement, City building
     *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
@@ -159,7 +159,7 @@ class CapstoneCatanatronEnv(gym.Env):
         assert all(p.color != Color.BLUE for p in self.enemies)
         self.self_player = Player(Color.BLUE)
         self.opp_color = self.enemies[0].color
-        self.players = [self.self_player] + self.enemies[0]  # type: ignore
+        self.players = [self.self_player] + self.enemies
         self.representation = "vector"
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
@@ -182,6 +182,13 @@ class CapstoneCatanatronEnv(gym.Env):
         )
         return batch_catanatron_to_capstone(catanatron_indices)
 
+    def get_action_mask(self) -> np.ndarray:
+        """Binary mask of shape (ACTION_SPACE_SIZE,). 1 = valid, 0 = invalid."""
+        mask = np.zeros(ACTION_SPACE_SIZE, dtype=np.float64)
+        for idx in self.get_valid_actions():
+            mask[idx] = 1.0
+        return mask
+
     def step(self, action: int):
         try:
             catan_action = capstone_to_action(
@@ -192,28 +199,29 @@ class CapstoneCatanatronEnv(gym.Env):
 
             observation = self._get_observation()
             winning_color = self.game.winning_color()
-            # done = (
-            #     winning_color is not None
-            #     or self.invalid_actions_count > self.max_invalid_actions
-            # )
             terminated = winning_color is not None
             truncated = (
                 self.invalid_actions_count > self.max_invalid_actions
                 or self.game.state.num_turns >= TURNS_LIMIT
             )
-            info = dict(valid_actions=self.get_valid_actions())
+            info = dict(
+                valid_actions=self.get_valid_actions(),
+                action_mask=self.get_action_mask(),
+            )
             return observation, self.invalid_action_reward, terminated, truncated, info
 
         self.game.execute(catan_action)
         self._advance_until_self_decision()
 
         observation = self._get_observation()
-        info = dict(valid_actions=self.get_valid_actions())
-
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
         reward = self.reward_function(self.game, self.self_player.color)
+        info = dict(
+            valid_actions=self.get_valid_actions(),
+            action_mask=self.get_action_mask(),
+        )
 
         return observation, reward, terminated, truncated, info
 
@@ -241,7 +249,10 @@ class CapstoneCatanatronEnv(gym.Env):
         self._advance_until_self_decision()
 
         observation = self._get_observation()
-        info = dict(valid_actions=self.get_valid_actions())
+        info = dict(
+            valid_actions=self.get_valid_actions(),
+            action_mask=self.get_action_mask(),
+        )
 
         return observation, info
 
@@ -264,7 +275,7 @@ CapstoneCatanatronEnv.__doc__ = f"""
 
 Attributes:
     reward_range: -1 if player lost, 1 if player won, 0 otherwise.
-    action_space: Integers from the [0, 289] interval. 
+    action_space: Integers from the [0, 244] interval.
         See Action Space table below.
     observation_space: Numeric Feature Vector. See Observation Space table 
         below for quantities. They appear in vector in alphabetical order,
