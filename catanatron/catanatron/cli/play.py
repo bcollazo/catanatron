@@ -230,6 +230,25 @@ def rich_color(color):
     return f"[{style}]{color.value}[/{style}]"
 
 
+def _write_training_data_csvs(games, observations_by_game):
+    """Write observation + action data for each game to Training_data/{game_id}.csv."""
+    import pandas as pd
+
+    training_data_dir = "Training_data" #PUT IN DESTINATION FOR THE (OBSERVATION, ACTION) CSV RESULTS HERE
+    ensure_dir(training_data_dir)
+    for i, game in enumerate(games):
+        if i >= len(observations_by_game):
+            break
+        rows = observations_by_game[i]
+        if not rows:
+            continue
+        num_features = len(rows[0][0])
+        columns = [f"OBS_{j}" for j in range(num_features)] + ["ACTION"]
+        data = [obs + [action_idx] for obs, action_idx in rows]
+        df = pd.DataFrame(data, columns=columns)
+        df.to_csv(os.path.join(training_data_dir, f"{game.id}.csv"), index=False)
+
+
 def play_batch_core(num_games, players, game_config, accumulators=[]):
     for accumulator in accumulators:
         if isinstance(accumulator, SimulationAccumulator):
@@ -259,6 +278,7 @@ def play_batch(
     output_options=None,
     game_config=None,
     quiet=False,
+    include_observations=True,
 ):
     output_options = output_options or OutputOptions()
     game_config = game_config or GameConfigOptions()
@@ -266,6 +286,12 @@ def play_batch(
     statistics_accumulator = StatisticsAccumulator()
     vp_accumulator = VpDistributionAccumulator()
     accumulators = [statistics_accumulator, vp_accumulator]
+
+    if include_observations:
+        from catanatron.gym.accumulators import CapstoneObservationAccumulator
+
+        observation_accumulator = CapstoneObservationAccumulator()
+        accumulators.append(observation_accumulator)
     if output_options.output:
         ensure_dir(output_options.output)
     if output_options.output:
@@ -305,6 +331,17 @@ def play_batch(
     if quiet:
         for _ in play_batch_core(num_games, players, game_config, accumulators):
             pass
+        if include_observations:
+            _write_training_data_csvs(
+                statistics_accumulator.games,
+                observation_accumulator.observations_by_game,
+            )
+            return (
+                dict(statistics_accumulator.wins),
+                dict(statistics_accumulator.results_by_player),
+                statistics_accumulator.games,
+                observation_accumulator.observations_by_game,
+            )
         return (
             dict(statistics_accumulator.wins),
             dict(statistics_accumulator.results_by_player),
@@ -444,6 +481,17 @@ def play_batch(
             f"{output_options.output_format} files saved at: [green]{output_options.output}[/green]"
         )
 
+    if include_observations:
+        _write_training_data_csvs(
+            statistics_accumulator.games,
+            observation_accumulator.observations_by_game,
+        )
+        return (
+            dict(statistics_accumulator.wins),
+            dict(statistics_accumulator.results_by_player),
+            statistics_accumulator.games,
+            observation_accumulator.observations_by_game,
+        )
     return (
         dict(statistics_accumulator.wins),
         dict(statistics_accumulator.results_by_player),

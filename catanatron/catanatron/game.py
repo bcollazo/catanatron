@@ -71,6 +71,13 @@ class GameAccumulator:
         """
         pass
 
+    def step_after(self, game_after_action, action):
+        """
+        Called after each action has been applied.
+        Game state reflects the board after the action.
+        """
+        pass
+
     def after(self, game):
         """
         Called when the game is finished.
@@ -165,8 +172,18 @@ class Game:
                 accumulator.step(self, action)
 
         # Apply Action, and do Move Generation
-        return self.execute(action)
+        action_record = self.execute(action)
 
+        # Call accumulator.step_after with game state after the action
+        if len(accumulators) > 0:
+            for accumulator in accumulators:
+                accumulator.step_after(self, action)
+
+        return action_record 
+        #TODO RECORD BOARD STATE, record what action # it is (record what action # it is rather than the json written version). gamestate is where all game version types are derived
+        #actions and actions index type translator is in capstone_env line 24 (actions_array)
+        #run record from get_capstone_observation and run actionRecord.action through to_action_space to get corresponding index. so now we want the get_capstone_obs output along with the corersponding action number all in a csv
+    
     def execute(
         self,
         action: Action,

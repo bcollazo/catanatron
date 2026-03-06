@@ -11,6 +11,7 @@ from catanatron.models.player import Color
 from catanatron.models.enums import Action, ActionType
 from catanatron.state_functions import get_longest_road_length, get_state_index
 from catanatron.state import State
+from catanatron.apply_action import apply_action
 
 
 def longest_roads_by_player(state: State):
@@ -121,3 +122,51 @@ class GameEncoder(json.JSONEncoder):
                 "number": obj.number,
             }
         return json.JSONEncoder.default(self, obj)
+
+
+def fullstate_GameEncoder(game: Game):
+    """Return a list of encoded board states, one after each action.
+
+    The first element corresponds to the initial state *before* any actions
+    have been applied. Each subsequent element is the result of replaying
+    the next recorded action on a freshly reconstructed State that shares
+    the same map, players, and victory-point configuration as ``game``.
+
+    This function is intended for analysis / visualization tooling that
+    needs a JSON-serializable snapshot of the board and player state at
+    every step of the game, rather than only the final state plus the
+    action log.
+    """
+    # Reconstruct an initial State that matches the logical start of the game.
+    # We use the existing players, map and discard limit; randomness-dependent
+    # events (dice rolls, dev-card draws, discards, robber steals) are replayed
+    # deterministically from the stored ActionRecords via apply_action's
+    # ``action_record`` parameter.
+    initial_state = State(
+        players=game.state.players,
+        catan_map=game.state.board.map,
+        discard_limit=game.state.discard_limit,
+    )
+
+    replay_game = Game(players=[], initialize=False)
+    replay_game.seed = getattr(game, "seed", None)
+    replay_game.id = game.id
+    replay_game.vps_to_win = game.vps_to_win
+    replay_game.state = initial_state
+    # We don't need accurate playable_actions for encoding board snapshots;
+    # leave it empty to avoid errors during initial build-phase replay.
+    replay_game.playable_actions = []
+
+    encoder = GameEncoder()
+    snapshots = []
+
+    # State before any actions.
+    snapshots.append(encoder.default(replay_game))
+
+    # Apply each recorded action using its stored result to ensure
+    # deterministic replay, capturing the board/state after each step.
+    for action_record in game.state.action_records:
+        apply_action(replay_game.state, action_record.action, action_record)
+        snapshots.append(encoder.default(replay_game))
+
+    return snapshots
