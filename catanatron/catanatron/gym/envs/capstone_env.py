@@ -1,6 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+from random import shuffle
 
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
@@ -8,6 +9,9 @@ from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
 from catanatron.gym.envs.capstone_features import get_capstone_observation
+from catanatron.gym.envs.catanatron_env import (
+    to_action_space as to_catanatron_action_space,
+)
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
@@ -48,6 +52,13 @@ ACTIONS_ARRAY = [
 ACTION_SPACE_SIZE = len(ACTIONS_ARRAY)
 ACTION_TYPES = [i for i in ActionType]
 
+# Imported after ACTIONS_ARRAY is defined to break the circular dependency
+# (action_translator imports ACTIONS_ARRAY from this module at load time).
+from catanatron.gym.envs.action_translator import (  # noqa: E402
+    batch_catanatron_to_capstone,
+    capstone_to_action,
+)
+
 
 def to_action_type_space(action_type: ActionType) -> int:
     return ACTION_TYPES.index(action_type)
@@ -66,6 +77,15 @@ def normalize_action(action):
         return Action(action.color, action.action_type, None)
     elif normalized.action_type == ActionType.DISCARD:
         return Action(action.color, action.action_type, None)
+    elif (
+        normalized.action_type == ActionType.PLAY_YEAR_OF_PLENTY
+        and isinstance(action.value, tuple)
+        and len(action.value) == 1
+    ):
+        # Capstone action space only encodes two-card YOP choices.
+        return Action(
+            action.color, action.action_type, (action.value[0], action.value[0])
+        )
     elif normalized.action_type == ActionType.MARITIME_TRADE:
         # Accept both:
         # - engine playable-actions format: (give, give, give/None, give/None, take)
@@ -111,9 +131,9 @@ def from_action_space(action_int, playable_actions):
 
 
 # TODO -> need to come up with our own reward scheme
-def simple_reward(game, p0_color):
+def simple_reward(game, self_color):
     winning_color = game.winning_color()
-    if p0_color == winning_color:
+    if self_color == winning_color:
         return 1
     elif winning_color is None:
         return 0
@@ -121,8 +141,8 @@ def simple_reward(game, p0_color):
         return -1
 
 
-# hex(114) + vertex(756) + edge(288) + hand(27) + strategic(44) + game(28)
-OBSERVATION_SIZE = 1257
+# hex(114) + vertex(756) + edge(288) + hand(27) + strategic(44) + game(29)
+OBSERVATION_SIZE = 1258
 
 
 class CapstoneCatanatronEnv(gym.Env):
@@ -137,9 +157,9 @@ class CapstoneCatanatronEnv(gym.Env):
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
 
         assert all(p.color != Color.BLUE for p in self.enemies)
-        self.p0 = Player(Color.BLUE)
+        self.self_player = Player(Color.BLUE)
         self.opp_color = self.enemies[0].color
-        self.players = [self.p0] + self.enemies  # type: ignore
+        self.players = [self.self_player] + self.enemies[0]  # type: ignore
         self.representation = "vector"
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
@@ -155,24 +175,27 @@ class CapstoneCatanatronEnv(gym.Env):
     def get_valid_actions(self):
         """
         Returns:
-            List[int]: valid actions
+            List[int]: valid actions in capstone action-space indices
         """
-        # TODO -> this is going to need to be rewritten/morphed from playable actions
-        return list(map(to_action_space, self.game.playable_actions))
+        catanatron_indices = list(
+            map(to_catanatron_action_space, self.game.playable_actions)
+        )
+        return batch_catanatron_to_capstone(catanatron_indices)
 
     def step(self, action: int):
-        # TODO -> e3nsure our own action space is working in here
         try:
-            catan_action = from_action_space(action, self.game.playable_actions)
+            catan_action = capstone_to_action(
+                action, self.game.playable_actions
+            )
         except Exception as e:
             self.invalid_actions_count += 1
 
             observation = self._get_observation()
             winning_color = self.game.winning_color()
-            done = (
-                winning_color is not None
-                or self.invalid_actions_count > self.max_invalid_actions
-            )
+            # done = (
+            #     winning_color is not None
+            #     or self.invalid_actions_count > self.max_invalid_actions
+            # )
             terminated = winning_color is not None
             truncated = (
                 self.invalid_actions_count > self.max_invalid_actions
@@ -182,7 +205,7 @@ class CapstoneCatanatronEnv(gym.Env):
             return observation, self.invalid_action_reward, terminated, truncated, info
 
         self.game.execute(catan_action)
-        self._advance_until_p0_decision()
+        self._advance_until_self_decision()
 
         observation = self._get_observation()
         info = dict(valid_actions=self.get_valid_actions())
@@ -190,7 +213,7 @@ class CapstoneCatanatronEnv(gym.Env):
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
-        reward = self.reward_function(self.game, self.p0.color)
+        reward = self.reward_function(self.game, self.self_player.color)
 
         return observation, reward, terminated, truncated, info
 
@@ -204,6 +227,9 @@ class CapstoneCatanatronEnv(gym.Env):
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
+
+        # randomize the order of the players
+        shuffle(self.players)
         self.game = Game(
             players=self.players,
             seed=seed,
@@ -212,7 +238,7 @@ class CapstoneCatanatronEnv(gym.Env):
         )
         self.invalid_actions_count = 0
 
-        self._advance_until_p0_decision()
+        self._advance_until_self_decision()
 
         observation = self._get_observation()
         info = dict(valid_actions=self.get_valid_actions())
@@ -221,14 +247,14 @@ class CapstoneCatanatronEnv(gym.Env):
 
     def _get_observation(self) -> np.ndarray:
         features = get_capstone_observation(
-            self.game, self.p0.color, self.opp_color
+            self.game, self.self_player.color, self.opp_color
         )
         return np.array(features, dtype=np.float64)
 
-    def _advance_until_p0_decision(self):
+    def _advance_until_self_decision(self):
         while (
             self.game.winning_color() is None
-            and self.game.state.current_color() != self.p0.color
+            and self.game.state.current_color() != self.self_player.color
         ):
             self.game.play_tick()  # will play bot
 
@@ -243,7 +269,7 @@ Attributes:
     observation_space: Numeric Feature Vector. See Observation Space table 
         below for quantities. They appear in vector in alphabetical order,
         from the perspective of "current" player (hiding/showing information
-        accordingly). P0 is "current" player. P1 is next in line.
+        accordingly). self is "current" player. P1 is next in line.
         
         We use the following nomenclature for Tile ids and Node ids.
         Edge ids are self-describing (node-id, node-id) tuples. We also
