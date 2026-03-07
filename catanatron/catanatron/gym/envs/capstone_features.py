@@ -425,6 +425,26 @@ def _get_dev_card_features(game):
     ]
     return [pct_remaining, *pct_played]
 
+def _get_dev_cards_bought(ps, si):
+        """Track total dev cards ever purchased (in hand + already played).
+            USED IN CAPSTONE REWARD CLASS
+        """
+        in_hand = (
+            ps[f"P{si}_KNIGHT_IN_HAND"] +
+            ps[f"P{si}_YEAR_OF_PLENTY_IN_HAND"] +
+            ps[f"P{si}_MONOPOLY_IN_HAND"] +
+            ps[f"P{si}_ROAD_BUILDING_IN_HAND"] +
+            ps[f"P{si}_VICTORY_POINT_IN_HAND"]
+        )
+        already_played = (
+            ps[f"P{si}_PLAYED_KNIGHT"] +
+            ps[f"P{si}_PLAYED_YEAR_OF_PLENTY"] +
+            ps[f"P{si}_PLAYED_MONOPOLY"] +
+            ps[f"P{si}_PLAYED_ROAD_BUILDING"]
+            # VP cards are never "played" so no need to add them
+        )
+        return in_hand + already_played
+
 
 def get_game_features(game, self_color: Color, opp_color: Color) -> list:
 
@@ -441,6 +461,7 @@ def get_game_features(game, self_color: Color, opp_color: Color) -> list:
             - 4x opp can afford: road, settlement, city, dev
             - 4x opp pct afforded: road, settlement, city, dev
     """
+    
     ps = game.state.player_state
     c2i = game.state.color_to_index
     si, oi = c2i[self_color], c2i[opp_color]
