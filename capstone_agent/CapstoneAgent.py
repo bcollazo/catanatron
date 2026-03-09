@@ -2,6 +2,7 @@ from CapstoneModel import CapstoneModel
 from RolloutBuffer import RolloutBuffer
 from PPOHyperparams import PPOHyperparams
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
@@ -83,11 +84,17 @@ class CapstoneAgent:
         """
         advantages, returns = self.compute_advantages(last_value)
 
-        # Convert buffer to tensors
-        states    = torch.FloatTensor(self.buffer.states)
-        masks     = torch.FloatTensor(self.buffer.masks)
-        actions   = torch.LongTensor(self.buffer.actions)
-        old_log_probs = torch.FloatTensor(self.buffer.log_probs)
+        # Convert rollout lists to contiguous arrays first to avoid slow
+        # tensor-from-list-of-ndarrays construction.
+        states_np = np.asarray(self.buffer.states, dtype=np.float32)
+        masks_np = np.asarray(self.buffer.masks, dtype=np.float32)
+        actions_np = np.asarray(self.buffer.actions, dtype=np.int64)
+        old_log_probs_np = np.asarray(self.buffer.log_probs, dtype=np.float32)
+
+        states = torch.from_numpy(states_np)
+        masks = torch.from_numpy(masks_np)
+        actions = torch.from_numpy(actions_np)
+        old_log_probs = torch.from_numpy(old_log_probs_np)
 
         # PPO trains multiple epochs on the SAME rollout
         for epoch in range(self.hyperparams.epochs):
