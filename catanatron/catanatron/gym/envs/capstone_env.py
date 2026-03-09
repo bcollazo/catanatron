@@ -1,7 +1,6 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-from random import shuffle
 
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
@@ -12,15 +11,14 @@ from catanatron.gym.envs.capstone_features import get_capstone_observation
 from catanatron.gym.envs.catanatron_env import (
     to_action_space as to_catanatron_action_space,
 )
+from catanatron.gym.envs.CapstoneReward import CapstoneReward
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
 TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == LandTile]
 
-# TODO -> Ensure the new actions array is good to go
-
-# Our rendition of the Capstone action array.
-# 245 total actions
+# Our Rendition of the actions array (will need to translate them into actual actions)
+# 249 total actions
 ACTIONS_ARRAY = [
     # Road, Settlement, City building
     *[(ActionType.BUILD_ROAD, tuple(sorted(edge))) for edge in get_edges()],
@@ -129,18 +127,6 @@ def from_action_space(action_int, playable_actions):
     return catan_action
 
 
-
-# TODO -> need to come up with our own reward scheme
-def simple_reward(game, self_color):
-    winning_color = game.winning_color()
-    if self_color == winning_color:
-        return 1
-    elif winning_color is None:
-        return 0
-    else:
-        return -1
-
-
 # hex(114) + vertex(756) + edge(288) + hand(27) + strategic(44) + game(29)
 OBSERVATION_SIZE = 1258
 
@@ -151,7 +137,8 @@ class CapstoneCatanatronEnv(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", simple_reward)
+        self.reward_function = self.config.get("reward_function", "full")
+        self.reward_manager = CapstoneReward(self.reward_function)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
@@ -217,7 +204,7 @@ class CapstoneCatanatronEnv(gym.Env):
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
-        reward = self.reward_function(self.game, self.self_player.color)
+        reward = self.reward_manager.reward(self.game, self.self_player.color)
         info = dict(
             valid_actions=self.get_valid_actions(),
             action_mask=self.get_action_mask(),
@@ -236,8 +223,6 @@ class CapstoneCatanatronEnv(gym.Env):
         for player in self.players:
             player.reset_state()
 
-        # randomize the order of the players
-        shuffle(self.players)
         self.game = Game(
             players=self.players,
             seed=seed,
@@ -247,6 +232,8 @@ class CapstoneCatanatronEnv(gym.Env):
         self.invalid_actions_count = 0
 
         self._advance_until_self_decision()
+
+        self.reward_manager.reset(self.game, self.self_player.color)
 
         observation = self._get_observation()
         info = dict(
