@@ -11,12 +11,12 @@ class CapstoneAgent:
 
     # Use PPO to train a model
 
-    def __init__(self):
+    def __init__(self, obs_size=1258, hidden_size=512):
 
-        self.model = CapstoneModel(obs_size=1258, hidden_size=512)
+        self.hyperparams = PPOHyperparams()
+        self.model = CapstoneModel(obs_size=obs_size, hidden_size=hidden_size)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyperparams.lr)
         self.buffer = RolloutBuffer()
-        self.hyperparams = PPOHyperparams()
 
 
     def select_action(self, state, mask):

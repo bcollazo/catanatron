@@ -8,11 +8,11 @@ class CapstoneModel(torch.nn.Module):
     ROBBER_ACTION_SIZE = 19
     VERTEX_ACTION_SIZE = 54
     EDGE_ACTION_SIZE = 72
-    PLAY_DEV_ACTION_SIZE = 5 # Buy Dev + 4 dev cards to play
+    PLAY_DEV_ACTION_SIZE = 3 # Buy Dev, Play Knight, Play Road Building
     TRADING_ACTION_SIZE = 20
     NUM_RESOURCES = 5
     NUM_RESOURCE_PAIRS = 15
-    TURN_MANAGEMENT_ACTION_SIZE = 3 # Roll, End Turn, Discard
+    TURN_MANAGEMENT_ACTION_SIZE = 3 # Discard, End Turn, Roll (see action_map.py)
 
 
     def __init__(self, obs_size, hidden_size):
@@ -153,19 +153,32 @@ class CapstoneModel(torch.nn.Module):
         # Policy head
         x = self.full_policy_head(x)
 
-        robber = self.robber_policy_head(x)
-        settlement= self.settlement_vertex_policy_head(x)
-        city = self.city_vertex_policy_head(x)
         road = self.edge_policy_head(x)
+        settlement = self.settlement_vertex_policy_head(x)
+        city = self.city_vertex_policy_head(x)
+        robber = self.robber_policy_head(x)
         dev_card = self.dev_card_policy_head(x)
         trading = self.trading_policy_head(x)
         monopoly_resource = self.monopoly_resource_head(x)
         yop_resource = self.yop_resource_head(x)
         turn_management = self.turn_management_head(x)
 
+        # Concatenation order must match ACTIONS_ARRAY in capstone_env.py:
+        # road(72), settlement(54), city(54), robber(19), discard(1),
+        # maritime_trade(20), buy_dev+knight+road_building(3), yop(15),
+        # monopoly(5), end_turn(1), roll(1) = 245 total
         policy_logits = torch.cat([
-            robber, settlement, city, road, dev_card, 
-            trading, monopoly_resource, yop_resource, turn_management
+            road,
+            settlement,
+            city,
+            robber,
+            turn_management[..., 0:1],   # discard
+            trading,
+            dev_card,                     # buy_dev, knight, road_building
+            yop_resource,
+            monopoly_resource,
+            turn_management[..., 1:2],   # end_turn
+            turn_management[..., 2:3],   # roll
         ], dim=-1)
 
         # ensure mask is on right device
