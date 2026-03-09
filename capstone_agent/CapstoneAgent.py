@@ -128,7 +128,8 @@ class CapstoneAgent:
                 ).mean()
 
                 # --- Critic Loss ---
-                critic_loss = nn.MSELoss()(values.squeeze(), b_returns) # Estimated Values against the true rewards (Advantage + Est value)
+                # Keep both tensors 1D to avoid scalar-vs-vector broadcasting when batch size is 1.
+                critic_loss = nn.MSELoss()(values.view(-1), b_returns.view(-1))
 
                 # --- Total Loss ---
                 loss = (
