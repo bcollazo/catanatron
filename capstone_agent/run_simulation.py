@@ -15,6 +15,8 @@ Usage:
 import sys
 import os
 import argparse
+import csv
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -32,6 +34,8 @@ import catanatron.gym
 OBS_SIZE = 1258
 HIDDEN_SIZE = 512
 MAX_STEPS_PER_GAME = 5000
+DEFAULT_MODEL_PATH = "capstone_agent/capstone_model.pt"
+DEFAULT_BENCHMARK_CSV = "capstone_agent/benchmarks/training_metrics.csv"
 
 
 @dataclass
@@ -46,6 +50,40 @@ class GameResult:
     @property
     def done(self):
         return self.terminated or self.truncated
+
+
+class BenchmarkLogger:
+    HEADER = [
+        "timestamp_utc",
+        "run_name",
+        "mode",
+        "loaded_model_path",
+        "game_index",
+        "games_total",
+        "status",
+        "won",
+        "terminated",
+        "truncated",
+        "steps",
+        "reward",
+        "cum_wins",
+        "cum_losses",
+        "cum_truncations",
+        "cum_win_rate",
+    ]
+
+    def __init__(self, csv_path: str):
+        self.csv_path = csv_path
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        if not os.path.exists(csv_path):
+            with open(csv_path, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(self.HEADER)
+
+    def write_row(self, row: dict):
+        with open(self.csv_path, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=self.HEADER)
+            writer.writerow(row)
 
 
 def simulate_game(
@@ -155,15 +193,52 @@ def main():
         "--load", type=str, default=None, help="Path to saved model weights"
     )
     parser.add_argument(
-        "--save", type=str, default=None,
-        help="Path to save model weights after all games (only with --train)",
+        "--save", type=str, default=DEFAULT_MODEL_PATH,
+        help=(
+            "Path to save model weights after all games. "
+            "In --train mode, this path is auto-used for resume if it already exists."
+        ),
+    )
+    parser.add_argument(
+        "--fresh-start",
+        action="store_true",
+        help="Ignore existing saved weights and train from scratch.",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default=None,
+        help="Optional benchmark run label. Defaults to timestamp-based name.",
+    )
+    parser.add_argument(
+        "--benchmark-csv",
+        type=str,
+        default=DEFAULT_BENCHMARK_CSV,
+        help="CSV path for per-game benchmark logs.",
+    )
+    parser.add_argument(
+        "--no-benchmark",
+        action="store_true",
+        help="Disable benchmark CSV logging.",
     )
     args = parser.parse_args()
 
-    agent, env = make_agent_and_env(model_path=args.load)
+    loaded_model_path = args.load
+    if args.train and not args.fresh_start:
+        # Resume behavior: if no explicit --load, and --save already exists, continue from it.
+        if loaded_model_path is None and args.save and os.path.exists(args.save):
+            loaded_model_path = args.save
+            print(f"Resuming training from existing weights: {loaded_model_path}")
+
+    agent, env = make_agent_and_env(model_path=loaded_model_path)
     params = sum(p.numel() for p in agent.model.parameters())
     print(f"Agent ready  ({params:,} params, obs={OBS_SIZE}, actions=245)")
     print()
+
+    run_name = args.run_name or datetime.now(timezone.utc).strftime(
+        "run_%Y%m%dT%H%M%SZ"
+    )
+    benchmark = None if args.no_benchmark else BenchmarkLogger(args.benchmark_csv)
 
     wins, losses, truncations = 0, 0, 0
 
@@ -183,8 +258,32 @@ def main():
             f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}"
         )
 
+        if benchmark is not None:
+            benchmark.write_row(
+                {
+                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                    "run_name": run_name,
+                    "mode": "train" if args.train else "eval",
+                    "loaded_model_path": loaded_model_path or "",
+                    "game_index": g,
+                    "games_total": args.games,
+                    "status": status,
+                    "won": int(result.won),
+                    "terminated": int(result.terminated),
+                    "truncated": int(result.truncated),
+                    "steps": result.steps,
+                    "reward": float(result.cumulative_reward),
+                    "cum_wins": wins,
+                    "cum_losses": losses,
+                    "cum_truncations": truncations,
+                    "cum_win_rate": float(wins / g),
+                }
+            )
+
     print()
     print(f"Results: {wins}W / {losses}L / {truncations}T  ({args.games} games)")
+    if benchmark is not None:
+        print(f"Benchmarks logged to: {args.benchmark_csv} (run_name={run_name})")
 
     if args.train and args.save:
         agent.save(args.save)
