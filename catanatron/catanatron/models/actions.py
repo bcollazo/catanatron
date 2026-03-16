@@ -39,10 +39,16 @@ from catanatron.state_functions import (
     player_key,
     player_num_resource_cards,
     player_resource_freqdeck_contains,
+    get_actual_victory_points,
 )
 
 
 def generate_playable_actions(state: State) -> List[Action]:
+    # If someone won, no more actions.
+    for color in state.colors:
+        if get_actual_victory_points(state, color) >= state.vps_to_win:
+            return []
+
     action_prompt = state.current_prompt
     color = state.current_color()
 

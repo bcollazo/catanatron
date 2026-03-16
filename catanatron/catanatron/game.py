@@ -118,6 +118,12 @@ class Game:
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
             self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.state = State(
+                players,
+                catan_map,
+                discard_limit=discard_limit,
+                vps_to_win=vps_to_win,
+            )
             self.playable_actions = generate_playable_actions(self.state)
 
     def play(self, accumulators=[], decide_fn=None):
