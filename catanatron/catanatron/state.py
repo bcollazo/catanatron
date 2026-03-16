@@ -89,12 +89,14 @@ class State:
         catan_map=None,
         discard_limit=7,
         initialize=True,
+        restrict_dice_to_board=False,
     ):
         if initialize:
             self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit
+            self.restrict_dice_to_board = restrict_dice_to_board
 
             # feature-ready dictionary
             self.player_state = dict()
@@ -184,4 +186,5 @@ class State:
         state_copy.current_trade = self.current_trade
         state_copy.acceptees = self.acceptees
 
+        state_copy.restrict_dice_to_board = self.restrict_dice_to_board
         return state_copy

@@ -235,6 +235,7 @@ class CatanatronEnv(gym.Env):
             seed=seed,
             catan_map=catan_map,
             vps_to_win=self.vps_to_win,
+            restrict_dice_to_board=self.config.get("restrict_dice_to_board", False),
         )
         self.invalid_actions_count = 0
 

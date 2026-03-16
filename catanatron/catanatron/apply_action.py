@@ -261,7 +261,18 @@ def apply_roll(state: State, action: Action, action_record=None):
     key = player_key(state, action.color)
     state.player_state[f"{key}_HAS_ROLLED"] = True
 
-    dices = action_record.result if action_record is not None else roll_dice()
+    if action_record is not None:
+        dices = action_record.result
+    elif state.restrict_dice_to_board:
+        allowed = state.board.map.land_tile_numbers
+        allowed.add(7)
+        while True:
+            dices = roll_dice()
+            if sum(dices) in allowed:
+                break
+    else:
+        dices = roll_dice()
+
     number = dices[0] + dices[1]
     action = Action(action.color, action.action_type, dices)
 
