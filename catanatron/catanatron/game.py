@@ -100,6 +100,7 @@ class Game:
         vps_to_win: int = 10,
         catan_map: Optional[CatanMap] = None,
         initialize: bool = True,
+        restrict_dice_to_board: bool = False,
     ):
         """Creates a game (doesn't run it).
 
@@ -110,6 +111,7 @@ class Game:
             vps_to_win (int, optional): Victory Points needed to win. Defaults to 10.
             catan_map (CatanMap, optional): Map to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
+            restrict_dice_to_board (bool, optional): Whether to restrict rolls to board numbers. Defaults to False.
         """
         if initialize:
             self.seed = seed if seed is not None else random.randrange(sys.maxsize)
@@ -117,7 +119,12 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
-            self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.state = State(
+                players,
+                catan_map,
+                discard_limit=discard_limit,
+                restrict_dice_to_board=restrict_dice_to_board,
+            )
             self.playable_actions = generate_playable_actions(self.state)
 
     def play(self, accumulators=[], decide_fn=None):
