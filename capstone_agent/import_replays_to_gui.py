@@ -135,7 +135,23 @@ def import_replay_json(
             game.execute(action, validate_action=False, action_record=action_record)
             upsert_game_state(game, session)
 
-    return game_id, len(payload["action_records"]) + 1
+    action_count = len(payload["action_records"])
+    winning_color = payload.get("winning_color")
+    if winning_color is None:
+        result_label = "IN_PROGRESS"
+    else:
+        result_label = f"WINNER_{winning_color}"
+
+    return {
+        "file": json_path.name,
+        "game_id": game_id,
+        "actions": action_count,
+        "states": action_count + 1,
+        "winner": winning_color,
+        "result": result_label,
+        "state_index": payload.get("state_index"),
+        "url": f"http://localhost:3000/replays/{game_id}",
+    }
 
 
 def main():
@@ -184,22 +200,41 @@ def main():
         raise SystemExit(f"No files matched {args.glob!r} in {input_dir}")
 
     imported = 0
+    imported_rows: list[dict] = []
+    failed_rows: list[tuple[str, str]] = []
     for path in paths:
         try:
-            game_id, states = import_replay_json(
+            row = import_replay_json(
                 path,
                 replace_existing=not args.no_replace,
                 id_prefix=args.id_prefix,
             )
             imported += 1
+            imported_rows.append(row)
             print(
-                f"[{imported}/{len(paths)}] imported {path.name} -> "
-                f"http://localhost:3000/replays/{game_id} ({states} states)"
+                f"[{imported}/{len(paths)}] imported {row['file']} -> "
+                f"{row['url']} ({row['states']} states, result={row['result']})"
             )
         except Exception as exc:
+            failed_rows.append((path.name, str(exc)))
             print(f"[ERROR] {path.name}: {exc}")
 
     print(f"Done. Imported {imported}/{len(paths)} replay file(s).")
+
+    if imported_rows:
+        print("\nImported Replay Links:")
+        for row in imported_rows:
+            print(
+                f"- {row['file']} | result={row['result']} | "
+                f"winner={row['winner']} | actions={row['actions']} | "
+                f"states={row['states']} | state_index={row['state_index']} | "
+                f"{row['url']}"
+            )
+
+    if failed_rows:
+        print("\nFailed Imports:")
+        for file_name, error in failed_rows:
+            print(f"- {file_name} | error={error}")
 
 
 if __name__ == "__main__":

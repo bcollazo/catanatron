@@ -145,6 +145,8 @@ class CapstoneCatanatronEnv(gym.Env):
 
         assert all(p.color != Color.BLUE for p in self.enemies)
         self.self_player = Player(Color.BLUE)
+        # Tag our controlled policy so GUI action logs can distinguish it from other bots.
+        self.self_player.ui_label = "BOT (US)"
         self.opp_color = self.enemies[0].color
         self.players = [self.self_player] + self.enemies
         self.representation = "vector"

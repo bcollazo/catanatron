@@ -16,7 +16,9 @@ export function humanizeActionRecord(
 ) {
   const botColors = gameState.bot_colors;
   const action = actionRecord[0];
-  const player = botColors.includes(action[0]) ? "BOT" : "YOU";
+  const player = botColors.includes(action[0])
+    ? gameState.bot_labels?.[action[0]] ?? "BOT"
+    : "YOU";
   switch (actionRecord[0][1]) {
     case "ROLL": {
       const action = actionRecord[1] as [number, number];

@@ -93,6 +93,11 @@ class GameEncoder(json.JSONEncoder):
                         lambda p: p.color, filter(lambda p: p.is_bot, obj.state.players)
                     )
                 ),
+                "bot_labels": {
+                    p.color.value: getattr(p, "ui_label", "BOT")
+                    for p in obj.state.players
+                    if p.is_bot
+                },
                 "is_initial_build_phase": obj.state.is_initial_build_phase,
                 "robber_coordinate": obj.state.board.robber_coordinate,
                 "current_color": obj.state.current_color(),
