@@ -58,6 +58,33 @@ catanatron-play --num 100 --output my-data-path/ --output-format json
 
 See more examples at https://docs.catanatron.com.
 
+### Capstone RL Training (Resume + Sparse Replays)
+
+Train the Capstone PPO agent while continuing from existing weights and saving
+GUI-replay JSONs for the first game of each 100-game block:
+
+```bash
+python capstone_agent/run_simulation.py \
+  --games 100 \
+  --train \
+  --save capstone_agent/capstone_model.pt \
+  --run-name iter_full \
+  --save-games-json-dir capstone_agent/replays/iter_full
+```
+
+Run this command repeatedly (or in a loop) to keep training on top of the
+latest checkpoint. By default, replay JSON saving is sparse (`1/100`).
+
+Import saved replay JSONs into the GUI database so they are step-through
+clickable in the web app:
+
+```bash
+python capstone_agent/import_replays_to_gui.py \
+  --input-dir capstone_agent/replays/iter_full
+```
+
+Then open `http://localhost:3000/replays/<game_id>` (printed by the importer).
+
 
 ## Graphical User Interface
 
