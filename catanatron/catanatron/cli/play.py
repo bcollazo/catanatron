@@ -230,9 +230,9 @@ def rich_color(color):
     return f"[{style}]{color.value}[/{style}]"
 
 
-def _write_training_data_csvs(games, observations_by_game):
-    """Write observation + action data for each game to Training_data/{game_id}.csv."""
-    import pandas as pd
+def _write_training_data_pickle(games, observations_by_game):
+    """Write observation + action data for each game to Training_data/{game_id}.pkl."""
+    import pickle
 
     training_data_dir = "Training_data" #PUT IN DESTINATION FOR THE (OBSERVATION, ACTION) CSV RESULTS HERE
     ensure_dir(training_data_dir)
@@ -242,11 +242,11 @@ def _write_training_data_csvs(games, observations_by_game):
         rows = observations_by_game[i]
         if not rows:
             continue
-        num_features = len(rows[0][0])
-        columns = [f"OBS_{j}" for j in range(num_features)] + ["ACTION"]
-        data = [obs + [action_idx] for obs, action_idx in rows]
-        df = pd.DataFrame(data, columns=columns)
-        df.to_csv(os.path.join(training_data_dir, f"{game.id}.csv"), index=False)
+        # Each row is (observation_list, action_index); pickle as list of (obs, action)
+        data = [(obs, action_idx) for obs, action_idx in rows]
+        filepath = os.path.join(training_data_dir, f"{game.id}.pkl")
+        with open(filepath, "wb") as f:
+            pickle.dump(data, f)
 
 
 def play_batch_core(num_games, players, game_config, accumulators=[]):
@@ -332,7 +332,7 @@ def play_batch(
         for _ in play_batch_core(num_games, players, game_config, accumulators):
             pass
         if include_observations:
-            _write_training_data_csvs(
+            _write_training_data_pickle(
                 statistics_accumulator.games,
                 observation_accumulator.observations_by_game,
             )
@@ -482,7 +482,7 @@ def play_batch(
         )
 
     if include_observations:
-        _write_training_data_csvs(
+        _write_training_data_pickle(
             statistics_accumulator.games,
             observation_accumulator.observations_by_game,
         )
@@ -501,3 +501,13 @@ def play_batch(
 
 if __name__ == "__main__":
     simulate()
+"""
+#to load a file later
+import pickle
+with open("Training_data/<game_id>.pkl", "rb") as f:
+    data = pickle.load(f)
+# data is list of (observation_list, action_index) tuples
+for obs, action_idx in data:
+    ...
+
+"""
