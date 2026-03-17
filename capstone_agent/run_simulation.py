@@ -16,6 +16,7 @@ import sys
 import os
 import argparse
 import csv
+import json
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -29,6 +30,7 @@ import torch
 import numpy as np
 import gymnasium
 import catanatron.gym
+from catanatron.json import GameEncoder
 
 
 OBS_SIZE = 1258
@@ -84,6 +86,34 @@ class BenchmarkLogger:
         with open(self.csv_path, "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=self.HEADER)
             writer.writerow(row)
+
+
+def _unwrap_env(env):
+    current = env
+    while hasattr(current, "env"):
+        current = current.env
+    return current
+
+
+def maybe_save_game_json(env, out_dir: Optional[str], game_index: int, every: int):
+    if not out_dir:
+        return None
+    if every <= 0:
+        every = 100
+    # Save first game of each block: 1, 1+every, 1+2*every, ...
+    if (game_index - 1) % every != 0:
+        return None
+
+    core_env = _unwrap_env(env)
+    game = getattr(core_env, "game", None)
+    if game is None:
+        return None
+
+    os.makedirs(out_dir, exist_ok=True)
+    filepath = os.path.join(out_dir, f"{game.id}.json")
+    with open(filepath, "w") as f:
+        f.write(json.dumps(game, cls=GameEncoder))
+    return filepath
 
 
 def simulate_game(
@@ -221,6 +251,23 @@ def main():
         action="store_true",
         help="Disable benchmark CSV logging.",
     )
+    parser.add_argument(
+        "--save-games-json-dir",
+        type=str,
+        default=None,
+        help=(
+            "Optional directory to save game JSONs (with action_records) for GUI replay."
+        ),
+    )
+    parser.add_argument(
+        "--save-games-json-every",
+        type=int,
+        default=100,
+        help=(
+            "Save one game JSON every N games (default: 100), "
+            "saving the first game of each N-game block."
+        ),
+    )
     args = parser.parse_args()
 
     loaded_model_path = args.load
@@ -257,6 +304,14 @@ def main():
             f"Game {g:4d}/{args.games}:  {status:>9s}  "
             f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}"
         )
+        saved_game_path = maybe_save_game_json(
+            env,
+            args.save_games_json_dir,
+            g,
+            args.save_games_json_every,
+        )
+        if saved_game_path is not None:
+            print(f"  saved replay json: {saved_game_path}")
 
         if benchmark is not None:
             benchmark.write_row(
