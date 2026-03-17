@@ -31,6 +31,7 @@ import numpy as np
 import gymnasium
 import catanatron.gym
 from catanatron.json import GameEncoder
+from catanatron.models.player import Color
 
 
 OBS_SIZE = 1258
@@ -55,7 +56,7 @@ class GameResult:
 
 
 class BenchmarkLogger:
-    HEADER = [
+    DEFAULT_HEADER = [
         "timestamp_utc",
         "run_name",
         "mode",
@@ -72,20 +73,34 @@ class BenchmarkLogger:
         "cum_losses",
         "cum_truncations",
         "cum_win_rate",
+        "self_seat",
+        "went_first",
     ]
 
     def __init__(self, csv_path: str):
         self.csv_path = csv_path
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         if not os.path.exists(csv_path):
+            self.header = list(self.DEFAULT_HEADER)
             with open(csv_path, "w", newline="") as f:
                 writer = csv.writer(f)
-                writer.writerow(self.HEADER)
+                writer.writerow(self.header)
+        else:
+            with open(csv_path, "r", newline="") as f:
+                reader = csv.reader(f)
+                existing_header = next(reader, None) or []
+            # Keep existing files backward-compatible instead of changing their schema mid-run.
+            self.header = (
+                existing_header
+                if existing_header
+                else list(self.DEFAULT_HEADER)
+            )
 
     def write_row(self, row: dict):
+        filtered = {key: row.get(key, "") for key in self.header}
         with open(self.csv_path, "a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=self.HEADER)
-            writer.writerow(row)
+            writer = csv.DictWriter(f, fieldnames=self.header)
+            writer.writerow(filtered)
 
 
 def _unwrap_env(env):
@@ -114,6 +129,14 @@ def maybe_save_game_json(env, out_dir: Optional[str], game_index: int, every: in
     with open(filepath, "w") as f:
         f.write(json.dumps(game, cls=GameEncoder))
     return filepath
+
+
+def _self_seat(env, self_color: Color = Color.BLUE) -> Optional[int]:
+    core_env = _unwrap_env(env)
+    game = getattr(core_env, "game", None)
+    if game is None:
+        return None
+    return game.state.color_to_index.get(self_color)
 
 
 def simulate_game(
@@ -311,6 +334,7 @@ def main():
             print(f"  saved replay json: {saved_game_path}")
 
         if benchmark is not None:
+            self_seat = _self_seat(env)
             benchmark.write_row(
                 {
                     "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -329,6 +353,10 @@ def main():
                     "cum_losses": losses,
                     "cum_truncations": truncations,
                     "cum_win_rate": float(wins / g),
+                    "self_seat": self_seat if self_seat is not None else "",
+                    "went_first": (
+                        int(self_seat == 0) if self_seat is not None else ""
+                    ),
                 }
             )
 

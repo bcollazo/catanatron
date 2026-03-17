@@ -85,6 +85,32 @@ python capstone_agent/import_replays_to_gui.py \
 
 Then open `http://localhost:3000/replays/<game_id>` (printed by the importer).
 
+Unified analytics script (benchmarks, first-vs-second, placements):
+
+```bash
+python capstone_agent/analytics.py benchmarks \
+  --csv capstone_agent/benchmarks/training_metrics.csv \
+  --run-name iter_full \
+  --mode train \
+  --rolling-window 100 \
+  --ema-span 100 \
+  --chunk-size 100 \
+  --out capstone_agent/benchmarks/benchmark_plot.png
+```
+
+```bash
+python capstone_agent/analytics.py first-second \
+  --csv capstone_agent/benchmarks/training_metrics.csv \
+  --run-name iter_full \
+  --mode train \
+  --chunk-size 200 \
+  --out capstone_agent/benchmarks/first_vs_second_200.png
+```
+
+```bash
+python capstone_agent/analytics.py placements --data-dir my-data-path
+```
+
 
 ## Graphical User Interface
 
