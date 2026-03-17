@@ -182,14 +182,11 @@ def simulate_and_train(
         agent, env, max_steps=max_steps, verbose=verbose, store_in_buffer=True
     )
 
-    obs, info = env.reset()
-    mask = info["action_mask"]
-    with torch.no_grad():
-        _, last_value = agent.model(
-            torch.FloatTensor(obs).unsqueeze(0),
-            torch.FloatTensor(mask).unsqueeze(0),
-        )
-    agent.train(last_value.item())
+    # Replay JSON export happens after this function returns. Avoid resetting the
+    # env here, otherwise the saved replay may capture a fresh game instead of
+    # the one we just finished. Because episodes are terminal at this point,
+    # bootstrap value for GAE is 0.
+    agent.train(0.0)
 
     return result
 

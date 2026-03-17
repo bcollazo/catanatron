@@ -9,8 +9,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Iterable
+
+# Allow running from repo root without editable install.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+CATANATRON_SRC = REPO_ROOT / "catanatron"
+if str(CATANATRON_SRC) not in sys.path:
+    sys.path.insert(0, str(CATANATRON_SRC))
 
 from catanatron.game import Game
 from catanatron.json import action_from_json
