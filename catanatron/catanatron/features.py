@@ -210,25 +210,24 @@ def build_production_features(consider_robber):
     prefix = "EFFECTIVE_" if consider_robber else "TOTAL_"
 
     def production_features(game: Game, p0_color: Color):
-        # P0_WHEAT_PRODUCTION, P0_ORE_PRODUCTION, ..., P1_WHEAT_PRODUCTION, ...
         features = {}
         board = game.state.board
-        robbed_nodes = set(board.map.tiles[board.robber_coordinate].nodes.values())
+        robber_coordinate = board.robber_coordinate if consider_robber else None
+
         for resource in RESOURCES:
             for i, color in iter_players(game.state.colors, p0_color):
                 production = 0
+
                 for node_id in get_player_buildings(game.state, color, SETTLEMENT):
-                    if consider_robber and node_id in robbed_nodes:
-                        continue
                     production += get_node_production(
-                        game.state.board.map, node_id, resource
+                        board.map, node_id, resource, robber_coordinate
                     )
+
                 for node_id in get_player_buildings(game.state, color, CITY):
-                    if consider_robber and node_id in robbed_nodes:
-                        continue
                     production += 2 * get_node_production(
-                        game.state.board.map, node_id, resource
+                        board.map, node_id, resource, robber_coordinate
                     )
+
                 features[f"{prefix}P{i}_{resource}_PRODUCTION"] = production
 
         return features
@@ -237,9 +236,15 @@ def build_production_features(consider_robber):
 
 
 @functools.lru_cache(maxsize=1000)
-def get_node_production(catan_map, node_id, resource):
+def get_node_production(catan_map, node_id, resource, robber_coordinate=None):
     tiles = catan_map.adjacent_tiles[node_id]
-    return sum([number_probability(t.number) for t in tiles if t.resource == resource])
+
+    return sum(
+        number_probability(t.number)
+        for t in tiles
+        if t.resource == resource
+        and (robber_coordinate is None or t != catan_map.tiles[robber_coordinate])
+    )
 
 
 def get_player_expandable_nodes(game: Game, color: Color):
@@ -476,7 +481,7 @@ def port_distance_features(game: Game, p0_color: Color):
 
 def game_features(game: Game, p0_color: Color):
     # BANK_WOODS, BANK_WHEATS, ..., BANK_DEV_CARDS
-    possibilities = set([a.action_type for a in game.playable_actions])
+    possibilities = set([a.action_type for a in game.state.playable_actions])
     features = {
         "BANK_DEV_CARDS": len(game.state.development_listdeck),
         "IS_MOVING_ROBBER": ActionType.MOVE_ROBBER in possibilities,
