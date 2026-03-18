@@ -210,6 +210,7 @@ def build_production_features(consider_robber):
     prefix = "EFFECTIVE_" if consider_robber else "TOTAL_"
 
     def production_features(game: Game, p0_color: Color):
+        # P0_WHEAT_PRODUCTION, P0_ORE_PRODUCTION, ..., P1_WHEAT_PRODUCTION, ...
         features = {}
         board = game.state.board
         robber_coordinate = board.robber_coordinate if consider_robber else None
@@ -483,7 +484,7 @@ def game_features(game: Game, p0_color: Color):
     # BANK_WOODS, BANK_WHEATS, ..., BANK_DEV_CARDS
     possibilities = set([a.action_type for a in game.state.playable_actions])
     features = {
-        "BANK_DEV_CARDS": len(game.state.development_listdeck),
+        "BANK_DEV_CARDS": len(game.development_listdeck),
         "IS_MOVING_ROBBER": ActionType.MOVE_ROBBER in possibilities,
         "IS_DISCARDING": ActionType.DISCARD in possibilities,
     }
@@ -499,8 +500,8 @@ feature_extractors = [
     player_features,
     resource_hand_features,
     # TRANSFERABLE BOARD FEATURES =====
-    # build_production_features(True),
-    # build_production_features(False),
+    # build_(True),
+    # build_(False),
     # expansion_features,
     # reachability_features,
     # RAW BASE-MAP FEATURES =====
