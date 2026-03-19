@@ -13,7 +13,7 @@ import gymnasium
 
 OBS_SIZE = 1258
 HIDDEN_SIZE = 512
-PLACEMENT_HIDDEN_SIZE = 256
+PLACEMENT_HIDDEN_SIZE = 64
 
 main_agent = CapstoneAgent(obs_size=OBS_SIZE, hidden_size=HIDDEN_SIZE)
 placement_agent = PlacementAgent(obs_size=OBS_SIZE, hidden_size=PLACEMENT_HIDDEN_SIZE)
@@ -55,5 +55,5 @@ for update in range(NUM_UPDATES):
     if (update + 1) % 10 == 0:
         print(f"Update {update + 1}/{NUM_UPDATES} complete  (step {step})")
 
-agent.save("capstone_model.pt", "placement_model.pt")
-print("Training complete — models saved to capstone_model.pt and placement_model.pt")
+agent.save("capstone_agent/models/capstone_model.pt", "capstone_agent/models/placement_model.pt")
+print("Training complete — models saved to capstone_agent/models/")

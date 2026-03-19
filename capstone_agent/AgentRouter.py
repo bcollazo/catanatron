@@ -59,6 +59,9 @@ class AgentRouter:
             self.placement_agent.load(placement_path)
 
     def save(self, main_path, placement_path=None):
+        import os
+        os.makedirs(os.path.dirname(main_path) or ".", exist_ok=True)
         self.main_agent.save(main_path)
         if placement_path is not None:
+            os.makedirs(os.path.dirname(placement_path) or ".", exist_ok=True)
             self.placement_agent.save(placement_path)

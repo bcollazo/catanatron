@@ -6,7 +6,7 @@ the PlacementModel with weighted cross-entropy, and saves the result.
 Usage:
     python capstone_agent/train_placement.py \
         --data capstone_agent/placement_data.npz \
-        --out  capstone_agent/placement_model.pt \
+        --out  capstone_agent/models/placement_model.pt \
         --epochs 30
 """
 
@@ -39,6 +39,7 @@ def train(
     epochs: int = 30,
     batch_size: int = 64,
     lr: float = 1e-3,
+    weight_decay: float = 1e-4,
     win_weight: float = 1.0,
     loss_weight: float = 0.1,
     val_frac: float = 0.1,
@@ -61,7 +62,7 @@ def train(
         loss_weight,
     ).to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     best_val_loss = float("inf")
@@ -144,13 +145,13 @@ def main():
     parser.add_argument(
         "--data",
         type=str,
-        default="capstone_agent/placement_data.npz",
+        default="capstone_agent/data/placement_data.npz",
         help="Path to .npz dataset from collect_placement_data.py",
     )
     parser.add_argument(
         "--out",
         type=str,
-        default="capstone_agent/placement_model.pt",
+        default="capstone_agent/models/placement_model.pt",
         help="Where to save trained weights",
     )
     parser.add_argument("--epochs", type=int, default=30)
@@ -164,7 +165,11 @@ def main():
         "--loss-weight", type=float, default=0.1,
         help="Sample weight for actions from losing games",
     )
-    parser.add_argument("--hidden-size", type=int, default=256)
+    parser.add_argument("--hidden-size", type=int, default=64)
+    parser.add_argument(
+        "--weight-decay", type=float, default=1e-4,
+        help="AdamW weight decay (L2 regularization)",
+    )
     parser.add_argument("--val-frac", type=float, default=0.1)
     args = parser.parse_args()
 
@@ -191,6 +196,7 @@ def main():
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
+        weight_decay=args.weight_decay,
         win_weight=args.win_weight,
         loss_weight=args.loss_weight,
         val_frac=args.val_frac,

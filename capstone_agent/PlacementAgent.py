@@ -87,7 +87,7 @@ class PlacementAgent:
     via ``supervised_train()``.
     """
 
-    def __init__(self, obs_size=1258, hidden_size=256):
+    def __init__(self, obs_size=1258, hidden_size=64):
         self.device = get_device()
         self.hyperparams = PPOHyperparams()
         self.hyperparams.batch_size = 16
@@ -226,6 +226,7 @@ class PlacementAgent:
         epochs: int = 20,
         batch_size: int = 64,
         lr: float = 1e-3,
+        weight_decay: float = 1e-4,
         win_weight: float = 1.0,
         loss_weight: float = 0.1,
     ) -> list:
@@ -246,7 +247,7 @@ class PlacementAgent:
             List of per-epoch mean losses.
         """
         self.model.train()
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, weight_decay=weight_decay)
 
         obs_t = torch.as_tensor(obs, dtype=torch.float32).to(self.device)
         mask_t = torch.as_tensor(masks, dtype=torch.float32).to(self.device)

@@ -24,6 +24,8 @@ Usage:
 import sys
 import os
 import argparse
+import time
+from datetime import datetime, timezone
 
 import numpy as np
 
@@ -38,12 +40,10 @@ from catanatron.players.search import VictoryPointPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.gym.envs.capstone_features import get_capstone_observation
 from catanatron.gym.envs.capstone_env import (
-    ACTIONS_ARRAY,
     ACTION_SPACE_SIZE,
-    to_action_space as catanatron_to_action_space,
+    to_action_space as capstone_action_index,
 )
 from catanatron.gym.envs.action_translator import (
-    batch_catanatron_to_capstone,
     catanatron_action_to_capstone_index,
 )
 
@@ -59,15 +59,11 @@ BOT_TYPES = {
 }
 
 
-def _make_action_mask(game, color):
+def _make_action_mask(game):
     """Build a 245-dim binary mask of valid capstone actions."""
-    catanatron_indices = [
-        catanatron_to_action_space(a) for a in game.playable_actions
-    ]
-    capstone_indices = batch_catanatron_to_capstone(catanatron_indices)
     mask = np.zeros(ACTION_SPACE_SIZE, dtype=np.float32)
-    for idx in capstone_indices:
-        mask[idx] = 1.0
+    for a in game.playable_actions:
+        mask[capstone_action_index(a)] = 1.0
     return mask
 
 
@@ -75,7 +71,6 @@ def collect(
     num_games: int,
     blue_type: str = "alphabeta",
     enemy_type: str = "alphabeta",
-    verbose: bool = False,
 ):
     validate_action_mapping()
 
@@ -92,6 +87,9 @@ def collect(
     all_obs, all_masks, all_actions = [], [], []
     game_indices = []
     game_outcomes = []
+
+    t0 = time.time()
+    report_every = max(1, num_games // 20)
 
     for g in range(num_games):
         blue_player = BOT_TYPES[blue_type](self_color)
@@ -112,7 +110,7 @@ def collect(
                     get_capstone_observation(game, self_color, opp_color),
                     dtype=np.float32,
                 )
-                mask = _make_action_mask(game, self_color)
+                mask = _make_action_mask(game)
                 placement_obs.append(obs)
                 placement_masks.append(mask)
 
@@ -132,11 +130,19 @@ def collect(
             game_indices.append(g)
         game_outcomes.append(won)
 
-        if verbose and (g + 1) % 500 == 0:
+        done = g + 1
+        if done % report_every == 0 or done == num_games:
+            elapsed = time.time() - t0
+            per_game = elapsed / done
+            remaining = per_game * (num_games - done)
             win_rate = sum(game_outcomes) / len(game_outcomes)
             print(
-                f"  {g + 1}/{num_games} games  "
-                f"({len(all_obs)} samples, win rate {win_rate:.2%})"
+                f"  {done:>{len(str(num_games))}}/{num_games}  "
+                f"samples={len(all_obs)}  "
+                f"win_rate={win_rate:.1%}  "
+                f"elapsed={elapsed:.0f}s  "
+                f"remaining~{remaining:.0f}s",
+                flush=True,
             )
 
     won_arr = np.array(
@@ -175,10 +181,9 @@ def main():
     parser.add_argument(
         "--out",
         type=str,
-        default="capstone_agent/placement_data.npz",
+        default="capstone_agent/data/placement_data.npz",
         help="Output .npz path",
     )
-    parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
     print(
@@ -189,15 +194,18 @@ def main():
         args.games,
         blue_type=args.blue,
         enemy_type=args.enemy,
-        verbose=args.verbose,
     )
 
-    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-    np.savez_compressed(args.out, obs=obs, masks=masks, actions=actions, won=won)
+    root, ext = os.path.splitext(args.out)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
+    out_path = f"{root}_{stamp}{ext}"
+
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    np.savez_compressed(out_path, obs=obs, masks=masks, actions=actions, won=won)
 
     n_wins = int(won.sum())
     print(
-        f"Saved {len(obs)} samples to {args.out}  "
+        f"Saved {len(obs)} samples to {out_path}  "
         f"({n_wins} from wins, {len(obs) - n_wins} from losses)"
     )
 

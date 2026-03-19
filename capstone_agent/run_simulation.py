@@ -49,10 +49,10 @@ def _timestamped_path(path: str) -> str:
 
 OBS_SIZE = 1258
 HIDDEN_SIZE = 512
-PLACEMENT_HIDDEN_SIZE = 256
+PLACEMENT_HIDDEN_SIZE = 64
 MAX_STEPS_PER_GAME = 5000
-DEFAULT_MODEL_PATH = "capstone_agent/capstone_model.pt"
-DEFAULT_PLACEMENT_MODEL_PATH = "capstone_agent/placement_model.pt"
+DEFAULT_MODEL_PATH = "capstone_agent/models/capstone_model.pt"
+DEFAULT_PLACEMENT_MODEL_PATH = "capstone_agent/models/placement_model.pt"
 DEFAULT_BENCHMARK_CSV = "capstone_agent/benchmarks/training_metrics.csv"
 
 
