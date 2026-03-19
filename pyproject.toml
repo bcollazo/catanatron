@@ -29,7 +29,7 @@ web = [
     "psycopg2-binary",
 ]
 dev = [
-    "black",
+    "black==25.11.0",
     "pytest",
     "pytest-benchmark",
     "pytest-watch",
