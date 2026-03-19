@@ -22,6 +22,7 @@ import torch.nn as nn
 sys.path.insert(0, os.path.dirname(__file__))
 
 from PlacementModel import PlacementModel
+from device import get_device
 
 
 def load_dataset(path: str):
@@ -43,19 +44,22 @@ def train(
     val_frac: float = 0.1,
     verbose: bool = True,
 ):
+    device = get_device()
+    model = model.to(device)
+
     n = len(obs)
     perm = np.random.permutation(n)
     split = int(n * (1 - val_frac))
     train_idx, val_idx = perm[:split], perm[split:]
 
-    obs_t = torch.as_tensor(obs, dtype=torch.float32)
-    mask_t = torch.as_tensor(masks, dtype=torch.float32)
-    act_t = torch.as_tensor(actions, dtype=torch.long)
+    obs_t = torch.as_tensor(obs, dtype=torch.float32).to(device)
+    mask_t = torch.as_tensor(masks, dtype=torch.float32).to(device)
+    act_t = torch.as_tensor(actions, dtype=torch.long).to(device)
     weights = torch.where(
         torch.as_tensor(won, dtype=torch.float32) > 0.5,
         win_weight,
         loss_weight,
-    )
+    ).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
@@ -96,7 +100,7 @@ def train(
         # validation
         model.eval()
         with torch.no_grad():
-            vi = torch.as_tensor(val_idx, dtype=torch.long)
+            vi = torch.as_tensor(val_idx, dtype=torch.long).to(device)
             v_probs, _ = model(obs_t[vi], mask_t[vi])
             v_log = torch.log(v_probs + 1e-8)
             v_nll = nn.functional.nll_loss(v_log, act_t[vi], reduction="none")
@@ -107,7 +111,7 @@ def train(
 
             win_mask = won[val_idx] > 0.5
             if win_mask.sum() > 0:
-                wi = torch.as_tensor(val_idx[win_mask], dtype=torch.long)
+                wi = torch.as_tensor(val_idx[win_mask], dtype=torch.long).to(device)
                 w_probs, _ = model(obs_t[wi], mask_t[wi])
                 win_acc = (w_probs.argmax(dim=-1) == act_t[wi]).float().mean().item()
             else:
@@ -171,9 +175,11 @@ def main():
         f"  {len(obs)} samples  ({n_wins} from wins, {len(obs) - n_wins} from losses)"
     )
 
+    device = get_device()
     model = PlacementModel(obs_size=obs.shape[1], hidden_size=args.hidden_size)
     params = sum(p.numel() for p in model.parameters())
     print(f"  PlacementModel: {params:,} params (hidden={args.hidden_size})")
+    print(f"  Device: {device}")
     print()
 
     model = train(

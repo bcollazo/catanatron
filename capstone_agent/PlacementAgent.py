@@ -1,6 +1,7 @@
 from PlacementModel import PlacementModel
 from RolloutBuffer import RolloutBuffer
 from PPOHyperparams import PPOHyperparams
+from device import get_device
 
 import math
 import numpy as np
@@ -87,10 +88,11 @@ class PlacementAgent:
     """
 
     def __init__(self, obs_size=1258, hidden_size=256):
+        self.device = get_device()
         self.hyperparams = PPOHyperparams()
         self.hyperparams.batch_size = 16
 
-        self.model = PlacementModel(obs_size=obs_size, hidden_size=hidden_size)
+        self.model = PlacementModel(obs_size=obs_size, hidden_size=hidden_size).to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(), lr=self.hyperparams.lr
         )
@@ -98,8 +100,8 @@ class PlacementAgent:
 
     def select_action(self, state, mask):
         """Sample an action from the policy and return (action, log_prob, value)."""
-        state_tensor = torch.FloatTensor(state).unsqueeze(0)
-        mask_tensor = torch.FloatTensor(mask).unsqueeze(0)
+        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        mask_tensor = torch.FloatTensor(mask).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
             probs, value = self.model(state_tensor, mask_tensor)
@@ -138,8 +140,8 @@ class PlacementAgent:
 
         advantages.reverse()
 
-        advantages = torch.FloatTensor(advantages)
-        returns = advantages + torch.FloatTensor(self.buffer.values)
+        advantages = torch.FloatTensor(advantages).to(self.device)
+        returns = advantages + torch.FloatTensor(self.buffer.values).to(self.device)
 
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
@@ -157,10 +159,10 @@ class PlacementAgent:
         actions_np = np.asarray(self.buffer.actions, dtype=np.int64)
         old_log_probs_np = np.asarray(self.buffer.log_probs, dtype=np.float32)
 
-        states = torch.from_numpy(states_np)
-        masks = torch.from_numpy(masks_np)
-        actions = torch.from_numpy(actions_np)
-        old_log_probs = torch.from_numpy(old_log_probs_np)
+        states = torch.from_numpy(states_np).to(self.device)
+        masks = torch.from_numpy(masks_np).to(self.device)
+        actions = torch.from_numpy(actions_np).to(self.device)
+        old_log_probs = torch.from_numpy(old_log_probs_np).to(self.device)
 
         for epoch in range(self.hyperparams.epochs):
             indices = torch.randperm(len(states))
@@ -246,14 +248,14 @@ class PlacementAgent:
         self.model.train()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
-        obs_t = torch.as_tensor(obs, dtype=torch.float32)
-        mask_t = torch.as_tensor(masks, dtype=torch.float32)
-        act_t = torch.as_tensor(actions, dtype=torch.long)
+        obs_t = torch.as_tensor(obs, dtype=torch.float32).to(self.device)
+        mask_t = torch.as_tensor(masks, dtype=torch.float32).to(self.device)
+        act_t = torch.as_tensor(actions, dtype=torch.long).to(self.device)
         weights = torch.where(
             torch.as_tensor(won, dtype=torch.float32) > 0.5,
             win_weight,
             loss_weight,
-        )
+        ).to(self.device)
 
         n = len(obs_t)
         epoch_losses = []
@@ -292,7 +294,9 @@ class PlacementAgent:
     # ── persistence ──────────────────────────────────────────────
 
     def load(self, path):
-        self.model.load_state_dict(torch.load(path, weights_only=True))
+        self.model.load_state_dict(
+            torch.load(path, weights_only=True, map_location=self.device)
+        )
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)

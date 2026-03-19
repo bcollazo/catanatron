@@ -27,6 +27,7 @@ from CapstoneAgent import CapstoneAgent
 from PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
 from AgentRouter import AgentRouter
 from action_map import validate as validate_action_mapping, describe_action
+from device import get_device
 
 import torch
 import numpy as np
@@ -365,9 +366,11 @@ def main():
         place_desc = f"{sum(p.numel() for p in pa.model.parameters()):,} params"
     else:
         place_desc = args.placement_strategy
+    device = get_device()
     print(
         f"Main agent ready      ({main_params:,} params, obs={OBS_SIZE}, actions=245)\n"
-        f"Placement agent ready ({place_desc})"
+        f"Placement agent ready ({place_desc})\n"
+        f"Device: {device}"
     )
     print()
 

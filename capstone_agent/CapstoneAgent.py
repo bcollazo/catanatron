@@ -1,6 +1,7 @@
 from CapstoneModel import CapstoneModel
 from RolloutBuffer import RolloutBuffer
 from PPOHyperparams import PPOHyperparams
+from device import get_device
 
 import numpy as np
 import torch
@@ -10,12 +11,10 @@ from torch.distributions import Categorical
 
 class CapstoneAgent:
 
-    # Use PPO to train a model
-
     def __init__(self, obs_size=1258, hidden_size=512):
-
+        self.device = get_device()
         self.hyperparams = PPOHyperparams()
-        self.model = CapstoneModel(obs_size=obs_size, hidden_size=hidden_size)
+        self.model = CapstoneModel(obs_size=obs_size, hidden_size=hidden_size).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyperparams.lr)
         self.buffer = RolloutBuffer()
 
@@ -25,8 +24,8 @@ class CapstoneAgent:
         Given state + mask, sample an action and return 
         everything PPO needs to store.
         """
-        state_tensor = torch.FloatTensor(state).unsqueeze(0)
-        mask_tensor  = torch.FloatTensor(mask).unsqueeze(0)
+        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        mask_tensor  = torch.FloatTensor(mask).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
             probs, value = self.model(state_tensor, mask_tensor)
@@ -67,10 +66,9 @@ class CapstoneAgent:
         # need to reverse because we're working back to front
         advantages.reverse()
 
-        advantages = torch.FloatTensor(advantages)
-        returns    = advantages + torch.FloatTensor(self.buffer.values)
+        advantages = torch.FloatTensor(advantages).to(self.device)
+        returns    = advantages + torch.FloatTensor(self.buffer.values).to(self.device)
 
-        # Normalize advantages (stabilizes training)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         return advantages, returns
@@ -91,10 +89,10 @@ class CapstoneAgent:
         actions_np = np.asarray(self.buffer.actions, dtype=np.int64)
         old_log_probs_np = np.asarray(self.buffer.log_probs, dtype=np.float32)
 
-        states = torch.from_numpy(states_np)
-        masks = torch.from_numpy(masks_np)
-        actions = torch.from_numpy(actions_np)
-        old_log_probs = torch.from_numpy(old_log_probs_np)
+        states = torch.from_numpy(states_np).to(self.device)
+        masks = torch.from_numpy(masks_np).to(self.device)
+        actions = torch.from_numpy(actions_np).to(self.device)
+        old_log_probs = torch.from_numpy(old_log_probs_np).to(self.device)
 
         # PPO trains multiple epochs on the SAME rollout
         for epoch in range(self.hyperparams.epochs):
@@ -148,7 +146,7 @@ class CapstoneAgent:
 
 
     def load(self, path):
-        self.model.load_state_dict(torch.load(path))
+        self.model.load_state_dict(torch.load(path, map_location=self.device))
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)
