@@ -46,3 +46,6 @@ catanatron-play = "catanatron.cli.play:simulate"
 
 [tool.setuptools.packages.find]
 where = ["catanatron"]
+
+[tool.black]
+target-version = ["py311"]
