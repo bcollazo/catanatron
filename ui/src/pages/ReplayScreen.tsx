@@ -1,5 +1,5 @@
 import { useEffect, useContext, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { GridLoader } from "react-spinners";
 
 import ZoomableBoard from "./ZoomableBoard";
@@ -11,7 +11,7 @@ import { store } from "../store";
 import ACTIONS from "../actions";
 import { getState } from "../utils/apiClient";
 import AnalysisBox from "../components/AnalysisBox";
-import { Divider } from "@mui/material";
+import { Button, Divider } from "@mui/material";
 import ReplayBox from "../components/ReplayBox";
 
 function ReplayScreen() {
@@ -62,6 +62,9 @@ function ReplayScreen() {
       <ZoomableBoard replayMode={true} />
       <LeftDrawer />
       <RightDrawer>
+        <Button className="catalog-link" component={Link} variant="outlined" to="/replays">
+          Back to Replay Catalog
+        </Button>
         <AnalysisBox stateIndex={stateIndex}/>
         <Divider />
         <ReplayBox

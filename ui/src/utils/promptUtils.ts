@@ -16,8 +16,10 @@ export function humanizeActionRecord(
 ) {
   const botColors = gameState.bot_colors;
   const action = actionRecord[0];
+  const fallbackBotLabel =
+    action[0] === "BLUE" && botColors.length === 2 ? "BOT (US)" : "BOT";
   const player = botColors.includes(action[0])
-    ? gameState.bot_labels?.[action[0]] ?? "BOT"
+    ? gameState.bot_labels?.[action[0]] ?? fallbackBotLabel
     : "YOU";
   switch (actionRecord[0][1]) {
     case "ROLL": {

@@ -94,6 +94,13 @@ export default function HomePage() {
             >
               Watch Catanatron
             </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => navigate("/replays")}
+            >
+              Browse Replay Catalog
+            </Button>
           </>
         ) : (
           <GridLoader

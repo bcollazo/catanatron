@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import { API_URL } from "../configuration";
-import type { Color, GameAction, GameState } from "./api.types";
+import type { Color, GameAction, GameState, ReplayCatalogItem } from "./api.types";
 
 type Player = "HUMAN" | "RANDOM" | "CATANATRON";
 export type StateIndex = number | `${number}` | "latest";
@@ -76,4 +76,11 @@ export async function getMctsAnalysis(
     });
     throw error;
   }
+}
+
+export async function getReplayCatalog(limit = 200): Promise<ReplayCatalogItem[]> {
+  const response = await axios.get<{ replays: ReplayCatalogItem[] }>(
+    `${API_URL}/api/replays?limit=${limit}`
+  );
+  return response.data.replays;
 }

@@ -8,7 +8,9 @@ http://localhost:3000/replays/<game_id>
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import random
 import sys
 from pathlib import Path
 from typing import Iterable
@@ -33,6 +35,17 @@ from catanatron.models.map import (
 )
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.web.models import GameState, database_session, upsert_game_state
+
+
+@contextlib.contextmanager
+def _preserve_player_order():
+    """Disable seat randomization while constructing a replay Game."""
+    original_sample = random.sample
+    random.sample = lambda seq, n: list(seq)[:n]
+    try:
+        yield
+    finally:
+        random.sample = original_sample
 
 
 def _coord_key(coordinate: Iterable[int]) -> tuple[int, int, int]:
@@ -89,7 +102,11 @@ def _extract_shuffle_arrays(template, tile_lookup: dict[tuple[int, int, int], di
         else:
             raise ValueError(f"Unsupported topology entry at {coordinate}: {topo}")
 
-    return numbers, port_resources, tile_resources
+    # initialize_tiles() consumes these arrays via .pop(), so replay arrays must
+    # be in reverse insertion order to reproduce exact coordinate assignments.
+    return list(reversed(numbers)), list(reversed(port_resources)), list(
+        reversed(tile_resources)
+    )
 
 
 def _build_map_from_payload(payload: dict) -> CatanMap:
@@ -110,12 +127,16 @@ def _build_players(colors: list[str]):
 
 
 def import_replay_json(
-    json_path: Path, replace_existing: bool = True, id_prefix: str | None = None
+    json_path: Path,
+    replace_existing: bool = True,
+    id_prefix: str | None = None,
+    skip_invalid_actions: bool = False,
 ):
     payload = json.loads(json_path.read_text())
     players = _build_players(payload["colors"])
     catan_map = _build_map_from_payload(payload)
-    game = Game(players=players, catan_map=catan_map)
+    with _preserve_player_order():
+        game = Game(players=players, catan_map=catan_map)
 
     game_id = json_path.stem if id_prefix is None else f"{id_prefix}-{json_path.stem}"
     game.id = game_id
@@ -129,11 +150,23 @@ def import_replay_json(
         upsert_game_state(game, session)
 
         # One DB row per action so GUI can step through every state.
-        for action_json, result in payload["action_records"]:
+        imported_actions = 0
+        skipped_rows: list[dict] = []
+        for idx, (action_json, result) in enumerate(payload["action_records"]):
             action = action_from_json(action_json)
             action_record = ActionRecord(action=action, result=result)
-            game.execute(action, validate_action=False, action_record=action_record)
-            upsert_game_state(game, session)
+            try:
+                game.execute(action, validate_action=False, action_record=action_record)
+                imported_actions += 1
+                upsert_game_state(game, session)
+            except Exception as exc:
+                if not skip_invalid_actions:
+                    raise RuntimeError(
+                        f"action_index={idx} action={action_json} error={exc}"
+                    ) from exc
+                skipped_rows.append(
+                    {"index": idx, "action": action_json, "error": str(exc)}
+                )
 
     action_count = len(payload["action_records"])
     winning_color = payload.get("winning_color")
@@ -145,12 +178,15 @@ def import_replay_json(
     return {
         "file": json_path.name,
         "game_id": game_id,
-        "actions": action_count,
-        "states": action_count + 1,
+        "actions": imported_actions,
+        "states": imported_actions + 1,
+        "total_actions": action_count,
+        "skipped_actions": len(skipped_rows),
         "winner": winning_color,
         "result": result_label,
         "state_index": payload.get("state_index"),
         "url": f"http://localhost:3000/replays/{game_id}",
+        "skipped_action_details": skipped_rows,
     }
 
 
@@ -187,6 +223,14 @@ def main():
         default=None,
         help="Optional prefix for imported game UUIDs.",
     )
+    parser.add_argument(
+        "--skip-invalid-actions",
+        action="store_true",
+        help=(
+            "Continue importing when an action fails to replay. "
+            "Failed actions are skipped and summarized."
+        ),
+    )
     args = parser.parse_args()
 
     input_dir = Path(args.input_dir)
@@ -208,12 +252,14 @@ def main():
                 path,
                 replace_existing=not args.no_replace,
                 id_prefix=args.id_prefix,
+                skip_invalid_actions=args.skip_invalid_actions,
             )
             imported += 1
             imported_rows.append(row)
             print(
                 f"[{imported}/{len(paths)}] imported {row['file']} -> "
-                f"{row['url']} ({row['states']} states, result={row['result']})"
+                f"{row['url']} ({row['states']} states, result={row['result']}, "
+                f"skipped={row['skipped_actions']})"
             )
         except Exception as exc:
             failed_rows.append((path.name, str(exc)))
@@ -226,10 +272,21 @@ def main():
         for row in imported_rows:
             print(
                 f"- {row['file']} | result={row['result']} | "
-                f"winner={row['winner']} | actions={row['actions']} | "
+                f"winner={row['winner']} | actions={row['actions']}/{row['total_actions']} | "
                 f"states={row['states']} | state_index={row['state_index']} | "
                 f"{row['url']}"
             )
+            if row["skipped_actions"] > 0:
+                print(f"  skipped_actions={row['skipped_actions']}")
+                for detail in row["skipped_action_details"][:3]:
+                    print(
+                        "  - "
+                        f"idx={detail['index']} action={detail['action']} "
+                        f"error={detail['error']}"
+                    )
+                extra = row["skipped_actions"] - 3
+                if extra > 0:
+                    print(f"  - ... and {extra} more skipped actions")
 
     if failed_rows:
         print("\nFailed Imports:")
