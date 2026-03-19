@@ -24,6 +24,8 @@ from typing import List, Optional
 sys.path.insert(0, os.path.dirname(__file__))
 
 from CapstoneAgent import CapstoneAgent
+from PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
+from AgentRouter import AgentRouter
 from action_map import validate as validate_action_mapping, describe_action
 
 import torch
@@ -34,10 +36,22 @@ from catanatron.json import GameEncoder
 from catanatron.models.player import Color
 
 
+def _timestamped_path(path: str) -> str:
+    """Insert a UTC timestamp before the file extension.
+
+    ``capstone_model.pt`` -> ``capstone_model_20260317T1423Z.pt``
+    """
+    root, ext = os.path.splitext(path)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
+    return f"{root}_{stamp}{ext}"
+
+
 OBS_SIZE = 1258
 HIDDEN_SIZE = 512
+PLACEMENT_HIDDEN_SIZE = 256
 MAX_STEPS_PER_GAME = 5000
 DEFAULT_MODEL_PATH = "capstone_agent/capstone_model.pt"
+DEFAULT_PLACEMENT_MODEL_PATH = "capstone_agent/placement_model.pt"
 DEFAULT_BENCHMARK_CSV = "capstone_agent/benchmarks/training_metrics.csv"
 
 
@@ -149,7 +163,7 @@ def simulate_game(
     """Play one full game using the agent and return a GameResult.
 
     Args:
-        agent: The CapstoneAgent to use for action selection.
+        agent: A CapstoneAgent, PlacementAgent, or AgentRouter.
         env: A CapstoneCatanatronEnv gymnasium environment.
         max_steps: Safety limit on the number of steps.
         verbose: Print per-step action descriptions.
@@ -218,14 +232,36 @@ def make_agent_and_env(
     obs_size: int = OBS_SIZE,
     hidden_size: int = HIDDEN_SIZE,
     model_path: Optional[str] = None,
+    placement_model_path: Optional[str] = None,
+    placement_strategy: str = "model",
 ):
-    """Create a fresh agent + env pair. Optionally load saved weights."""
+    """Create a routed agent + env pair.
+
+    Args:
+        placement_strategy: ``"model"`` for the learned PlacementAgent,
+            ``"random"`` for uniform-random placement.
+
+    Returns an AgentRouter that delegates initial-placement decisions to
+    the chosen placement agent and all other decisions to the main
+    CapstoneAgent.
+    """
     validate_action_mapping()
-    agent = CapstoneAgent(obs_size=obs_size, hidden_size=hidden_size)
+
+    main_agent = CapstoneAgent(obs_size=obs_size, hidden_size=hidden_size)
     if model_path is not None:
-        agent.load(model_path)
+        main_agent.load(model_path)
+
+    placement_agent = make_placement_agent(
+        placement_strategy,
+        obs_size=obs_size,
+        hidden_size=PLACEMENT_HIDDEN_SIZE,
+    )
+    if placement_model_path is not None:
+        placement_agent.load(placement_model_path)
+
     env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
-    return agent, env
+    router = AgentRouter(placement_agent, main_agent, env)
+    return router, env
 
 
 def main():
@@ -240,14 +276,27 @@ def main():
         "--verbose", action="store_true", help="Print per-step action log"
     )
     parser.add_argument(
-        "--load", type=str, default=None, help="Path to saved model weights"
+        "--load", type=str, default=None, help="Path to saved main-agent model weights"
     )
     parser.add_argument(
         "--save", type=str, default=DEFAULT_MODEL_PATH,
         help=(
-            "Path to save model weights after all games. "
+            "Path to save main-agent model weights after all games. "
             "In --train mode, this path is auto-used for resume if it already exists."
         ),
+    )
+    parser.add_argument(
+        "--placement-strategy", type=str, default="model",
+        choices=["model", "random"],
+        help="Placement agent strategy: 'model' (learned) or 'random'.",
+    )
+    parser.add_argument(
+        "--placement-model", type=str, default=None,
+        help="Path to saved placement-agent model weights (ignored for --placement-strategy random)",
+    )
+    parser.add_argument(
+        "--save-placement-model", type=str, default=DEFAULT_PLACEMENT_MODEL_PATH,
+        help="Path to save placement-agent weights after all games.",
     )
     parser.add_argument(
         "--fresh-start",
@@ -291,15 +340,35 @@ def main():
     args = parser.parse_args()
 
     loaded_model_path = args.load
+    loaded_placement_path = args.placement_model
     if args.train and not args.fresh_start:
-        # Resume behavior: if no explicit --load, and --save already exists, continue from it.
         if loaded_model_path is None and args.save and os.path.exists(args.save):
             loaded_model_path = args.save
-            print(f"Resuming training from existing weights: {loaded_model_path}")
+            print(f"Resuming training from existing main weights: {loaded_model_path}")
+        if (
+            args.placement_strategy == "model"
+            and loaded_placement_path is None
+            and args.save_placement_model
+            and os.path.exists(args.save_placement_model)
+        ):
+            loaded_placement_path = args.save_placement_model
+            print(f"Resuming training from existing placement weights: {loaded_placement_path}")
 
-    agent, env = make_agent_and_env(model_path=loaded_model_path)
-    params = sum(p.numel() for p in agent.model.parameters())
-    print(f"Agent ready  ({params:,} params, obs={OBS_SIZE}, actions=245)")
+    agent, env = make_agent_and_env(
+        model_path=loaded_model_path,
+        placement_model_path=loaded_placement_path,
+        placement_strategy=args.placement_strategy,
+    )
+    main_params = sum(p.numel() for p in agent.main_agent.model.parameters())
+    pa = agent.placement_agent
+    if hasattr(pa, "model"):
+        place_desc = f"{sum(p.numel() for p in pa.model.parameters()):,} params"
+    else:
+        place_desc = args.placement_strategy
+    print(
+        f"Main agent ready      ({main_params:,} params, obs={OBS_SIZE}, actions=245)\n"
+        f"Placement agent ready ({place_desc})"
+    )
     print()
 
     run_name = args.run_name or datetime.now(timezone.utc).strftime(
@@ -366,8 +435,20 @@ def main():
         print(f"Benchmarks logged to: {args.benchmark_csv} (run_name={run_name})")
 
     if args.train and args.save:
-        agent.save(args.save)
-        print(f"Model saved to {args.save}")
+        placement_save = (
+            args.save_placement_model
+            if args.placement_strategy == "model"
+            else None
+        )
+        main_ckpt = _timestamped_path(args.save)
+        place_ckpt = _timestamped_path(placement_save) if placement_save else None
+
+        agent.save(args.save, placement_save)
+        agent.save(main_ckpt, place_ckpt)
+
+        print(f"Main model saved to {args.save}  (checkpoint: {main_ckpt})")
+        if placement_save:
+            print(f"Placement model saved to {placement_save}  (checkpoint: {place_ckpt})")
 
 
 if __name__ == "__main__":

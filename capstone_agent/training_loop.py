@@ -4,14 +4,20 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 from CapstoneAgent import CapstoneAgent
+from PlacementAgent import PlacementAgent
+from AgentRouter import AgentRouter
 from action_map import validate as validate_action_mapping
 import torch
 import gymnasium
 
 OBS_SIZE = 1258
 HIDDEN_SIZE = 512
-agent = CapstoneAgent(obs_size=OBS_SIZE, hidden_size=HIDDEN_SIZE)
+PLACEMENT_HIDDEN_SIZE = 256
+
+main_agent = CapstoneAgent(obs_size=OBS_SIZE, hidden_size=HIDDEN_SIZE)
+placement_agent = PlacementAgent(obs_size=OBS_SIZE, hidden_size=PLACEMENT_HIDDEN_SIZE)
 env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
+agent = AgentRouter(placement_agent, main_agent, env)
 validate_action_mapping()
 
 ROLLOUT_LENGTH = 2048
@@ -47,5 +53,5 @@ for update in range(NUM_UPDATES):
     if (update + 1) % 10 == 0:
         print(f"Update {update + 1}/{NUM_UPDATES} complete  (step {step})")
 
-agent.save("capstone_model.pt")
-print("Training complete — model saved to capstone_model.pt")
+agent.save("capstone_model.pt", "placement_model.pt")
+print("Training complete — models saved to capstone_model.pt and placement_model.pt")
