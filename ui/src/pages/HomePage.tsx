@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
 import { GridLoader } from "react-spinners";
 import { createGame } from "../utils/apiClient";
+import { useSkin } from "../SkinContext";
+import SkinSwitcher from "../components/SkinSwitcher";
 
 import "./HomePage.scss";
 
@@ -36,6 +38,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [numPlayers, setNumPlayers] = useState(2);
   const navigate = useNavigate();
+  const { skin } = useSkin();
 
   const handleCreateGame = async (gameMode: GameModeType) => {
     setLoading(true);
@@ -46,7 +49,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="home-page">
+    <div className={`home-page skin-${skin}`}>
       <h1 className="logo">Catanatron</h1>
 
       <div className="switchable">
@@ -103,6 +106,8 @@ export default function HomePage() {
           />
         )}
       </div>
+
+      <SkinSwitcher />
     </div>
   );
 }

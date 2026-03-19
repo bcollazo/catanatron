@@ -54,6 +54,15 @@ main {
   display: flex;
   flex-direction: column;
 
+  &.skin-classic {
+    background: #f5e6c8;
+    color: #333;
+
+    .logo {
+      color: #333;
+    }
+  }
+
   .loader {
     display: flex;
     justify-content: center;

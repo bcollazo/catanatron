@@ -30,3 +30,27 @@ $dark-divider: rgb(0 0 0 / 80%);
     }
   }
 }
+
+// Classic skin: lighter beige drawers
+body.skin-classic .left-drawer {
+  .MuiDrawer-paper {
+    background: #eddcb9;
+    color: #333;
+  }
+
+  .MuiDivider-root {
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  .MuiDrawer-paperAnchorDockedLeft {
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  .log {
+    scrollbar-color: #c5b18e #eddcb9;
+
+    .action.foreground {
+      color: #333;
+    }
+  }
+}

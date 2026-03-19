@@ -62,4 +62,38 @@
       }
     }
   }
+
+  // Classic skin overrides
+  &.skin-classic {
+    background: #f5e6c8;
+
+    h1 {
+      color: #333;
+    }
+    ul {
+      color: #333;
+    }
+
+    .player-count-label {
+      color: #333;
+    }
+
+    .player-count-selector .player-count-buttons .player-count-button {
+      background-color: #d4c4a8 !important;
+      color: #333 !important;
+
+      &:hover {
+        background-color: color.adjust(#d4c4a8, $lightness: -8%) !important;
+      }
+
+      &.selected {
+        background-color: #8b6914 !important;
+        color: white !important;
+
+        &:hover {
+          background-color: color.adjust(#8b6914, $lightness: -5%) !important;
+        }
+      }
+    }
+  }
 }

@@ -21,3 +21,15 @@ $dark-divider: rgb(0 0 0 / 80%);
     background: $dark-divider;
   }
 }
+
+// Classic skin: lighter beige drawers
+body.skin-classic .right-drawer {
+  .MuiDrawer-paper {
+    background: #eddcb9;
+    color: #333;
+  }
+
+  .MuiDivider-root {
+    background: rgba(0, 0, 0, 0.15);
+  }
+}

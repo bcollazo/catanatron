@@ -11,6 +11,8 @@ import { store } from "../store";
 import ACTIONS from "../actions";
 import { getState } from "../utils/apiClient";
 import AnalysisBox from "../components/AnalysisBox";
+import SkinSwitcher from "../components/SkinSwitcher";
+import { useSkin } from "../SkinContext";
 import { Divider } from "@mui/material";
 import ReplayBox from "../components/ReplayBox";
 
@@ -19,6 +21,7 @@ function ReplayScreen() {
   const { state, dispatch } = useContext(store);
   const [latestStateIndex, setLatestStateIndex] = useState<number>(0);
   const [stateIndex, setStateIndex] = useState<number>(0);
+  const { skin } = useSkin();
 
   const handlePrevState = () => setStateIndex((prev) => Math.max(prev - 1, 0));
   const handleNextState = () => setStateIndex((prev) => Math.min(prev + 1, latestStateIndex));
@@ -57,7 +60,7 @@ function ReplayScreen() {
   }
 
   return (
-    <main>
+    <main className={`skin-${skin}`}>
       <h1 className="logo">Catanatron</h1>
       <ZoomableBoard replayMode={true} />
       <LeftDrawer />
@@ -72,6 +75,7 @@ function ReplayScreen() {
           onSeekMove={(index) => setStateIndex(index)}
         />
       </RightDrawer>
+      <SkinSwitcher />
     </main>
   );
 }
