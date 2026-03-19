@@ -18,6 +18,22 @@ type Point = {
   y: number;
 };
 
+type CorrelationPoint = {
+  x: number;
+  y: number;
+  count: number;
+  label: string;
+};
+
+type CatalogFilters = {
+  won: "all" | "yes" | "no";
+  wentFirst: "all" | "yes" | "no";
+  gameIndex?: number;
+  openingPipDiffExact?: number;
+  turnBucketStart?: number;
+  turnBucketSize?: number;
+};
+
 function formatWentFirst(value: boolean | null) {
   if (value === null) return "N/A";
   return value ? "YES" : "NO";
@@ -85,6 +101,52 @@ function vpDiffPoints(rows: ReplayCatalogItem[]): Point[] {
   });
 }
 
+function openingPipDiffPoints(rows: ReplayCatalogItem[]): Point[] {
+  const ordered = [...rows].reverse();
+  return ordered
+    .map((row, index) => ({ x: index + 1, y: row.opening_pip_diff }))
+    .filter((point): point is Point => typeof point.y === "number");
+}
+
+function pipDiffWinRateCorrelation(rows: ReplayCatalogItem[]): CorrelationPoint[] {
+  const buckets = new Map<number, { wins: number; total: number }>();
+  for (const row of rows) {
+    if (row.opening_pip_diff === null || row.opening_pip_diff === undefined) continue;
+    const key = Math.trunc(row.opening_pip_diff);
+    const value = buckets.get(key) ?? { wins: 0, total: 0 };
+    value.total += 1;
+    if (row.won) value.wins += 1;
+    buckets.set(key, value);
+  }
+  return Array.from(buckets.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([diff, stats]) => ({
+      x: diff,
+      y: pct(stats.wins, stats.total),
+      count: stats.total,
+      label: `diff=${diff}`,
+    }));
+}
+
+function turnBucketWinRate(rows: ReplayCatalogItem[], bucketSize = 50): CorrelationPoint[] {
+  const buckets = new Map<number, { wins: number; total: number }>();
+  for (const row of rows) {
+    const bucketStart = Math.floor(row.turn_count / bucketSize) * bucketSize;
+    const value = buckets.get(bucketStart) ?? { wins: 0, total: 0 };
+    value.total += 1;
+    if (row.won) value.wins += 1;
+    buckets.set(bucketStart, value);
+  }
+  return Array.from(buckets.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([bucketStart, stats]) => ({
+      x: bucketStart,
+      y: pct(stats.wins, stats.total),
+      count: stats.total,
+      label: `${bucketStart}-${bucketStart + bucketSize - 1}`,
+    }));
+}
+
 function firstCityPoints(rows: ReplayCatalogItem[]): Point[] {
   const ordered = [...rows].reverse();
   return ordered
@@ -142,6 +204,7 @@ function InteractiveLineChart({
   yMin,
   yMax,
   formatY = (v) => v.toFixed(1),
+  onPointClick,
 }: {
   points: Point[];
   yLabel: string;
@@ -149,6 +212,7 @@ function InteractiveLineChart({
   yMin?: number;
   yMax?: number;
   formatY?: (value: number) => string;
+  onPointClick?: (point: Point) => void;
 }) {
   const width = 320;
   const height = 150;
@@ -238,8 +302,20 @@ function InteractiveLineChart({
           {formatY(safeMin)}
         </text>
         <path d={toPath} fill="none" stroke={color} strokeWidth={2.5} />
+        {points.map((p, i) => (
+          <circle
+            key={`${p.x}-${i}`}
+            cx={xAt(p.x)}
+            cy={yAt(p.y)}
+            r={i === activeIndex ? 4 : 2.3}
+            fill={color}
+            opacity={i === activeIndex ? 1 : 0.8}
+            onClick={() => onPointClick?.(p)}
+            style={{ cursor: onPointClick ? "pointer" : "default" }}
+          />
+        ))}
         <line x1={activeX} y1={paddingY} x2={activeX} y2={height - paddingY} stroke="#5d5d5d" strokeDasharray="3 3" />
-        <circle cx={activeX} cy={activeY} r={4} fill={color} stroke="#111111" strokeWidth={1.5} />
+        <circle cx={activeX} cy={activeY} r={4} fill={color} stroke="#111111" strokeWidth={1.5} pointerEvents="none" />
       </svg>
     </div>
   );
@@ -278,7 +354,13 @@ function SplitBarChart({
   );
 }
 
-function ActionMixChart({ points }: { points: MixPoint[] }) {
+function ActionMixChart({
+  points,
+  onPointClick,
+}: {
+  points: MixPoint[];
+  onPointClick?: (point: MixPoint) => void;
+}) {
   const width = 320;
   const height = 150;
   const paddingLeft = 34;
@@ -365,6 +447,18 @@ function ActionMixChart({ points }: { points: MixPoint[] }) {
         <path d={tradePath} fill="none" stroke="#54d38b" strokeWidth={2.2} />
         <path d={devPath} fill="none" stroke="#c68cff" strokeWidth={2.2} />
         <path d={robberPath} fill="none" stroke="#f7c45a" strokeWidth={2.2} />
+        {points.map((p, i) => (
+          <circle
+            key={`${p.x}-${i}`}
+            cx={xAt(p.x)}
+            cy={yAt(p.build + p.trade + p.dev + p.robber)}
+            r={i === activeIndex ? 3.8 : 2}
+            fill="#f7c45a"
+            opacity={i === activeIndex ? 1 : 0.7}
+            onClick={() => onPointClick?.(p)}
+            style={{ cursor: onPointClick ? "pointer" : "default" }}
+          />
+        ))}
         <line x1={activeX} y1={paddingY} x2={activeX} y2={height - paddingY} stroke="#5d5d5d" strokeDasharray="3 3" />
       </svg>
       <div className="chart-legend">
@@ -377,8 +471,134 @@ function ActionMixChart({ points }: { points: MixPoint[] }) {
   );
 }
 
+function CorrelationLineChart({
+  titleLabel,
+  points,
+  color = "#64d8ff",
+  onPointClick,
+}: {
+  titleLabel: string;
+  points: CorrelationPoint[];
+  color?: string;
+  onPointClick?: (point: CorrelationPoint) => void;
+}) {
+  const width = 320;
+  const height = 150;
+  const paddingLeft = 34;
+  const paddingRight = 10;
+  const paddingY = 14;
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  if (points.length === 0) {
+    return <div className="chart-empty">No data</div>;
+  }
+
+  const xMin = Math.min(...points.map((p) => p.x));
+  const xMax = Math.max(...points.map((p) => p.x));
+  const safeXMax = xMin === xMax ? xMax + 1 : xMax;
+  const spanX = width - paddingLeft - paddingRight;
+  const spanY = height - paddingY * 2;
+  const xAt = (x: number) =>
+    paddingLeft + (spanX * (x - xMin)) / (safeXMax - xMin);
+  const yAt = (y: number) => height - paddingY - (spanY * y) / 100;
+
+  const toPath = points
+    .map((p, i) => {
+      const x = xAt(p.x);
+      const y = yAt(p.y);
+      return `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+
+  const activeIndex = hoverIndex ?? points.length - 1;
+  const active = points[activeIndex];
+  const activeX = xAt(active.x);
+  const activeY = yAt(active.y);
+
+  const handleMouseMove = (evt: MouseEvent<SVGSVGElement>) => {
+    const rect = evt.currentTarget.getBoundingClientRect();
+    const relativeX = clamp(
+      evt.clientX - rect.left,
+      paddingLeft,
+      width - paddingRight
+    );
+    const ratio = (relativeX - paddingLeft) / spanX;
+    const idx = clamp(Math.round(ratio * (points.length - 1)), 0, points.length - 1);
+    setHoverIndex(idx);
+  };
+
+  return (
+    <div className="interactive-chart">
+      <div className="chart-readout">
+        <strong>{titleLabel}:</strong> {active.label} | win rate{" "}
+        {active.y.toFixed(1)}% | games {active.count}
+      </div>
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoverIndex(null)}
+      >
+        <line
+          x1={paddingLeft}
+          y1={height - paddingY}
+          x2={width - paddingRight}
+          y2={height - paddingY}
+          stroke="#505050"
+        />
+        <line
+          x1={paddingLeft}
+          y1={paddingY}
+          x2={paddingLeft}
+          y2={height - paddingY}
+          stroke="#505050"
+        />
+        <text x={8} y={paddingY + 4} fill="#aaaaaa" fontSize="10">
+          100%
+        </text>
+        <text x={8} y={height - paddingY + 4} fill="#aaaaaa" fontSize="10">
+          0%
+        </text>
+        <text x={paddingLeft - 4} y={height - 2} textAnchor="end" fill="#9d9d9d" fontSize="10">
+          {xMin}
+        </text>
+        <text x={width - paddingRight + 2} y={height - 2} fill="#9d9d9d" fontSize="10">
+          {xMax}
+        </text>
+        <path d={toPath} fill="none" stroke={color} strokeWidth={2.5} />
+        {points.map((p, i) => (
+          <circle
+            key={`${p.x}-${i}`}
+            cx={xAt(p.x)}
+            cy={yAt(p.y)}
+            r={i === activeIndex ? 4 : 2.5}
+            fill={color}
+            opacity={i === activeIndex ? 1 : 0.85}
+            onClick={() => onPointClick?.(p)}
+            style={{ cursor: onPointClick ? "pointer" : "default" }}
+          />
+        ))}
+        <line
+          x1={activeX}
+          y1={paddingY}
+          x2={activeX}
+          y2={height - paddingY}
+          stroke="#5d5d5d"
+          strokeDasharray="3 3"
+        />
+        <circle cx={activeX} cy={activeY} r={4} fill={color} stroke="#111111" strokeWidth={1.5} />
+      </svg>
+    </div>
+  );
+}
+
 export default function ReplayCatalogScreen() {
   const [rows, setRows] = useState<ReplayCatalogItem[] | null>(null);
+  const [filters, setFilters] = useState<CatalogFilters>({
+    won: "all",
+    wentFirst: "all",
+  });
 
   useEffect(() => {
     (async () => {
@@ -394,6 +614,56 @@ export default function ReplayCatalogScreen() {
       </main>
     );
   }
+
+  const orderedRows = [...rows].reverse(); // game #1 is oldest
+  const gameNumberById = new Map(orderedRows.map((row, i) => [row.game_id, i + 1]));
+  const selectedGameId =
+    filters.gameIndex !== undefined
+      ? orderedRows[filters.gameIndex - 1]?.game_id
+      : undefined;
+
+  const filteredRows = rows.filter((row) => {
+    if (selectedGameId && row.game_id !== selectedGameId) return false;
+    if (filters.won === "yes" && row.won !== true) return false;
+    if (filters.won === "no" && row.won !== false) return false;
+    if (filters.wentFirst === "yes" && row.went_first !== true) return false;
+    if (filters.wentFirst === "no" && row.went_first !== false) return false;
+    if (
+      filters.openingPipDiffExact !== undefined &&
+      row.opening_pip_diff !== filters.openingPipDiffExact
+    ) {
+      return false;
+    }
+    if (filters.turnBucketStart !== undefined) {
+      const size = filters.turnBucketSize ?? 50;
+      const start = filters.turnBucketStart;
+      if (!(row.turn_count >= start && row.turn_count < start + size)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const clearAllFilters = () =>
+    setFilters({
+      won: "all",
+      wentFirst: "all",
+    });
+
+  const removeFilter = (
+    key: "gameIndex" | "openingPipDiffExact" | "turnBucketStart"
+  ) => {
+    setFilters((prev) => {
+      const next: CatalogFilters = { ...prev };
+      if (key === "gameIndex") delete next.gameIndex;
+      if (key === "openingPipDiffExact") delete next.openingPipDiffExact;
+      if (key === "turnBucketStart") {
+        delete next.turnBucketStart;
+        delete next.turnBucketSize;
+      }
+      return next;
+    });
+  };
 
   const total = rows.length;
   const wins = rows.filter((row) => row.won).length;
@@ -414,7 +684,14 @@ export default function ReplayCatalogScreen() {
     lossRows.map((row) => row.us_final_vp ?? 0).filter((v) => v > 0)
   );
   const avgOpeningPips = averageNullable(rows.map((row) => row.us_opening_pip_score));
+  const avgOpeningPipDiff = averageNullable(rows.map((row) => row.opening_pip_diff));
   const avgFirstCityTurn = averageNullable(rows.map((row) => row.us_first_city_turn));
+  const positivePipDiffRows = rows.filter((row) => (row.opening_pip_diff ?? 0) > 0);
+  const neutralPipDiffRows = rows.filter((row) => (row.opening_pip_diff ?? 0) === 0);
+  const negativePipDiffRows = rows.filter((row) => (row.opening_pip_diff ?? 0) < 0);
+  const positivePipDiffWins = positivePipDiffRows.filter((row) => row.won).length;
+  const neutralPipDiffWins = neutralPipDiffRows.filter((row) => row.won).length;
+  const negativePipDiffWins = negativePipDiffRows.filter((row) => row.won).length;
 
   const devBehavior = splitBehaviorWinRate(rows, (row) => row.us_buy_dev);
   const tradeBehavior = splitBehaviorWinRate(rows, (row) => row.us_maritime_trades);
@@ -424,6 +701,9 @@ export default function ReplayCatalogScreen() {
   const rollingWinRate = rollingWinRatePoints(rows, 10);
   const turnsSeries = turnCountPoints(rows);
   const vpDiffSeries = vpDiffPoints(rows);
+  const openingPipDiffSeries = openingPipDiffPoints(rows);
+  const openingPipWinRateSeries = pipDiffWinRateCorrelation(rows);
+  const turnBucketWinRateSeries = turnBucketWinRate(rows, 50);
   const firstCitySeries = firstCityPoints(rows);
   const mixSeries = actionMixPoints(rows);
 
@@ -452,6 +732,7 @@ export default function ReplayCatalogScreen() {
     { label: "Avg Final VP (Wins)", value: `${avgVpWin.toFixed(2)}` },
     { label: "Avg Final VP (Losses)", value: `${avgVpLoss.toFixed(2)}` },
     { label: "Avg Opening Pip Score", value: `${avgOpeningPips.toFixed(2)}` },
+    { label: "Avg Opening Pip Differential", value: `${avgOpeningPipDiff.toFixed(2)}` },
     { label: "Avg First City Turn", value: `${avgFirstCityTurn.toFixed(1)}` },
     { label: "Avg Dev Buys / Game", value: `${avgDevBuys.toFixed(2)}` },
     { label: "Avg Maritime Trades / Game", value: `${avgTrades.toFixed(2)}` },
@@ -467,10 +748,70 @@ export default function ReplayCatalogScreen() {
       <h1 className="logo">Replay Catalog</h1>
       <div className="catalog-card foreground">
         <div className="catalog-header">
-          <div>{rows.length} replay(s)</div>
+          <div>
+            Showing {filteredRows.length} / {rows.length} replay(s)
+          </div>
           <Button component={Link} variant="contained" to="/">
             Home
           </Button>
+        </div>
+
+        <div className="catalog-filters">
+          <label>
+            Won:
+            <select
+              value={filters.won}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  won: e.target.value as CatalogFilters["won"],
+                }))
+              }
+            >
+              <option value="all">All</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+
+          <label>
+            Went First:
+            <select
+              value={filters.wentFirst}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  wentFirst: e.target.value as CatalogFilters["wentFirst"],
+                }))
+              }
+            >
+              <option value="all">All</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+
+          <Button size="small" variant="outlined" onClick={clearAllFilters}>
+            Clear All Filters
+          </Button>
+        </div>
+
+        <div className="active-filters">
+          {filters.gameIndex !== undefined && (
+            <button type="button" className="filter-chip" onClick={() => removeFilter("gameIndex")}>
+              Game #{filters.gameIndex} x
+            </button>
+          )}
+          {filters.openingPipDiffExact !== undefined && (
+            <button type="button" className="filter-chip" onClick={() => removeFilter("openingPipDiffExact")}>
+              Pip diff = {filters.openingPipDiffExact} x
+            </button>
+          )}
+          {filters.turnBucketStart !== undefined && (
+            <button type="button" className="filter-chip" onClick={() => removeFilter("turnBucketStart")}>
+              Turns {filters.turnBucketStart}-{filters.turnBucketStart + (filters.turnBucketSize ?? 50) - 1} x
+            </button>
+          )}
         </div>
 
         <div className="catalog-body">
@@ -479,6 +820,7 @@ export default function ReplayCatalogScreen() {
               <thead>
                 <tr>
                   <th>Replay ID</th>
+                  <th>Game #</th>
                   <th>Turn #</th>
                   <th>State #</th>
                   <th>Went First</th>
@@ -487,9 +829,10 @@ export default function ReplayCatalogScreen() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <tr key={row.game_id}>
                     <td className="mono">{row.game_id}</td>
+                    <td>{gameNumberById.get(row.game_id) ?? "N/A"}</td>
                     <td>{row.turn_count}</td>
                     <td>{row.state_index}</td>
                     <td>{formatWentFirst(row.went_first)}</td>
@@ -530,6 +873,12 @@ export default function ReplayCatalogScreen() {
                 yMax={100}
                 color="#4da3ff"
                 formatY={(v) => `${v.toFixed(1)}%`}
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    gameIndex: point.x,
+                  }))
+                }
               />
             </div>
 
@@ -542,6 +891,12 @@ export default function ReplayCatalogScreen() {
                 yMax={100}
                 color="#54d38b"
                 formatY={(v) => `${v.toFixed(1)}%`}
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    gameIndex: point.x,
+                  }))
+                }
               />
             </div>
 
@@ -552,6 +907,12 @@ export default function ReplayCatalogScreen() {
                 yLabel="Turns"
                 color="#f7c45a"
                 formatY={(v) => `${v.toFixed(0)}`}
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    gameIndex: point.x,
+                  }))
+                }
               />
             </div>
 
@@ -562,6 +923,43 @@ export default function ReplayCatalogScreen() {
                 yLabel="VP Differential"
                 color="#c68cff"
                 formatY={(v) => `${v.toFixed(2)}`}
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    gameIndex: point.x,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="stats-block">
+              <h4>Opening Pip Differential Over Game #</h4>
+              <InteractiveLineChart
+                points={openingPipDiffSeries}
+                yLabel="Opening Pip Differential"
+                color="#64d8ff"
+                formatY={(v) => `${v.toFixed(0)}`}
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    gameIndex: point.x,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="stats-block">
+              <h4>Pip Differential vs Win Rate</h4>
+              <CorrelationLineChart
+                titleLabel="Pip Differential"
+                points={openingPipWinRateSeries}
+                color="#64d8ff"
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    openingPipDiffExact: point.x,
+                  }))
+                }
               />
             </div>
 
@@ -572,6 +970,12 @@ export default function ReplayCatalogScreen() {
                 yLabel="First City Turn"
                 color="#ff9f6e"
                 formatY={(v) => `${v.toFixed(0)}`}
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    gameIndex: point.x,
+                  }))
+                }
               />
             </div>
 
@@ -587,7 +991,15 @@ export default function ReplayCatalogScreen() {
 
             <div className="stats-block">
               <h4>Action Mix Over Game # (US)</h4>
-              <ActionMixChart points={mixSeries} />
+              <ActionMixChart
+                points={mixSeries}
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    gameIndex: point.x,
+                  }))
+                }
+              />
             </div>
 
             <div className="stats-block">
@@ -615,6 +1027,34 @@ export default function ReplayCatalogScreen() {
               <div className="stat-row">
                 <span>Low Knight Plays (&lt; {knightBehavior.median})</span>
                 <strong>{knightBehavior.lowWinRate.toFixed(1)}%</strong>
+              </div>
+            </div>
+
+            <div className="stats-block">
+              <h4>Turns per Game Bucket vs Win Rate (50-turn bins)</h4>
+              <CorrelationLineChart
+                titleLabel="Turns Bucket"
+                points={turnBucketWinRateSeries}
+                color="#f7c45a"
+                onPointClick={(point) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    turnBucketStart: point.x,
+                    turnBucketSize: 50,
+                  }))
+                }
+              />
+              <div className="stat-row">
+                <span>Positive Pip Diff Win Rate</span>
+                <strong>{pct(positivePipDiffWins, positivePipDiffRows.length).toFixed(1)}%</strong>
+              </div>
+              <div className="stat-row">
+                <span>Neutral Pip Diff Win Rate</span>
+                <strong>{pct(neutralPipDiffWins, neutralPipDiffRows.length).toFixed(1)}%</strong>
+              </div>
+              <div className="stat-row">
+                <span>Negative Pip Diff Win Rate</span>
+                <strong>{pct(negativePipDiffWins, negativePipDiffRows.length).toFixed(1)}%</strong>
               </div>
             </div>
           </aside>

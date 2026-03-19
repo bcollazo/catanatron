@@ -27,6 +27,47 @@
     margin-bottom: variables.$sm-gutter;
   }
 
+  .catalog-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: #cecece;
+    }
+
+    select {
+      background: #141414;
+      color: #efefef;
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 4px;
+      padding: 4px 6px;
+    }
+  }
+
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+
+    .filter-chip {
+      background: rgb(77 163 255 / 15%);
+      color: #d8ebff;
+      border: 1px solid rgb(77 163 255 / 40%);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+  }
+
   .catalog-body {
     display: grid;
     gap: 12px;

@@ -145,6 +145,8 @@ export type ReplayCatalogItem = {
   us_build_settlement: number;
   us_play_knight: number;
   us_opening_pip_score: number | null;
+  opp_opening_pip_score: number | null;
+  opening_pip_diff: number | null;
   us_first_city_turn: number | null;
   us_action_build: number;
   us_action_trade: number;

@@ -134,15 +134,15 @@ def _pip_value(number: int | None) -> int:
     return pip_lookup.get(number, 0) if number is not None else 0
 
 
-def _opening_pip_score(payload: dict, us_color: str | None, action_records: list) -> int | None:
-    if us_color is None:
+def _opening_pip_score(payload: dict, color: str | None, action_records: list) -> int | None:
+    if color is None:
         return None
     settlement_nodes: list[int] = []
     for action_record in action_records:
         if not action_record or not action_record[0]:
             continue
         action = action_record[0]
-        if action[0] == us_color and action[1] == "BUILD_SETTLEMENT":
+        if action[0] == color and action[1] == "BUILD_SETTLEMENT":
             settlement_nodes.append(action[2])
             if len(settlement_nodes) >= 2:
                 break
@@ -217,8 +217,10 @@ def list_replay_catalog(limit: int = 200):
         won = winning_color == us_color if us_color and winning_color is not None else None
         us_index = colors.index(us_color) if us_color in colors else None
         opp_index = None
+        opp_color = None
         if us_index is not None and len(colors) == 2:
             opp_index = 1 - us_index
+            opp_color = colors[opp_index]
 
         us_final_vp = (
             player_state.get(f"P{us_index}_ACTUAL_VICTORY_POINTS")
@@ -275,6 +277,12 @@ def list_replay_catalog(limit: int = 200):
                 us_robber_actions += 1
 
         opening_pip_score = _opening_pip_score(payload, us_color, action_records)
+        opp_opening_pip_score = _opening_pip_score(payload, opp_color, action_records)
+        opening_pip_diff = (
+            opening_pip_score - opp_opening_pip_score
+            if opening_pip_score is not None and opp_opening_pip_score is not None
+            else None
+        )
         first_city_turn = _first_city_turn(action_records, us_color)
 
         catalog.append(
@@ -294,6 +302,8 @@ def list_replay_catalog(limit: int = 200):
                 "us_build_settlement": us_build_settlement,
                 "us_play_knight": us_play_knight,
                 "us_opening_pip_score": opening_pip_score,
+                "opp_opening_pip_score": opp_opening_pip_score,
+                "opening_pip_diff": opening_pip_diff,
                 "us_first_city_turn": first_city_turn,
                 "us_action_build": us_build_actions,
                 "us_action_trade": us_trade_actions,
