@@ -12,7 +12,7 @@ from catanatron.state_functions import (
 )
 from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.map import NUM_TILES, CatanMap, build_map, number_probability
-from catanatron.models.player import Player, Color, SimplePlayer
+from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
     RESOURCES,
@@ -106,7 +106,7 @@ def resource_hand_features(game: Game, p0_color: Color):
                 ]
             for card in DEVELOPMENT_CARDS:
                 features[f"P0_{card}_IN_HAND"] = player_state[key + f"_{card}_IN_HAND"]
-            features[f"P0_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = player_state[
+            features["P0_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = player_state[
                 key + "_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"
             ]
 
@@ -132,7 +132,7 @@ def map_tile_features(catan_map: CatanMap, robber_coordinate):
     for tile_id, tile in catan_map.tiles_by_id.items():
         for resource in RESOURCES:
             features[f"TILE{tile_id}_IS_{resource}"] = tile.resource == resource
-        features[f"TILE{tile_id}_IS_DESERT"] = tile.resource == None
+        features[f"TILE{tile_id}_IS_DESERT"] = tile.resource is None
         features[f"TILE{tile_id}_PROBA"] = (
             0 if tile.resource is None else number_probability(tile.number)
         )
