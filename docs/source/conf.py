@@ -27,8 +27,8 @@ author = "Bryan Collazo"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "m2r2"]
-source_suffix = [".rst", ".md"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon"]
+source_suffix = [".rst"]
 
 # napoleon_google_docstring = True
 # napoleon_use_param = False
