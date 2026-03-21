@@ -1,7 +1,7 @@
-import random
 import pickle
+import random
 from collections import defaultdict
-from typing import Any, List, Sequence, Tuple, Dict
+from typing import Any, Dict, List, Sequence, Tuple
 
 from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
@@ -76,6 +76,8 @@ class State:
         current_prompt (ActionPrompt): DEPRECATED. Not needed; use is_initial_build_phase,
             is_moving_knight, etc... instead.
         is_discarding (bool): If current player needs to discard.
+        discard_counts (Dict[Color, int]): Remaining number of cards each player
+            must discard in the current discard sequence.
         is_moving_knight (bool): If current player needs to move robber.
         is_road_building (bool): If current player needs to build free roads per Road
             Building dev card.
@@ -126,6 +128,9 @@ class State:
             self.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
             self.is_initial_build_phase = True
             self.is_discarding = False
+            self.discard_counts: Dict[Color, int] = {
+                color: 0 for color in self.colors
+            }
             self.is_moving_knight = False
             self.is_road_building = False
             self.free_roads_available = 0
@@ -133,6 +138,17 @@ class State:
             self.is_resolving_trade = False
             self.current_trade: Tuple = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             self.acceptees = tuple(False for _ in self.colors)
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        if not hasattr(self, "action_records"):
+            self.action_records = []
+        # Migration for discard_counts if it's a list (old format)
+        if hasattr(self, "discard_counts") and isinstance(self.discard_counts, list):
+            self.discard_counts = {
+                color: count
+                for color, count in zip(self.colors, self.discard_counts)
+            }
 
     def current_player(self):
         """Helper for accessing Player instance who should decide next"""
@@ -176,6 +192,7 @@ class State:
         state_copy.current_prompt = self.current_prompt
         state_copy.is_initial_build_phase = self.is_initial_build_phase
         state_copy.is_discarding = self.is_discarding
+        state_copy.discard_counts = self.discard_counts.copy()
         state_copy.is_moving_knight = self.is_moving_knight
         state_copy.is_road_building = self.is_road_building
         state_copy.free_roads_available = self.free_roads_available

@@ -1,5 +1,6 @@
 from catanatron.state import State
 from catanatron.models.actions import (
+    discard_possibilities,
     generate_playable_actions,
     monopoly_possibilities,
     year_of_plenty_possibilities,
@@ -10,6 +11,7 @@ from catanatron.models.actions import (
     maritime_trade_possibilities,
 )
 from catanatron.models.enums import (
+    Action,
     BRICK,
     ORE,
     RESOURCES,
@@ -53,6 +55,20 @@ def test_year_of_plenty_possible_actions_not_enough_cards():
 
 def test_monopoly_possible_actions():
     assert len(monopoly_possibilities(Color.RED)) == len(RESOURCES)
+
+
+def test_discard_possibilities_are_per_resource():
+    player = SimplePlayer(Color.RED)
+    state = State([player])
+    state.discard_counts[player.color] = 2
+
+    player_deck_replenish(state, player.color, WHEAT, 2)
+    player_deck_replenish(state, player.color, BRICK, 1)
+
+    assert discard_possibilities(state, player.color) == [
+        Action(player.color, ActionType.DISCARD, BRICK),
+        Action(player.color, ActionType.DISCARD, WHEAT),
+    ]
 
 
 def test_road_possible_actions():
@@ -173,13 +189,6 @@ def test_initial_placement_possibilities():
     red = SimplePlayer(Color.RED)
     state = State([red])
     assert len(settlement_possibilities(state, Color.RED, True)) == 54
-
-
-# TODO: Forcing random selection to ease dimensionality.
-# def test_discard_possibilities():
-#     player = SimplePlayer(Color.RED)
-#     player_deck_replenish(state, player.color, Resource.WHEAT)
-#     assert len(discard_possibilities(player)) == 70
 
 
 def test_4to1_maritime_trade_possibilities():

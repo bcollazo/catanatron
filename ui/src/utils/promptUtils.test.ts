@@ -180,10 +180,10 @@ describe("humanizeAction", () => {
   test("DISCARD action", () => {
     expect(
       humanizeActionRecord(baseGameState, [
-        ["ORANGE", "DISCARD", null],
+        ["ORANGE", "DISCARD", "WHEAT"],
         ["WHEAT"],
       ])
-    ).toBe("YOU DISCARDED");
+    ).toBe("YOU DISCARDED WHEAT");
   });
 
   test("BUY_DEVELOPMENT_CARD action", () => {

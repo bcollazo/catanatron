@@ -20,7 +20,7 @@ def get_action_array(
     actions_array = sorted(
         [
             (ActionType.ROLL, None),
-            (ActionType.DISCARD, None),
+            *[(ActionType.DISCARD, resource) for resource in RESOURCES],
             *[
                 (ActionType.BUILD_ROAD, tuple(sorted(edge)))
                 for edge in get_edges(catan_map.land_nodes)

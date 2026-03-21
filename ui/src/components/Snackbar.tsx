@@ -1,7 +1,7 @@
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import type { GameState } from "../utils/api.types";
-import { humanizeActionRecord } from "../utils/promptUtils";
+import { latestActionText } from "../utils/promptUtils";
 
 // No types exported from notistack;
 type SnackbarKey = string | number;
@@ -29,8 +29,13 @@ export function dispatchSnackbar(
   closeSnackbar: (key?: string | number) => void,
   gameState: GameState
 ) {
+  const message = latestActionText(gameState);
+  if (!message) {
+    return;
+  }
+
   enqueueSnackbar(
-    humanizeActionRecord(gameState, gameState.action_records.slice(-1)[0]),
+    message,
     {
       action: snackbarActions(closeSnackbar),
       onClick: () => {

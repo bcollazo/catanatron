@@ -87,7 +87,7 @@ def generate_playable_actions(state: State) -> List[Action]:
             actions.extend(maritime_trade_possibilities(state, color))
         return actions
     elif action_prompt == ActionPrompt.DISCARD:
-        return discard_possibilities(color)
+        return discard_possibilities(state, color)
     elif action_prompt == ActionPrompt.DECIDE_TRADE:
         actions = [Action(color, ActionType.REJECT_TRADE, state.current_trade)]
 
@@ -245,24 +245,15 @@ def initial_road_possibilities(state, color) -> List[Action]:
     return [Action(color, ActionType.BUILD_ROAD, edge) for edge in buildable_edges]
 
 
-def discard_possibilities(color) -> List[Action]:
-    return [Action(color, ActionType.DISCARD, None)]
-    # TODO: Be robust to high dimensionality of DISCARD
-    # hand = player.resource_deck.to_array()
-    # num_cards = player.resource_deck.num_cards()
-    # num_to_discard = num_cards // 2
+def discard_possibilities(state: State, color) -> List[Action]:
+    if state.discard_counts[color] <= 0:
+        return []
 
-    # num_possibilities = ncr(num_cards, num_to_discard)
-    # if num_possibilities > 100:  # if too many, just take first N
-    #     return [Action(player, ActionType.DISCARD, hand[:num_to_discard])]
-
-    # to_discard = itertools.combinations(hand, num_to_discard)
-    # return list(
-    #     map(
-    #         lambda combination: Action(player, ActionType.DISCARD, combination),
-    #         to_discard,
-    #     )
-    # )
+    return [
+        Action(color, ActionType.DISCARD, resource)
+        for resource in RESOURCES
+        if player_num_resource_cards(state, color, resource) > 0
+    ]
 
 
 def ncr(n, r):

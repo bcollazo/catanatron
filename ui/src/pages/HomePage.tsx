@@ -54,7 +54,6 @@ export default function HomePage() {
           <>
             <ul>
               <li>OPEN HAND</li>
-              <li>NO CHOICE DURING DISCARD</li>
             </ul>
             <div className="player-count-selector">
               <div className="player-count-label">Number of Players</div>
