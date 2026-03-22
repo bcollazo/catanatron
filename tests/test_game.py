@@ -29,6 +29,7 @@ from catanatron.models.enums import (
     ROAD_BUILDING,
 )
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
+from tests.utils import build_initial_placements
 
 
 def test_initial_build_phase():
@@ -222,6 +223,31 @@ def test_discard_is_configurable(fake_roll_dice):
     game.play_tick()  # should be p0 rolling.
 
     assert game.playable_actions != [Action(players[1].color, ActionType.DISCARD, None)]
+
+
+@patch("catanatron.apply_action.roll_dice")
+def test_friendly_robber_filters_tiles_in_game_playable_actions(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 6)
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    blocked_coordinates = {(2, -2, 0), (2, -1, -1)}
+
+    regular_game = Game(players, seed=1, friendly_robber=False)
+    build_initial_placements(regular_game)
+    regular_game.execute(Action(Color.RED, ActionType.ROLL, None))
+    regular_coordinates = {
+        action.value[0] for action in regular_game.playable_actions
+    }
+
+    friendly_game = Game(players, seed=1, friendly_robber=True)
+    build_initial_placements(friendly_game)
+    friendly_game.execute(Action(Color.RED, ActionType.ROLL, None))
+    friendly_coordinates = {
+        action.value[0] for action in friendly_game.playable_actions
+    }
+
+    assert blocked_coordinates.issubset(regular_coordinates)
+    assert blocked_coordinates.isdisjoint(friendly_coordinates)
+    assert friendly_coordinates == regular_coordinates - blocked_coordinates
 
 
 @patch("catanatron.apply_action.roll_dice")

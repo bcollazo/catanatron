@@ -97,6 +97,7 @@ class Game:
         players: Sequence[Player],
         seed: Optional[int] = None,
         discard_limit: int = 7,
+        friendly_robber: bool = False,
         vps_to_win: int = 10,
         catan_map: Optional[CatanMap] = None,
         number_placement: NumberPlacement = "official_spiral",
@@ -118,10 +119,12 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
+            self.friendly_robber = friendly_robber
             self.state = State(
                 players,
                 catan_map,
                 discard_limit=discard_limit,
+                friendly_robber=friendly_robber,
                 number_placement=number_placement,
             )
             self.playable_actions = generate_playable_actions(self.state)
@@ -219,6 +222,7 @@ class Game:
         game_copy.seed = self.seed
         game_copy.id = self.id
         game_copy.vps_to_win = self.vps_to_win
+        game_copy.friendly_robber = self.friendly_robber
         game_copy.state = self.state.copy()
         game_copy.playable_actions = self.playable_actions
         return game_copy
