@@ -35,20 +35,20 @@ def test_play_with_random_number_placement():
     assert "Game Summary" in result.output
 
 
-def test_play_rejects_official_spiral_for_mini():
+def test_play_rejects_official_spiral_for_tournament():
     runner = CliRunner()
     result = runner.invoke(
         simulate,
         [
             "--num=1",
             "--players=R,R",
-            "--config-map=MINI",
+            "--config-map=TOURNAMENT",
             "--config-number-placement=official_spiral",
         ],
     )
     assert result.exit_code != 0
     assert result.exception is not None
-    assert "official_spiral number placement is only supported for BASE maps" in str(
+    assert "official_spiral number placement is only supported for" in str(
         result.exception
     )
 

@@ -374,9 +374,9 @@ def initialize_tiles(
 
     # If asked for numbers in official spiral, override the numbers.
     if number_placement == "official_spiral":
-        if map_template not in [BASE_MAP_TEMPLATE, MINI_MAP_TEMPLATE]:
+        if shuffled_numbers_param is not None:
             raise ValueError(
-                "official_spiral number placement is only supported for base and mini map templates"
+                "official_spiral number placement does not support custom shuffled numbers"
             )
 
         # iterate in order of official spiral and assign numbers, skipping desert tile
@@ -524,6 +524,7 @@ TOURNAMENT_MAP_TILES = initialize_tiles(
         ORE,
         None,
     ],
+    "random",
 )
 TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
 

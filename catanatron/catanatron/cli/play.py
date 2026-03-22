@@ -220,6 +220,12 @@ class GameConfigOptions:
     map_type: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
     number_placement: NumberPlacement = "official_spiral"
 
+    def __post_init__(self):
+        if self.number_placement == "official_spiral" and self.map_type == "TOURNAMENT":
+            raise ValueError(
+                "official_spiral number placement is only supported for base or mini maps"
+            )
+
 
 COLOR_TO_RICH_STYLE = {
     Color.RED: "red",

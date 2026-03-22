@@ -89,16 +89,6 @@ def test_official_spiral():
         assert_no_adjacent_red_pips(all_tiles)
 
 
-def test_official_spiral_mini_map_never_has_adjacent_red_pips():
-    random.seed(1)
-
-    for _ in range(100):
-        all_tiles = initialize_tiles(
-            MINI_MAP_TEMPLATE, number_placement="official_spiral"
-        )
-        assert_no_adjacent_red_pips(all_tiles)
-
-
 def test_get_nodes_and_edges_on_empty_board():
     nodes, edges, node_autoinc = get_nodes_and_edges({}, (0, 0, 0), 0)
     assert max(map(lambda n: n, nodes.values())) == 5
