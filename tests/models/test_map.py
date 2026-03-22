@@ -1,13 +1,40 @@
+import random
+
 from catanatron import WOOD, BRICK
+from catanatron.models.coordinate_system import Direction, UNIT_VECTORS, add
 from catanatron.models.map import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
     CatanMap,
     LandTile,
+    initialize_tiles,
     get_nodes_and_edges,
     get_node_counter_production,
     DICE_PROBAS,
 )
+
+
+def assert_no_adjacent_red_pips(all_tiles):
+    land_tiles = {
+        coordinate: tile
+        for coordinate, tile in all_tiles.items()
+        if isinstance(tile, LandTile)
+    }
+
+    for coordinate, tile in land_tiles.items():
+        if tile.number not in (6, 8):
+            continue
+
+        for direction in Direction:
+            neighbor_coordinate = add(coordinate, UNIT_VECTORS[direction])
+            if neighbor_coordinate not in land_tiles:
+                continue
+
+            neighbor = land_tiles[neighbor_coordinate]
+            assert neighbor.number not in (6, 8), (
+                f"adjacent red pips found at {coordinate}={tile.number} and "
+                f"{neighbor_coordinate}={neighbor.number}"
+            )
 
 
 def test_node_production_of_same_resource_adjacent_tile():
@@ -42,6 +69,24 @@ def test_base_map_can_be_created():
     catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
     assert len(catan_map.land_tiles) == 19
     assert len(catan_map.node_production) == 54
+
+
+def test_official_spiral():
+    random.seed(0)
+
+    for _ in range(100):
+        all_tiles = initialize_tiles(
+            BASE_MAP_TEMPLATE, number_placement="official_spiral"
+        )
+        land_tiles = [tile for tile in all_tiles.values() if isinstance(tile, LandTile)]
+        desert_tiles = [tile for tile in land_tiles if tile.resource is None]
+
+        assert len(desert_tiles) == 1
+        assert desert_tiles[0].number is None
+        assert all(
+            tile.number is not None for tile in land_tiles if tile.resource is not None
+        )
+        assert_no_adjacent_red_pips(all_tiles)
 
 
 def test_get_nodes_and_edges_on_empty_board():

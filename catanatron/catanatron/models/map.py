@@ -1,64 +1,52 @@
-import typing
-from dataclasses import dataclass
 import random
+import typing
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
 
-from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
+from catanatron.models.coordinate_system import UNIT_VECTORS, Coordinate, Direction, add
 from catanatron.models.enums import (
-    FastResource,
-    WOOD,
     BRICK,
+    ORE,
     SHEEP,
     WHEAT,
-    ORE,
+    WOOD,
     EdgeRef,
+    FastResource,
     NodeRef,
 )
+from catanatron.models.spiral import spiral_land_coordinates
+from catanatron.models.tiles import EdgeId, LandTile, NodeId, Port, Tile, Water
 
 NUM_NODES = 54
 NUM_EDGES = 72
 NUM_TILES = 19
 
-
-EdgeId = Tuple[int, int]
-NodeId = int
-Coordinate = Tuple[int, int, int]
-
-
-@dataclass
-class LandTile:
-    id: int
-    resource: Union[FastResource, None]  # None means desert tile
-    number: Union[int, None]  # None if desert
-    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
-    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
-
-    # The id is unique among the tiles, so we can use it as the hash.
-    def __hash__(self):
-        return self.id
-
-
-@dataclass
-class Port:
-    id: int
-    resource: Union[FastResource, None]  # None means desert tile
-    direction: Direction
-    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
-    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
-
-    # The id is unique among the tiles, so we can use it as the hash.
-    def __hash__(self):
-        return self.id
+# According to their letter in their backside
+BASE_NUMBERS_IN_SPIRAL_ORDER = [
+    5,  # A
+    2,  # B
+    6,  # ...
+    3,
+    8,
+    10,
+    9,
+    12,
+    11,
+    4,
+    8,
+    10,
+    9,
+    4,
+    5,
+    6,
+    3,
+    11,
+]
 
 
-@dataclass(frozen=True)
-class Water:
-    nodes: Dict[NodeRef, int]
-    edges: Dict[EdgeRef, EdgeId]
-
-
-Tile = Union[LandTile, Port, Water]
+MapType = Literal["TOURNAMENT", "MINI", "BASE"]
+NumberPlacement = Literal["official_spiral", "random"]
 
 
 @dataclass(frozen=True)
@@ -216,8 +204,11 @@ class CatanMap:
         self.ports_by_id = ports_by_id
 
     @staticmethod
-    def from_template(map_template: MapTemplate):
-        tiles = initialize_tiles(map_template)
+    def from_template(
+        map_template: MapTemplate,
+        number_placement: NumberPlacement = "official_spiral",
+    ):
+        tiles = initialize_tiles(map_template, number_placement=number_placement)
 
         return CatanMap.from_tiles(tiles)
 
@@ -321,6 +312,7 @@ def initialize_tiles(
     shuffled_numbers_param=None,
     shuffled_port_resources_param=None,
     shuffled_tile_resources_param=None,
+    number_placement: NumberPlacement = "official_spiral",
 ) -> Dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
@@ -380,6 +372,26 @@ def initialize_tiles(
         else:
             raise ValueError("Invalid tile")
 
+    # If asked for numbers in official spiral, override the numbers.
+    if number_placement == "official_spiral":
+        if shuffled_numbers_param is not None:
+            raise ValueError(
+                "official_spiral number placement does not support custom shuffled numbers"
+            )
+
+        # iterate in order of official spiral and assign numbers, skipping desert tile
+        start = (2, -2, 0) if map_template == BASE_MAP_TEMPLATE else (1, -1, 0)
+        i = 0
+        for coordinate in spiral_land_coordinates(all_tiles, start):
+            tile = all_tiles[coordinate]
+            if not isinstance(tile, LandTile):
+                raise ValueError(
+                    "official_spiral number placement only supports land tiles"
+                )
+            if tile.resource is None:  # desert tile
+                continue
+            tile.number = BASE_NUMBERS_IN_SPIRAL_ORDER[i]
+            i += 1
     return all_tiles
 
 
@@ -512,14 +524,19 @@ TOURNAMENT_MAP_TILES = initialize_tiles(
         ORE,
         None,
     ],
+    "random",
 )
 TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
 
 
-def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
+def build_map(map_type: MapType, number_placement: NumberPlacement = "official_spiral"):
     if map_type == "TOURNAMENT":
         return TOURNAMENT_MAP  # this assumes map is read-only data struct
     elif map_type == "MINI":
-        return CatanMap.from_template(MINI_MAP_TEMPLATE)
+        return CatanMap.from_template(
+            MINI_MAP_TEMPLATE, number_placement=number_placement
+        )
     else:
-        return CatanMap.from_template(BASE_MAP_TEMPLATE)
+        return CatanMap.from_template(
+            BASE_MAP_TEMPLATE, number_placement=number_placement
+        )

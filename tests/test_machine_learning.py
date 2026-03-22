@@ -126,7 +126,7 @@ def test_reachability_features():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
+    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE, "random")
     game = Game(players, seed=123, catan_map=catan_map)
     p0_color = game.state.colors[0]
 
@@ -197,7 +197,10 @@ def test_tile_features_in_mini():
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
     ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+    game = Game(
+        players,
+        catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE, "random"),
+    )
 
     features = tile_features(game, players[0].color)
     haystack = "".join(features.keys())
@@ -209,7 +212,10 @@ def test_port_features_in_mini():
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
     ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+    game = Game(
+        players,
+        catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE, "random"),
+    )
 
     features = port_features(game, players[0].color)
     assert len(features) == 0
@@ -247,7 +253,10 @@ def test_graph_features_in_mini():
         SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
     ]
-    game = Game(players, catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+    game = Game(
+        players,
+        catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE, "random"),
+    )
     p0_color = game.state.colors[0]
     game.execute(Action(p0_color, ActionType.BUILD_SETTLEMENT, 3))
     game.execute(Action(p0_color, ActionType.BUILD_ROAD, (2, 3)))
@@ -378,7 +387,7 @@ def test_resource_proba_planes():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
+    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE, "random")
     game = Game(players, seed=123, catan_map=catan_map)
 
     tensor = create_board_tensor(game, players[0].color)

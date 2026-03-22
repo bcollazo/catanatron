@@ -12,7 +12,7 @@ from catanatron.models.enums import Action, ActionPrompt, ActionRecord, ActionTy
 from catanatron.state import State
 from catanatron.apply_action import apply_action
 from catanatron.state_functions import player_key, player_has_rolled
-from catanatron.models.map import CatanMap
+from catanatron.models.map import CatanMap, NumberPlacement
 from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...
@@ -99,6 +99,7 @@ class Game:
         discard_limit: int = 7,
         vps_to_win: int = 10,
         catan_map: Optional[CatanMap] = None,
+        number_placement: NumberPlacement = "official_spiral",
         initialize: bool = True,
     ):
         """Creates a game (doesn't run it).
@@ -117,7 +118,12 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
-            self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.state = State(
+                players,
+                catan_map,
+                discard_limit=discard_limit,
+                number_placement=number_placement,
+            )
             self.playable_actions = generate_playable_actions(self.state)
 
     def play(self, accumulators=[], decide_fn=None):
