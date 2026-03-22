@@ -2,8 +2,11 @@ import { test, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('renders setup controls on the home page', () => {
   const { getByText } = render(<App />);
-  const linkElement = getByText(/Play against catanatron/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(getByText(/Map Template/i)).toBeInTheDocument();
+  expect(getByText(/Points to Win/i)).toBeInTheDocument();
+  expect(getByText(/Card Discard Limit/i)).toBeInTheDocument();
+  expect(getByText(/At most one Human player/i)).toBeInTheDocument();
+  expect(getByText(/^Start$/i)).toBeInTheDocument();
 });
