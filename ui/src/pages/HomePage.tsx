@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, MenuItem, Select, Slider } from "@mui/material";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  IconButton,
+  MenuItem,
+  Select,
+  Slider,
+  Tooltip,
+} from "@mui/material";
+import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
 import { GridLoader } from "react-spinners";
 import {
   createGame,
@@ -28,6 +38,7 @@ export default function HomePage() {
   const [mapTemplate, setMapTemplate] = useState<MapTemplate>("BASE");
   const [vpsToWin, setVpsToWin] = useState(10);
   const [discardLimit, setDiscardLimit] = useState(7);
+  const [friendlyRobber, setFriendlyRobber] = useState(false);
   const [players, setPlayers] = useState<PlayerArchetype[]>([
     "CATANATRON",
     "RANDOM",
@@ -77,6 +88,7 @@ export default function HomePage() {
       mapTemplate,
       vpsToWin,
       discardLimit,
+      friendlyRobber,
     });
     setLoading(false);
     navigate("/games/" + gameId);
@@ -143,6 +155,36 @@ export default function HomePage() {
                     marks
                     valueLabelDisplay="auto"
                     onChange={(_, value) => setDiscardLimit(value as number)}
+                  />
+                </div>
+
+                <div className="control-group compact-control switch-control">
+                  <div className="control-header">
+                    <span className="inline-title">
+                      Friendly Robber
+                      <Tooltip
+                        title="Prevent robber placement on tiles touching opponents with 2 victory points."
+                        arrow
+                        enterTouchDelay={0}
+                        leaveTouchDelay={3000}
+                      >
+                        <IconButton
+                          size="small"
+                          className="help-button"
+                          aria-label="Friendly Robber help"
+                        >
+                          <HelpOutlineRoundedIcon fontSize="inherit" />
+                        </IconButton>
+                      </Tooltip>
+                    </span>
+                    <strong>{friendlyRobber ? "On" : "Off"}</strong>
+                  </div>
+                  <Checkbox
+                    className="inline-switch"
+                    checked={friendlyRobber}
+                    onChange={(event) =>
+                      setFriendlyRobber(event.target.checked)
+                    }
                   />
                 </div>
               </div>

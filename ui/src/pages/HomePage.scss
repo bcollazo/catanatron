@@ -29,7 +29,7 @@
     justify-content: center;
     align-items: center;
 
-    button {
+    .MuiButton-root {
       margin-bottom: variables.$sm-gutter;
     }
   }
@@ -58,7 +58,7 @@
 
   .control-row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
   }
 
@@ -69,13 +69,15 @@
   .control-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     color: white;
     margin-bottom: 8px;
+    min-height: 24px;
 
     strong {
       font-size: 0.9rem;
       letter-spacing: 0.04em;
+      line-height: 1;
     }
   }
 
@@ -85,22 +87,22 @@
     gap: 8px;
   }
 
-  .choice-button,
-  .add-player-btn,
-  .start-btn {
-    color: white !important;
-    background-color: variables.$dark-gray !important;
+  .MuiButton-root.choice-button,
+  .MuiButton-root.add-player-btn,
+  .MuiButton-root.start-btn {
+    color: white;
+    background-color: variables.$dark-gray;
 
     &:hover {
-      background-color: color.adjust(variables.$dark-gray, $lightness: -8%) !important;
+      background-color: color.adjust(variables.$dark-gray, $lightness: -8%);
     }
   }
 
-  .choice-button.selected {
-    background-color: #0d47a1 !important;
+  .MuiButton-root.choice-button.selected {
+    background-color: #0d47a1;
 
     &:hover {
-      background-color: color.adjust(#0d47a1, $lightness: -2%) !important;
+      background-color: color.adjust(#0d47a1, $lightness: -2%);
     }
   }
 
@@ -184,8 +186,8 @@
     background: rgb(255 255 255 / 4%);
   }
 
-  .MuiOutlinedInput-notchedOutline {
-    border-color: rgb(255 255 255 / 14%) !important;
+  .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+    border-color: rgb(255 255 255 / 14%);
   }
 
   .MuiSvgIcon-root,
@@ -193,16 +195,46 @@
     color: variables.$blue;
   }
 
+  .switch-control {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .inline-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+  }
+
+  .MuiIconButton-root.help-button {
+    color: rgb(255 255 255 / 52%);
+    padding: 0;
+    font-size: 0.95rem;
+    line-height: 1;
+    margin-bottom: 0;
+
+    &:hover {
+      color: rgb(255 255 255 / 82%);
+      background: transparent;
+    }
+  }
+
+  .MuiCheckbox-root.inline-switch {
+    margin-left: -9px;
+    padding: 0;
+  }
+
   .MuiSlider-mark {
     background-color: rgb(255 255 255 / 20%);
   }
 
-  .remove-player-btn {
-    color: rgb(255 255 255 / 75%) !important;
+  .MuiButton-root.remove-player-btn {
+    color: rgb(255 255 255 / 75%);
     min-width: 80px;
 
-    &:disabled {
-      color: rgb(255 255 255 / 30%) !important;
+    &.Mui-disabled {
+      color: rgb(255 255 255 / 30%);
     }
   }
 

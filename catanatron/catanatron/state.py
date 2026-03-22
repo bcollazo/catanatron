@@ -88,6 +88,7 @@ class State:
         players: Sequence[Player],
         catan_map=None,
         discard_limit=7,
+        friendly_robber=False,
         number_placement: NumberPlacement = "official_spiral",
         initialize=True,
     ):
@@ -98,6 +99,7 @@ class State:
                 catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE, number_placement)
             )
             self.discard_limit = discard_limit
+            self.friendly_robber = friendly_robber
 
             # feature-ready dictionary
             self.player_state = dict()
@@ -155,6 +157,7 @@ class State:
         state_copy = State([], None, initialize=False)
         state_copy.players = self.players
         state_copy.discard_limit = self.discard_limit  # immutable
+        state_copy.friendly_robber = self.friendly_robber  # immutable
 
         state_copy.board = self.board.copy()
 

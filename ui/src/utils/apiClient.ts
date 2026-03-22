@@ -16,6 +16,7 @@ type CreateGameOptions = {
   mapTemplate: MapTemplate;
   vpsToWin: number;
   discardLimit: number;
+  friendlyRobber: boolean;
 };
 
 export async function createGame({
@@ -23,12 +24,14 @@ export async function createGame({
   mapTemplate,
   vpsToWin,
   discardLimit,
+  friendlyRobber,
 }: CreateGameOptions) {
   const response = await axios.post(API_URL + "/api/games", {
     players,
     map_template: mapTemplate,
     vps_to_win: vpsToWin,
     discard_limit: discardLimit,
+    friendly_robber: friendlyRobber,
   });
   return response.data.game_id;
 }

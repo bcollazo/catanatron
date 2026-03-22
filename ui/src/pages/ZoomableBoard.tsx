@@ -145,6 +145,13 @@ export default function ZoomableBoard({ replayMode }: ZoomableBoardProps) {
 
   const nodeActions = replayMode ? {} : buildNodeActions(state);
   const edgeActions = replayMode ? {} : buildEdgeActions(state);
+  const robberCoordinates = new Set(
+    state.isMovingRobber
+      ? gameState.current_playable_actions
+          .filter((action) => action[1] === "MOVE_ROBBER")
+          .map((action) => `${action[2][0]}`)
+      : []
+  );
 
   useEffect(() => {
     setTimeout(() => {
@@ -171,6 +178,7 @@ export default function ZoomableBoard({ replayMode }: ZoomableBoardProps) {
             gameState={gameState}
             isMobile={isMobile}
             isMovingRobber={state.isMovingRobber}
+            robberCoordinates={robberCoordinates}
           />
         </TransformComponent>
       </div>

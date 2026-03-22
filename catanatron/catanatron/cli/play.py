@@ -132,6 +132,12 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Sets how number tokens are placed on random boards.",
 )
 @click.option(
+    "--config-friendly-robber",
+    default=False,
+    is_flag=True,
+    help="Prevents robber placement on tiles that would block opponents with fewer than 3 actual victory points, unless no other robber move is available.",
+)
+@click.option(
     "--quiet",
     default=False,
     is_flag=True,
@@ -157,6 +163,7 @@ def simulate(
     config_vps_to_win,
     config_map,
     config_number_placement,
+    config_friendly_robber,
     quiet,
     help_players,
 ):
@@ -192,6 +199,7 @@ def simulate(
         config_vps_to_win,
         config_map,
         config_number_placement,
+        config_friendly_robber,
     )
     play_batch(
         num,
@@ -219,6 +227,7 @@ class GameConfigOptions:
     vps_to_win: int = 10
     map_type: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
     number_placement: NumberPlacement = "official_spiral"
+    friendly_robber: bool = False
 
     def __post_init__(self):
         if self.number_placement == "official_spiral" and self.map_type == "TOURNAMENT":
@@ -259,6 +268,7 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
         game = Game(
             players,
             discard_limit=game_config.discard_limit,
+            friendly_robber=game_config.friendly_robber,
             vps_to_win=game_config.vps_to_win,
             catan_map=catan_map,
         )

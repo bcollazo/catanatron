@@ -35,6 +35,20 @@ def test_play_with_random_number_placement():
     assert "Game Summary" in result.output
 
 
+def test_play_with_friendly_robber():
+    runner = CliRunner()
+    result = runner.invoke(
+        simulate,
+        [
+            "--num=1",
+            "--players=R,R",
+            "--config-friendly-robber",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Game Summary" in result.output
+
+
 def test_play_rejects_official_spiral_for_tournament():
     runner = CliRunner()
     result = runner.invoke(

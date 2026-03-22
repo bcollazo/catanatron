@@ -55,12 +55,17 @@ def post_game_endpoint():
     if not isinstance(vps_to_win, int) or not 3 <= vps_to_win <= 20:
         abort(400, description="'vps_to_win' must be an integer between 3 and 20")
 
+    friendly_robber = request.json.get("friendly_robber", False)
+    if not isinstance(friendly_robber, bool):
+        abort(400, description="'friendly_robber' must be a boolean")
+
     players = list(map(player_factory, zip(player_keys, Color)))
     catan_map = build_map(map_template)
 
     game = Game(
         players=players,
         discard_limit=discard_limit,
+        friendly_robber=friendly_robber,
         vps_to_win=vps_to_win,
         catan_map=catan_map,
     )
