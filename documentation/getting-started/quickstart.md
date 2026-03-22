@@ -28,4 +28,4 @@ Go to [https://www.catanatron.com](https://www.catanatron.com/). Good luck! :rai
 
 You can also do research with Catan in a Jupypter Notebook. To get started, try out our Overview.ipynb:
 
-[https://colab.research.google.com/github/bcollazo/catanatron/blob/master/examples/Overview.ipynb](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/examples/Overview.ipynb)
+[https://colab.research.google.com/github/bcollazo/catanatron/blob/main/examples/Overview.ipynb](https://colab.research.google.com/github/bcollazo/catanatron/blob/main/examples/Overview.ipynb)

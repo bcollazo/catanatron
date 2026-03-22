@@ -1,9 +1,9 @@
 # Catanatron
 
-[![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=main)](https://coveralls.io/github/bcollazo/catanatron?branch=main)
 [![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
 ![Discord](https://img.shields.io/discord/1385302652014825552)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/examples/Overview.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/main/examples/Overview.ipynb)
 
 Catanatron is a high-performance simulator and strong AI player for Settlers of Catan. You can run thousands of games in the order of seconds. The goal is to find the strongest Settlers of Catan bot possible.
 
@@ -16,7 +16,7 @@ Join our Discord: https://discord.gg/FgFmb75TWd!
 Catanatron provides a `catanatron-play` CLI tool to run large scale simulations.
 
 <p align="left">
- <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/cli.gif">
+ <img src="https://raw.githubusercontent.com/bcollazo/catanatron/main/docs/source/_static/cli.gif">
 </p>
 
 ### Installation
@@ -69,7 +69,7 @@ See more examples at https://docs.catanatron.com.
 We provide Docker images so that you can watch, inspect, and play games against Catanatron via a web UI!
 
 <p align="left">
- <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/CatanatronUI.png">
+ <img src="https://raw.githubusercontent.com/bcollazo/catanatron/main/docs/source/_static/CatanatronUI.png">
 </p>
 
 ### Installation
