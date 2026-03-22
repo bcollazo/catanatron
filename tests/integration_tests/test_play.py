@@ -21,6 +21,38 @@ def test_play_strong():
     assert "Game Summary" in result.output
 
 
+def test_play_with_random_number_placement():
+    runner = CliRunner()
+    result = runner.invoke(
+        simulate,
+        [
+            "--num=1",
+            "--players=R,R",
+            "--config-number-placement=random",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Game Summary" in result.output
+
+
+def test_play_rejects_official_spiral_for_mini():
+    runner = CliRunner()
+    result = runner.invoke(
+        simulate,
+        [
+            "--num=1",
+            "--players=R,R",
+            "--config-map=MINI",
+            "--config-number-placement=official_spiral",
+        ],
+    )
+    assert result.exit_code != 0
+    assert result.exception is not None
+    assert "official_spiral number placement is only supported for BASE maps" in str(
+        result.exception
+    )
+
+
 def test_csv_play():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdirname:

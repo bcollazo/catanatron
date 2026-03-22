@@ -18,8 +18,8 @@ from catanatron.models.enums import FastBuildingType, SETTLEMENT, CITY
 
 
 # Used to find relationships between nodes and edges
-base_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
-mini_map = CatanMap.from_template(MINI_MAP_TEMPLATE)
+base_map = CatanMap.from_template(BASE_MAP_TEMPLATE, "random")
+mini_map = CatanMap.from_template(MINI_MAP_TEMPLATE, "random")
 STATIC_GRAPH = nx.Graph()
 for tile in base_map.tiles.values():
     STATIC_GRAPH.add_nodes_from(tile.nodes.values())

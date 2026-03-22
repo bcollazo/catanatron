@@ -7,7 +7,7 @@ import pickle
 from collections import defaultdict
 from typing import Any, List, Sequence, Tuple, Dict
 
-from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
+from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap, NumberPlacement
 from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
@@ -133,12 +133,15 @@ class State:
         players: Sequence[Player],
         catan_map=None,
         discard_limit=7,
+        number_placement: NumberPlacement = "official_spiral",
         initialize=True,
     ):
         if initialize:
             self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
-            self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
+            self.board = Board(
+                catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE, number_placement)
+            )
             self.discard_limit = discard_limit
 
             # feature-ready dictionary

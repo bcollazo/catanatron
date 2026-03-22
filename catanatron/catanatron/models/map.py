@@ -20,7 +20,8 @@ NUM_NODES = 54
 NUM_EDGES = 72
 NUM_TILES = 19
 
-
+MapType = Literal["TOURNAMENT", "MINI", "BASE"]
+NumberPlacement = Literal["official_spiral", "random"]
 EdgeId = Tuple[int, int]
 NodeId = int
 Coordinate = Tuple[int, int, int]
@@ -216,8 +217,11 @@ class CatanMap:
         self.ports_by_id = ports_by_id
 
     @staticmethod
-    def from_template(map_template: MapTemplate):
-        tiles = initialize_tiles(map_template)
+    def from_template(
+        map_template: MapTemplate,
+        number_placement: NumberPlacement = "official_spiral",
+    ):
+        tiles = initialize_tiles(map_template, number_placement=number_placement)
 
         return CatanMap.from_tiles(tiles)
 
@@ -321,6 +325,7 @@ def initialize_tiles(
     shuffled_numbers_param=None,
     shuffled_port_resources_param=None,
     shuffled_tile_resources_param=None,
+    number_placement: NumberPlacement = "official_spiral",
 ) -> Dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
@@ -380,6 +385,7 @@ def initialize_tiles(
         else:
             raise ValueError("Invalid tile")
 
+    # TODO: HANDLE number_placement
     return all_tiles
 
 
@@ -516,10 +522,14 @@ TOURNAMENT_MAP_TILES = initialize_tiles(
 TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
 
 
-def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
+def build_map(map_type: MapType, number_placement: NumberPlacement = "official_spiral"):
     if map_type == "TOURNAMENT":
         return TOURNAMENT_MAP  # this assumes map is read-only data struct
     elif map_type == "MINI":
-        return CatanMap.from_template(MINI_MAP_TEMPLATE)
+        return CatanMap.from_template(
+            MINI_MAP_TEMPLATE, number_placement=number_placement
+        )
     else:
-        return CatanMap.from_template(BASE_MAP_TEMPLATE)
+        return CatanMap.from_template(
+            BASE_MAP_TEMPLATE, number_placement=number_placement
+        )
