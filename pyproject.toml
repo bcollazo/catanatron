@@ -19,7 +19,7 @@ classifiers = [
 dependencies = ["networkx", "click", "rich"]
 
 [project.optional-dependencies]
-gym = ["gymnasium<=0.29.1", "numpy", "pandas", "fastparquet"]
+gym = ["gymnasium<=0.29.1", "numpy", "pandas", "fastparquet", "pygame"]
 web = [
     "gunicorn",
     "flask",
@@ -29,7 +29,7 @@ web = [
     "psycopg2-binary",
 ]
 dev = [
-    "black",
+    "black==25.11.0",
     "pytest",
     "pytest-benchmark",
     "pytest-watch",
@@ -46,3 +46,6 @@ catanatron-play = "catanatron.cli.play:simulate"
 
 [tool.setuptools.packages.find]
 where = ["catanatron"]
+
+[tool.black]
+target-version = ["py311"]

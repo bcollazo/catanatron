@@ -72,15 +72,17 @@ class ActionType(Enum):
     .value field in Actions of that type.
     """
 
-    ROLL = "ROLL"  # value is None. Log instead sets it to (int, int) rolled.
-    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None). Log has extra element of card stolen.
-    DISCARD = "DISCARD"  # value is None|Resource[]. TODO: Should always be Resource[].
+    ROLL = "ROLL"  # value is None
+    MOVE_ROBBER = "MOVE_ROBBER"  # value is (coordinate, Color|None).
+
+    # TODO: None for now to avoid complexity, but should be Resource[].
+    DISCARD = "DISCARD"  # value is None
 
     # Building/Buying
     BUILD_ROAD = "BUILD_ROAD"  # value is edge_id
     BUILD_SETTLEMENT = "BUILD_SETTLEMENT"  # value is node_id
     BUILD_CITY = "BUILD_CITY"  # value is node_id
-    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None. Log value is card
+    BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None.
 
     # Dev Card Plays
     PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is None
@@ -104,27 +106,34 @@ class ActionType(Enum):
 
     END_TURN = "END_TURN"  # value is None
 
-
-def __repr__(self):
-    return f"ActionType.{self.value}"
+    def __repr__(self):
+        return f"AT.{self.name}"
 
 
 # TODO: Distinguish between Action and ActionLog?
 Action = namedtuple("Action", ["color", "action_type", "value"])
 Action.__doc__ = """
-Main class to represent action. Should be immutable.
+Main class to represent action. Should be immutable, and so the 
+choice of a namedtuple.
 
 The "value" is a polymorphic field that acts as the "parameters"
 for the "action_type". e.g. where to ActionType.BUILD_SETTLEMENT
 or who to steal from in a ActionType.MOVE_ROBBER action.
 
-We use this class to represent both the _intent_ of say "moving a
-robber to Tile (0,0,0) and stealing from Blue" as well as
-the final result of such a move. In moves like these where the intent
-is not enough to be used to reproduce the game identically,
-we use "None"s in the "value" container as placeholders 
-for that information needed for fully reproducing a game.
-(e.g. card stolen, dev card bought, etc...)
+We use this class to represent the _intent_ of say "moving a
+robber to Tile (0,0,0) and stealing from Blue".
+"""
 
-See more on ActionType.
+ActionRecord = namedtuple("ActionRecord", ["action", "result"])
+ActionRecord.__doc__ = """
+Records an Action along with the result of that action. Useful for
+showing an "action log" in a UI, fully replaying a game, or 
+undoing actions to a State.
+
+The "result" field is polymorphic depending on the action_type.
+- ROLL: result is (int, int) 2 dice rolled
+- DISCARD: result is List[Resource] discarded
+- MOVE_ROBBER: result is card stolen (Resource|None)
+- BUY_DEVELOPMENT_CARD: result is card
+- ...for the rest, result is None since they are deterministic actions
 """

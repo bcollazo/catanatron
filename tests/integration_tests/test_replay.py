@@ -73,3 +73,22 @@ def test_execute_action_on_copies_doesnt_conflict():
     game_copy.execute(action)
 
     game.execute(action)
+
+
+def test_seed_reproducibility():
+    # Play 10 games with the same seed, assert the action logs look the same
+    players = [
+        RandomPlayer(Color.RED),
+        RandomPlayer(Color.BLUE),
+        RandomPlayer(Color.WHITE),
+        RandomPlayer(Color.ORANGE),
+    ]
+    game = Game(players, seed=123)
+    game.play()
+    game_json = json.dumps(game, cls=GameEncoder)
+
+    for i in range(10):
+        game = Game(players, seed=123)
+        game.play()
+        game_json_copy = json.dumps(game, cls=GameEncoder)
+        assert game_json == game_json_copy

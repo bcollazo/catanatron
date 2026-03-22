@@ -4,7 +4,7 @@ import random
 import numpy as np
 
 from tests.utils import advance_to_play_turn, build_initial_placements
-from catanatron.state import player_deck_replenish
+from catanatron.state_functions import player_deck_replenish
 from catanatron.models.enums import ORE, Action, ActionType, WHEAT, NodeRef
 from catanatron.models.board import Board, get_edges
 from catanatron.models.map import (

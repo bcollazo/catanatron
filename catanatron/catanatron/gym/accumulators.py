@@ -1,15 +1,16 @@
 import os
-from collections import defaultdict
 import time
+from collections import defaultdict
+from typing import Tuple, Literal
 
-from catanatron.utils import format_secs
 import numpy as np
 import pandas as pd
 
+from catanatron import Action, Color, Game
 from catanatron.features import create_sample
 from catanatron.game import GameAccumulator
 from catanatron.gym.board_tensor_features import create_board_tensor
-from catanatron.gym.envs.catanatron_env import to_action_space, to_action_type_space
+from catanatron.gym.envs.action_space import to_action_space, to_action_type_space
 from catanatron.gym.utils import (
     DISCOUNT_FACTOR,
     get_tournament_total_return,
@@ -17,11 +18,14 @@ from catanatron.gym.utils import (
     populate_matrices,
     simple_total_return,
 )
+from catanatron.utils import format_secs
 
 
 class ReinforcementLearningAccumulator(GameAccumulator):
     def __init__(
         self,
+        player_colors: Tuple[Color],
+        map_type: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE",
         include_board_tensor=True,
         total_return_fns={
             "RETURN": simple_total_return,
@@ -29,6 +33,8 @@ class ReinforcementLearningAccumulator(GameAccumulator):
             "VICTORY_POINTS_RETURN": get_victory_points_total_return,
         },
     ):
+        self.player_colors = player_colors
+        self.map_type = map_type
         self.include_board_tensor = include_board_tensor
         # TODO: Generalize to "rewards_fn" that can yield intermediary rewards
         #   while still rewarding big on terminal states.
@@ -45,14 +51,17 @@ class ReinforcementLearningAccumulator(GameAccumulator):
         if self.include_board_tensor:
             self.data["board_tensors"] = []
 
-    def step(self, game_before_action, action):
+    def step(self, game_before_action: Game, action: Action):
         self.data["color_action_indices"][action.color].append(
             len(self.data["samples"])
         )
         self.data["acting_color"].append(action.color)
         self.data["samples"].append(create_sample(game_before_action, action.color))
         self.data["actions"].append(
-            [to_action_space(action), to_action_type_space(action)]
+            [
+                to_action_space(action, self.player_colors, self.map_type),
+                to_action_type_space(action.action_type),
+            ]
         )
 
         if self.include_board_tensor:
@@ -130,8 +139,14 @@ class ReinforcementLearningAccumulator(GameAccumulator):
 
 
 class CsvDataAccumulator(ReinforcementLearningAccumulator):
-    def __init__(self, output, include_board_tensor=True):
-        super().__init__(include_board_tensor)
+    def __init__(
+        self,
+        player_colors: Tuple[Color],
+        map_type: Literal["BASE", "TOURNAMENT", "MINI"],
+        output,
+        include_board_tensor=True,
+    ):
+        super().__init__(player_colors, map_type, include_board_tensor)
         self.output = output
 
     def after(self, game):
@@ -164,8 +179,14 @@ class CsvDataAccumulator(ReinforcementLearningAccumulator):
 
 
 class ParquetDataAccumulator(ReinforcementLearningAccumulator):
-    def __init__(self, output, include_board_tensor=True):
-        super().__init__(include_board_tensor)
+    def __init__(
+        self,
+        player_colors: Tuple[Color],
+        map_type: Literal["BASE", "TOURNAMENT", "MINI"],
+        output,
+        include_board_tensor=True,
+    ):
+        super().__init__(player_colors, map_type, include_board_tensor)
         self.output = output
 
     def after(self, game):

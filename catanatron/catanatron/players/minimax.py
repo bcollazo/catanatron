@@ -50,7 +50,7 @@ class AlphaBetaPlayer(Player):
     def get_actions(self, game):
         if self.prunning:
             return list_prunned_actions(game)
-        return game.state.playable_actions
+        return game.playable_actions
 
     def decide(self, game: Game, playable_actions):
         actions = self.get_actions(game)
@@ -61,7 +61,7 @@ class AlphaBetaPlayer(Player):
             return random.choice(playable_actions)
 
         start = time.time()
-        state_id = str(len(game.state.actions))
+        state_id = str(len(game.state.action_records))
         node = DebugStateNode(state_id, self.color)  # i think it comes from outside
         deadline = start + MAX_SEARCH_TIME_SECS
         result = self.alphabeta(

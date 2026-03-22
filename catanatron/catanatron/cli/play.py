@@ -21,8 +21,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from catanatron.utils import ensure_dir, format_secs
 from catanatron.cli.cli_players import (
     CUSTOM_ACCUMULATORS,
+    parse_cli_string,
     player_help_table,
-    CLI_PLAYERS,
 )
 from catanatron.cli.accumulators import (
     JsonDataAccumulator,
@@ -183,19 +183,7 @@ def simulate(
     if output and not output_format:
         return print("--output requires --output-format")
 
-    player_keys = players.split(",")
-    players = []
-    colors = [c for c in Color]
-    for i, key in enumerate(player_keys):
-        parts = key.split(":")
-        code = parts[0]
-        for cli_player in CLI_PLAYERS:
-            if cli_player.code == code:
-                params = [colors[i]] + parts[1:]
-                player = cli_player.import_fn(*params)
-                players.append(player)
-                break
-
+    players = parse_cli_string(players)
     output_options = OutputOptions(
         output, output_format, include_board_tensor, db, step_db
     )
@@ -261,9 +249,7 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        catan_map = build_map(
-            game_config.map_type, number_placement=game_config.number_placement
-        )
+        catan_map = build_map(game_config.map_type, game_config.number_placement)
         game = Game(
             players,
             discard_limit=game_config.discard_limit,
@@ -300,7 +286,10 @@ def play_batch(
 
             accumulators.append(
                 CsvDataAccumulator(
-                    output_options.output, output_options.include_board_tensor
+                    tuple(p.color for p in players),
+                    game_config.map_type,
+                    output_options.output,
+                    output_options.include_board_tensor,
                 )
             )
         elif output_options.output_format == "parquet":
@@ -309,7 +298,10 @@ def play_batch(
 
             accumulators.append(
                 ParquetDataAccumulator(
-                    output_options.output, output_options.include_board_tensor
+                    tuple(p.color for p in players),
+                    game_config.map_type,
+                    output_options.output,
+                    output_options.include_board_tensor,
                 )
             )
         elif output_options.output_format == "json":
