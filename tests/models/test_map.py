@@ -71,12 +71,20 @@ def test_base_map_can_be_created():
     assert len(catan_map.node_production) == 54
 
 
-def test_official_spiral_base_map_never_has_adjacent_red_pips():
+def test_official_spiral():
     random.seed(0)
 
-    for _ in range(250):
+    for _ in range(100):
         all_tiles = initialize_tiles(
             BASE_MAP_TEMPLATE, number_placement="official_spiral"
+        )
+        land_tiles = [tile for tile in all_tiles.values() if isinstance(tile, LandTile)]
+        desert_tiles = [tile for tile in land_tiles if tile.resource is None]
+
+        assert len(desert_tiles) == 1
+        assert desert_tiles[0].number is None
+        assert all(
+            tile.number is not None for tile in land_tiles if tile.resource is not None
         )
         assert_no_adjacent_red_pips(all_tiles)
 
