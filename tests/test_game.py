@@ -29,6 +29,7 @@ from catanatron.models.enums import (
     ROAD_BUILDING,
 )
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
+from catanatron.players.tree_search_utils import list_prunned_actions
 from tests.utils import build_initial_placements
 
 
@@ -248,6 +249,21 @@ def test_friendly_robber_filters_tiles_in_game_playable_actions(fake_roll_dice):
     assert blocked_coordinates.issubset(regular_coordinates)
     assert blocked_coordinates.isdisjoint(friendly_coordinates)
     assert friendly_coordinates == regular_coordinates - blocked_coordinates
+
+
+@patch("catanatron.apply_action.roll_dice")
+def test_friendly_robber_does_not_break_pruned_robber_actions(fake_roll_dice):
+    fake_roll_dice.return_value = (1, 6)
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+
+    game = Game(players, seed=1, friendly_robber=True)
+    build_initial_placements(game)
+    game.execute(Action(Color.RED, ActionType.ROLL, None))
+
+    actions = list_prunned_actions(game)
+
+    assert len(actions) > 0
+    assert all(action.action_type == ActionType.MOVE_ROBBER for action in actions)
 
 
 @patch("catanatron.apply_action.roll_dice")
