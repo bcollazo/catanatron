@@ -15,11 +15,35 @@ from catanatron.models.enums import (
     FastResource,
     NodeRef,
 )
+from catanatron.models.spiral import spiral_land_coordinates
 from catanatron.models.tiles import EdgeId, LandTile, NodeId, Port, Tile, Water
 
 NUM_NODES = 54
 NUM_EDGES = 72
 NUM_TILES = 19
+
+# According to their letter in their backside
+BASE_NUMBERS_IN_SPIRAL_ORDER = [
+    5,  # A
+    2,  # B
+    6,  # ...
+    3,
+    8,
+    10,
+    9,
+    12,
+    11,
+    4,
+    8,
+    10,
+    9,
+    4,
+    5,
+    6,
+    3,
+    11,
+]
+
 
 MapType = Literal["TOURNAMENT", "MINI", "BASE"]
 NumberPlacement = Literal["official_spiral", "random"]
@@ -335,7 +359,7 @@ def initialize_tiles(
             port_autoinc += 1
         elif tile_type == LandTile:
             resource = shuffled_tile_resources.pop()
-            if resource != None:
+            if resource is not None:
                 number = shuffled_numbers.pop()
                 tile = LandTile(tile_autoinc, resource, number, nodes, edges)
             else:
@@ -348,7 +372,26 @@ def initialize_tiles(
         else:
             raise ValueError("Invalid tile")
 
-    # TODO: HANDLE number_placement
+    # If asked for numbers in official spiral, override the numbers.
+    if number_placement == "official_spiral":
+        if map_template not in [BASE_MAP_TEMPLATE, MINI_MAP_TEMPLATE]:
+            raise ValueError(
+                "official_spiral number placement is only supported for base and mini map templates"
+            )
+
+        # iterate in order of official spiral and assign numbers, skipping desert tile
+        start = (2, -2, 0) if map_template == BASE_MAP_TEMPLATE else (1, -1, 0)
+        i = 0
+        for coordinate in spiral_land_coordinates(all_tiles, start):
+            tile = all_tiles[coordinate]
+            if not isinstance(tile, LandTile):
+                raise ValueError(
+                    "official_spiral number placement only supports land tiles"
+                )
+            if tile.resource is None:  # desert tile
+                continue
+            tile.number = BASE_NUMBERS_IN_SPIRAL_ORDER[i]
+            i += 1
     return all_tiles
 
 
