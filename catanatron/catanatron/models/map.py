@@ -15,7 +15,7 @@ from catanatron.models.enums import (
     FastResource,
     NodeRef,
 )
-from catanatron.models.spiral import spiral_land_coordinates
+from catanatron.models.spiral import outer_land_coordinates, spiral_land_coordinates
 from catanatron.models.tiles import EdgeId, LandTile, NodeId, Port, Tile, Water
 
 NUM_NODES = 54
@@ -380,7 +380,7 @@ def initialize_tiles(
             )
 
         # iterate in order of official spiral and assign numbers, skipping desert tile
-        start = (2, -2, 0) if map_template == BASE_MAP_TEMPLATE else (1, -1, 0)
+        start = get_starting_spiral_coordinate(all_tiles)
         i = 0
         for coordinate in spiral_land_coordinates(all_tiles, start):
             tile = all_tiles[coordinate]
@@ -393,6 +393,13 @@ def initialize_tiles(
             tile.number = BASE_NUMBERS_IN_SPIRAL_ORDER[i]
             i += 1
     return all_tiles
+
+
+def get_starting_spiral_coordinate(all_tiles: Dict[Coordinate, Tile]) -> Coordinate:
+    outer_ring = outer_land_coordinates(all_tiles)
+    if not outer_ring:
+        raise ValueError("official_spiral number placement requires outer land tiles")
+    return random.choice(outer_ring)
 
 
 def get_nodes_and_edges(tiles, coordinate: Coordinate, node_autoinc):
