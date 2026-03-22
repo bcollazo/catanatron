@@ -126,7 +126,7 @@ def test_reachability_features():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
+    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE, "random")
     game = Game(players, seed=123, catan_map=catan_map)
     p0_color = game.state.colors[0]
 
@@ -387,7 +387,7 @@ def test_resource_proba_planes():
     # We do this here to allow Game.__init__ evolve freely.
     random.seed(123)
     random.sample(players, len(players))
-    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE)
+    catan_map = CatanMap.from_template(BASE_MAP_TEMPLATE, "random")
     game = Game(players, seed=123, catan_map=catan_map)
 
     tensor = create_board_tensor(game, players[0].color)
