@@ -1,8 +1,8 @@
 from collections.abc import Generator
 from typing import Mapping
 
-from catanatron.models.coordinate_system import Direction, UNIT_VECTORS, add
-from catanatron.models.map import Coordinate, LandTile, Tile
+from catanatron.models.coordinate_system import Direction, UNIT_VECTORS, add, Coordinate
+from catanatron.models.tiles import LandTile, Tile
 
 
 def spiral_land_coordinates(

@@ -1,20 +1,21 @@
-import typing
-from dataclasses import dataclass
 import random
+import typing
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
 
-from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
+from catanatron.models.coordinate_system import UNIT_VECTORS, Coordinate, Direction, add
 from catanatron.models.enums import (
-    FastResource,
-    WOOD,
     BRICK,
+    ORE,
     SHEEP,
     WHEAT,
-    ORE,
+    WOOD,
     EdgeRef,
+    FastResource,
     NodeRef,
 )
+from catanatron.models.tiles import EdgeId, LandTile, NodeId, Port, Tile, Water
 
 NUM_NODES = 54
 NUM_EDGES = 72
@@ -22,44 +23,6 @@ NUM_TILES = 19
 
 MapType = Literal["TOURNAMENT", "MINI", "BASE"]
 NumberPlacement = Literal["official_spiral", "random"]
-EdgeId = Tuple[int, int]
-NodeId = int
-Coordinate = Tuple[int, int, int]
-
-
-@dataclass
-class LandTile:
-    id: int
-    resource: Union[FastResource, None]  # None means desert tile
-    number: Union[int, None]  # None if desert
-    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
-    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
-
-    # The id is unique among the tiles, so we can use it as the hash.
-    def __hash__(self):
-        return self.id
-
-
-@dataclass
-class Port:
-    id: int
-    resource: Union[FastResource, None]  # None means desert tile
-    direction: Direction
-    nodes: Dict[NodeRef, NodeId]  # node_ref => node_id
-    edges: Dict[EdgeRef, EdgeId]  # edge_ref => edge
-
-    # The id is unique among the tiles, so we can use it as the hash.
-    def __hash__(self):
-        return self.id
-
-
-@dataclass(frozen=True)
-class Water:
-    nodes: Dict[NodeRef, int]
-    edges: Dict[EdgeRef, EdgeId]
-
-
-Tile = Union[LandTile, Port, Water]
 
 
 @dataclass(frozen=True)

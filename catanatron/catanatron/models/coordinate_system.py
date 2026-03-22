@@ -1,4 +1,9 @@
+from typing import Tuple
+
 from enum import Enum
+
+
+Coordinate = Tuple[int, int, int]
 
 
 # We'll be using Cube coordinates in https://math.stackexchange.com/questions/2254655/hexagon-grid-coordinate-system
