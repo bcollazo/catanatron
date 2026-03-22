@@ -29,7 +29,7 @@
     justify-content: center;
     align-items: center;
 
-    button {
+    .MuiButton-root {
       margin-bottom: variables.$sm-gutter;
     }
   }
@@ -87,22 +87,22 @@
     gap: 8px;
   }
 
-  .choice-button,
-  .add-player-btn,
-  .start-btn {
-    color: white !important;
-    background-color: variables.$dark-gray !important;
+  .MuiButton-root.choice-button,
+  .MuiButton-root.add-player-btn,
+  .MuiButton-root.start-btn {
+    color: white;
+    background-color: variables.$dark-gray;
 
     &:hover {
-      background-color: color.adjust(variables.$dark-gray, $lightness: -8%) !important;
+      background-color: color.adjust(variables.$dark-gray, $lightness: -8%);
     }
   }
 
-  .choice-button.selected {
-    background-color: #0d47a1 !important;
+  .MuiButton-root.choice-button.selected {
+    background-color: #0d47a1;
 
     &:hover {
-      background-color: color.adjust(#0d47a1, $lightness: -2%) !important;
+      background-color: color.adjust(#0d47a1, $lightness: -2%);
     }
   }
 
@@ -186,8 +186,8 @@
     background: rgb(255 255 255 / 4%);
   }
 
-  .MuiOutlinedInput-notchedOutline {
-    border-color: rgb(255 255 255 / 14%) !important;
+  .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+    border-color: rgb(255 255 255 / 14%);
   }
 
   .MuiSvgIcon-root,
@@ -207,34 +207,34 @@
     line-height: 1;
   }
 
-  .help-button {
-    color: rgb(255 255 255 / 52%) !important;
-    padding: 0 !important;
-    font-size: 0.95rem !important;
-    line-height: 1 !important;
-    margin-bottom: 0 !important;
+  .MuiIconButton-root.help-button {
+    color: rgb(255 255 255 / 52%);
+    padding: 0;
+    font-size: 0.95rem;
+    line-height: 1;
+    margin-bottom: 0;
 
     &:hover {
-      color: rgb(255 255 255 / 82%) !important;
-      background: transparent !important;
+      color: rgb(255 255 255 / 82%);
+      background: transparent;
     }
   }
 
-  .inline-switch {
+  .MuiCheckbox-root.inline-switch {
     margin-left: -9px;
-    padding: 0 !important;
+    padding: 0;
   }
 
   .MuiSlider-mark {
     background-color: rgb(255 255 255 / 20%);
   }
 
-  .remove-player-btn {
-    color: rgb(255 255 255 / 75%) !important;
+  .MuiButton-root.remove-player-btn {
+    color: rgb(255 255 255 / 75%);
     min-width: 80px;
 
-    &:disabled {
-      color: rgb(255 255 255 / 30%) !important;
+    &.Mui-disabled {
+      color: rgb(255 255 255 / 30%);
     }
   }
 
