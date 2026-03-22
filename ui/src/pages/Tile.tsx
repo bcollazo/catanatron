@@ -138,7 +138,7 @@ type TileProps = {
   coordinate: any;
   tile: Tile;
   size: any;
-  onClick: React.MouseEventHandler<HTMLDivElement>;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
   flashing: boolean;
 };
 

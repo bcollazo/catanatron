@@ -58,7 +58,7 @@
 
   .control-row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
   }
 
@@ -69,13 +69,15 @@
   .control-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
     color: white;
     margin-bottom: 8px;
+    min-height: 24px;
 
     strong {
       font-size: 0.9rem;
       letter-spacing: 0.04em;
+      line-height: 1;
     }
   }
 
@@ -191,6 +193,36 @@
   .MuiSvgIcon-root,
   .MuiSlider-root {
     color: variables.$blue;
+  }
+
+  .switch-control {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .inline-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+  }
+
+  .help-button {
+    color: rgb(255 255 255 / 52%) !important;
+    padding: 0 !important;
+    font-size: 0.95rem !important;
+    line-height: 1 !important;
+    margin-bottom: 0 !important;
+
+    &:hover {
+      color: rgb(255 255 255 / 82%) !important;
+      background: transparent !important;
+    }
+  }
+
+  .inline-switch {
+    margin-left: -9px;
+    padding: 0 !important;
   }
 
   .MuiSlider-mark {
