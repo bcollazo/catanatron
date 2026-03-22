@@ -6,10 +6,23 @@
   max-width: variables.$sm-breakpoint;
   margin: 0 auto;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: variables.$sm-gutter;
   padding: variables.$sm-gutter;
+
+  .MuiButton-root {
+    flex-shrink: 0;
+  }
+
+  .resource-cards {
+    flex: 1;
+    min-width: 0;
+  }
+
   .open-drawer-btn {
     color: white;
-    margin-right: variables.$sm-gutter;
+    min-width: 0;
   }
 }
 

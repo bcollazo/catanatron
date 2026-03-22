@@ -3,6 +3,11 @@
 
 .home-page {
   height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at top, rgb(34 120 255 / 18%), transparent 35%),
+    linear-gradient(180deg, #070a0c 0%, #111614 100%);
 
   display: flex;
   flex-direction: column;
@@ -12,17 +17,13 @@
 
   h1 {
     color: white;
-    font-size: 2.5rem;
-    margin-bottom: 30px;
-  }
-  ul {
-    color: white;
-    margin-top: 0px;
-    margin-bottom: 3px;
+    font-size: 2.2rem;
+    margin-bottom: 14px;
   }
 
   .switchable {
-    height: 224px; // NOTE: Fixed to avoid loading jump
+    width: min(100%, 680px);
+    min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -33,33 +34,212 @@
     }
   }
 
-  .player-count-selector {
-    margin: 0 0 16px 0;
+  .setup-card {
+    width: 100%;
+    background: rgb(21 19 19 / 92%);
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 24px;
+    padding: 18px 20px;
+    box-shadow: 0 20px 60px rgb(0 0 0 / 28%);
+  }
+
+  .setup-note {
+    color: rgb(255 255 255 / 72%);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.73rem;
     text-align: center;
+    margin: 0 0 14px;
+  }
 
-    .player-count-buttons {
-      .player-count-button {
-        width: 130px;
-        height: 35px;
-        font-size: 1rem;
-        color: white !important;
-        margin: 0 4px;
-        transition: background-color 0.3s;
-        background-color: variables.$dark-gray !important;
+  .control-group {
+    margin-bottom: 16px;
+  }
 
-        &:hover {
-          background-color: color.adjust(variables.$dark-gray, $lightness: -10%) !important;
-        }
+  .control-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
 
-        &.selected {
-          background-color: #0d47a1 !important;
-          color: white !important;
+  .compact-control {
+    margin-bottom: 0;
+  }
 
-          &:hover {
-            background-color: color.adjust(#0d47a1, $lightness: -1%) !important;
-          }
-        }
-      }
+  .control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    color: white;
+    margin-bottom: 8px;
+
+    strong {
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  .map-template-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .choice-button,
+  .add-player-btn,
+  .start-btn {
+    color: white !important;
+    background-color: variables.$dark-gray !important;
+
+    &:hover {
+      background-color: color.adjust(variables.$dark-gray, $lightness: -8%) !important;
+    }
+  }
+
+  .choice-button.selected {
+    background-color: #0d47a1 !important;
+
+    &:hover {
+      background-color: color.adjust(#0d47a1, $lightness: -2%) !important;
+    }
+  }
+
+  .players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .players-heading {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .players-hint {
+    color: rgb(255 255 255 / 48%);
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  .players-alert {
+    margin-bottom: 10px;
+  }
+
+  .player-row {
+    display: grid;
+    grid-template-columns: minmax(78px, auto) minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .player-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .player-label {
+    color: white;
+    font-size: 0.9rem;
+  }
+
+  .player-color-chip {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: rgb(255 255 255 / 92%);
+    background: rgb(255 255 255 / 10%);
+
+    &.red {
+      background: rgb(254 4 0 / 22%);
+      color: #ff8a86;
+    }
+
+    &.blue {
+      background: rgb(34 120 255 / 22%);
+      color: #8cb7ff;
+    }
+
+    &.orange {
+      background: rgb(255 165 0 / 24%);
+      color: #ffd18a;
+    }
+
+    &.white {
+      background: rgb(255 255 255 / 16%);
+      color: rgb(255 255 255 / 88%);
+    }
+  }
+
+  .MuiInputBase-root {
+    color: white;
+    background: rgb(255 255 255 / 4%);
+  }
+
+  .MuiOutlinedInput-notchedOutline {
+    border-color: rgb(255 255 255 / 14%) !important;
+  }
+
+  .MuiSvgIcon-root,
+  .MuiSlider-root {
+    color: variables.$blue;
+  }
+
+  .MuiSlider-mark {
+    background-color: rgb(255 255 255 / 20%);
+  }
+
+  .remove-player-btn {
+    color: rgb(255 255 255 / 75%) !important;
+    min-width: 80px;
+
+    &:disabled {
+      color: rgb(255 255 255 / 30%) !important;
+    }
+  }
+
+  .add-player-btn,
+  .start-btn {
+    width: 100%;
+  }
+
+  .start-btn {
+    height: 40px;
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: variables.$sm-breakpoint) {
+    padding: 18px;
+
+    .setup-card {
+      padding: 16px;
+      border-radius: 18px;
+    }
+
+    .map-template-buttons,
+    .player-row {
+      grid-template-columns: 1fr;
+    }
+
+    .control-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .compact-control {
+      margin-bottom: 16px;
+    }
+
+    .remove-player-btn {
+      justify-self: start;
     }
   }
 }
