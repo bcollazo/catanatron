@@ -138,3 +138,14 @@ dmypy.json
 .pyre/
 
 /db-data
+
+# Timestamped model checkpoints (keep only canonical .pt files)
+capstone_agent/models/*_*T*Z.pt
+
+# Training data and logs (large, regeneratable)
+capstone_agent/data/*.npz
+capstone_agent/data/*.jsonl
+
+# Atomic-save temp files
+*.tmp.npz
+*.pt.tmp

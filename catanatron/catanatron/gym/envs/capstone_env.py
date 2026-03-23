@@ -196,6 +196,7 @@ class CapstoneCatanatronEnv(gym.Env):
             info = dict(
                 valid_actions=self.get_valid_actions(),
                 action_mask=self.get_action_mask(),
+                is_initial_build_phase=self.game.state.is_initial_build_phase,
             )
             return observation, self.invalid_action_reward, terminated, truncated, info
 
@@ -210,6 +211,7 @@ class CapstoneCatanatronEnv(gym.Env):
         info = dict(
             valid_actions=self.get_valid_actions(),
             action_mask=self.get_action_mask(),
+            is_initial_build_phase=self.game.state.is_initial_build_phase,
         )
 
         return observation, reward, terminated, truncated, info
@@ -241,6 +243,7 @@ class CapstoneCatanatronEnv(gym.Env):
         info = dict(
             valid_actions=self.get_valid_actions(),
             action_mask=self.get_action_mask(),
+            is_initial_build_phase=self.game.state.is_initial_build_phase,
         )
 
         return observation, info

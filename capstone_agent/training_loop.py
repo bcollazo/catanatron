@@ -4,14 +4,21 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 from CapstoneAgent import CapstoneAgent
+from PlacementAgent import PlacementAgent
+from AgentRouter import AgentRouter
 from action_map import validate as validate_action_mapping
+from device import get_device
 import torch
 import gymnasium
 
 OBS_SIZE = 1258
 HIDDEN_SIZE = 512
-agent = CapstoneAgent(obs_size=OBS_SIZE, hidden_size=HIDDEN_SIZE)
+PLACEMENT_HIDDEN_SIZE = 64
+
+main_agent = CapstoneAgent(obs_size=OBS_SIZE, hidden_size=HIDDEN_SIZE)
+placement_agent = PlacementAgent(obs_size=OBS_SIZE, hidden_size=PLACEMENT_HIDDEN_SIZE)
 env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
+agent = AgentRouter(placement_agent, main_agent, env)
 validate_action_mapping()
 
 ROLLOUT_LENGTH = 2048
@@ -37,15 +44,16 @@ for update in range(NUM_UPDATES):
         else:
             obs, mask = next_obs, next_mask
 
+    device = get_device()
     with torch.no_grad():
         _, last_value = agent.model(
-            torch.FloatTensor(obs).unsqueeze(0),
-            torch.FloatTensor(mask).unsqueeze(0),
+            torch.FloatTensor(obs).unsqueeze(0).to(device),
+            torch.FloatTensor(mask).unsqueeze(0).to(device),
         )
     agent.train(last_value.item())
 
     if (update + 1) % 10 == 0:
         print(f"Update {update + 1}/{NUM_UPDATES} complete  (step {step})")
 
-agent.save("capstone_model.pt")
-print("Training complete — model saved to capstone_model.pt")
+agent.save("capstone_agent/models/capstone_model.pt", "capstone_agent/models/placement_model.pt")
+print("Training complete — models saved to capstone_agent/models/")
