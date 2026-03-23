@@ -129,11 +129,6 @@ class Game:
             )
             self.playable_actions = generate_playable_actions(self.state)
 
-    def __setstate__(self, state):
-        self.__dict__ = state
-        if not hasattr(self, "playable_actions"):
-            self.playable_actions = generate_playable_actions(self.state)
-
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
 

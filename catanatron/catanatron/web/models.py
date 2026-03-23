@@ -91,6 +91,4 @@ def get_game_state(game_id, state_index=None) -> Game | None:
         if result is None:
             abort(404)
     db.session.commit()
-    game = pickle.loads(result.pickle_data)  # type: ignore
-    game.state._state_index = result.state_index
-    return game
+    return pickle.loads(result.pickle_data)  # type: ignore

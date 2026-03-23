@@ -160,8 +160,6 @@ def get_player_freqdeck(state: State, color):
 
 
 def get_state_index(state: State) -> int:
-    if hasattr(state, "_state_index") and state._state_index is not None:
-        return state._state_index
     return len(state.action_records)
 
 

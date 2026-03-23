@@ -177,10 +177,10 @@ describe("humanizeAction", () => {
     ).toBe("BOT ROLLED A 7");
   });
 
-  test("DISCARD action", () => {
+  test("DISCARD_RESOURCE action", () => {
     expect(
       humanizeActionRecord(baseGameState, [
-        ["ORANGE", "DISCARD", "WHEAT"],
+        ["ORANGE", "DISCARD_RESOURCE", "WHEAT"],
         ["WHEAT"],
       ])
     ).toBe("YOU DISCARDED WHEAT");

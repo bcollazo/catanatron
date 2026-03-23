@@ -225,14 +225,14 @@ def test_discard_sequence_tracks_original_hand_size():
     player_deck_replenish(state, color, BRICK, 1)
     player_deck_replenish(state, color, WHEAT, 3)
 
-    apply_action(state, Action(color, ActionType.DISCARD, BRICK))
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, BRICK))
     assert state.current_color() == color
     assert state.is_discarding
     assert state.discard_counts[color] == 3
 
-    apply_action(state, Action(color, ActionType.DISCARD, WHEAT))
-    apply_action(state, Action(color, ActionType.DISCARD, WHEAT))
-    apply_action(state, Action(color, ActionType.DISCARD, WHEAT))
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
     assert not state.is_discarding
     assert state.is_moving_knight
     assert state.current_player_index == turn_player_index

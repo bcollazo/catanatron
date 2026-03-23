@@ -283,7 +283,7 @@ def discard_possibilities(state: State, color) -> List[Action]:
         return []
 
     return [
-        Action(color, ActionType.DISCARD, resource)
+        Action(color, ActionType.DISCARD_RESOURCE, resource)
         for resource in RESOURCES
         if player_num_resource_cards(state, color, resource) > 0
     ]

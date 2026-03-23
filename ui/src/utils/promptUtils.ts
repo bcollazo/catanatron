@@ -22,6 +22,7 @@ export function humanizeAction(gameState: GameState, action: GameAction) {
       }
       return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
     case "DISCARD":
+    case "DISCARD_RESOURCE":
       return action[2] ? `${player} DISCARDED ${action[2]}` : `${player} DISCARDED`;
     case "BUY_DEVELOPMENT_CARD":
       return `${player} BOUGHT DEVELOPMENT CARD`;
@@ -89,6 +90,7 @@ export function humanizeActionRecord(
       return `${player} ROLLED A ${action[0] + action[1]}`;
     }
     case "DISCARD":
+    case "DISCARD_RESOURCE":
       return `${player} DISCARDED ${
         (actionRecord[1] as ResourceCard[])[0]
       }`;

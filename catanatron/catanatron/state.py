@@ -133,9 +133,8 @@ class State:
             self.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
             self.is_initial_build_phase = True
             self.is_discarding = False
-            self.discard_counts: Dict[Color, int] = {
-                color: 0 for color in self.colors
-            }
+            self.discard_counts: Dict[Color, int] = {color: 0 for color in self.colors}
+            self.discard_counts: Dict[Color, int] = {color: 0 for color in self.colors}
             self.is_moving_knight = False
             self.is_road_building = False
             self.free_roads_available = 0
@@ -143,17 +142,6 @@ class State:
             self.is_resolving_trade = False
             self.current_trade: Tuple = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             self.acceptees = tuple(False for _ in self.colors)
-
-    def __setstate__(self, state):
-        self.__dict__ = state
-        if not hasattr(self, "action_records"):
-            self.action_records = []
-        # Migration for discard_counts if it's a list (old format)
-        if hasattr(self, "discard_counts") and isinstance(self.discard_counts, list):
-            self.discard_counts = {
-                color: count
-                for color, count in zip(self.colors, self.discard_counts)
-            }
 
     def current_player(self):
         """Helper for accessing Player instance who should decide next"""

@@ -66,8 +66,8 @@ def test_discard_possibilities_are_per_resource():
     player_deck_replenish(state, player.color, BRICK, 1)
 
     assert discard_possibilities(state, player.color) == [
-        Action(player.color, ActionType.DISCARD, BRICK),
-        Action(player.color, ActionType.DISCARD, WHEAT),
+        Action(player.color, ActionType.DISCARD_RESOURCE, BRICK),
+        Action(player.color, ActionType.DISCARD_RESOURCE, WHEAT),
     ]
 
 

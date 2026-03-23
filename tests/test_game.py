@@ -122,7 +122,9 @@ def test_seven_cards_dont_trigger_discarding(fake_roll_dice):
     assert player_num_resource_cards(game.state, players[1].color) == 7
     game.play_tick()  # should be player 0 rolling.
 
-    assert not any(a.action_type == ActionType.DISCARD for a in game.playable_actions)
+    assert not any(
+        a.action_type == ActionType.DISCARD_RESOURCE for a in game.playable_actions
+    )
 
 
 @patch("catanatron.apply_action.roll_dice")
@@ -140,7 +142,9 @@ def test_rolling_a_seven_triggers_default_discard_limit(fake_roll_dice):
     game.play_tick()  # should be player 0 rolling.
 
     assert game.state.current_color() == players[1].color
-    assert all(a.action_type == ActionType.DISCARD for a in game.playable_actions)
+    assert all(
+        a.action_type == ActionType.DISCARD_RESOURCE for a in game.playable_actions
+    )
 
     for _ in range(original_hand_size // 2):
         assert game.state.current_color() == players[1].color
@@ -190,7 +194,8 @@ def test_all_players_discard_as_needed(fake_roll_dice):
             game.state.current_color() == ordered_player.color
         ):
             assert all(
-                a.action_type == ActionType.DISCARD for a in game.playable_actions
+                a.action_type == ActionType.DISCARD_RESOURCE
+                for a in game.playable_actions
             )
             game.play_tick()
             discard_steps += 1
@@ -216,7 +221,9 @@ def test_discard_is_configurable(fake_roll_dice):
     assert player_num_resource_cards(game.state, players[1].color) == 9
     game.play_tick()  # should be p0 rolling.
 
-    assert not any(a.action_type == ActionType.DISCARD for a in game.playable_actions)
+    assert not any(
+        a.action_type == ActionType.DISCARD_RESOURCE for a in game.playable_actions
+    )
 
 
 @patch("catanatron.apply_action.roll_dice")

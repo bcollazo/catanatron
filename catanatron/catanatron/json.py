@@ -30,7 +30,7 @@ def action_from_json(data) -> Action:
         if len(resources) not in [1, 2]:
             raise ValueError("Year of Plenty action must have 1 or 2 resources")
         action = Action(color, action_type, resources)
-    elif action_type == ActionType.DISCARD:
+    elif action_type == ActionType.DISCARD_RESOURCE:
         value = data[2]
         if isinstance(value, list):
             if len(value) != 1:

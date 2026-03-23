@@ -93,7 +93,7 @@ def apply_action(
         action_record = apply_buy_development_card(state, action, action_record)
     elif action.action_type == ActionType.ROLL:
         action_record = apply_roll(state, action, action_record)
-    elif action.action_type == ActionType.DISCARD:
+    elif action.action_type == ActionType.DISCARD_RESOURCE:
         action_record = apply_discard(state, action, action_record)
     elif action.action_type == ActionType.MOVE_ROBBER:
         action_record = apply_move_robber(state, action, action_record)
@@ -338,9 +338,9 @@ def apply_discard(state: State, action: Action, action_record=None):
         # state.current_prompt stays the same
         pass
     else:
-        discarders_left = [
-            state.discard_counts[color] > 0 for color in state.colors
-        ][state.current_player_index + 1 :]
+        discarders_left = [state.discard_counts[color] > 0 for color in state.colors][
+            state.current_player_index + 1 :
+        ]
         if any(discarders_left):
             to_skip = discarders_left.index(True)
             state.current_player_index = state.current_player_index + 1 + to_skip

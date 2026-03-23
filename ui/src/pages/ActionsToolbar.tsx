@@ -36,6 +36,14 @@ import "./ActionsToolbar.scss";
 import { useSnackbar } from "notistack";
 import { dispatchSnackbar } from "../components/Snackbar";
 
+const RESOURCE_ORDER: ResourceCard[] = [
+  "WOOD",
+  "BRICK",
+  "SHEEP",
+  "WHEAT",
+  "ORE",
+];
+
 function PlayButtons() {
   const { gameId } = useParams();
   if (!gameId) {
@@ -78,14 +86,28 @@ function PlayButtons() {
       .map((action) => action[1])
   );
   const humanColor = getHumanColor(gameState);
+  const discardActionType =
+    gameState.current_playable_actions.find(
+      (action) => action[1] === "DISCARD" || action[1] === "DISCARD_RESOURCE"
+    )?.[1] ?? "DISCARD_RESOURCE";
   const setIsPlayingMonopoly = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_MONOPOLY });
   }, [dispatch]);
   const getValidDiscardOptions = useCallback(() => {
-    return gameState.current_playable_actions
-      .filter((action) => action[1] === "DISCARD")
+    const discardOptions = gameState.current_playable_actions
+      .filter(
+        (action) => action[1] === "DISCARD" || action[1] === "DISCARD_RESOURCE"
+      )
       .map((action) => action[2] as ResourceCard);
-  }, [gameState.current_playable_actions]);
+    if (discardOptions.length > 0) {
+      return discardOptions;
+    }
+
+    // Fallback to the current hand if the discard actions are missing from the payload.
+    return RESOURCE_ORDER.filter(
+      (resource) => gameState.player_state[`${key}_${resource}_IN_HAND`] > 0
+    );
+  }, [gameState.current_playable_actions, gameState.player_state, key]);
   const getValidYearOfPlentyOptions = useCallback(() => {
     return gameState.current_playable_actions
       .filter((action) => action[1] === "PLAY_YEAR_OF_PLENTY")
@@ -102,7 +124,11 @@ function PlayButtons() {
           selectedResources as ResourceCard,
         ];
       } else if (isDiscard) {
-        action = [humanColor, "DISCARD", selectedResources as ResourceCard];
+        action = [
+          humanColor,
+          discardActionType,
+          selectedResources as ResourceCard,
+        ];
       } else if (isPlayingYearOfPlenty) {
         action = [
           humanColor,
@@ -126,6 +152,7 @@ function PlayButtons() {
       isPlayingMonopoly,
       isPlayingYearOfPlenty,
       isDiscard,
+      discardActionType,
     ]
   );
   const handleOpenResourceSelector = useCallback(() => {

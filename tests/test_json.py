@@ -53,10 +53,10 @@ def test_action_from_json_play_year_of_plenty_one_resource():
 
 
 def test_action_from_json_discard():
-    data = ["BLUE", "DISCARD", WOOD]
+    data = ["BLUE", "DISCARD_RESOURCE", WOOD]
     action = action_from_json(data)
     assert action.color == Color.BLUE
-    assert action.action_type == ActionType.DISCARD
+    assert action.action_type == ActionType.DISCARD_RESOURCE
     assert action.value == WOOD
 
 
