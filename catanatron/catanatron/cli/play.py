@@ -501,13 +501,3 @@ def play_batch(
 
 if __name__ == "__main__":
     simulate()
-"""
-#to load a file later
-import pickle
-with open("Training_data/<game_id>.pkl", "rb") as f:
-    data = pickle.load(f)
-# data is list of (observation_list, action_index) tuples
-for obs, action_idx in data:
-    ...
-
-"""
