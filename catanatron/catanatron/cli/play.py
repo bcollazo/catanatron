@@ -6,15 +6,14 @@ from typing import Literal, Union
 import click
 from rich.console import Console
 from rich.table import Table
-from rich.progress import Progress
-from rich.progress import BarColumn, TimeRemainingColumn
+from rich.progress import Progress, BarColumn, TimeRemainingColumn
 from rich import box
 from rich.theme import Theme
 from rich.text import Text
 
 from catanatron.game import Game
 from catanatron.models.player import Color
-from catanatron.models.map import build_map
+from catanatron.models.map import NumberPlacement, build_map
 from catanatron.state_functions import get_actual_victory_points
 
 # try to suppress TF output before any potentially tf-importing modules
@@ -127,6 +126,18 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     help="Sets Map to use. MINI is a 7-tile smaller version. TOURNAMENT uses a fixed balanced map.",
 )
 @click.option(
+    "--config-number-placement",
+    default="official_spiral",
+    type=click.Choice(["official_spiral", "random"], case_sensitive=False),
+    help="Sets how number tokens are placed on random boards.",
+)
+@click.option(
+    "--config-friendly-robber",
+    default=False,
+    is_flag=True,
+    help="Prevents robber placement on tiles that would block opponents with fewer than 3 actual victory points, unless no other robber move is available.",
+)
+@click.option(
     "--quiet",
     default=False,
     is_flag=True,
@@ -151,6 +162,8 @@ def simulate(
     config_discard_limit,
     config_vps_to_win,
     config_map,
+    config_number_placement,
+    config_friendly_robber,
     quiet,
     help_players,
 ):
@@ -181,7 +194,13 @@ def simulate(
     output_options = OutputOptions(
         output, output_format, include_board_tensor, db, step_db
     )
-    game_config = GameConfigOptions(config_discard_limit, config_vps_to_win, config_map)
+    game_config = GameConfigOptions(
+        config_discard_limit,
+        config_vps_to_win,
+        config_map,
+        config_number_placement,
+        config_friendly_robber,
+    )
     play_batch(
         num,
         players,
@@ -207,6 +226,14 @@ class GameConfigOptions:
     discard_limit: int = 7
     vps_to_win: int = 10
     map_type: Literal["BASE", "TOURNAMENT", "MINI"] = "BASE"
+    number_placement: NumberPlacement = "official_spiral"
+    friendly_robber: bool = False
+
+    def __post_init__(self):
+        if self.number_placement == "official_spiral" and self.map_type == "TOURNAMENT":
+            raise ValueError(
+                "official_spiral number placement is only supported for base or mini maps"
+            )
 
 
 COLOR_TO_RICH_STYLE = {
@@ -237,10 +264,11 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
     for _ in range(num_games):
         for player in players:
             player.reset_state()
-        catan_map = build_map(game_config.map_type)
+        catan_map = build_map(game_config.map_type, game_config.number_placement)
         game = Game(
             players,
             discard_limit=game_config.discard_limit,
+            friendly_robber=game_config.friendly_robber,
             vps_to_win=game_config.vps_to_win,
             catan_map=catan_map,
         )

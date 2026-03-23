@@ -36,7 +36,7 @@ For `observation` documentation see [here](https://catanatron.readthedocs.io/en/
 
 You can access `env.unwrapped.game.state` and build your own "observation" (features) vector as well.
 
-For evaluation and using your model in the simulator for testing / benchmarking you might want to checkout: [https://github.com/bcollazo/catanatron/blob/master/catanatron\_experimental/catanatron\_experimental/machine\_learning/players/reinforcement.py](../../catanatron_experimental/catanatron_experimental/machine_learning/players/reinforcement.py)
+For evaluation and using your model in the simulator for testing / benchmarking you might want to checkout: [https://github.com/bcollazo/catanatron/blob/main/catanatron\_experimental/catanatron\_experimental/machine\_learning/players/reinforcement.py](../../catanatron_experimental/catanatron_experimental/machine_learning/players/reinforcement.py)
 
 ### Stable-Baselines3 Example
 

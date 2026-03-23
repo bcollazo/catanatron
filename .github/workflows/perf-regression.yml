@@ -4,7 +4,7 @@ name: Performance Regression Test
 
 on:
   pull_request:
-    branches: master
+    branches: main
 
 jobs:
   build-python-and-test-performance:
@@ -21,17 +21,17 @@ jobs:
           python -m pip install --upgrade pip setuptools
           pip install .[web,gym,dev]
 
-      - name: Checkout PR and Master Branch
+      - name: Checkout PR and Main Branch
         uses: actions/checkout@v4
         with:
           path: pr
       - uses: actions/checkout@v4
         with:
-          ref: master
-          path: master
+          ref: main
+          path: main
 
-      - name: Run Benchmark on Master (baseline)
-        run: cd master && pytest tests/integration_tests/test_speed.py --benchmark-only --benchmark-json=benchmark.json
+      - name: Run Benchmark on Main (baseline)
+        run: cd main && pytest tests/integration_tests/test_speed.py --benchmark-only --benchmark-json=benchmark.json
       - name: Run Benchmark on PR
         run: cd pr && pytest tests/integration_tests/test_speed.py --benchmark-only --benchmark-json=benchmark.json
 
@@ -40,7 +40,7 @@ jobs:
         with:
           tool: "pytest"
           pr-benchmark-file-path: pr/benchmark.json
-          base-benchmark-file-path: master/benchmark.json
+          base-benchmark-file-path: main/benchmark.json
           # A comment will be left on the latest PR commit if `alert-threshold` is exceeded
           comment-on-alert: true
           alert-threshold: "130%"

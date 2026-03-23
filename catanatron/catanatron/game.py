@@ -12,7 +12,7 @@ from catanatron.models.enums import Action, ActionPrompt, ActionRecord, ActionTy
 from catanatron.state import State
 from catanatron.apply_action import apply_action
 from catanatron.state_functions import player_key, player_has_rolled
-from catanatron.models.map import CatanMap
+from catanatron.models.map import CatanMap, NumberPlacement
 from catanatron.models.player import Color, Player
 
 # To timeout RandomRobots from getting stuck...
@@ -97,8 +97,10 @@ class Game:
         players: Sequence[Player],
         seed: Optional[int] = None,
         discard_limit: int = 7,
+        friendly_robber: bool = False,
         vps_to_win: int = 10,
         catan_map: Optional[CatanMap] = None,
+        number_placement: NumberPlacement = "official_spiral",
         initialize: bool = True,
     ):
         """Creates a game (doesn't run it).
@@ -117,7 +119,14 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
-            self.state = State(players, catan_map, discard_limit=discard_limit)
+            self.friendly_robber = friendly_robber
+            self.state = State(
+                players,
+                catan_map,
+                discard_limit=discard_limit,
+                friendly_robber=friendly_robber,
+                number_placement=number_placement,
+            )
             self.playable_actions = generate_playable_actions(self.state)
 
     def __setstate__(self, state):
@@ -218,6 +227,7 @@ class Game:
         game_copy.seed = self.seed
         game_copy.id = self.id
         game_copy.vps_to_win = self.vps_to_win
+        game_copy.friendly_robber = self.friendly_robber
         game_copy.state = self.state.copy()
         game_copy.playable_actions = self.playable_actions
         return game_copy

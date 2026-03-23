@@ -3,11 +3,36 @@ import axios from "axios";
 import { API_URL } from "../configuration";
 import type { Color, GameAction, GameState } from "./api.types";
 
-type Player = "HUMAN" | "RANDOM" | "CATANATRON";
+export type PlayerArchetype =
+  | "HUMAN"
+  | "RANDOM"
+  | "CATANATRON"
+  | "WEIGHTED_RANDOM";
+export type MapTemplate = "BASE" | "MINI" | "TOURNAMENT";
 export type StateIndex = number | `${number}` | "latest";
 
-export async function createGame(players: Player[]) {
-  const response = await axios.post(API_URL + "/api/games", { players });
+type CreateGameOptions = {
+  players: PlayerArchetype[];
+  mapTemplate: MapTemplate;
+  vpsToWin: number;
+  discardLimit: number;
+  friendlyRobber: boolean;
+};
+
+export async function createGame({
+  players,
+  mapTemplate,
+  vpsToWin,
+  discardLimit,
+  friendlyRobber,
+}: CreateGameOptions) {
+  const response = await axios.post(API_URL + "/api/games", {
+    players,
+    map_template: mapTemplate,
+    vps_to_win: vpsToWin,
+    discard_limit: discardLimit,
+    friendly_robber: friendlyRobber,
+  });
   return response.data.game_id;
 }
 

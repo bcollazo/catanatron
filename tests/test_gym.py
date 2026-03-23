@@ -166,14 +166,14 @@ def test_move_robber_action_in_base_action_array():
     player_colors = (Color.BLUE, Color.RED)
     action_array = get_action_array(player_colors, "BASE")
     target_action = (ActionType.MOVE_ROBBER, ((-1, 0, 1), Color.BLUE))
-    assert target_action in action_array, (
-        f"Action {target_action} not found in BASE action array for 2 players"
-    )
+    assert (
+        target_action in action_array
+    ), f"Action {target_action} not found in BASE action array for 2 players"
 
     target_action = (ActionType.MOVE_ROBBER, ((-1, 0, 1), None))
-    assert target_action in action_array, (
-        f"Action {target_action} not found in BASE action array for 2 players"
-    )
+    assert (
+        target_action in action_array
+    ), f"Action {target_action} not found in BASE action array for 2 players"
 
 
 def test_there_are_54_build_nodes_in_base():
@@ -198,9 +198,9 @@ def test_outside_tiles_not_in_mini():
     player_colors = (Color.BLUE, Color.RED)
     action_array = get_action_array(player_colors, "MINI")
     target_action = (ActionType.MOVE_ROBBER, ((0, 2, -2), Color.BLUE))
-    assert target_action not in action_array, (
-        f"Action {target_action} found in MINI action array for 2 players"
-    )
+    assert (
+        target_action not in action_array
+    ), f"Action {target_action} found in MINI action array for 2 players"
 
 
 def test_action_space_conversion_roundtrip():
@@ -246,9 +246,9 @@ def test_action_space_conversion_roundtrip():
         )
 
         # Assert they are the same
-        assert recovered_action == action, (
-            f"Action conversion failed: {action} -> {action_int} -> {recovered_action}"
-        )
+        assert (
+            recovered_action == action
+        ), f"Action conversion failed: {action} -> {action_int} -> {recovered_action}"
 
 
 def test_gym_reproducibility():
@@ -266,7 +266,7 @@ def test_gym_reproducibility():
     game = env.unwrapped.game
     center_tile = game.state.board.map.land_tiles[(0, 0, 0)]
     assert center_tile.resource == ORE
-    assert center_tile.number == 8
+    assert center_tile.number == 11
 
     done = False
     reward = 0
@@ -281,4 +281,4 @@ def test_gym_reproducibility():
     game_json = json.loads(json.dumps(game, cls=GameEncoder))
     env.close()
 
-    assert game_json["state_index"] == 124
+    assert game_json["state_index"] == 146

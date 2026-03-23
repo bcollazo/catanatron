@@ -32,7 +32,10 @@ export function NumberToken({
   return (
     <Paper
       elevation={3}
-      className={cn("number-token", className, { flashing: flashing })}
+      className={cn("number-token", className, {
+        flashing: flashing,
+        "number-token-red": number === 6 || number === 8,
+      })}
       style={style}
     >
       <div>{number}</div>
@@ -135,7 +138,7 @@ type TileProps = {
   coordinate: any;
   tile: Tile;
   size: any;
-  onClick: React.MouseEventHandler<HTMLDivElement>;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
   flashing: boolean;
 };
 

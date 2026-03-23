@@ -31,11 +31,7 @@ def test_build_production_features_robber_only_blocks_robbed_tile(monkeypatch):
             board=SimpleNamespace(
                 robber_coordinate=robber_coordinate,
                 map=SimpleNamespace(
-                    tiles={
-                        robber_coordinate: SimpleNamespace(
-                            nodes={0: target_node}
-                        )
-                    }
+                    tiles={robber_coordinate: SimpleNamespace(nodes={0: target_node})}
                 ),
             ),
         )

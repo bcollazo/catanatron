@@ -1,7 +1,7 @@
 import pytest
 import json
 from catanatron.web import create_app
-from catanatron.web.models import db, GameState
+from catanatron.web.models import db, GameState, get_game_state
 
 
 @pytest.fixture
@@ -44,6 +44,46 @@ def test_post_game_endpoint(client):
             db.session.query(GameState).filter_by(uuid=data["game_id"]).first()
             is not None
         )
+
+
+def test_post_game_endpoint_accepts_custom_config(client):
+    response = client.post(
+        "/api/games",
+        json={
+            "players": ["WEIGHTED_RANDOM", "CATANATRON"],
+            "map_template": "MINI",
+            "vps_to_win": 15,
+            "discard_limit": 12,
+            "friendly_robber": True,
+        },
+    )
+    assert response.status_code == 200
+    data = json.loads(response.data)
+
+    with client.application.app_context():
+        game = get_game_state(data["game_id"])
+        assert game.friendly_robber is True
+
+    state_response = client.get(f"/api/games/{data['game_id']}/states/latest")
+    assert state_response.status_code == 200
+    state_data = json.loads(state_response.data)
+    land_tiles = [
+        tile for tile in state_data["tiles"] if tile["tile"]["type"] != "WATER"
+    ]
+    assert len(land_tiles) == 7
+
+
+def test_post_game_endpoint_rejects_invalid_config(client):
+    response = client.post(
+        "/api/games",
+        json={
+            "players": ["RANDOM"],
+            "map_template": "INVALID",
+            "vps_to_win": 25,
+            "discard_limit": 2,
+        },
+    )
+    assert response.status_code == 400
 
 
 def test_get_game_endpoint(client):
