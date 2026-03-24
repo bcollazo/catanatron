@@ -17,12 +17,13 @@ class AgentRouter:
     be used as a drop-in replacement in simulate_game / training_loop.
     """
 
-    def __init__(self, placement_agent, main_agent, env):
+    def __init__(self, placement_agent, main_agent):
         self.placement_agent = placement_agent
         self.main_agent = main_agent
-        self.env = env
         self._last_was_placement = False
 
+    # TODO -> NEED TO FIGURE OUT HOW TO DETERMINE PLACEMENT PHASE WITHOUT ENV BEING PASSED IN
+    # TODO -> I THINK WE NEED TO ADD ONE MORE BIT TO THE FEATURE SPACE
     def _is_placement_phase(self) -> bool:
         core_env = _unwrap_env(self.env)
         return core_env.game.state.is_initial_build_phase
