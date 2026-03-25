@@ -62,6 +62,7 @@ class RLCapstonePlayer(Player):
 
         action, _, _ = self.router_agent.select_action(observation, action_mask)
 
+        # TODO -> use capstone_to_action() function to convert to the catanatron action space
         return action
 
 register_cli_player("Capstone_RL_AGENT", RLCapstonePlayer)
