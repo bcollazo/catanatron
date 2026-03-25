@@ -208,3 +208,31 @@ def test_sequence():
     p0_color = state.colors[0]
     assert state.current_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT
     apply_action(state, Action(p0_color, ActionType.BUILD_SETTLEMENT, 0))
+
+
+def test_discard_sequence_tracks_original_hand_size():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    state = State(players)
+    color = players[0].color
+    current_player_index = state.colors.index(color)
+    turn_player_index = state.colors.index(players[1].color)
+
+    state.current_turn_index = turn_player_index
+    state.current_player_index = current_player_index
+    state.current_prompt = ActionPrompt.DISCARD
+    state.is_discarding = True
+    state.discard_counts[color] = 4
+    player_deck_replenish(state, color, BRICK, 1)
+    player_deck_replenish(state, color, WHEAT, 3)
+
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, BRICK))
+    assert state.current_color() == color
+    assert state.is_discarding
+    assert state.discard_counts[color] == 3
+
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
+    apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
+    assert not state.is_discarding
+    assert state.is_moving_knight
+    assert state.current_player_index == turn_player_index

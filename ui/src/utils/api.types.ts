@@ -25,8 +25,12 @@ export type GameActionRecord =
   | [MaritimeTradeAction, null]
   | [EndTurnAction, null];
 
-export type RollGameAction = [Color, "ROLL", null];
-export type DiscardGameAction = [Color, "DISCARD", null];
+export type RollGameAction = [Color, "ROLL", [number, number] | null];
+export type DiscardGameAction = [
+  Color,
+  "DISCARD" | "DISCARD_RESOURCE",
+  ResourceCard | null
+];
 export type BuyDevelopmentCardAction = [Color, "BUY_DEVELOPMENT_CARD", null];
 export type BuildSettlementAction = [Color, "BUILD_SETTLEMENT", number];
 export type BuildCityAction = [Color, "BUILD_CITY", number];
@@ -42,7 +46,7 @@ export type PlayYearOfPlentyAction = [
 export type MoveRobberAction = [
   Color,
   "MOVE_ROBBER",
-  [TileCoordinate, string?]
+  [TileCoordinate, string?, string?]
 ];
 export type MaritimeTradeAction = [
   Color,
@@ -106,7 +110,8 @@ export type GameState = {
   winning_color?: Color;
   current_prompt: string;
   player_state: Record<string, PlayerState>;
-  action_records: GameActionRecord[];
+  action_records?: GameActionRecord[];
+  actions?: GameAction[];
   robber_coordinate: TileCoordinate;
   nodes: Array<{
     id: number;

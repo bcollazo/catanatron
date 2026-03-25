@@ -177,13 +177,13 @@ describe("humanizeAction", () => {
     ).toBe("BOT ROLLED A 7");
   });
 
-  test("DISCARD action", () => {
+  test("DISCARD_RESOURCE action", () => {
     expect(
       humanizeActionRecord(baseGameState, [
-        ["ORANGE", "DISCARD", null],
+        ["ORANGE", "DISCARD_RESOURCE", "WHEAT"],
         ["WHEAT"],
       ])
-    ).toBe("YOU DISCARDED");
+    ).toBe("YOU DISCARDED WHEAT");
   });
 
   test("BUY_DEVELOPMENT_CARD action", () => {

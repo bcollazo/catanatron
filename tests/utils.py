@@ -24,7 +24,7 @@ def build_initial_placements(
 def advance_to_play_turn(game: Game):
     game.execute(Action(game.state.current_color(), ActionType.ROLL, None))
     while game.playable_actions[0].action_type in [
-        ActionType.DISCARD,
+        ActionType.DISCARD_RESOURCE,
         ActionType.MOVE_ROBBER,
     ]:
         game.execute(game.playable_actions[0])

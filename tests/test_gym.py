@@ -213,7 +213,7 @@ def test_action_space_conversion_roundtrip():
     # RESOURCES = ['WOOD', 'BRICK', 'SHEEP', 'WHEAT', 'ORE']
     test_actions = [
         Action(Color.BLUE, ActionType.ROLL, None),
-        Action(Color.BLUE, ActionType.DISCARD, None),
+        Action(Color.BLUE, ActionType.DISCARD_RESOURCE, WHEAT),
         Action(Color.BLUE, ActionType.BUILD_SETTLEMENT, 10),
         Action(Color.BLUE, ActionType.BUILD_CITY, 5),
         Action(Color.BLUE, ActionType.BUILD_ROAD, (0, 1)),

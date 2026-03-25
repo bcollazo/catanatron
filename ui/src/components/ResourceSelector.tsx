@@ -10,12 +10,14 @@ import {
 import "./ResourceSelector.scss";
 import type { ResourceCard } from "../utils/api.types";
 
+type SelectorOption = ResourceCard | ResourceCard[];
+
 type ResourceSelectorProps = {
   open: boolean;
   onClose: () => void;
-  onSelect: (option: ResourceCard | ResourceCard[]) => void;
-  options: ResourceCard[][]; // this is only used when mode == "yearOfPlenty"
-  mode: "monopoly" | "yearOfPlenty";
+  onSelect: (option: SelectorOption) => void;
+  options: SelectorOption[];
+  mode: "discard" | "monopoly" | "yearOfPlenty";
 };
 
 const ResourceSelector = ({
@@ -25,23 +27,36 @@ const ResourceSelector = ({
   onSelect,
   mode,
 }: ResourceSelectorProps) => {
-  const sortedOptions = React.useMemo(() => {
-    const resourceOrder: ResourceCard[] = [
-      "WOOD",
-      "BRICK",
-      "SHEEP",
-      "WHEAT",
-      "ORE",
-    ];
+  const resourceOrder: ResourceCard[] = [
+    "WOOD",
+    "BRICK",
+    "SHEEP",
+    "WHEAT",
+    "ORE",
+  ];
+  const isSingleResourceOption = (
+    option: SelectorOption
+  ): option is ResourceCard => !Array.isArray(option);
 
+  const sortedOptions = React.useMemo(() => {
     if (mode === "monopoly") {
       return resourceOrder;
     }
+    if (mode === "discard") {
+      return options
+        .filter(isSingleResourceOption)
+        .sort((a, b) => resourceOrder.indexOf(a) - resourceOrder.indexOf(b));
+    }
 
-    const hasDoubleOptions = options.some((option) => option.length === 2);
+    const yearOfPlentyOptions = options.filter(
+      (option): option is ResourceCard[] => Array.isArray(option)
+    );
+    const hasDoubleOptions = yearOfPlentyOptions.some(
+      (option) => option.length === 2
+    );
     const filteredOptions = hasDoubleOptions
-      ? options.filter((option) => option.length === 2)
-      : options;
+      ? yearOfPlentyOptions.filter((option) => option.length === 2)
+      : yearOfPlentyOptions;
 
     return filteredOptions.sort((a: ResourceCard[], b: ResourceCard[]) => {
       const aFirstResource = a[0];
@@ -65,13 +80,11 @@ const ResourceSelector = ({
     </span>
   );
 
-  const isMonopolyOption = (
-    option: ResourceCard | ResourceCard[]
-  ): option is ResourceCard => mode === "monopoly" && !!option;
-  const optionToResourceSpan = (option: ResourceCard | ResourceCard[]) => {
-    if (isMonopolyOption(option)) {
+  const optionToResourceSpan = (option: SelectorOption) => {
+    if (isSingleResourceOption(option)) {
       return getResourceSpan(option);
-    } else if (option.length === 1) {
+    }
+    if (option.length === 1) {
       return (
         <>
           {getResourceSpan(option[0])}
@@ -98,7 +111,9 @@ const ResourceSelector = ({
       fullWidth
     >
       <DialogTitle>
-        {mode === "monopoly"
+        {mode === "discard"
+          ? "Select Resource to Discard"
+          : mode === "monopoly"
           ? "Select Resource to Monopolize"
           : "Select Resources for Year of Plenty"}
       </DialogTitle>

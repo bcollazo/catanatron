@@ -93,7 +93,7 @@ def apply_action(
         action_record = apply_buy_development_card(state, action, action_record)
     elif action.action_type == ActionType.ROLL:
         action_record = apply_roll(state, action, action_record)
-    elif action.action_type == ActionType.DISCARD:
+    elif action.action_type == ActionType.DISCARD_RESOURCE:
         action_record = apply_discard(state, action, action_record)
     elif action.action_type == ActionType.MOVE_ROBBER:
         action_record = apply_move_robber(state, action, action_record)
@@ -266,17 +266,26 @@ def apply_roll(state: State, action: Action, action_record=None):
     action = Action(action.color, action.action_type, dices)
 
     if number == 7:
-        discarders = [
-            player_num_resource_cards(state, color) > state.discard_limit
+        state.discard_counts = {
+            color: (
+                player_num_resource_cards(state, color) // 2
+                if player_num_resource_cards(state, color) > state.discard_limit
+                else 0
+            )
             for color in state.colors
-        ]
-        should_enter_discarding_sequence = any(discarders)
+        }
+        should_enter_discarding_sequence = any(state.discard_counts.values())
 
         if should_enter_discarding_sequence:
-            state.current_player_index = discarders.index(True)
+            state.current_player_index = next(
+                i
+                for i, color in enumerate(state.colors)
+                if state.discard_counts[color] > 0
+            )
             state.current_prompt = ActionPrompt.DISCARD
             state.is_discarding = True
         else:
+            state.discard_counts = {color: 0 for color in state.colors}
             # state.current_player_index stays the same
             state.current_prompt = ActionPrompt.MOVE_ROBBER
             state.is_moving_knight = True
@@ -295,33 +304,53 @@ def apply_roll(state: State, action: Action, action_record=None):
     return ActionRecord(action=action, result=dices)
 
 
-def apply_discard(state: State, action: Action, action_record=None):
+def normalize_discarded_cards(state: State, action: Action, action_record=None):
+    if action.value is not None:
+        if isinstance(action.value, (list, tuple)):
+            return list(action.value)
+        return [action.value]
+
+    if action_record is not None and action_record.result is not None:
+        if isinstance(action_record.result, (list, tuple)):
+            return list(action_record.result)
+        return [action_record.result]
+
     hand = player_deck_to_array(state, action.color)
-    num_to_discard = len(hand) // 2
-    if action_record is None:
-        # TODO: Forcefully discard randomly so that decision tree doesnt explode in possibilities.
-        discarded = random.sample(hand, k=num_to_discard)
-    else:
-        discarded = action_record.result  # for replay functionality
+    return [random.choice(hand)]
+
+
+def apply_discard(state: State, action: Action, action_record=None):
+    discarded = normalize_discarded_cards(state, action, action_record)
+    remaining = state.discard_counts[action.color]
+    if len(discarded) > remaining:
+        raise ValueError("Trying to discard more cards than required")
+
     to_discard = freqdeck_from_listdeck(discarded)
 
     player_freqdeck_subtract(state, action.color, to_discard)
     state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, to_discard)
-    action = Action(action.color, action.action_type, discarded)
+    state.discard_counts[action.color] = remaining - len(discarded)
+    action_value = discarded[0] if len(discarded) == 1 else tuple(discarded)
+    action = Action(action.color, action.action_type, action_value)
 
-    # Advance turn
-    discarders_left = [
-        player_num_resource_cards(state, color) > 7 for color in state.colors
-    ][state.current_player_index + 1 :]
-    if any(discarders_left):
-        to_skip = discarders_left.index(True)
-        state.current_player_index = state.current_player_index + 1 + to_skip
+    if state.discard_counts[action.color] > 0:
+        # state.current_player_index stays the same
         # state.current_prompt stays the same
+        pass
     else:
-        state.current_player_index = state.current_turn_index
-        state.current_prompt = ActionPrompt.MOVE_ROBBER
-        state.is_discarding = False
-        state.is_moving_knight = True
+        discarders_left = [state.discard_counts[color] > 0 for color in state.colors][
+            state.current_player_index + 1 :
+        ]
+        if any(discarders_left):
+            to_skip = discarders_left.index(True)
+            state.current_player_index = state.current_player_index + 1 + to_skip
+            # state.current_prompt stays the same
+        else:
+            state.current_player_index = state.current_turn_index
+            state.current_prompt = ActionPrompt.MOVE_ROBBER
+            state.is_discarding = False
+            state.is_moving_knight = True
+            state.discard_counts = {color: 0 for color in state.colors}
 
     return ActionRecord(action=action, result=discarded)
 

@@ -329,9 +329,8 @@ CatanatronEnv.__doc__ += """
      - Float
 
    * - IS_DISCARDING
-     - Whether current player must discard. For now, there is only 1 
-       discarding action (at random), since otherwise action space
-       would explode in size.
+     - Whether current player must discard. Discarding is represented
+       as one action per resource type currently held.
      - 1
      - Boolean
    * - IS_MOVING_ROBBER

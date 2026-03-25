@@ -486,7 +486,7 @@ def game_features(game: Game, p0_color: Color):
     features = {
         "BANK_DEV_CARDS": len(game.state.development_listdeck),
         "IS_MOVING_ROBBER": ActionType.MOVE_ROBBER in possibilities,
-        "IS_DISCARDING": ActionType.DISCARD in possibilities,
+        "IS_DISCARDING": ActionType.DISCARD_RESOURCE in possibilities,
     }
     for resource in RESOURCES:
         features[f"BANK_{resource}"] = freqdeck_count(
