@@ -1,8 +1,0 @@
-#!/bin/sh
-'''exec' "/Users/daniyalqazi/Desktop/Desktop - Daniyal’s MacBook Air - 1/ECE487/Github/catan_ai/.venv311/bin/python" "$0" "$@"
-' '''
-import sys
-from pygments.cmdline import main
-if __name__ == '__main__':
-    sys.argv[0] = sys.argv[0].removesuffix('.exe')
-    sys.exit(main())
