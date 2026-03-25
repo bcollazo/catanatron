@@ -380,7 +380,19 @@ def initialize_tiles(
             )
 
         # iterate in order of official spiral and assign numbers, skipping desert tile
-        start = (2, -2, 0) if map_template == BASE_MAP_TEMPLATE else (1, -1, 0)
+        if map_template == BASE_MAP_TEMPLATE:
+            possible_starts = [
+                (2, -2, 0), (0, -2, 2), (-2, 0, 2), 
+                (-2, 2, 0), (0, 2, -2), (2, 0, -2)
+            ]
+        else: # MINI_MAP_TEMPLATE
+            possible_starts = [
+                (1, -1, 0), (0, -1, 1), (-1, 0, 1), 
+                (-1, 1, 0), (0, 1, -1), (1, 0, -1)
+            ]
+            
+        start = random.choice(possible_starts)
+        
         i = 0
         for coordinate in spiral_land_coordinates(all_tiles, start):
             tile = all_tiles[coordinate]
