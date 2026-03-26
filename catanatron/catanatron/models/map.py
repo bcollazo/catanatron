@@ -15,7 +15,7 @@ from catanatron.models.enums import (
     FastResource,
     NodeRef,
 )
-from catanatron.models.spiral import spiral_land_coordinates
+from catanatron.models.spiral import get_starting_spiral_coordinates, spiral_land_coordinates
 from catanatron.models.tiles import EdgeId, LandTile, NodeId, Port, Tile, Water
 
 NUM_NODES = 54
@@ -178,7 +178,6 @@ BASE_MAP_TEMPLATE = MapTemplate(
         (3, -2, -1): Water,
     },
 )
-
 
 class CatanMap:
     """Represents a randomly initialized map."""
@@ -380,19 +379,7 @@ def initialize_tiles(
             )
 
         # iterate in order of official spiral and assign numbers, skipping desert tile
-        if map_template == BASE_MAP_TEMPLATE:
-            possible_starts = [
-                (2, -2, 0), (0, -2, 2), (-2, 0, 2), 
-                (-2, 2, 0), (0, 2, -2), (2, 0, -2)
-            ]
-        else: # MINI_MAP_TEMPLATE
-            possible_starts = [
-                (1, -1, 0), (0, -1, 1), (-1, 0, 1), 
-                (-1, 1, 0), (0, 1, -1), (1, 0, -1)
-            ]
-            
-        start = random.choice(possible_starts)
-        
+        start = get_starting_spiral_coordinates(all_tiles)        
         i = 0
         for coordinate in spiral_land_coordinates(all_tiles, start):
             tile = all_tiles[coordinate]

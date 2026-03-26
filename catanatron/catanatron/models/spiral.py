@@ -1,9 +1,18 @@
 from collections.abc import Generator
-from typing import Mapping
+from typing import Dict, Mapping
+import random
 
 from catanatron.models.coordinate_system import Direction, UNIT_VECTORS, add, Coordinate
 from catanatron.models.tiles import LandTile, Tile
 
+COUNTERCLOCKWISE_RING_DIRECTIONS = (
+    Direction.NORTHWEST,
+    Direction.WEST,
+    Direction.SOUTHWEST,
+    Direction.SOUTHEAST,
+    Direction.EAST,
+    Direction.NORTHEAST,
+)
 
 def spiral_land_coordinates(
     all_tiles: Mapping[Coordinate, Tile], start: Coordinate
@@ -65,3 +74,39 @@ def spiral_land_coordinates(
             continue
 
         direction = directions[(directions.index(direction) + 1) % len(directions)]
+
+def cube_radius(coord: Coordinate) -> int:
+    return max(abs(component) for component in coord)
+
+def ring_coordinates(radius: int) -> tuple[Coordinate, ...]:
+    if radius == 0:
+        return ((0, 0, 0),)
+
+    coord = (radius, -radius, 0)
+    ring = []
+    for direction in COUNTERCLOCKWISE_RING_DIRECTIONS:
+        for _ in range(radius):
+            ring.append(coord)
+            coord = add(coord, UNIT_VECTORS[direction])
+    return tuple(ring)
+
+def  outer_land_coordinates(
+    all_tiles: Mapping[Coordinate, Tile],
+) -> tuple[Coordinate, ...]:
+    """Return outer-ring land coordinates in deterministic coast-following order."""
+    land_coords = {
+        coord for coord, tile in all_tiles.items() if isinstance(tile, LandTile)
+    }
+    if not land_coords:
+        return tuple()
+
+    radius = max(cube_radius(coord) for coord in land_coords)
+    return tuple(coord for coord in ring_coordinates(radius) if coord in land_coords)
+
+
+def get_starting_spiral_coordinates(all_tiles: Dict[Coordinate, Tile]) -> Coordinate:
+    """Return a randomly chosen corner coordinate from the outer ring of land coordinates."""
+    outer_ring = outer_land_coordinates(all_tiles)
+
+    corners = [coord for coord in outer_ring if 0 in coord]
+    return random.choice(corners)
