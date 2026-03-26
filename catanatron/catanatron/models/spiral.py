@@ -14,6 +14,7 @@ COUNTERCLOCKWISE_RING_DIRECTIONS = (
     Direction.NORTHEAST,
 )
 
+
 def spiral_land_coordinates(
     all_tiles: Mapping[Coordinate, Tile], start: Coordinate
 ) -> Generator[Coordinate, None, None]:
@@ -75,8 +76,10 @@ def spiral_land_coordinates(
 
         direction = directions[(directions.index(direction) + 1) % len(directions)]
 
+
 def cube_radius(coord: Coordinate) -> int:
     return max(abs(component) for component in coord)
+
 
 def ring_coordinates(radius: int) -> tuple[Coordinate, ...]:
     if radius == 0:
@@ -90,7 +93,8 @@ def ring_coordinates(radius: int) -> tuple[Coordinate, ...]:
             coord = add(coord, UNIT_VECTORS[direction])
     return tuple(ring)
 
-def  outer_land_coordinates(
+
+def outer_land_coordinates(
     all_tiles: Mapping[Coordinate, Tile],
 ) -> tuple[Coordinate, ...]:
     """Return outer-ring land coordinates in deterministic coast-following order."""

@@ -9,6 +9,7 @@ from catanatron.models.map import (
 )
 from catanatron.models.spiral import spiral_land_coordinates
 
+
 def test_spiral_land_coordinates_rejects_non_land_start():
     all_tiles = initialize_tiles(BASE_MAP_TEMPLATE, number_placement="random")
 
@@ -52,21 +53,22 @@ def test_spiral_land_coordinates_mini_map_order_from_tile_one():
 
     assert ids == [1, 6, 5, 4, 3, 2, 0]
 
+
 def test_spiral_starts_at_random_corners():
     """Prove that the spiral starting coordinate is a randomly chosen corner."""
-    
+
     # We only need to generate the board layout once to test the coordinate picker
     all_tiles = initialize_tiles(BASE_MAP_TEMPLATE, number_placement="random")
     starts = set()
-    
+
     for _ in range(50):
         # Directly call the function we modified to see what it picks
         start_coord = get_starting_spiral_coordinates(all_tiles)
-        
+
         # 1. Prove it is a corner (cube coordinates for corners always contain a 0)
         assert 0 in start_coord
-        
+
         starts.add(start_coord)
-        
+
     # 2. Prove it picked more than one unique corner over 50 calls
     assert len(starts) > 1
