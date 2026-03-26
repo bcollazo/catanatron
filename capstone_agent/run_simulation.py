@@ -36,6 +36,9 @@ import catanatron.gym
 from catanatron.json import GameEncoder
 from catanatron.models.player import Color
 
+from CONSTANTS import (FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, 
+                       MAX_STEPS_PER_GAME,
+                       DEFAULT_BENCHMARK_CSV, DEFAULT_MAIN_PLAY_MODEL_PATH, DEFAULT_PLACEMENT_MODEL_PATH)
 
 def _timestamped_path(path: str) -> str:
     """Insert a UTC timestamp before the file extension.
@@ -45,15 +48,6 @@ def _timestamped_path(path: str) -> str:
     root, ext = os.path.splitext(path)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
     return f"{root}_{stamp}{ext}"
-
-
-OBS_SIZE = 1258
-HIDDEN_SIZE = 512
-PLACEMENT_HIDDEN_SIZE = 64
-MAX_STEPS_PER_GAME = 5000
-DEFAULT_MODEL_PATH = "capstone_agent/models/capstone_model.pt"
-DEFAULT_PLACEMENT_MODEL_PATH = "capstone_agent/models/placement_model.pt"
-DEFAULT_BENCHMARK_CSV = "capstone_agent/benchmarks/training_metrics.csv"
 
 
 @dataclass
@@ -230,8 +224,8 @@ def simulate_and_train(
 
 
 def make_agent_and_env(
-    obs_size: int = OBS_SIZE,
-    hidden_size: int = HIDDEN_SIZE,
+    obs_size: int = FEATURE_SPACE_SIZE,
+    hidden_size: int = MAIN_PLAY_AGENT_HIDDEN_SIZE,
     model_path: Optional[str] = None,
     placement_model_path: Optional[str] = None,
     placement_strategy: str = "model",
@@ -255,7 +249,7 @@ def make_agent_and_env(
     placement_agent = make_placement_agent(
         placement_strategy,
         obs_size=obs_size,
-        hidden_size=PLACEMENT_HIDDEN_SIZE,
+        hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE,
     )
     if placement_model_path is not None:
         placement_agent.load(placement_model_path)
@@ -280,7 +274,7 @@ def main():
         "--load", type=str, default=None, help="Path to saved main-agent model weights"
     )
     parser.add_argument(
-        "--save", type=str, default=DEFAULT_MODEL_PATH,
+        "--save", type=str, default=DEFAULT_MAIN_PLAY_MODEL_PATH,
         help=(
             "Path to save main-agent model weights after all games. "
             "In --train mode, this path is auto-used for resume if it already exists."
@@ -368,7 +362,7 @@ def main():
         place_desc = args.placement_strategy
     device = get_device()
     print(
-        f"Main agent ready      ({main_params:,} params, obs={OBS_SIZE}, actions=245)\n"
+        f"Main agent ready      ({main_params:,} params, obs={FEATURE_SPACE_SIZE}, actions=245)\n"
         f"Placement agent ready ({place_desc})\n"
         f"Device: {device}"
     )

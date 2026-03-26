@@ -13,6 +13,14 @@ from catanatron.gym.envs.catanatron_env import (
 )
 from catanatron.gym.envs.CapstoneReward import CapstoneReward
 
+import sys
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+from capstone_agent.CONSTANTS import FEATURE_SPACE_SIZE
+
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
 TILE_COORDINATES = [x for x, y in BASE_TOPOLOGY.items() if y == LandTile]
@@ -115,7 +123,6 @@ def from_action_space(action_int, playable_actions):
     # Get "catan_action" based on space action.
     # i.e. Take first action in playable that matches ACTIONS_ARRAY blueprint
 
-    # TODO -> need to make sure this lines up with what we expect from playable actions
     (action_type, value) = ACTIONS_ARRAY[action_int]
     catan_action = None
     for action in playable_actions:
@@ -125,10 +132,6 @@ def from_action_space(action_int, playable_actions):
             break  # return the first one
     assert catan_action is not None
     return catan_action
-
-
-# hex(114) + vertex(756) + edge(288) + hand(27) + strategic(44) + game(29)
-OBSERVATION_SIZE = 1258
 
 
 class CapstoneCatanatronEnv(gym.Env):
@@ -156,7 +159,7 @@ class CapstoneCatanatronEnv(gym.Env):
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf,
-            shape=(OBSERVATION_SIZE,), dtype=np.float64,
+            shape=(FEATURE_SPACE_SIZE,), dtype=np.float64,
         )
 
         self.reset()

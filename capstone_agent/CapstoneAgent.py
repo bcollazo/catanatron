@@ -7,11 +7,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
-
+from CONSTANTS import FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE
 
 class CapstoneAgent:
 
-    def __init__(self, obs_size=1258, hidden_size=512):
+    def __init__(self, obs_size=FEATURE_SPACE_SIZE, hidden_size=MAIN_PLAY_AGENT_HIDDEN_SIZE):
         self.device = get_device()
         self.hyperparams = PPOHyperparams()
         self.model = CapstoneModel(obs_size=obs_size, hidden_size=hidden_size).to(self.device)

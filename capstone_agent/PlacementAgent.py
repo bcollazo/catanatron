@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
-
+from CONSTANTS import FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
 
 # ── registry of available strategies ─────────────────────────────
 
@@ -87,7 +87,7 @@ class PlacementAgent:
     via ``supervised_train()``.
     """
 
-    def __init__(self, obs_size=1258, hidden_size=64):
+    def __init__(self, obs_size=FEATURE_SPACE_SIZE, hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE): # TODO -> does this really need the whole feature space?
         self.device = get_device()
         self.hyperparams = PPOHyperparams()
         self.hyperparams.batch_size = 16
@@ -233,7 +233,7 @@ class PlacementAgent:
         """Train on a labelled dataset of placement decisions.
 
         Args:
-            obs:     (N, 1258)  board observations at placement time.
+            obs:     (N, 1259)  board observations at placement time.
             masks:   (N, 245)   action masks at placement time.
             actions: (N,)       action indices that were chosen.
             won:     (N,)       1.0 if the acting player won, else 0.0.

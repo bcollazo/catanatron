@@ -7,7 +7,7 @@ zeros them out.
 
 Architecture
 ------------
-Compressor (1258 -> hidden) -> 1 residual block -> dropout -> shared policy stem
+Compressor (1259 -> hidden) -> 1 residual block -> dropout -> shared policy stem
     -> settlement head (hidden -> 54)
     -> road head       (hidden -> 72)
     -> value head      (hidden -> 1)
@@ -15,21 +15,15 @@ Compressor (1258 -> hidden) -> 1 residual block -> dropout -> shared policy stem
 
 import torch
 import torch.nn as nn
-
-# Indices inside the 245-dim ACTIONS_ARRAY
-ROAD_START = 0
-ROAD_END = 72
-SETTLEMENT_START = 72
-SETTLEMENT_END = 126
-ACTION_SPACE_SIZE = 245
-
+from CONSTANTS import FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, ACTION_SPACE_SIZE
+from CONSTANTS import ROAD_SLICE, SETTLEMENT_SLICE
 
 class PlacementModel(nn.Module):
 
     VERTEX_ACTION_SIZE = 54  # settlement nodes
     EDGE_ACTION_SIZE = 72    # road edges
-
-    def __init__(self, obs_size: int = 1258, hidden_size: int = 64, dropout: float = 0.3):
+    # TODO -> does the placement agent really need the whole feature space? it really only needs a few key features
+    def __init__(self, obs_size: int = FEATURE_SPACE_SIZE, hidden_size: int = PLACEMENT_AGENT_HIDDEN_SIZE, dropout: float = 0.3):
         super().__init__()
 
         self.hidden_size = hidden_size
@@ -87,8 +81,8 @@ class PlacementModel(nn.Module):
             (x.size(0), ACTION_SPACE_SIZE), -1e9,
             device=x.device, dtype=x.dtype,
         )
-        logits[:, ROAD_START:ROAD_END] = road_logits
-        logits[:, SETTLEMENT_START:SETTLEMENT_END] = settlement_logits
+        logits[:, ROAD_SLICE] = road_logits
+        logits[:, SETTLEMENT_SLICE] = settlement_logits
 
         mask_tensor = torch.as_tensor(mask, device=logits.device)
         logits = logits.masked_fill(mask_tensor == 0, -1e9)

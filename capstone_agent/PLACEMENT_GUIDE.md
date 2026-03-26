@@ -29,7 +29,7 @@ python capstone_agent/collect_placement_data.py --games 5000
 Both Blue and Red default to AlphaBeta, so the recorded placements reflect real strategy. Progress prints automatically (~20 status updates).
 
 **Output:** `capstone_agent/data/placement_data.npz` containing:
-- `obs` (N, 1258) — board observations at each placement decision
+- `obs` (N, 1259) — board observations at each placement decision
 - `masks` (N, 245) — valid action masks
 - `actions` (N,) — the action index AlphaBeta chose
 - `won` (N,) — 1.0 if Blue won that game, 0.0 otherwise
