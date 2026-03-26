@@ -1,7 +1,7 @@
 """Lightweight policy network for initial settlement + road placement.
 
 Only two action heads (settlement: 54 nodes, road: 72 edges) plus a
-value head for compatibility with the AgentRouter interface.  All other
+value head for compatibility with the CapstoneAgent interface.  All other
 action slots in the 245-dim output are filled with -inf so the mask
 zeros them out.
 
@@ -15,8 +15,8 @@ Compressor (1259 -> hidden) -> 1 residual block -> dropout -> shared policy stem
 
 import torch
 import torch.nn as nn
-from CONSTANTS import FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, ACTION_SPACE_SIZE
-from CONSTANTS import ROAD_SLICE, SETTLEMENT_SLICE
+from CONSTANTS import (FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, ACTION_SPACE_SIZE,
+                       ROAD_ACTION_SLICE, SETTLEMENT_ACTION_SLICE)
 
 class PlacementModel(nn.Module):
 
@@ -81,8 +81,8 @@ class PlacementModel(nn.Module):
             (x.size(0), ACTION_SPACE_SIZE), -1e9,
             device=x.device, dtype=x.dtype,
         )
-        logits[:, ROAD_SLICE] = road_logits
-        logits[:, SETTLEMENT_SLICE] = settlement_logits
+        logits[:, ROAD_ACTION_SLICE] = road_logits
+        logits[:, SETTLEMENT_ACTION_SLICE] = settlement_logits
 
         mask_tensor = torch.as_tensor(mask, device=logits.device)
         logits = logits.masked_fill(mask_tensor == 0, -1e9)

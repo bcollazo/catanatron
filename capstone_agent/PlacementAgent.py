@@ -79,7 +79,7 @@ class PlacementAgent:
     """Agent for initial settlement + road placement.
 
     Shares the same select_action / store / train interface as
-    CapstoneAgent so the AgentRouter can delegate transparently.
+    MainPlayAgent so the CapstoneAgent can delegate transparently.
 
     Uses a lightweight PlacementModel (settlement + road heads only,
     2 residual blocks, ~0.8M params vs 6.3M for the full model).

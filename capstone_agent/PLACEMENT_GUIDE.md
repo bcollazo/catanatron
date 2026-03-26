@@ -1,6 +1,6 @@
 # Placement Agent Guide
 
-This branch adds a **separate initial-placement agent** that handles the first settlement and road decisions in Catan, then hands off to the main CapstoneAgent (or AlphaBeta) for the rest of the game.
+This branch adds a **separate initial-placement agent** that handles the first settlement and road decisions in Catan, then hands off to the main MainPlayAgent (or AlphaBeta) for the rest of the game.
 
 ## Architecture Overview
 
@@ -9,7 +9,7 @@ This branch adds a **separate initial-placement agent** that handles the first s
 | `PlacementModel` | `PlacementModel.py` | Lightweight neural net (settlement + road heads only, ~880K params) |
 | `PlacementAgent` | `PlacementAgent.py` | Wraps the model with PPO and supervised learning interfaces |
 | `RandomPlacementAgent` | `PlacementAgent.py` | Baseline that picks uniformly from valid placement actions |
-| `AgentRouter` | `AgentRouter.py` | Routes decisions to the placement agent during initial build, main agent otherwise |
+| `CapstoneAgent` | `CapstoneAgent.py` | Routes decisions to the placement agent during initial build, main agent otherwise |
 | `device.py` | `device.py` | Shared device selection (MPS > CUDA > CPU) |
 
 The placement agent can be swapped between strategies via `make_placement_agent("model")` or `make_placement_agent("random")`.
@@ -138,7 +138,7 @@ RESULTS
 
 ### With `run_simulation.py`
 
-The main simulation script uses the `AgentRouter` by default. It routes initial placement to the placement agent and everything else to the main CapstoneAgent.
+The main simulation script uses the `CapstoneAgent` by default. It routes initial placement to the placement agent and everything else to the MainPlayAgent.
 
 ```bash
 # Train with a learned placement model
@@ -168,7 +168,7 @@ Both the main model and placement model are saved with timestamped checkpoints t
 
 ### With `training_loop.py`
 
-The simpler training loop also uses `AgentRouter` and saves both models:
+The simpler training loop also uses `CapstoneAgent` and saves both models:
 
 ```bash
 python capstone_agent/training_loop.py

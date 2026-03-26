@@ -3,9 +3,9 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
-from CapstoneAgent import CapstoneAgent
+from capstone_agent.MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent
-from AgentRouter import AgentRouter
+from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping
 from device import get_device
 import torch
@@ -14,10 +14,10 @@ import gymnasium
 from CONSTANTS import FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
 from CONFIG import ROLLOUT_LENGTH, NUM_UPDATES, STORE_FREQUENCY
 
-main_agent = CapstoneAgent(obs_size=FEATURE_SPACE_SIZE, hidden_size=MAIN_PLAY_AGENT_HIDDEN_SIZE)
+main_agent = MainPlayAgent(obs_size=FEATURE_SPACE_SIZE, hidden_size=MAIN_PLAY_AGENT_HIDDEN_SIZE)
 placement_agent = PlacementAgent(obs_size=FEATURE_SPACE_SIZE, hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE)
 env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
-agent = AgentRouter(placement_agent, main_agent, env)
+agent = CapstoneAgent(placement_agent, main_agent, env)
 validate_action_mapping()
 
 obs, info = env.reset()

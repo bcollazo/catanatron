@@ -23,9 +23,9 @@ from typing import List, Optional
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from CapstoneAgent import CapstoneAgent
+from capstone_agent.MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
-from AgentRouter import AgentRouter
+from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping, describe_action
 from device import get_device
 
@@ -149,7 +149,7 @@ def _self_seat(env, self_color: Color = Color.BLUE) -> Optional[int]:
 
 
 def simulate_game(
-    agent: CapstoneAgent,
+    agent,
     env,
     max_steps: int = MAX_STEPS_PER_GAME,
     verbose: bool = False,
@@ -158,7 +158,7 @@ def simulate_game(
     """Play one full game using the agent and return a GameResult.
 
     Args:
-        agent: A CapstoneAgent, PlacementAgent, or AgentRouter.
+        agent: A CapstoneAgent, PlacementAgent, or MainPlayAgent
         env: A CapstoneCatanatronEnv gymnasium environment.
         max_steps: Safety limit on the number of steps.
         verbose: Print per-step action descriptions.
@@ -204,7 +204,7 @@ def simulate_game(
 
 
 def simulate_and_train(
-    agent: CapstoneAgent,
+    agent,
     env,
     max_steps: int = MAX_STEPS_PER_GAME,
     verbose: bool = False,
@@ -236,13 +236,13 @@ def make_agent_and_env(
         placement_strategy: ``"model"`` for the learned PlacementAgent,
             ``"random"`` for uniform-random placement.
 
-    Returns an AgentRouter that delegates initial-placement decisions to
+    Returns a CapstoneAgent that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
-    CapstoneAgent.
+    MainPlayAgent.
     """
     validate_action_mapping()
 
-    main_agent = CapstoneAgent(obs_size=obs_size, hidden_size=hidden_size)
+    main_agent = MainPlayAgent(obs_size=obs_size, hidden_size=hidden_size)
     if model_path is not None:
         main_agent.load(model_path)
 
@@ -255,7 +255,7 @@ def make_agent_and_env(
         placement_agent.load(placement_model_path)
 
     env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
-    router = AgentRouter(placement_agent, main_agent, env)
+    router = CapstoneAgent(placement_agent, main_agent, env)
     return router, env
 
 
