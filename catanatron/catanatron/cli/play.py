@@ -253,7 +253,7 @@ def rich_color(color):
     if color is None:
         return ""
     style = COLOR_TO_RICH_STYLE[color]
-    return f"[{style}]{color.value}[/{style}]"
+    return f"[{style}]{color.name}[/{style}]"
 
 
 def play_batch_core(num_games, players, game_config, accumulators=[]):
@@ -352,7 +352,7 @@ def play_batch(
     table.add_column("SEATING")
     table.add_column("TURNS", justify="right")
     for player in players:
-        table.add_column(f"{player.color.value} VP", justify="right")
+        table.add_column(f"{player.color.name} VP", justify="right")
     table.add_column("WINNER")
     if output_options.db:
         table.add_column("LINK", overflow="fold")

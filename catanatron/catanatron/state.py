@@ -109,6 +109,7 @@ class State:
             self.color_to_index = {
                 color: index for index, color in enumerate(self.colors)
             }
+            self._player_keys = {color: f"P{i}" for i, color in enumerate(self.colors)}
 
             self.resource_freqdeck = starting_resource_bank()
             self.development_listdeck = starting_devcard_bank()
@@ -164,6 +165,7 @@ class State:
         state_copy.player_state = self.player_state.copy()
         state_copy.color_to_index = self.color_to_index
         state_copy.colors = self.colors  # immutable
+        state_copy._player_keys = self._player_keys  # immutable, shared
 
         state_copy.resource_freqdeck = self.resource_freqdeck.copy()
         state_copy.development_listdeck = self.development_listdeck.copy()

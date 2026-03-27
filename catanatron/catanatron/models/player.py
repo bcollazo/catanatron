@@ -1,16 +1,16 @@
 import random
 import builtins
 
-from enum import Enum
+from enum import IntEnum, auto
 
 
-class Color(Enum):
+class Color(IntEnum):
     """Enum to represent the colors in the game"""
 
-    RED = "RED"
-    BLUE = "BLUE"
-    ORANGE = "ORANGE"
-    WHITE = "WHITE"
+    RED = auto()
+    BLUE = auto()
+    ORANGE = auto()
+    WHITE = auto()
 
     def __repr__(self):
         return f"C.{self.name}"
@@ -49,7 +49,7 @@ class Player:
         pass
 
     def __repr__(self):
-        return f"{type(self).__name__}:{self.color.value}"
+        return f"{type(self).__name__}:{self.color.name}"
 
 
 class SimplePlayer(Player):

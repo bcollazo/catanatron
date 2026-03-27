@@ -70,10 +70,5 @@ def run_playouts(action_applied_game_copy, num_playouts):
 
 def run_playout(action_applied_game_copy):
     game_copy = action_applied_game_copy.copy()
-    game_copy.play(decide_fn=decide_fn)
+    game_copy.play_random()
     return game_copy.winning_color()
-
-
-def decide_fn(self, game, playable_actions):
-    index = random.randrange(0, len(playable_actions))
-    return playable_actions[index]

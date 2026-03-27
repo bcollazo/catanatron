@@ -310,7 +310,7 @@ class PygameRenderer:
                 if nid == node_id:
                     # Found the tile and direction
                     tile_center = self.cube_to_pixel(coord)
-                    delta = self.get_node_delta(node_ref.value, self.hex_size)
+                    delta = self.get_node_delta(node_ref.name, self.hex_size)
                     return (tile_center[0] + delta[0], tile_center[1] + delta[1])
 
         return (0, 0)
