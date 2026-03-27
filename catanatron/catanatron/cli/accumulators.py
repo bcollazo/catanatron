@@ -52,30 +52,40 @@ class VpDistributionAccumulator(GameAccumulator):
         self.num_games += 1
 
     def get_avg_cities(self, color=None):
+        if self.num_games == 0:
+            return 0
         if color is None:
             return sum(self.cities.values()) / self.num_games
         else:
             return self.cities[color] / self.num_games
 
     def get_avg_settlements(self, color=None):
+        if self.num_games == 0:
+            return 0
         if color is None:
             return sum(self.settlements.values()) / self.num_games
         else:
             return self.settlements[color] / self.num_games
 
     def get_avg_longest(self, color=None):
+        if self.num_games == 0:
+            return 0
         if color is None:
             return sum(self.longest.values()) / self.num_games
         else:
             return self.longest[color] / self.num_games
 
     def get_avg_largest(self, color=None):
+        if self.num_games == 0:
+            return 0
         if color is None:
             return sum(self.largest.values()) / self.num_games
         else:
             return self.largest[color] / self.num_games
 
     def get_avg_devvps(self, color=None):
+        if self.num_games == 0:
+            return 0
         if color is None:
             return sum(self.devvps.values()) / self.num_games
         else:
