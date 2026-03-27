@@ -211,6 +211,17 @@ class Game:
 
         return result
 
+    def play_random(self):
+        """Lightweight game loop for random playouts.
+
+        Picks a random action each turn without materializing the full action
+        list when possible. Falls back to full generation for complex prompts.
+        """
+        while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
+            actions = self.playable_actions
+            action = actions[random.randrange(len(actions))]
+            self.execute(action, validate_action=False)
+
     def copy(self) -> "Game":
         """Creates a copy of this Game, that can be modified without
         repercusions on this one (useful for simulations).

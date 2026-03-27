@@ -72,7 +72,7 @@ def maintain_largest_army(state: State, color, previous_army_color, previous_arm
 
 # ===== State Getters
 def player_key(state: State, color):
-    return f"P{state.color_to_index[color]}"
+    return state._player_keys[color]
 
 
 def get_enemy_colors(colors, player_color):

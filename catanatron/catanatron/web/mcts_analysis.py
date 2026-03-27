@@ -10,8 +10,8 @@ class GameAnalyzer:
         if game.winning_color() is not None:
             winner = game.winning_color()
             result = {
-                winner.value: 100.0,
-                **{c.value: 0.0 for c in game.state.colors if c != winner},
+                winner.name: 100.0,
+                **{c.name: 0.0 for c in game.state.colors if c != winner},
             }
             return result
 
@@ -36,6 +36,6 @@ class GameAnalyzer:
                     else 0
                 )
 
-            probabilities[color.value] = round(win_ratio * 100, 1)
+            probabilities[color.name] = round(win_ratio * 100, 1)
 
         return probabilities

@@ -221,7 +221,14 @@ class Board:
 
         # find longest path on component under question
         previous_road_color = self.road_color
-        candidate_length = len(longest_acyclic_path(self, component, color))
+
+        # Leaf extension fast path: if one endpoint of the new road had no
+        # prior roads of this color, only DFS from the new tip.
+        if a_index is None or b_index is None:
+            tip = a if b_index is not None else b
+            candidate_length = len(longest_acyclic_path(self, component, color, only_from=tip))
+        else:
+            candidate_length = len(longest_acyclic_path(self, component, color))
         self.road_lengths[color] = max(self.road_lengths[color], candidate_length)
         if candidate_length >= 5 and candidate_length > self.road_length:
             self.road_color = color
@@ -347,34 +354,100 @@ class Board:
         return self.get_edge_color(edge) == color
 
 
-def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
-    paths = []
-    for start_node in node_set:
-        # do DFS when reach leaf node, stop and add to paths
-        paths_from_this_node = []
-        agenda: List[Tuple[int, Any]] = [(start_node, [])]
-        while len(agenda) > 0:
-            node, path_thus_far = agenda.pop()
+def _road_degree(board: Board, node: int, color: Color) -> int:
+    """Count friendly road edges incident to node (that aren't blocked by enemy)."""
+    deg = 0
+    for neighbor in STATIC_GRAPH.neighbors(node):
+        edge = (node, neighbor) if node < neighbor else (neighbor, node)
+        if board.is_friendly_road(edge, color):
+            deg += 1
+    return deg
 
-            able_to_navigate = False
-            for neighbor_node in STATIC_GRAPH.neighbors(node):
-                edge = tuple(sorted((node, neighbor_node)))
 
-                # Must travel on a friendly road.
-                if not board.is_friendly_road(edge, color):
+def longest_acyclic_path(board: Board, node_set: Set[int], color: Color, only_from=None):
+    """Find the longest acyclic path of friendly roads in node_set.
+
+    Args:
+        only_from: If provided, only start DFS from this node (leaf extension
+            fast path). The full node_set is still used for edge discovery.
+    """
+    # Collect friendly edges in this component
+    friendly_edges = set()
+    for node in node_set:
+        for neighbor in STATIC_GRAPH.neighbors(node):
+            if neighbor not in node_set:
+                continue
+            edge = (node, neighbor) if node < neighbor else (neighbor, node)
+            if board.is_friendly_road(edge, color):
+                friendly_edges.add(edge)
+
+    if not friendly_edges:
+        return []
+
+    if only_from is not None:
+        start_nodes = [only_from]
+    else:
+        # Start DFS only from leaves and branch points (degree != 2).
+        # Optimal path endpoints must be at such vertices.
+        # Enemy nodes with friendly roads act as dead ends (effective leaves)
+        # and must be included as potential start nodes.
+        start_nodes = []
+        for node in node_set:
+            deg = _road_degree(board, node, color)
+            if deg == 0:
+                continue
+            if board.is_enemy_node(node, color) or deg != 2:
+                start_nodes.append(node)
+
+        # Pure-cycle fallback: if all nodes have degree 2, pick any node with roads.
+        if not start_nodes:
+            for node in node_set:
+                if not board.is_enemy_node(node, color) and _road_degree(board, node, color) > 0:
+                    start_nodes.append(node)
+                    break
+
+    if not start_nodes:
+        return []
+
+    best_length = 0
+    best_path: list = []
+
+    def _sorted_edge(a, b):
+        return (a, b) if a < b else (b, a)
+
+    def _neighbor_iter(node):
+        for nb in STATIC_GRAPH.neighbors(node):
+            e = _sorted_edge(node, nb)
+            if e in friendly_edges and not board.is_enemy_node(nb, color):
+                yield nb, e
+
+    for start_node in start_nodes:
+        # Iterative DFS with visited-set mutation
+        visited: Set[Tuple[int, int]] = set()
+        path: List[Tuple[int, int]] = []
+        stack = [(start_node, _neighbor_iter(start_node))]
+
+        while stack:
+            node, neighbors = stack[-1]
+
+            expanded = False
+            for neighbor, edge in neighbors:
+                if edge in visited:
                     continue
+                visited.add(edge)
+                path.append(edge)
+                expanded = True
+                stack.append((neighbor, _neighbor_iter(neighbor)))
+                break
 
-                # Can't expand past an enemy node.
-                if board.is_enemy_node(neighbor_node, color):
-                    continue
+            if not expanded:
+                # Leaf: check if this path is the longest so far
+                if len(path) > best_length:
+                    best_length = len(path)
+                    best_path = list(path)
+                stack.pop()
+                if path:
+                    removed = path.pop()
+                    visited.discard(removed)
 
-                if edge not in path_thus_far:
-                    agenda.append((neighbor_node, path_thus_far + [edge]))
-                    able_to_navigate = True
-
-            if not able_to_navigate:  # then it is leaf node
-                paths_from_this_node.append(path_thus_far)
-
-        paths.extend(paths_from_this_node)
-
-    return max(paths, key=len)
+    return best_path

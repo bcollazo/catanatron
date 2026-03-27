@@ -3,7 +3,7 @@ Classes to encode/decode catanatron classes to JSON format.
 """
 
 import json
-from enum import Enum
+from enum import Enum, IntEnum
 
 from catanatron.models.map import Water, Port, LandTile
 from catanatron.game import Game
@@ -16,7 +16,7 @@ from catanatron.state import State
 def longest_roads_by_player(state: State):
     result = dict()
     for color in state.colors:
-        result[color.value] = get_longest_road_length(state, color)
+        result[color.name] = get_longest_road_length(state, color)
     return result
 
 
@@ -49,8 +49,8 @@ class GameEncoder(json.JSONEncoder):
             return None
         if isinstance(obj, str):
             return obj
-        if isinstance(obj, Enum):
-            return obj.value
+        if isinstance(obj, (Enum, IntEnum)):
+            return obj.name
         if isinstance(obj, tuple):
             return obj
         if isinstance(obj, Game):
