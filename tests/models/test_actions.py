@@ -71,6 +71,42 @@ def test_discard_possibilities_are_per_resource():
     ]
 
 
+def test_discard_possibilities_empty_when_player_does_not_need_to_discard():
+    player = SimplePlayer(Color.RED)
+    state = State([player])
+
+    player_deck_replenish(state, player.color, WHEAT, 2)
+    player_deck_replenish(state, player.color, BRICK, 1)
+
+    assert discard_possibilities(state, player.color) == []
+
+
+def test_discard_possibilities_do_not_repeat_same_resource():
+    player = SimplePlayer(Color.RED)
+    state = State([player])
+    state.discard_counts[player.color] = 3
+
+    player_deck_replenish(state, player.color, WHEAT, 3)
+
+    assert discard_possibilities(state, player.color) == [
+        Action(player.color, ActionType.DISCARD_RESOURCE, WHEAT),
+    ]
+
+
+def test_discard_possibilities_include_each_resource_in_resource_order():
+    player = SimplePlayer(Color.RED)
+    state = State([player])
+    state.discard_counts[player.color] = len(RESOURCES)
+
+    for resource in RESOURCES:
+        player_deck_replenish(state, player.color, resource)
+
+    assert discard_possibilities(state, player.color) == [
+        Action(player.color, ActionType.DISCARD_RESOURCE, resource)
+        for resource in RESOURCES
+    ]
+
+
 def test_road_possible_actions():
     player = SimplePlayer(Color.RED)
     state = State([player])

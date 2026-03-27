@@ -305,33 +305,33 @@ def apply_roll(state: State, action: Action, action_record=None):
 
 
 def normalize_discarded_cards(state: State, action: Action, action_record=None):
-    if action.value is not None:
-        if isinstance(action.value, (list, tuple)):
-            return list(action.value)
-        return [action.value]
+    discarded = action.value
+    if discarded is None and action_record is not None:
+        discarded = action_record.result
 
-    if action_record is not None and action_record.result is not None:
-        if isinstance(action_record.result, (list, tuple)):
-            return list(action_record.result)
-        return [action_record.result]
+    if discarded is None:
+        raise ValueError("Discard action requires a resource")
 
-    hand = player_deck_to_array(state, action.color)
-    return [random.choice(hand)]
+    if isinstance(discarded, (list, tuple)):
+        if len(discarded) != 1:
+            raise ValueError("Discard action must specify exactly 1 resource")
+        return discarded[0]
+
+    return discarded
 
 
 def apply_discard(state: State, action: Action, action_record=None):
     discarded = normalize_discarded_cards(state, action, action_record)
     remaining = state.discard_counts[action.color]
-    if len(discarded) > remaining:
+    if remaining <= 0:
         raise ValueError("Trying to discard more cards than required")
 
-    to_discard = freqdeck_from_listdeck(discarded)
+    to_discard = freqdeck_from_listdeck([discarded])
 
     player_freqdeck_subtract(state, action.color, to_discard)
     state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, to_discard)
-    state.discard_counts[action.color] = remaining - len(discarded)
-    action_value = discarded[0] if len(discarded) == 1 else tuple(discarded)
-    action = Action(action.color, action.action_type, action_value)
+    state.discard_counts[action.color] = remaining - 1
+    action = Action(action.color, action.action_type, discarded)
 
     if state.discard_counts[action.color] > 0:
         # state.current_player_index stays the same
@@ -352,7 +352,7 @@ def apply_discard(state: State, action: Action, action_record=None):
             state.is_moving_knight = True
             state.discard_counts = {color: 0 for color in state.colors}
 
-    return ActionRecord(action=action, result=discarded)
+    return ActionRecord(action=action, result=[discarded])
 
 
 def apply_move_robber(state: State, action: Action, action_record=None):

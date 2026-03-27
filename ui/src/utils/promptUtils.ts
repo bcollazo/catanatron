@@ -1,5 +1,4 @@
 import type {
-  GameAction,
   Tile,
   PlacedTile,
   GameActionRecord,
@@ -11,71 +10,6 @@ import type {
   ResourceCard,
 } from "./api.types";
 import type { GameState } from "./api.types";
-
-export function humanizeAction(gameState: GameState, action: GameAction) {
-  const botColors = gameState.bot_colors;
-  const player = botColors.includes(action[0]) ? "BOT" : "YOU";
-  switch (action[1]) {
-    case "ROLL":
-      if (!action[2]) {
-        throw new Error("did not get Rolling outcomes back from Server! output");
-      }
-      return `${player} ROLLED A ${action[2][0] + action[2][1]}`;
-    case "DISCARD":
-    case "DISCARD_RESOURCE":
-      return action[2] ? `${player} DISCARDED ${action[2]}` : `${player} DISCARDED`;
-    case "BUY_DEVELOPMENT_CARD":
-      return `${player} BOUGHT DEVELOPMENT CARD`;
-    case "BUILD_SETTLEMENT":
-    case "BUILD_CITY": {
-      const parts = action[1].split("_");
-      const building = parts[parts.length - 1];
-      const tileId = action[2];
-      const tiles = gameState.adjacent_tiles[tileId];
-      const tileString = tiles.map(getShortTileString).join("-");
-      return `${player} BUILT ${building} ON ${tileString}`;
-    }
-    case "BUILD_ROAD": {
-      const edge = action[2];
-      const a = gameState.adjacent_tiles[edge[0]].map((t) => t.id);
-      const b = gameState.adjacent_tiles[edge[1]].map((t) => t.id);
-      const intersection = a.filter((t) => b.includes(t));
-      const tiles = intersection.map(
-        (tileId) => findTileById(gameState, tileId).tile
-      );
-      const edgeString = tiles.map(getShortTileString).join("-");
-      return `${player} BUILT ROAD ON ${edgeString}`;
-    }
-    case "PLAY_KNIGHT_CARD":
-      return `${player} PLAYED KNIGHT CARD`;
-    case "PLAY_ROAD_BUILDING":
-      return `${player} PLAYED ROAD BUILDING`;
-    case "PLAY_MONOPOLY":
-      return `${player} MONOPOLIZED ${action[2]}`;
-    case "PLAY_YEAR_OF_PLENTY": {
-      const firstResource = action[2][0];
-      const secondResource = action[2][1];
-      if (secondResource) {
-        return `${player} PLAYED YEAR OF PLENTY. CLAIMED ${firstResource} AND ${secondResource}`;
-      }
-      return `${player} PLAYED YEAR OF PLENTY. CLAIMED ${firstResource}`;
-    }
-    case "MOVE_ROBBER": {
-      const tile = findTileByCoordinate(gameState, action[2][0]);
-      const tileString = getTileString(tile);
-      const stolenResource = action[2][2] ? ` (STOLE ${action[2][2]})` : "";
-      return `${player} ROBBED ${tileString}${stolenResource}`;
-    }
-    case "MARITIME_TRADE": {
-      const label = humanizeTradeAction(action as MaritimeTradeAction);
-      return `${player} TRADED ${label}`;
-    }
-    case "END_TURN":
-      return `${player} ENDED TURN`;
-    default:
-      throw new Error(`Unknown action type: ${action[1]}`);
-  }
-}
 
 export function humanizeActionRecord(
   gameState: GameState,
@@ -166,11 +100,6 @@ export function latestActionText(gameState: GameState) {
   const latestActionRecord = gameState.action_records?.slice(-1)[0];
   if (latestActionRecord) {
     return humanizeActionRecord(gameState, latestActionRecord);
-  }
-
-  const latestAction = gameState.actions?.slice(-1)[0];
-  if (latestAction) {
-    return humanizeAction(gameState, latestAction);
   }
 
   return "";

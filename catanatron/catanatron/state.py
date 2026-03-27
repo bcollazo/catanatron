@@ -134,7 +134,6 @@ class State:
             self.is_initial_build_phase = True
             self.is_discarding = False
             self.discard_counts: Dict[Color, int] = {color: 0 for color in self.colors}
-            self.discard_counts: Dict[Color, int] = {color: 0 for color in self.colors}
             self.is_moving_knight = False
             self.is_road_building = False
             self.free_roads_available = 0

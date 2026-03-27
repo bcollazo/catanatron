@@ -281,4 +281,4 @@ def test_gym_reproducibility():
     game_json = json.loads(json.dumps(game, cls=GameEncoder))
     env.close()
 
-    assert game_json["state_index"] == 146
+    assert game_json["state_index"] == 125

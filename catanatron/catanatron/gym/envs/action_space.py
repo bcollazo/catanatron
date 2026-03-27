@@ -15,13 +15,6 @@ def get_action_array(
     catan_map = build_map(map_type)
     num_nodes = len(catan_map.land_nodes)
 
-    # We sort the actions to ensure a consistent ordering and reproducibility
-    # without sorting, we couldn't get gym usages to be reproducible
-    def action_sort_key(action):
-        # Preserve historical DISCARD ordering so the rename does not reshuffle
-        # integer action ids for gym consumers.
-        return str(action).replace("DISCARD_RESOURCE", "DISCARD")
-
     actions_array = sorted(
         [
             (ActionType.ROLL, None),
@@ -74,7 +67,9 @@ def get_action_array(
             ],
             (ActionType.END_TURN, None),
         ],
-        key=action_sort_key,
+        # Preserve historical DISCARD ordering so the rename does not reshuffle
+        # integer action ids for gym consumers.
+        key=lambda action: str(action).replace("DISCARD_RESOURCE", "DISCARD"),
     )
     return actions_array
 
