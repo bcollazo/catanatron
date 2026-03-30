@@ -3,6 +3,7 @@
 
 .home-page {
   height: 100%;
+  overflow-y: auto;
   padding: 24px;
   box-sizing: border-box;
   background:
@@ -11,9 +12,15 @@
 
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
   min-height: 100vh;
+
+  &::before,
+  &::after {
+    content: "";
+    flex: 1;
+    min-height: 24px;
+  }
 
   h1 {
     color: white;
@@ -256,9 +263,12 @@
       border-radius: 18px;
     }
 
-    .map-template-buttons,
-    .player-row {
+    .map-template-buttons {
       grid-template-columns: 1fr;
+    }
+
+    .player-row {
+      grid-template-columns: minmax(78px, auto) 1fr auto;
     }
 
     .control-row {
