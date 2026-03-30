@@ -36,9 +36,9 @@ const PLAYER_COLORS = ["RED", "BLUE", "ORANGE", "WHITE"] as const;
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [mapTemplate, setMapTemplate] = useState<MapTemplate>("BASE");
-  const [vpsToWin, setVpsToWin] = useState(10);
+  const [vpsToWin, setVpsToWin] = useState(15);
   const [discardLimit, setDiscardLimit] = useState(9);
-  const [friendlyRobber, setFriendlyRobber] = useState(false);
+  const [friendlyRobber, setFriendlyRobber] = useState(true);
   const [players, setPlayers] = useState<PlayerArchetype[]>([
     "HUMAN",
     "CATANATRON",
