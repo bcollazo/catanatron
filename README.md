@@ -11,6 +11,67 @@ Get Started with the Full Documentation: https://docs.catanatron.com
 
 Join our Discord: https://discord.gg/FgFmb75TWd!
 
+## Capstone RL Quick Start (Top-Level)
+
+Base training run (recommended default: step-buffered PPO updates):
+
+```bash
+python capstone_agent/run_simulation.py --games 1000 --train
+```
+
+This default uses:
+- `--train-update-trigger steps`
+- `--train-every-steps 2048`
+
+### `run_simulation.py` Parameters
+
+All flags for `python capstone_agent/run_simulation.py`:
+
+| Parameter | Default | What it does |
+| --- | --- | --- |
+| `--games` | `1` | Number of full games to simulate. |
+| `--train` | off | Enable PPO training during the run. |
+| `--train-update-trigger` | `steps` | Update schedule mode: `steps` or `games`. |
+| `--train-every-steps` | `2048` | If trigger is `steps`, run PPO every N buffered transitions. |
+| `--train-every-games` | `20` | If trigger is `games`, run PPO every N completed games. |
+| `--verbose` | off | Print selected per-step action logs during simulation. |
+| `--load` | `None` | Path to load main-agent model weights before running. |
+| `--save` | `capstone_agent/models/capstone_model.pt` | Path to save main-agent weights at the end (also used for auto-resume in train mode when present). |
+| `--placement-strategy` | `model` | Placement policy: `model` or `random`. |
+| `--placement-model` | `None` | Path to load placement-agent weights (ignored for `--placement-strategy random`). |
+| `--save-placement-model` | `capstone_agent/models/placement_model.pt` | Path to save placement-agent weights at the end (model strategy only). |
+| `--fresh-start` | off | In train mode, ignore existing save paths and start from scratch. |
+| `--run-name` | auto timestamp | Optional run label for benchmark CSV rows. |
+| `--benchmark-csv` | `capstone_agent/benchmarks/training_metrics.csv` | Output CSV path for per-game benchmark logs. |
+| `--no-benchmark` | off | Disable benchmark CSV logging. |
+| `--save-games-json-dir` | `None` | Directory to export replay JSONs for GUI replay/import. |
+| `--save-games-json-every` | `100` | Save replay JSON for first game in each N-game block. |
+
+Common variants:
+
+```bash
+# Step-buffered training with larger PPO batches
+python capstone_agent/run_simulation.py \
+  --games 1000 \
+  --train \
+  --train-update-trigger steps \
+  --train-every-steps 4096
+
+# Game-buffered training
+python capstone_agent/run_simulation.py \
+  --games 1000 \
+  --train \
+  --train-update-trigger games \
+  --train-every-games 20
+
+# Training + replay export + explicit run label
+python capstone_agent/run_simulation.py \
+  --games 1000 \
+  --train \
+  --run-name iter_full \
+  --save-games-json-dir capstone_agent/replays/iter_full
+```
+
 ## Command Line Interface
 Catanatron provides a `catanatron-play` CLI tool to run large scale simulations.
 
