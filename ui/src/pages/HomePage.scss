@@ -3,285 +3,321 @@
 
 .home-page {
   height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
   overflow-y: auto;
-  padding: 24px;
-  box-sizing: border-box;
+  overflow-x: hidden;
+  padding: 24px 16px 0;
   background:
     radial-gradient(circle at top, rgb(34 120 255 / 18%), transparent 35%),
     linear-gradient(180deg, #070a0c 0%, #111614 100%);
+}
 
+.home-page__inner {
+  width: min(100%, 680px);
+  margin: 0 auto;
+}
+
+.home-page .logo {
+  margin: 12px 0 24px;
+  color: white;
+  font-size: clamp(1.9rem, 5vw, 2.4rem);
+  text-align: center;
+}
+
+.setup-card {
+  width: 100%;
+  padding: 18px 20px 28px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 24px;
+  background: rgb(21 19 19 / 92%);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 28%);
+}
+
+.setup-note {
+  margin: 0 0 14px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.73rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.control-group {
+  margin-bottom: 16px;
+}
+
+.control-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.compact-control {
+  margin-bottom: 0;
+}
+
+.control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.control-header strong {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.map-template-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.players-alert {
+  margin-bottom: 10px;
+}
+
+.players-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.player-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  min-height: 100vh;
+}
 
-  &::before,
-  &::after {
-    content: "";
-    flex: 1;
-    min-height: 24px;
+.player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.player-label {
+  color: white;
+  font-size: 0.9rem;
+}
+
+.player-color-chip {
+  display: inline-flex;
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: rgb(255 255 255 / 92%);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: rgb(255 255 255 / 10%);
+}
+
+.player-color-chip.red {
+  background: rgb(254 4 0 / 22%);
+  color: #ff8a86;
+}
+
+.player-color-chip.blue {
+  background: rgb(34 120 255 / 22%);
+  color: #8cb7ff;
+}
+
+.player-color-chip.orange {
+  background: rgb(255 165 0 / 24%);
+  color: #ffd18a;
+}
+
+.player-color-chip.white {
+  background: rgb(255 255 255 / 16%);
+  color: rgb(255 255 255 / 88%);
+}
+
+.switch-control {
+  display: flex;
+  flex-direction: column;
+}
+
+.inline-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.MuiButton-root.choice-button,
+.MuiButton-root.add-player-btn {
+  color: white;
+  background-color: variables.$dark-gray;
+}
+
+.MuiButton-root.choice-button:hover,
+.MuiButton-root.add-player-btn:hover {
+  background-color: color.adjust(variables.$dark-gray, $lightness: -8%);
+}
+
+.MuiButton-root.choice-button.selected {
+  background-color: #0d47a1;
+}
+
+.MuiButton-root.choice-button.selected:hover {
+  background-color: color.adjust(#0d47a1, $lightness: -2%);
+}
+
+.MuiButton-root.remove-player-btn {
+  min-width: 80px;
+  color: rgb(255 255 255 / 75%);
+}
+
+.MuiButton-root.remove-player-btn.Mui-disabled {
+  color: rgb(255 255 255 / 30%);
+}
+
+.add-player-btn,
+.start-btn {
+  width: 100%;
+}
+
+.start-btn {
+  height: 40px;
+  color: white;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: linear-gradient(135deg, #2f87ff 0%, #0d47a1 100%);
+  box-shadow: 0 12px 28px rgb(13 71 161 / 32%);
+}
+
+.start-btn:hover {
+  background: linear-gradient(135deg, #4b98ff 0%, #1565c0 100%);
+  box-shadow: 0 14px 30px rgb(21 101 192 / 36%);
+}
+
+.MuiInputBase-root {
+  width: 100%;
+  min-width: 0;
+  color: white;
+  background: rgb(255 255 255 / 4%);
+}
+
+.MuiInputBase-root.MuiOutlinedInput-root,
+.MuiInputBase-root.MuiOutlinedInput-root .MuiSelect-select,
+.MuiInputBase-root.MuiOutlinedInput-root .MuiSelect-select span,
+.MuiInputBase-root.MuiOutlinedInput-root input {
+  color: white;
+}
+
+.MuiInputBase-root.MuiOutlinedInput-root .MuiSvgIcon-root,
+.MuiSelect-icon {
+  color: rgb(255 255 255 / 72%);
+}
+
+.MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-color: rgb(255 255 255 / 14%);
+}
+
+.MuiSvgIcon-root,
+.MuiSlider-root {
+  color: variables.$blue;
+}
+
+.MuiIconButton-root.help-button {
+  margin: 0;
+  padding: 0;
+  color: rgb(255 255 255 / 52%);
+  font-size: 0.95rem;
+}
+
+.MuiIconButton-root.help-button:hover {
+  color: rgb(255 255 255 / 82%);
+  background: transparent;
+}
+
+.MuiCheckbox-root.inline-switch {
+  margin-left: -9px;
+  padding: 0;
+}
+
+.MuiSlider-mark {
+  background-color: rgb(255 255 255 / 20%);
+}
+
+.loader {
+  display: block;
+  margin: 40px auto 0;
+}
+
+.page-end-spacer {
+  height: max(32px, calc(env(safe-area-inset-bottom) + 24px));
+}
+
+@media (max-width: variables.$sm-breakpoint) {
+  .home-page {
+    padding: 24px 16px 0;
   }
 
-  h1 {
-    color: white;
-    font-size: 2.2rem;
-    margin-bottom: 14px;
-  }
-
-  .switchable {
-    width: min(100%, 680px);
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    .MuiButton-root {
-      margin-bottom: variables.$sm-gutter;
-    }
+  .home-page .logo {
+    margin: 16px 0 20px;
+    font-size: clamp(1.75rem, 8vw, 2.2rem);
   }
 
   .setup-card {
-    width: 100%;
-    background: rgb(21 19 19 / 92%);
-    border: 1px solid rgb(255 255 255 / 8%);
-    border-radius: 24px;
-    padding: 18px 20px;
-    box-shadow: 0 20px 60px rgb(0 0 0 / 28%);
+    padding: 16px 16px 24px;
+    border-radius: 18px;
   }
 
-  .setup-note {
-    color: rgb(255 255 255 / 72%);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.73rem;
-    text-align: center;
-    margin: 0 0 14px;
-  }
-
-  .control-group {
-    margin-bottom: 16px;
+  .map-template-buttons,
+  .control-row {
+    grid-template-columns: 1fr;
   }
 
   .control-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .compact-control {
-    margin-bottom: 0;
-  }
-
-  .control-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: white;
-    margin-bottom: 8px;
-    min-height: 24px;
-
-    strong {
-      font-size: 0.9rem;
-      letter-spacing: 0.04em;
-      line-height: 1;
-    }
+    gap: 0;
   }
 
   .map-template-buttons {
-    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .compact-control {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-page {
+    padding: 20px 14px 0;
+  }
+
+  .setup-card {
+    padding: 14px 14px 22px;
+  }
+
+  .control-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 8px;
-  }
-
-  .MuiButton-root.choice-button,
-  .MuiButton-root.add-player-btn,
-  .MuiButton-root.start-btn {
-    color: white;
-    background-color: variables.$dark-gray;
-
-    &:hover {
-      background-color: color.adjust(variables.$dark-gray, $lightness: -8%);
-    }
-  }
-
-  .MuiButton-root.choice-button.selected {
-    background-color: #0d47a1;
-
-    &:hover {
-      background-color: color.adjust(#0d47a1, $lightness: -2%);
-    }
-  }
-
-  .players-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  .players-heading {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-  }
-
-  .players-hint {
-    color: rgb(255 255 255 / 48%);
-    font-size: 0.72rem;
-    font-weight: 400;
-    letter-spacing: 0.01em;
-  }
-
-  .players-alert {
-    margin-bottom: 10px;
   }
 
   .player-row {
-    display: grid;
-    grid-template-columns: minmax(78px, auto) minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .player-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .player-label {
-    color: white;
-    font-size: 0.9rem;
-  }
-
-  .player-color-chip {
-    display: inline-flex;
-    align-items: center;
-    width: fit-content;
-    padding: 2px 7px;
-    border-radius: 999px;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: rgb(255 255 255 / 92%);
-    background: rgb(255 255 255 / 10%);
-
-    &.red {
-      background: rgb(254 4 0 / 22%);
-      color: #ff8a86;
-    }
-
-    &.blue {
-      background: rgb(34 120 255 / 22%);
-      color: #8cb7ff;
-    }
-
-    &.orange {
-      background: rgb(255 165 0 / 24%);
-      color: #ffd18a;
-    }
-
-    &.white {
-      background: rgb(255 255 255 / 16%);
-      color: rgb(255 255 255 / 88%);
-    }
-  }
-
-  .MuiInputBase-root {
-    color: white;
-    background: rgb(255 255 255 / 4%);
-  }
-
-  .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
-    border-color: rgb(255 255 255 / 14%);
-  }
-
-  .MuiSvgIcon-root,
-  .MuiSlider-root {
-    color: variables.$blue;
-  }
-
-  .switch-control {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .inline-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    line-height: 1;
-  }
-
-  .MuiIconButton-root.help-button {
-    color: rgb(255 255 255 / 52%);
+    grid-template-columns: 88px minmax(0, 1fr) auto;
+    gap: 8px;
     padding: 0;
-    font-size: 0.95rem;
-    line-height: 1;
-    margin-bottom: 0;
-
-    &:hover {
-      color: rgb(255 255 255 / 82%);
-      background: transparent;
-    }
-  }
-
-  .MuiCheckbox-root.inline-switch {
-    margin-left: -9px;
-    padding: 0;
-  }
-
-  .MuiSlider-mark {
-    background-color: rgb(255 255 255 / 20%);
+    border-top: 0;
+    align-items: center;
   }
 
   .MuiButton-root.remove-player-btn {
-    color: rgb(255 255 255 / 75%);
+    width: auto;
     min-width: 80px;
-
-    &.Mui-disabled {
-      color: rgb(255 255 255 / 30%);
-    }
   }
 
-  .add-player-btn,
-  .start-btn {
-    width: 100%;
-  }
-
-  .start-btn {
-    height: 40px;
-    font-size: 0.95rem;
-  }
-
-  @media (max-width: variables.$sm-breakpoint) {
-    padding: 18px;
-
-    .setup-card {
-      padding: 16px;
-      border-radius: 18px;
-    }
-
-    .map-template-buttons {
-      grid-template-columns: 1fr;
-    }
-
-    .player-row {
-      grid-template-columns: minmax(78px, auto) 1fr auto;
-    }
-
-    .control-row {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-
-    .compact-control {
-      margin-bottom: 16px;
-    }
-
-    .remove-player-btn {
-      justify-self: start;
-    }
+  .inline-title {
+    align-items: flex-start;
+    line-height: 1.2;
   }
 }
