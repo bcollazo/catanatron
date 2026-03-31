@@ -186,8 +186,6 @@ class CapstoneCatanatronEnv(gym.Env):
             catan_action = capstone_to_action(
                 action, self.game.playable_actions
             )
-            
-            self.game.execute(catan_action)
         except Exception as e:
             self.invalid_actions_count += 1
 
@@ -205,6 +203,7 @@ class CapstoneCatanatronEnv(gym.Env):
             )
             return observation, self.invalid_action_reward, terminated, truncated, info
 
+        self.game.execute(catan_action)
         self._advance_until_self_decision()
         observation = self._get_observation()
         winning_color = self.game.winning_color()

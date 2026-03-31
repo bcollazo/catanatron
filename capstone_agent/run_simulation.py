@@ -272,7 +272,7 @@ def make_agent_and_env(
         placement_agent.load(placement_model_path)
 
     env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
-    router = CapstoneAgent(placement_agent, main_agent, env)
+    router = CapstoneAgent(placement_agent, main_agent)
     return router, env
 
 

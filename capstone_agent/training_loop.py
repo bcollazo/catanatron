@@ -3,7 +3,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
-from capstone_agent.MainPlayAgent import MainPlayAgent
+from MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent
 from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping
@@ -17,7 +17,7 @@ from CONFIG import ROLLOUT_LENGTH, NUM_UPDATES, STORE_FREQUENCY
 main_agent = MainPlayAgent(obs_size=FEATURE_SPACE_SIZE, hidden_size=MAIN_PLAY_AGENT_HIDDEN_SIZE)
 placement_agent = PlacementAgent(obs_size=FEATURE_SPACE_SIZE, hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE)
 env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
-agent = CapstoneAgent(placement_agent, main_agent, env)
+agent = CapstoneAgent(placement_agent, main_agent)
 validate_action_mapping()
 
 obs, info = env.reset()
