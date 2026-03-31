@@ -36,12 +36,12 @@ const PLAYER_COLORS = ["RED", "BLUE", "ORANGE", "WHITE"] as const;
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [mapTemplate, setMapTemplate] = useState<MapTemplate>("BASE");
-  const [vpsToWin, setVpsToWin] = useState(10);
-  const [discardLimit, setDiscardLimit] = useState(7);
-  const [friendlyRobber, setFriendlyRobber] = useState(false);
+  const [vpsToWin, setVpsToWin] = useState(15);
+  const [discardLimit, setDiscardLimit] = useState(9);
+  const [friendlyRobber, setFriendlyRobber] = useState(true);
   const [players, setPlayers] = useState<PlayerArchetype[]>([
+    "HUMAN",
     "CATANATRON",
-    "RANDOM",
   ]);
   const navigate = useNavigate();
   const humanCount = players.filter((player) => player === "HUMAN").length;
@@ -96,180 +96,175 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      <h1 className="logo">Catanatron</h1>
-
-      <div className="switchable">
+      <div className="home-page__inner">
+        <h1 className="logo">Catanatron</h1>
         {!loading ? (
-          <>
-            <div className="setup-card">
-              <p className="setup-note">Open hands. Random discard choice.</p>
+          <div className="setup-card">
+            <p className="setup-note">Open hands. Random discard choice.</p>
 
-              <div className="control-group">
+            <div className="control-group">
+              <div className="control-header">
+                <span>Map Template</span>
+                <strong>{mapTemplate}</strong>
+              </div>
+              <div className="map-template-buttons">
+                {MAP_TEMPLATES.map((value) => (
+                  <Button
+                    key={value}
+                    variant="contained"
+                    onClick={() => setMapTemplate(value)}
+                    className={`choice-button ${
+                      mapTemplate === value ? "selected" : ""
+                    }`}
+                  >
+                    {value}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="control-row">
+              <div className="control-group compact-control">
                 <div className="control-header">
-                  <span>Map Template</span>
-                  <strong>{mapTemplate}</strong>
+                  <span>Points to Win</span>
+                  <strong>{vpsToWin}</strong>
                 </div>
-                <div className="map-template-buttons">
-                  {MAP_TEMPLATES.map((value) => (
-                    <Button
-                      key={value}
-                      variant="contained"
-                      onClick={() => setMapTemplate(value)}
-                      className={`choice-button ${
-                        mapTemplate === value ? "selected" : ""
-                      }`}
+                <Slider
+                  value={vpsToWin}
+                  min={3}
+                  max={20}
+                  step={1}
+                  marks
+                  valueLabelDisplay="auto"
+                  onChange={(_, value) => setVpsToWin(value as number)}
+                />
+              </div>
+
+              <div className="control-group compact-control">
+                <div className="control-header">
+                  <span>Card Discard Limit</span>
+                  <strong>{discardLimit}</strong>
+                </div>
+                <Slider
+                  value={discardLimit}
+                  min={5}
+                  max={20}
+                  step={1}
+                  marks
+                  valueLabelDisplay="auto"
+                  onChange={(_, value) => setDiscardLimit(value as number)}
+                />
+              </div>
+
+              <div className="control-group compact-control switch-control">
+                <div className="control-header">
+                  <span className="inline-title">
+                    Friendly Robber
+                    <Tooltip
+                      title="Prevent robber placement on tiles touching opponents with 2 victory points."
+                      arrow
+                      enterTouchDelay={0}
+                      leaveTouchDelay={3000}
                     >
-                      {value}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="control-row">
-                <div className="control-group compact-control">
-                  <div className="control-header">
-                    <span>Points to Win</span>
-                    <strong>{vpsToWin}</strong>
-                  </div>
-                  <Slider
-                    value={vpsToWin}
-                    min={3}
-                    max={20}
-                    step={1}
-                    marks
-                    valueLabelDisplay="auto"
-                    onChange={(_, value) => setVpsToWin(value as number)}
-                  />
-                </div>
-
-                <div className="control-group compact-control">
-                  <div className="control-header">
-                    <span>Card Discard Limit</span>
-                    <strong>{discardLimit}</strong>
-                  </div>
-                  <Slider
-                    value={discardLimit}
-                    min={5}
-                    max={20}
-                    step={1}
-                    marks
-                    valueLabelDisplay="auto"
-                    onChange={(_, value) => setDiscardLimit(value as number)}
-                  />
-                </div>
-
-                <div className="control-group compact-control switch-control">
-                  <div className="control-header">
-                    <span className="inline-title">
-                      Friendly Robber
-                      <Tooltip
-                        title="Prevent robber placement on tiles touching opponents with 2 victory points."
-                        arrow
-                        enterTouchDelay={0}
-                        leaveTouchDelay={3000}
-                      >
-                        <IconButton
-                          size="small"
-                          className="help-button"
-                          aria-label="Friendly Robber help"
-                        >
-                          <HelpOutlineRoundedIcon fontSize="inherit" />
-                        </IconButton>
-                      </Tooltip>
-                    </span>
-                    <strong>{friendlyRobber ? "On" : "Off"}</strong>
-                  </div>
-                  <Checkbox
-                    className="inline-switch"
-                    checked={friendlyRobber}
-                    onChange={(event) =>
-                      setFriendlyRobber(event.target.checked)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="control-group">
-                <div className="control-header">
-                  <span className="players-heading">
-                    Players
-                    <span className="players-hint">(At most one Human player)</span>
-                  </span>
-                  <strong>{players.length}/4</strong>
-                </div>
-                {hasTooManyHumans && (
-                  <Alert severity="error" className="players-alert">
-                    Only one Human player is allowed.
-                  </Alert>
-                )}
-                <div className="players-list">
-                  {players.map((player, index) => (
-                    <div className="player-row" key={`${player}-${index}`}>
-                      <div className="player-meta">
-                        <span className="player-label">Player {index + 1}</span>
-                        <span
-                          className={`player-color-chip ${PLAYER_COLORS[index].toLowerCase()}`}
-                        >
-                          {PLAYER_COLORS[index]}
-                        </span>
-                      </div>
-                      <Select
+                      <IconButton
                         size="small"
-                        value={player}
-                        onChange={(event) =>
-                          handlePlayerChange(
-                            index,
-                            event.target.value as PlayerArchetype
-                          )
-                        }
+                        className="help-button"
+                        aria-label="Friendly Robber help"
                       >
-                        {PLAYER_ARCHETYPES.map((option) => (
-                          <MenuItem
-                            key={option.value}
-                            value={option.value}
-                            disabled={
-                              option.value === "HUMAN" &&
-                              humanCount >= 1 &&
-                              player !== "HUMAN"
-                            }
-                          >
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <Button
-                        variant="text"
-                        className="remove-player-btn"
-                        disabled={players.length <= 2}
-                        onClick={() => handleRemovePlayer(index)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
+                        <HelpOutlineRoundedIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  </span>
+                  <strong>{friendlyRobber ? "On" : "Off"}</strong>
                 </div>
+                <Checkbox
+                  className="inline-switch"
+                  checked={friendlyRobber}
+                  onChange={(event) =>
+                    setFriendlyRobber(event.target.checked)
+                  }
+                />
+              </div>
+            </div>
 
-                <Button
-                  variant="contained"
-                  className="add-player-btn"
-                  disabled={players.length >= 4}
-                  onClick={handleAddPlayer}
-                >
-                  Add Player
-                </Button>
+            <div className="control-group">
+              <div className="control-header">
+                <span>Players</span>
+                <strong>{players.length}/4</strong>
+              </div>
+              {hasTooManyHumans && (
+                <Alert severity="error" className="players-alert">
+                  Only one Human player is allowed.
+                </Alert>
+              )}
+              <div className="players-list">
+                {players.map((player, index) => (
+                  <div className="player-row" key={`${player}-${index}`}>
+                    <div className="player-meta">
+                      <span className="player-label">Player {index + 1}</span>
+                      <span
+                        className={`player-color-chip ${PLAYER_COLORS[index].toLowerCase()}`}
+                      >
+                        {PLAYER_COLORS[index]}
+                      </span>
+                    </div>
+                    <Select
+                      size="small"
+                      fullWidth
+                      value={player}
+                      onChange={(event) =>
+                        handlePlayerChange(
+                          index,
+                          event.target.value as PlayerArchetype
+                        )
+                      }
+                    >
+                      {PLAYER_ARCHETYPES.map((option) => (
+                        <MenuItem
+                          key={option.value}
+                          value={option.value}
+                          disabled={
+                            option.value === "HUMAN" &&
+                            humanCount >= 1 &&
+                            player !== "HUMAN"
+                          }
+                        >
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <Button
+                      variant="text"
+                      className="remove-player-btn"
+                      disabled={players.length <= 2}
+                      onClick={() => handleRemovePlayer(index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
               </div>
 
               <Button
                 variant="contained"
-                color="primary"
-                className="start-btn"
-                disabled={hasTooManyHumans}
-                onClick={handleCreateGame}
+                className="add-player-btn"
+                disabled={players.length >= 4}
+                onClick={handleAddPlayer}
               >
-                Start
+                Add Player
               </Button>
             </div>
-          </>
+
+            <Button
+              variant="contained"
+              color="primary"
+              className="start-btn"
+              disabled={hasTooManyHumans}
+              onClick={handleCreateGame}
+            >
+              Start
+            </Button>
+          </div>
         ) : (
           <GridLoader
             className="loader"
@@ -277,6 +272,7 @@ export default function HomePage() {
             size={60}
           />
         )}
+        <div className="page-end-spacer" aria-hidden="true" />
       </div>
     </div>
   );
