@@ -9,6 +9,8 @@ Usage:
                                                       # PPO update every 4096 steps
     python capstone_agent/run_simulation.py --train --train-update-trigger games \
         --train-every-games 20                       # PPO update every 20 games
+    python capstone_agent/run_simulation.py --games 10 --enemy alphabeta
+                                                      # evaluate/train vs AlphaBeta
 
     # Or import and call from your own code:
     from run_simulation import simulate_game, simulate_and_train
@@ -38,7 +40,11 @@ import numpy as np
 import gymnasium
 import catanatron.gym
 from catanatron.json import GameEncoder
-from catanatron.models.player import Color
+from catanatron.models.player import Color, RandomPlayer
+from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
+from catanatron.players.search import VictoryPointPlayer
+from catanatron.players.value import ValueFunctionPlayer
+from catanatron.players.weighted_random import WeightedRandomPlayer
 
 from CONSTANTS import (FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, 
                        MAX_STEPS_PER_GAME,
@@ -165,6 +171,39 @@ def _buffer_transition_count(agent) -> int:
     return total
 
 
+def make_enemy_player(
+    enemy_type: str,
+    color: Color = Color.RED,
+    alphabeta_depth: int = 2,
+    alphabeta_prunning: bool = False,
+):
+    """Construct the training/eval opponent used by CapstoneCatanatronEnv."""
+    if enemy_type == "random":
+        return RandomPlayer(color)
+    if enemy_type == "alphabeta":
+        return AlphaBetaPlayer(
+            color, depth=alphabeta_depth, prunning=alphabeta_prunning
+        )
+    if enemy_type == "alphabeta-prune":
+        return AlphaBetaPlayer(color, depth=alphabeta_depth, prunning=True)
+    if enemy_type == "same-turn-ab":
+        return SameTurnAlphaBetaPlayer(color, depth=alphabeta_depth)
+    if enemy_type == "value":
+        return ValueFunctionPlayer(color)
+    if enemy_type == "vp":
+        return VictoryPointPlayer(color)
+    if enemy_type == "weighted":
+        return WeightedRandomPlayer(color)
+    raise ValueError(f"Unknown enemy type: {enemy_type}")
+
+
+def resolve_map_template(map_template: str, map_mode: str) -> str:
+    """Resolve AUTO template defaults based on selected map mode."""
+    if map_template != "AUTO":
+        return map_template
+    return "TOURNAMENT" if map_mode == "fixed" else "BASE"
+
+
 def simulate_game(
     agent,
     env,
@@ -246,12 +285,22 @@ def make_agent_and_env(
     model_path: Optional[str] = None,
     placement_model_path: Optional[str] = None,
     placement_strategy: str = "model",
+    enemy_type: str = "random",
+    enemy_ab_depth: int = 2,
+    enemy_ab_prunning: bool = False,
+    map_template: str = "BASE",
+    map_mode: str = "fixed",
+    fixed_map_seed: int = 0,
 ):
     """Create a routed agent + env pair.
 
     Args:
         placement_strategy: ``"model"`` for the learned PlacementAgent,
             ``"random"`` for uniform-random placement.
+        enemy_type: Opponent bot for all non-blue turns in environment.
+        map_template: Board template ("BASE", "MINI", or "TOURNAMENT").
+        map_mode: "fixed" for deterministic map layout, "random" for reshuffled map.
+        fixed_map_seed: Seed used when map_mode is "fixed".
 
     Returns a CapstoneAgent that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
@@ -271,8 +320,24 @@ def make_agent_and_env(
     if placement_model_path is not None:
         placement_agent.load(placement_model_path)
 
-    env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
+    enemy = make_enemy_player(
+        enemy_type,
+        color=Color.RED,
+        alphabeta_depth=enemy_ab_depth,
+        alphabeta_prunning=enemy_ab_prunning,
+    )
+    randomize_map = map_mode == "random" and map_template != "TOURNAMENT"
+    env = gymnasium.make(
+        "catanatron/CapstoneCatanatron-v0",
+        config={
+            "enemies": [enemy],
+            "map_type": map_template,
+            "randomize_map": randomize_map,
+            "fixed_map_seed": fixed_map_seed,
+        },
+    )
     router = CapstoneAgent(placement_agent, main_agent)
+
     return router, env
 
 
@@ -341,6 +406,61 @@ def main():
         help="Path to save placement-agent weights after all games.",
     )
     parser.add_argument(
+        "--enemy",
+        type=str,
+        default="random",
+        choices=[
+            "random",
+            "alphabeta",
+            "alphabeta-prune",
+            "same-turn-ab",
+            "value",
+            "vp",
+            "weighted",
+        ],
+        help=(
+            "Opponent bot in env (controls non-blue turns). "
+            "Use 'alphabeta' to train/eval directly vs AlphaBeta."
+        ),
+    )
+    parser.add_argument(
+        "--enemy-ab-depth",
+        type=int,
+        default=2,
+        help="AlphaBeta depth when --enemy is alphabeta/alphabeta-prune/same-turn-ab.",
+    )
+    parser.add_argument(
+        "--enemy-ab-prunning",
+        action="store_true",
+        help="Enable AlphaBeta pruning when --enemy=alphabeta.",
+    )
+    parser.add_argument(
+        "--map-template",
+        type=str,
+        default="AUTO",
+        choices=["AUTO", "BASE", "MINI", "TOURNAMENT"],
+        help=(
+            "Board template for simulation games. "
+            "AUTO uses TOURNAMENT for fixed mode and BASE for random mode."
+        ),
+    )
+    parser.add_argument(
+        "--map-mode",
+        type=str,
+        default="fixed",
+        choices=["fixed", "random"],
+        help=(
+            "Map layout mode: 'fixed' (default, deterministic by seed) "
+            "or 'random' (reshuffle each game)."
+        ),
+    )
+    parser.add_argument(
+        "--fixed-map-seed",
+        type=int,
+        default=0,
+        help="Seed used to generate deterministic map layout when --map-mode=fixed.",
+    )
+    parser.add_argument(
         "--fresh-start",
         action="store_true",
         help="Ignore existing saved weights and train from scratch.",
@@ -384,6 +504,11 @@ def main():
         parser.error("--train-every-steps must be >= 1")
     if args.train_every_games < 1:
         parser.error("--train-every-games must be >= 1")
+    if args.enemy_ab_depth < 1:
+        parser.error("--enemy-ab-depth must be >= 1")
+    if args.fixed_map_seed < 0:
+        parser.error("--fixed-map-seed must be >= 0")
+    resolved_map_template = resolve_map_template(args.map_template, args.map_mode)
 
     loaded_model_path = args.load
     loaded_placement_path = args.placement_model
@@ -404,6 +529,12 @@ def main():
         model_path=loaded_model_path,
         placement_model_path=loaded_placement_path,
         placement_strategy=args.placement_strategy,
+        enemy_type=args.enemy,
+        enemy_ab_depth=args.enemy_ab_depth,
+        enemy_ab_prunning=args.enemy_ab_prunning,
+        map_template=resolved_map_template,
+        map_mode=args.map_mode,
+        fixed_map_seed=args.fixed_map_seed,
     )
     main_params = sum(p.numel() for p in agent.main_agent.model.parameters())
     pa = agent.placement_agent
@@ -412,18 +543,55 @@ def main():
     else:
         place_desc = args.placement_strategy
     device = get_device()
+
     print(
         f"Main agent ready      ({main_params:,} params, obs={FEATURE_SPACE_SIZE}, actions=245)\n"
         f"Placement agent ready ({place_desc})\n"
         f"Device: {device}"
     )
+
+    enemy_detail = args.enemy
+    if args.enemy in {"alphabeta", "alphabeta-prune", "same-turn-ab"}:
+        enemy_detail += f" (depth={args.enemy_ab_depth}"
+        if args.enemy == "alphabeta":
+            enemy_detail += f", prunning={args.enemy_ab_prunning}"
+        enemy_detail += ")"
+    map_detail = f"{resolved_map_template} / {args.map_mode}"
+    if args.map_template == "AUTO":
+        map_detail += " (auto-selected)"
+    if args.map_mode == "fixed":
+        map_detail += f" (seed={args.fixed_map_seed})"
+    if resolved_map_template == "TOURNAMENT" and args.map_mode == "random":
+        map_detail += " [TOURNAMENT map is always fixed]"
+    training_detail = "disabled"
+
     if args.train:
         if args.train_update_trigger == "steps":
-            print(
-                f"Training trigger: every {args.train_every_steps} buffered transitions"
+            training_detail = (
+                f"enabled, trigger=steps, every {args.train_every_steps} transitions"
             )
         else:
-            print(f"Training trigger: every {args.train_every_games} completed games")
+            training_detail = (
+                f"enabled, trigger=games, every {args.train_every_games} games"
+            )
+    replay_detail = "disabled"
+    if args.save_games_json_dir:
+        replay_detail = (
+            f"enabled, dir={args.save_games_json_dir}, every {args.save_games_json_every} games"
+        )
+    print(
+        "Run configuration:\n"
+        f"  Main agent: {main_params:,} params (obs={FEATURE_SPACE_SIZE}, actions=245)\n"
+        f"  Main weights: {loaded_model_path or '[fresh/random init]'}\n"
+        f"  Placement agent: strategy={args.placement_strategy}, {place_desc}\n"
+        f"  Placement weights: {loaded_placement_path or '[none loaded]'}\n"
+        f"  Opponent: {enemy_detail}\n"
+        f"  Map: {map_detail}\n"
+        f"  Training: {training_detail}\n"
+        f"  Replay JSON save: {replay_detail}\n"
+        f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
+        f"  Device: {device}"
+    )
     print()
 
     run_name = args.run_name or datetime.now(timezone.utc).strftime(

@@ -40,6 +40,12 @@ All flags for `python capstone_agent/run_simulation.py`:
 | `--placement-strategy` | `model` | Placement policy: `model` or `random`. |
 | `--placement-model` | `None` | Path to load placement-agent weights (ignored for `--placement-strategy random`). |
 | `--save-placement-model` | `capstone_agent/models/placement_model.pt` | Path to save placement-agent weights at the end (model strategy only). |
+| `--enemy` | `random` | Opponent bot in environment (`random`, `alphabeta`, `alphabeta-prune`, `same-turn-ab`, `value`, `vp`, `weighted`). |
+| `--enemy-ab-depth` | `2` | AlphaBeta depth when using an AlphaBeta-type enemy. |
+| `--enemy-ab-prunning` | off | Enable pruning for `--enemy alphabeta`. |
+| `--map-template` | `AUTO` | Board template (`AUTO`, `BASE`, `MINI`, `TOURNAMENT`). `AUTO` selects `TOURNAMENT` for fixed mode and `BASE` for random mode. |
+| `--map-mode` | `fixed` | Map layout mode: `fixed` (deterministic) or `random` (reshuffled each game). |
+| `--fixed-map-seed` | `0` | Seed used when `--map-mode fixed` to generate the deterministic map. |
 | `--fresh-start` | off | In train mode, ignore existing save paths and start from scratch. |
 | `--run-name` | auto timestamp | Optional run label for benchmark CSV rows. |
 | `--benchmark-csv` | `capstone_agent/benchmarks/training_metrics.csv` | Output CSV path for per-game benchmark logs. |
@@ -70,6 +76,23 @@ python capstone_agent/run_simulation.py \
   --train \
   --run-name iter_full \
   --save-games-json-dir capstone_agent/replays/iter_full
+
+# Train/eval directly against AlphaBeta
+python capstone_agent/run_simulation.py \
+  --games 10 \
+  --enemy alphabeta \
+  --enemy-ab-depth 2 \
+  --map-mode fixed \
+  --placement-strategy model \
+  --placement-model capstone_agent/models/placement_model.pt \
+  --save-games-json-dir capstone_agent/replays/ab_placement_eval \
+  --save-games-json-every 1
+
+# Randomize map each game (non-tournament templates)
+python capstone_agent/run_simulation.py \
+  --games 200 \
+  --enemy random \
+  --map-mode random
 ```
 
 ## Command Line Interface

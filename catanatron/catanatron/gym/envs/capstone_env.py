@@ -143,6 +143,8 @@ class CapstoneCatanatronEnv(gym.Env):
         self.reward_function = self.config.get("reward_function", "full")
         self.reward_manager = CapstoneReward(self.reward_function)
         self.map_type = self.config.get("map_type", "BASE")
+        self.randomize_map = self.config.get("randomize_map", True)
+        self.fixed_map_seed = int(self.config.get("fixed_map_seed", 0))
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
 
@@ -225,7 +227,11 @@ class CapstoneCatanatronEnv(gym.Env):
     ):
         super().reset(seed=seed)
 
-        catan_map = build_map(self.map_type)
+        catan_map = build_map(
+            self.map_type,
+            randomize=self.randomize_map,
+            fixed_seed=self.fixed_map_seed,
+        )
         for player in self.players:
             player.reset_state()
 

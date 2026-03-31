@@ -516,10 +516,31 @@ TOURNAMENT_MAP_TILES = initialize_tiles(
 TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
 
 
-def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
+def build_map(
+    map_type: Literal["BASE", "TOURNAMENT", "MINI"],
+    randomize: bool = True,
+    fixed_seed: int = 0,
+):
     if map_type == "TOURNAMENT":
         return TOURNAMENT_MAP  # this assumes map is read-only data struct
-    elif map_type == "MINI":
-        return CatanMap.from_template(MINI_MAP_TEMPLATE)
-    else:
-        return CatanMap.from_template(BASE_MAP_TEMPLATE)
+
+    map_template = MINI_MAP_TEMPLATE if map_type == "MINI" else BASE_MAP_TEMPLATE
+    if randomize:
+        return CatanMap.from_template(map_template)
+
+    # Build a deterministic map from the selected template.
+    rng = random.Random(fixed_seed)
+    numbers = rng.sample(map_template.numbers, len(map_template.numbers))
+    port_resources = rng.sample(
+        map_template.port_resources, len(map_template.port_resources)
+    )
+    tile_resources = rng.sample(
+        map_template.tile_resources, len(map_template.tile_resources)
+    )
+    tiles = initialize_tiles(
+        map_template,
+        numbers,
+        port_resources,
+        tile_resources,
+    )
+    return CatanMap.from_tiles(tiles)
