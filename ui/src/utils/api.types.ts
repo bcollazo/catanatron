@@ -108,6 +108,7 @@ export type GameState = {
   player_state: Record<string, PlayerState>;
   action_records: GameActionRecord[];
   robber_coordinate: TileCoordinate;
+  current_discard_count: number;
   nodes: Array<{
     id: number;
     tile_coordinate: TileCoordinate;

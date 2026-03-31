@@ -1,6 +1,6 @@
 @use "../variables.scss";
 
-.resource-selector {
+.discard-planner {
   .MuiPaper-root {
     background-color: #1a1a1a;
     color: #e0e0e0;
@@ -22,6 +22,28 @@
     padding: 20px;
   }
 
+  .discard-note {
+    margin-top: 4px;
+  }
+
+  .discard-summary {
+    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .selected-discard-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .selected-discard-chip {
+    text-transform: none;
+  }
+
   .resource-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -33,7 +55,7 @@
   }
 
   .resource-button {
-    height: 40px;
+    min-height: 54px;
     font-size: 0.9rem;
     text-transform: none;
     background-color: #2a2a2a;
@@ -68,9 +90,9 @@
       font-weight: bold;
     }
 
-    .plus {
-      color: #ffffff;
-      margin: 0 4px;
+    .resource-meta {
+      color: #c7c7c7;
+      font-size: 0.75rem;
     }
   }
 
@@ -87,5 +109,9 @@
     &:hover {
       background-color: rgba(0, 153, 255, 0.1);
     }
+  }
+
+  .clear-button {
+    color: #c7c7c7;
   }
 }

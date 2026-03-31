@@ -25,12 +25,14 @@ import Hidden from "../components/Hidden";
 import Prompt from "../components/Prompt";
 import ResourceCards from "../components/ResourceCards";
 import ResourceSelector from "../components/ResourceSelector";
+import DiscardPlannerDialog from "../components/DiscardPlannerDialog";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import type { GameAction, ResourceCard } from "../utils/api.types"; // Add GameState to the import, adjust path if needed
 import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 import { humanizeTradeAction } from "../utils/promptUtils";
+import { useDiscardBatchSubmission } from "../hooks/useDiscardBatchSubmission";
 
 import "./ActionsToolbar.scss";
 import { useSnackbar } from "notistack";
@@ -53,6 +55,8 @@ function PlayButtons() {
   const { state, dispatch } = useContext(store);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [resourceSelectorOpen, setResourceSelectorOpen] = useState(false);
+  const [discardPlannerOpen, setDiscardPlannerOpen] = useState(false);
+  const { isSubmitting, submitDiscardBatch } = useDiscardBatchSubmission();
 
   const carryOutAction = useCallback(
     memoize((action?: GameAction) => async () => {
@@ -93,19 +97,18 @@ function PlayButtons() {
   const setIsPlayingMonopoly = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_MONOPOLY });
   }, [dispatch]);
-  const getValidDiscardOptions = useCallback(() => {
-    const discardOptions = gameState.current_playable_actions
-      .filter((action) => action[1] === "DISCARD_RESOURCE")
-      .map((action) => action[2] as ResourceCard);
-    if (discardOptions.length > 0) {
-      return discardOptions;
-    }
-
-    // Fallback to the current hand if the discard actions are missing from the payload.
-    return RESOURCE_ORDER.filter(
-      (resource) => gameState.player_state[`${key}_${resource}_IN_HAND`] > 0,
+  const getDiscardResourceCounts = useCallback(() => {
+    return RESOURCE_ORDER.reduce(
+      (counts, resource) => {
+        const inHand = gameState.player_state[`${key}_${resource}_IN_HAND`];
+        if (inHand > 0) {
+          counts[resource] = inHand;
+        }
+        return counts;
+      },
+      {} as Partial<Record<ResourceCard, number>>,
     );
-  }, [gameState.current_playable_actions, gameState.player_state, key]);
+  }, [gameState.player_state, key]);
   const getValidYearOfPlentyOptions = useCallback(() => {
     return gameState.current_playable_actions
       .filter((action) => action[1] === "PLAY_YEAR_OF_PLENTY")
@@ -114,6 +117,7 @@ function PlayButtons() {
   const handleResourceSelection = useCallback(
     async (selectedResources: ResourceCard | ResourceCard[]) => {
       setResourceSelectorOpen(false);
+      let nextGameState;
       let action: GameAction;
       if (isPlayingMonopoly) {
         action = [
@@ -121,25 +125,20 @@ function PlayButtons() {
           "PLAY_MONOPOLY",
           selectedResources as ResourceCard,
         ];
-      } else if (isDiscard) {
-        action = [
-          humanColor,
-          discardActionType,
-          selectedResources as ResourceCard,
-        ];
+        nextGameState = await postAction(gameId, action);
       } else if (isPlayingYearOfPlenty) {
         action = [
           humanColor,
           "PLAY_YEAR_OF_PLENTY",
           selectedResources as [ResourceCard] | [ResourceCard, ResourceCard],
         ];
+        nextGameState = await postAction(gameId, action);
       } else {
         console.error("Invalid resource selector mode");
         return;
       }
-      const gameState = await postAction(gameId, action);
-      dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
-      dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: nextGameState });
+      dispatchSnackbar(enqueueSnackbar, closeSnackbar, nextGameState);
     },
     [
       gameId,
@@ -149,13 +148,36 @@ function PlayButtons() {
       closeSnackbar,
       isPlayingMonopoly,
       isPlayingYearOfPlenty,
-      isDiscard,
-      discardActionType,
     ],
   );
   const handleOpenResourceSelector = useCallback(() => {
     setResourceSelectorOpen(true);
   }, []);
+  const handleOpenDiscardPlanner = useCallback(() => {
+    setDiscardPlannerOpen(true);
+  }, []);
+  const handleDiscardSelection = useCallback(
+    async (resources: ResourceCard[]) => {
+      setDiscardPlannerOpen(false);
+      const nextGameState = await submitDiscardBatch({
+        discardActionType,
+        gameId,
+        humanColor,
+        resources,
+      });
+      dispatch({ type: ACTIONS.SET_GAME_STATE, data: nextGameState });
+      dispatchSnackbar(enqueueSnackbar, closeSnackbar, nextGameState);
+    },
+    [
+      discardActionType,
+      gameId,
+      humanColor,
+      submitDiscardBatch,
+      dispatch,
+      enqueueSnackbar,
+      closeSnackbar,
+    ],
+  );
   const setIsPlayingYearOfPlenty = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_YEAR_OF_PLENTY });
   }, [dispatch]);
@@ -291,13 +313,17 @@ function PlayButtons() {
         Trade
       </OptionsButton>
       <Button
-        disabled={gameState.is_initial_build_phase || isRoadBuilding}
+        disabled={
+          gameState.is_initial_build_phase ||
+          isRoadBuilding ||
+          isSubmitting
+        }
         variant="contained"
         color="primary"
         startIcon={<NavigateNextIcon />}
         onClick={
           isDiscard
-            ? handleOpenResourceSelector
+            ? handleOpenDiscardPlanner
             : isMoveRobber
               ? setIsMovingRobber
               : isPlayingYearOfPlenty || isPlayingMonopoly
@@ -324,17 +350,17 @@ function PlayButtons() {
           dispatch({ type: ACTIONS.CANCEL_MONOPOLY });
           dispatch({ type: ACTIONS.CANCEL_YEAR_OF_PLENTY });
         }}
-        options={
-          isDiscard ? getValidDiscardOptions() : getValidYearOfPlentyOptions()
-        }
+        options={getValidYearOfPlentyOptions()}
         onSelect={handleResourceSelection}
-        mode={
-          isDiscard
-            ? "discard"
-            : isPlayingMonopoly
-              ? "monopoly"
-              : "yearOfPlenty"
-        }
+        mode={isPlayingMonopoly ? "monopoly" : "yearOfPlenty"}
+      />
+      <DiscardPlannerDialog
+        open={discardPlannerOpen}
+        onClose={() => setDiscardPlannerOpen(false)}
+        onConfirm={handleDiscardSelection}
+        remainingDiscardCount={gameState.current_discard_count}
+        discardResourceCounts={getDiscardResourceCounts()}
+        submitting={isSubmitting}
       />
     </>
   );
