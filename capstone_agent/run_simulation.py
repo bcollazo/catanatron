@@ -203,6 +203,13 @@ def make_enemy_player(
     raise ValueError(f"Unknown enemy type: {enemy_type}")
 
 
+def resolve_map_template(map_template: str, map_mode: str) -> str:
+    """Resolve AUTO template defaults based on selected map mode."""
+    if map_template != "AUTO":
+        return map_template
+    return "TOURNAMENT" if map_mode == "fixed" else "BASE"
+
+
 def simulate_game(
     agent: CapstoneAgent,
     env,
@@ -435,9 +442,12 @@ def main():
     parser.add_argument(
         "--map-template",
         type=str,
-        default="BASE",
-        choices=["BASE", "MINI", "TOURNAMENT"],
-        help="Board template to use for simulation games.",
+        default="AUTO",
+        choices=["AUTO", "BASE", "MINI", "TOURNAMENT"],
+        help=(
+            "Board template for simulation games. "
+            "AUTO uses TOURNAMENT for fixed mode and BASE for random mode."
+        ),
     )
     parser.add_argument(
         "--map-mode",
@@ -503,6 +513,7 @@ def main():
         parser.error("--enemy-ab-depth must be >= 1")
     if args.fixed_map_seed < 0:
         parser.error("--fixed-map-seed must be >= 0")
+    resolved_map_template = resolve_map_template(args.map_template, args.map_mode)
 
     loaded_model_path = args.load
     loaded_placement_path = args.placement_model
@@ -526,7 +537,7 @@ def main():
         enemy_type=args.enemy,
         enemy_ab_depth=args.enemy_ab_depth,
         enemy_ab_prunning=args.enemy_ab_prunning,
-        map_template=args.map_template,
+        map_template=resolved_map_template,
         map_mode=args.map_mode,
         fixed_map_seed=args.fixed_map_seed,
     )
@@ -543,10 +554,12 @@ def main():
         if args.enemy == "alphabeta":
             enemy_detail += f", prunning={args.enemy_ab_prunning}"
         enemy_detail += ")"
-    map_detail = f"{args.map_template} / {args.map_mode}"
+    map_detail = f"{resolved_map_template} / {args.map_mode}"
+    if args.map_template == "AUTO":
+        map_detail += " (auto-selected)"
     if args.map_mode == "fixed":
         map_detail += f" (seed={args.fixed_map_seed})"
-    if args.map_template == "TOURNAMENT" and args.map_mode == "random":
+    if resolved_map_template == "TOURNAMENT" and args.map_mode == "random":
         map_detail += " [TOURNAMENT map is always fixed]"
     training_detail = "disabled"
     if args.train:

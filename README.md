@@ -43,7 +43,7 @@ All flags for `python capstone_agent/run_simulation.py`:
 | `--enemy` | `random` | Opponent bot in environment (`random`, `alphabeta`, `alphabeta-prune`, `same-turn-ab`, `value`, `vp`, `weighted`). |
 | `--enemy-ab-depth` | `2` | AlphaBeta depth when using an AlphaBeta-type enemy. |
 | `--enemy-ab-prunning` | off | Enable pruning for `--enemy alphabeta`. |
-| `--map-template` | `BASE` | Board template (`BASE`, `MINI`, `TOURNAMENT`). |
+| `--map-template` | `AUTO` | Board template (`AUTO`, `BASE`, `MINI`, `TOURNAMENT`). `AUTO` selects `TOURNAMENT` for fixed mode and `BASE` for random mode. |
 | `--map-mode` | `fixed` | Map layout mode: `fixed` (deterministic) or `random` (reshuffled each game). |
 | `--fixed-map-seed` | `0` | Seed used when `--map-mode fixed` to generate the deterministic map. |
 | `--fresh-start` | off | In train mode, ignore existing save paths and start from scratch. |
@@ -92,7 +92,6 @@ python capstone_agent/run_simulation.py \
 python capstone_agent/run_simulation.py \
   --games 200 \
   --enemy random \
-  --map-template BASE \
   --map-mode random
 ```
 
