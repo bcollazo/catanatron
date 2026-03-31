@@ -128,6 +128,32 @@ export type GameState = {
   nodeActions?: GameAction[];
   state_index: number;
 };
+
+export type ReplayCatalogItem = {
+  game_id: string;
+  state_index: number;
+  turn_count: number;
+  winner: Color | null;
+  us_color: Color | null;
+  went_first: boolean | null;
+  won: boolean | null;
+  us_final_vp: number | null;
+  opp_final_vp: number | null;
+  us_buy_dev: number;
+  us_maritime_trades: number;
+  us_build_city: number;
+  us_build_settlement: number;
+  us_play_knight: number;
+  us_opening_pip_score: number | null;
+  opp_opening_pip_score: number | null;
+  opening_pip_diff: number | null;
+  us_first_city_turn: number | null;
+  us_action_build: number;
+  us_action_trade: number;
+  us_action_dev: number;
+  us_action_robber: number;
+  us_action_total: number;
+};
 const DIRECTIONS = [
   "NORTH",
   "NORTHEAST",

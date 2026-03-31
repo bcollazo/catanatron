@@ -4,7 +4,11 @@ Usage:
     # From the repo root:
     python capstone_agent/run_simulation.py              # 1 game, no training
     python capstone_agent/run_simulation.py --games 10   # 10 games, no training
-    python capstone_agent/run_simulation.py --train      # 1 game + PPO update
+    python capstone_agent/run_simulation.py --train      # PPO updates by buffered steps
+    python capstone_agent/run_simulation.py --train --train-every-steps 4096
+                                                      # PPO update every 4096 steps
+    python capstone_agent/run_simulation.py --train --train-update-trigger games \
+        --train-every-games 20                       # PPO update every 20 games
 
     # Or import and call from your own code:
     from run_simulation import simulate_game, simulate_and_train
@@ -40,6 +44,7 @@ from CONSTANTS import (FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMEN
                        MAX_STEPS_PER_GAME,
                        DEFAULT_BENCHMARK_CSV, DEFAULT_MAIN_PLAY_MODEL_PATH, DEFAULT_PLACEMENT_MODEL_PATH)
 
+from CONFIG import (DEFAULT_TRAIN_UPDATE_STEPS)
 def _timestamped_path(path: str) -> str:
     """Insert a UTC timestamp before the file extension.
 
@@ -146,6 +151,18 @@ def _self_seat(env, self_color: Color = Color.BLUE) -> Optional[int]:
     if game is None:
         return None
     return game.state.color_to_index.get(self_color)
+
+
+def _buffer_transition_count(agent) -> int:
+    """Return total rollout transitions currently buffered on an agent/router."""
+    total = 0
+    if hasattr(agent, "buffer"):
+        total += len(agent.buffer.rewards)
+    if hasattr(agent, "main_agent") and hasattr(agent.main_agent, "buffer"):
+        total += len(agent.main_agent.buffer.rewards)
+    if hasattr(agent, "placement_agent") and hasattr(agent.placement_agent, "buffer"):
+        total += len(agent.placement_agent.buffer.rewards)
+    return total
 
 
 def simulate_game(
@@ -265,7 +282,37 @@ def main():
         "--games", type=int, default=1, help="Number of games to simulate"
     )
     parser.add_argument(
-        "--train", action="store_true", help="Run a PPO update after each game"
+        "--train",
+        action="store_true",
+        help="Enable PPO training updates (configured by trigger/interval args).",
+    )
+    parser.add_argument(
+        "--train-update-trigger",
+        type=str,
+        choices=["steps", "games"],
+        default="steps",
+        help=(
+            "What controls PPO update timing in --train mode: "
+            "'steps' (default) or 'games'."
+        ),
+    )
+    parser.add_argument(
+        "--train-every-steps",
+        type=int,
+        default=DEFAULT_TRAIN_UPDATE_STEPS,
+        help=(
+            "When --train-update-trigger=steps, run PPO every N buffered "
+            f"transitions (default: {DEFAULT_TRAIN_UPDATE_STEPS})."
+        ),
+    )
+    parser.add_argument(
+        "--train-every-games",
+        type=int,
+        default=20,
+        help=(
+            "When --train-update-trigger=games, run PPO every N completed games "
+            "(default: 20)."
+        ),
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Print per-step action log"
@@ -333,6 +380,10 @@ def main():
         ),
     )
     args = parser.parse_args()
+    if args.train_every_steps < 1:
+        parser.error("--train-every-steps must be >= 1")
+    if args.train_every_games < 1:
+        parser.error("--train-every-games must be >= 1")
 
     loaded_model_path = args.load
     loaded_placement_path = args.placement_model
@@ -366,6 +417,13 @@ def main():
         f"Placement agent ready ({place_desc})\n"
         f"Device: {device}"
     )
+    if args.train:
+        if args.train_update_trigger == "steps":
+            print(
+                f"Training trigger: every {args.train_every_steps} buffered transitions"
+            )
+        else:
+            print(f"Training trigger: every {args.train_every_games} completed games")
     print()
 
     run_name = args.run_name or datetime.now(timezone.utc).strftime(
@@ -374,10 +432,14 @@ def main():
     benchmark = None if args.no_benchmark else BenchmarkLogger(args.benchmark_csv)
 
     wins, losses, truncations = 0, 0, 0
+    games_since_update = 0
 
     for g in range(1, args.games + 1):
         if args.train:
-            result = simulate_and_train(agent, env, verbose=args.verbose)
+            result = simulate_game(
+                agent, env, verbose=args.verbose, store_in_buffer=True
+            )
+            games_since_update += 1
         else:
             result = simulate_game(agent, env, verbose=args.verbose)
 
@@ -424,6 +486,39 @@ def main():
                         int(self_seat == 0) if self_seat is not None else ""
                     ),
                 }
+            )
+
+        if args.train:
+            buffered = _buffer_transition_count(agent)
+            should_update = False
+            update_reason = ""
+
+            if args.train_update_trigger == "steps":
+                if buffered >= args.train_every_steps:
+                    should_update = True
+                    update_reason = f"buffered transitions reached {buffered}"
+            else:
+                if games_since_update >= args.train_every_games:
+                    should_update = True
+                    update_reason = f"completed games in batch reached {games_since_update}"
+
+            if should_update and buffered > 0:
+                batch_games = games_since_update
+                agent.train(0.0)
+                print(
+                    f"  trained PPO on {buffered} buffered transitions "
+                    f"(games in batch: {batch_games}; trigger={args.train_update_trigger}: {update_reason})"
+                )
+                games_since_update = 0
+
+    if args.train:
+        buffered = _buffer_transition_count(agent)
+        if buffered > 0:
+            batch_games = games_since_update
+            agent.train(0.0)
+            print(
+                f"Final PPO flush on {buffered} buffered transitions "
+                f"(games in batch: {batch_games})"
             )
 
     print()

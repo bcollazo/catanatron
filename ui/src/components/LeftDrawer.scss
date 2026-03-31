@@ -16,6 +16,14 @@ $dark-divider: rgb(0 0 0 / 80%);
     border-color: $dark-divider;
   }
 
+  .player-label {
+    padding: 6px variables.$sm-gutter;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+
   .log {
     overflow-y: auto;
     font-size: 0.8rem;

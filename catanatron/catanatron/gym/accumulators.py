@@ -10,6 +10,7 @@ from catanatron.features import create_sample
 from catanatron.game import GameAccumulator
 from catanatron.gym.board_tensor_features import create_board_tensor
 from catanatron.gym.envs.capstone_env import to_action_space, to_action_type_space
+from catanatron.gym.envs.capstone_features import get_capstone_observation
 from catanatron.gym.utils import (
     DISCOUNT_FACTOR,
     get_tournament_total_return,
@@ -181,3 +182,30 @@ class ParquetDataAccumulator(ReinforcementLearningAccumulator):
             f"Saved main_df to {self.output} with shapes {main_df.shape} in {format_secs(time.time() - t1)}"
         )
         return main_df
+
+
+class CapstoneObservationAccumulator(GameAccumulator):
+    """
+    Records the capstone observation (board state vector) and action index
+    after every action during a game. Used with play_batch(..., include_observations=True)
+    to get the new board state after each action rather than only at game end.
+    Each entry is (observation_list, action_space_index).
+    """
+
+    def __init__(self):
+        self.observations_by_game = []
+
+    def before(self, game):
+        self.current_game_observations = []
+
+    def step_after(self, game_after_action, action):
+        self_color = action.color
+        other_colors = [c for c in game_after_action.state.colors if c != self_color]
+        opp_color = other_colors[0] if other_colors else self_color
+        obs = get_capstone_observation(game_after_action, self_color, opp_color)
+        action_idx = to_action_space(action)
+        self.current_game_observations.append((obs, action_idx))
+
+    def after(self, game):
+        if game.winning_color() is not None:
+            self.observations_by_game.append(self.current_game_observations)

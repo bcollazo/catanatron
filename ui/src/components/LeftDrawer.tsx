@@ -10,16 +10,25 @@ import { humanizeActionRecord } from "../utils/promptUtils";
 import { store } from "../store";
 import ACTIONS from "../actions";
 import { playerKey } from "../utils/stateUtils";
-import { type GameState } from "../utils/api.types";
+import { type Color, type GameState } from "../utils/api.types";
 import { isTabOrShift, type InteractionEvent } from "../utils/events";
 
 import "./LeftDrawer.scss";
 
 function DrawerContent({ gameState }: { gameState: GameState }) {
+  const playerLabel = (color: Color) => {
+    const botLabel = gameState.bot_labels?.[color];
+    if (botLabel) return botLabel;
+    return gameState.bot_colors.includes(color) ? "BOT" : "YOU";
+  };
+
   const playerSections = gameState.colors.map((color) => {
     const key = playerKey(gameState, color);
     return (
       <React.Fragment key={color}>
+        <div className={cn("player-label foreground", color)}>
+          {playerLabel(color)}
+        </div>
         <PlayerStateBox
           playerState={gameState.player_state}
           playerKey={key}
