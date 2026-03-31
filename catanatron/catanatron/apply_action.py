@@ -266,22 +266,21 @@ def apply_roll(state: State, action: Action, action_record=None):
     action = Action(action.color, action.action_type, dices)
 
     if number == 7:
-        state.discard_counts = [
-            (
-                player_num_resource_cards(state, color) // 2
-                if player_num_resource_cards(state, color) > state.discard_limit
-                else 0
-            )
-            for color in state.colors
-        ]
-        should_enter_discarding_sequence = any(
-            count > 0 for count in state.discard_counts
-        )
+        discard_counts = []
+        first_discarding_player_index = None
 
-        if should_enter_discarding_sequence:
-            state.current_player_index = next(
-                i for i, count in enumerate(state.discard_counts) if count > 0
-            )
+        for i, color in enumerate(state.colors):
+            num_cards = player_num_resource_cards(state, color)
+            discard_count = num_cards // 2 if num_cards > state.discard_limit else 0
+            discard_counts.append(discard_count)
+
+            if discard_count > 0 and first_discarding_player_index is None:
+                first_discarding_player_index = i
+
+        state.discard_counts = discard_counts
+
+        if first_discarding_player_index is not None:
+            state.current_player_index = first_discarding_player_index
             state.current_prompt = ActionPrompt.DISCARD
             state.is_discarding = True
         else:
