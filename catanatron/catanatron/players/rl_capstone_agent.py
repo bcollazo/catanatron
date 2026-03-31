@@ -96,7 +96,7 @@ class RLCapstonePlayer(Player):
 
         # convert capstone action into the Catan Game indexed action
         catan_action = capstone_to_action(
-                capstone_action, game.playable_actions
+                capstone_action, playable_actions
             )
 
         return catan_action
