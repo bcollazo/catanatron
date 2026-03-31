@@ -76,7 +76,7 @@ class State:
         current_prompt (ActionPrompt): DEPRECATED. Not needed; use is_initial_build_phase,
             is_moving_knight, etc... instead.
         is_discarding (bool): If current player needs to discard.
-        discard_counts (Dict[Color, int]): Remaining number of cards each player
+        discard_counts (List[int]): Color-index aligned number of cards each player
             must discard in the current discard sequence.
         is_moving_knight (bool): If current player needs to move robber.
         is_road_building (bool): If current player needs to build free roads per Road
@@ -133,7 +133,7 @@ class State:
             self.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
             self.is_initial_build_phase = True
             self.is_discarding = False
-            self.discard_counts: Dict[Color, int] = {color: 0 for color in self.colors}
+            self.discard_counts: List[int] = [0] * len(self.colors)
             self.is_moving_knight = False
             self.is_road_building = False
             self.free_roads_available = 0

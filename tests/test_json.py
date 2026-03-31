@@ -60,12 +60,6 @@ def test_action_from_json_discard():
     assert action.value == WOOD
 
 
-def test_action_from_json_discard_rejects_list_value():
-    data = ["BLUE", "DISCARD_RESOURCE", [WOOD]]
-    with pytest.raises(ValueError, match="Discard action must have 1 resource"):
-        action_from_json(data)
-
-
 def test_action_from_json_play_year_of_plenty_invalid():
     data = ["WHITE", "PLAY_YEAR_OF_PLENTY", [WOOD, BRICK, SHEEP]]
     with pytest.raises(

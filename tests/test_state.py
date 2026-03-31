@@ -221,14 +221,14 @@ def test_discard_sequence_tracks_original_hand_size():
     state.current_player_index = current_player_index
     state.current_prompt = ActionPrompt.DISCARD
     state.is_discarding = True
-    state.discard_counts[color] = 4
+    state.discard_counts[current_player_index] = 4
     player_deck_replenish(state, color, BRICK, 1)
     player_deck_replenish(state, color, WHEAT, 3)
 
     apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, BRICK))
     assert state.current_color() == color
     assert state.is_discarding
-    assert state.discard_counts[color] == 3
+    assert state.discard_counts[current_player_index] == 3
 
     apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
     apply_action(state, Action(color, ActionType.DISCARD_RESOURCE, WHEAT))
@@ -236,3 +236,35 @@ def test_discard_sequence_tracks_original_hand_size():
     assert not state.is_discarding
     assert state.is_moving_knight
     assert state.current_player_index == turn_player_index
+
+
+def test_discard_sequence_advances_to_next_discarder():
+    players = [
+        SimplePlayer(Color.RED),
+        SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.WHITE),
+    ]
+    state = State(players)
+    current_color = players[0].color
+    next_color = players[2].color
+    current_player_index = state.colors.index(current_color)
+    next_player_index = state.colors.index(next_color)
+
+    state.current_turn_index = 1
+    state.current_player_index = current_player_index
+    state.current_prompt = ActionPrompt.DISCARD
+    state.is_discarding = True
+    state.discard_counts[current_player_index] = 1
+    state.discard_counts[next_player_index] = 2
+
+    player_deck_replenish(state, current_color, BRICK, 1)
+
+    apply_action(
+        state,
+        Action(current_color, ActionType.DISCARD_RESOURCE, BRICK),
+    )
+
+    assert state.current_player_index == next_player_index
+    assert state.current_color() == next_color
+    assert state.is_discarding
+    assert state.current_prompt == ActionPrompt.DISCARD
