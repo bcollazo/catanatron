@@ -35,7 +35,7 @@ const ResourceSelector = ({
     "ORE",
   ];
   const isSingleResourceOption = (
-    option: SelectorOption
+    option: SelectorOption,
   ): option is ResourceCard => !Array.isArray(option);
 
   const sortedOptions = React.useMemo(() => {
@@ -49,10 +49,10 @@ const ResourceSelector = ({
     }
 
     const yearOfPlentyOptions = options.filter(
-      (option): option is ResourceCard[] => Array.isArray(option)
+      (option): option is ResourceCard[] => Array.isArray(option),
     );
     const hasDoubleOptions = yearOfPlentyOptions.some(
-      (option) => option.length === 2
+      (option) => option.length === 2,
     );
     const filteredOptions = hasDoubleOptions
       ? yearOfPlentyOptions.filter((option) => option.length === 2)
@@ -114,8 +114,13 @@ const ResourceSelector = ({
         {mode === "discard"
           ? "Select Resource to Discard"
           : mode === "monopoly"
-          ? "Select Resource to Monopolize"
-          : "Select Resources for Year of Plenty"}
+            ? "Select Resource to Monopolize"
+            : "Select Resources for Year of Plenty"}
+        {mode === "discard" && (
+          <Typography variant="body2" className="discard-note">
+            (Discards happen one card at a time)
+          </Typography>
+        )}
       </DialogTitle>
       <DialogContent>
         <div className="resource-grid">
