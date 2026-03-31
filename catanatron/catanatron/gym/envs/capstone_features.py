@@ -12,6 +12,7 @@ from catanatron.models.enums import (
     SETTLEMENT,
     CITY,
 )
+from catanatron.state_functions import get_player_buildings
 from catanatron.models.board import get_edges
 from catanatron.models.decks import (
     starting_resource_bank,
@@ -21,14 +22,17 @@ from catanatron.models.decks import (
     CITY_COST_FREQDECK,
     DEVELOPMENT_CARD_COST_FREQDECK,
 )
-DEV_CARD_COUNTS = [14, 2, 2, 2, 5]
-TOTAL_KNIGHT_COUNTS = DEV_CARD_COUNTS[0]
-NUM_DEV_CARDS = sum(DEV_CARD_COUNTS)
-NUM_STARTING_ROADS = PLAYER_INITIAL_STATE["ROADS_AVAILABLE"]
-from catanatron.state_functions import get_player_buildings
 
-CLAIM_ARMY_SIZE = 3
-CLAIM_ROAD_LENGTH = 5
+
+import sys
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+from capstone_agent.CONSTANTS import (DEV_CARD_COUNTS, TOTAL_KNIGHT_COUNTS,
+                                      NUM_STARTING_ROADS, NUM_DEV_CARDS,
+                                      CLAIM_ARMY_SIZE, CLAIM_ROAD_LENGTH)
 
 
 def get_hex_features(game) -> list:
@@ -52,7 +56,7 @@ def get_hex_features(game) -> list:
 
 def get_vertex_features(game, self_color: Color, opp_color: Color) -> list:
     """
-        16 nodes per vertex x 54 vertices
+        14 nodes per vertex x 54 vertices
             - settlement status
             - 5x resource pips
             - total pips
@@ -60,7 +64,7 @@ def get_vertex_features(game, self_color: Color, opp_color: Color) -> list:
             - impacted by robber
             - is buildable
 
-            TODO NOT YET IMPLEMENTED
+            TODO 2 additional NOT YET IMPLEMENTED
             - distance from self network
             - distance from opponent network
     """
@@ -135,7 +139,7 @@ def get_edge_features(game, self_color: Color, opp_color: Color) -> list:
             - can opponent build there
             - is it connected to an adjacent vertex
 
-            TODO NOT YET IMPLEMENTED
+            TODO 2 NOT YET IMPLEMENTED
             - Extends self longest road
             - Extends opponent longest road
     """
@@ -143,7 +147,6 @@ def get_edge_features(game, self_color: Color, opp_color: Color) -> list:
     edge_features = []
     self_buildable = game.state.board.buildable_edges(self_color)
     opp_buildable = game.state.board.buildable_edges(opp_color)
-
     for edge in get_edges():
         road_color = game.state.board.get_edge_color(edge)
         if road_color is None:
@@ -449,8 +452,9 @@ def _get_dev_cards_bought(ps, si):
 def get_game_features(game, self_color: Color, opp_color: Color) -> list:
 
     """
-        29 Game State Features
+        30 Game State Features
             - Turn num / 100
+            - is settlement phase
             - is player 2
             - pct dev cards remaining in deck
             - 4x pct dev cards played (exclude VP)
@@ -467,6 +471,7 @@ def get_game_features(game, self_color: Color, opp_color: Color) -> list:
     si, oi = c2i[self_color], c2i[opp_color]
 
     turn_num = game.state.num_turns
+    is_settlement_phase = int(game.state.is_initial_build_phase)
     is_player_2 = game.state.color_to_index[self_color] # NOTE -> works for 2 player game
     
     dev_feats = _get_dev_card_features(game)
@@ -503,6 +508,7 @@ def get_game_features(game, self_color: Color, opp_color: Color) -> list:
 
     return [
         turn_num / 100,
+        is_settlement_phase,
         is_player_2,
         *dev_feats,
         self_can_place_road, self_can_place_sett, self_can_place_city,

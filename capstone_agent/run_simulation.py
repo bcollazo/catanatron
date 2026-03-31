@@ -29,9 +29,9 @@ from typing import List, Optional
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from CapstoneAgent import CapstoneAgent
+from capstone_agent.MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
-from AgentRouter import AgentRouter
+from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping, describe_action
 from device import get_device
 
@@ -46,7 +46,11 @@ from catanatron.players.search import VictoryPointPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 
+from CONSTANTS import (FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, 
+                       MAX_STEPS_PER_GAME,
+                       DEFAULT_BENCHMARK_CSV, DEFAULT_MAIN_PLAY_MODEL_PATH, DEFAULT_PLACEMENT_MODEL_PATH)
 
+from CONFIG import (DEFAULT_TRAIN_UPDATE_STEPS)
 def _timestamped_path(path: str) -> str:
     """Insert a UTC timestamp before the file extension.
 
@@ -55,16 +59,6 @@ def _timestamped_path(path: str) -> str:
     root, ext = os.path.splitext(path)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
     return f"{root}_{stamp}{ext}"
-
-
-OBS_SIZE = 1258
-HIDDEN_SIZE = 512
-PLACEMENT_HIDDEN_SIZE = 64
-MAX_STEPS_PER_GAME = 5000
-DEFAULT_MODEL_PATH = "capstone_agent/models/capstone_model.pt"
-DEFAULT_PLACEMENT_MODEL_PATH = "capstone_agent/models/placement_model.pt"
-DEFAULT_BENCHMARK_CSV = "capstone_agent/benchmarks/training_metrics.csv"
-DEFAULT_TRAIN_UPDATE_STEPS = 2048
 
 
 @dataclass
@@ -211,7 +205,7 @@ def resolve_map_template(map_template: str, map_mode: str) -> str:
 
 
 def simulate_game(
-    agent: CapstoneAgent,
+    agent,
     env,
     max_steps: int = MAX_STEPS_PER_GAME,
     verbose: bool = False,
@@ -220,7 +214,7 @@ def simulate_game(
     """Play one full game using the agent and return a GameResult.
 
     Args:
-        agent: A CapstoneAgent, PlacementAgent, or AgentRouter.
+        agent: A CapstoneAgent, PlacementAgent, or MainPlayAgent
         env: A CapstoneCatanatronEnv gymnasium environment.
         max_steps: Safety limit on the number of steps.
         verbose: Print per-step action descriptions.
@@ -266,7 +260,7 @@ def simulate_game(
 
 
 def simulate_and_train(
-    agent: CapstoneAgent,
+    agent,
     env,
     max_steps: int = MAX_STEPS_PER_GAME,
     verbose: bool = False,
@@ -286,8 +280,8 @@ def simulate_and_train(
 
 
 def make_agent_and_env(
-    obs_size: int = OBS_SIZE,
-    hidden_size: int = HIDDEN_SIZE,
+    obs_size: int = FEATURE_SPACE_SIZE,
+    hidden_size: int = MAIN_PLAY_AGENT_HIDDEN_SIZE,
     model_path: Optional[str] = None,
     placement_model_path: Optional[str] = None,
     placement_strategy: str = "model",
@@ -308,20 +302,20 @@ def make_agent_and_env(
         map_mode: "fixed" for deterministic map layout, "random" for reshuffled map.
         fixed_map_seed: Seed used when map_mode is "fixed".
 
-    Returns an AgentRouter that delegates initial-placement decisions to
+    Returns a CapstoneAgent that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
-    CapstoneAgent.
+    MainPlayAgent.
     """
     validate_action_mapping()
 
-    main_agent = CapstoneAgent(obs_size=obs_size, hidden_size=hidden_size)
+    main_agent = MainPlayAgent(obs_size=obs_size, hidden_size=hidden_size)
     if model_path is not None:
         main_agent.load(model_path)
 
     placement_agent = make_placement_agent(
         placement_strategy,
         obs_size=obs_size,
-        hidden_size=PLACEMENT_HIDDEN_SIZE,
+        hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE,
     )
     if placement_model_path is not None:
         placement_agent.load(placement_model_path)
@@ -342,7 +336,8 @@ def make_agent_and_env(
             "fixed_map_seed": fixed_map_seed,
         },
     )
-    router = AgentRouter(placement_agent, main_agent, env)
+    router = CapstoneAgent(placement_agent, main_agent)
+
     return router, env
 
 
@@ -391,7 +386,7 @@ def main():
         "--load", type=str, default=None, help="Path to saved main-agent model weights"
     )
     parser.add_argument(
-        "--save", type=str, default=DEFAULT_MODEL_PATH,
+        "--save", type=str, default=DEFAULT_MAIN_PLAY_MODEL_PATH,
         help=(
             "Path to save main-agent model weights after all games. "
             "In --train mode, this path is auto-used for resume if it already exists."
@@ -548,6 +543,13 @@ def main():
     else:
         place_desc = args.placement_strategy
     device = get_device()
+
+    print(
+        f"Main agent ready      ({main_params:,} params, obs={FEATURE_SPACE_SIZE}, actions=245)\n"
+        f"Placement agent ready ({place_desc})\n"
+        f"Device: {device}"
+    )
+
     enemy_detail = args.enemy
     if args.enemy in {"alphabeta", "alphabeta-prune", "same-turn-ab"}:
         enemy_detail += f" (depth={args.enemy_ab_depth}"
@@ -562,6 +564,7 @@ def main():
     if resolved_map_template == "TOURNAMENT" and args.map_mode == "random":
         map_detail += " [TOURNAMENT map is always fixed]"
     training_detail = "disabled"
+
     if args.train:
         if args.train_update_trigger == "steps":
             training_detail = (
@@ -578,7 +581,7 @@ def main():
         )
     print(
         "Run configuration:\n"
-        f"  Main agent: {main_params:,} params (obs={OBS_SIZE}, actions=245)\n"
+        f"  Main agent: {main_params:,} params (obs={FEATURE_SPACE_SIZE}, actions=245)\n"
         f"  Main weights: {loaded_model_path or '[fresh/random init]'}\n"
         f"  Placement agent: strategy={args.placement_strategy}, {place_desc}\n"
         f"  Placement weights: {loaded_placement_path or '[none loaded]'}\n"

@@ -13,7 +13,7 @@ Supports graceful Ctrl+C (saves data collected so far) and --append
 to resume collection into an existing .npz file.
 
 Output: a .npz file containing:
-    obs     (N, 1258)  float32  -- board observation at decision time
+    obs     (N, 1259)  float32  -- board observation at decision time
     masks   (N, 245)   float32  -- valid-action mask
     actions (N,)       int64    -- capstone action index chosen
     won     (N,)       float32  -- 1.0 if Blue won, 0.0 otherwise

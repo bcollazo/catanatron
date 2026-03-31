@@ -1,8 +1,8 @@
-"""Canonical mapping between CapstoneModel output neurons and
+"""Canonical mapping between MainPlayModel output neurons and
 CapstoneCatanatronEnv ACTIONS_ARRAY.
 
 The model produces a 245-dimensional policy logit vector by concatenating
-9 policy sub-heads.  The concatenation order in CapstoneModel.forward()
+9 policy sub-heads.  The concatenation order in MainPlayModel.forward()
 aligns 1:1 with ACTIONS_ARRAY in capstone_env.py, meaning:
 
     model_output_index  ==  env_action_index

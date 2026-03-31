@@ -1,22 +1,14 @@
 import torch
 import torch.nn as nn
+from CONSTANTS import (ROBBER_ACTION_SIZE, VERTEX_ACTION_SIZE, EDGE_ACTION_SIZE, VALUE_SIZE,
+                       PLAY_DEV_ACTION_SIZE, TRADING_ACTION_SIZE, TURN_MANAGEMENT_ACTION_SIZE,
+                       NUM_RESOURCES, NUM_RESOURCE_PAIRS
+                    )
 
-class CapstoneModel(torch.nn.Module):
+class MainPlayModel(torch.nn.Module):
 
-    VALUE_SIZE = 1
-
-    ROBBER_ACTION_SIZE = 19
-    VERTEX_ACTION_SIZE = 54
-    EDGE_ACTION_SIZE = 72
-    PLAY_DEV_ACTION_SIZE = 3 # Buy Dev, Play Knight, Play Road Building
-    TRADING_ACTION_SIZE = 20
-    NUM_RESOURCES = 5
-    NUM_RESOURCE_PAIRS = 15
-    TURN_MANAGEMENT_ACTION_SIZE = 3 # Discard, End Turn, Roll (see action_map.py)
-
-
-    def __init__(self, obs_size, hidden_size):
-        super(CapstoneModel, self).__init__()
+    def __init__(self, obs_size: int, hidden_size: int):
+        super().__init__()
 
         # ReLU activation
         # Softmax and Tanh final activations for policy and value functions
@@ -65,7 +57,7 @@ class CapstoneModel(torch.nn.Module):
                         nn.ReLU(),
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.VALUE_SIZE),
+                        nn.Linear(hidden_size, VALUE_SIZE),
                         nn.Tanh()
                     )
 
@@ -80,49 +72,49 @@ class CapstoneModel(torch.nn.Module):
         self.robber_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.ROBBER_ACTION_SIZE)
+                        nn.Linear(hidden_size, ROBBER_ACTION_SIZE)
                     )
         self.settlement_vertex_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.VERTEX_ACTION_SIZE)
+                        nn.Linear(hidden_size, VERTEX_ACTION_SIZE)
                     )
         self.city_vertex_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.VERTEX_ACTION_SIZE)
+                        nn.Linear(hidden_size, VERTEX_ACTION_SIZE)
                     )
         
         self.edge_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.EDGE_ACTION_SIZE)
+                        nn.Linear(hidden_size, EDGE_ACTION_SIZE)
                     )
         
         self.dev_card_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.PLAY_DEV_ACTION_SIZE)
+                        nn.Linear(hidden_size, PLAY_DEV_ACTION_SIZE)
                     )
         self.trading_policy_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.TRADING_ACTION_SIZE)
+                        nn.Linear(hidden_size, TRADING_ACTION_SIZE)
                     )
         self.monopoly_resource_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.NUM_RESOURCES)
+                        nn.Linear(hidden_size, NUM_RESOURCES)
                     )
         self.yop_resource_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.NUM_RESOURCE_PAIRS)
+                        nn.Linear(hidden_size, NUM_RESOURCE_PAIRS)
                     )
         self.turn_management_head = nn.Sequential(
                         nn.Linear(hidden_size, hidden_size),
                         nn.ReLU(),
-                        nn.Linear(hidden_size, self.TURN_MANAGEMENT_ACTION_SIZE)
+                        nn.Linear(hidden_size, TURN_MANAGEMENT_ACTION_SIZE)
                     )
         
 

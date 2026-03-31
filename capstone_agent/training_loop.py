@@ -3,26 +3,22 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
-from CapstoneAgent import CapstoneAgent
+from MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent
-from AgentRouter import AgentRouter
+from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping
 from device import get_device
 import torch
 import gymnasium
 
-OBS_SIZE = 1258
-HIDDEN_SIZE = 512
-PLACEMENT_HIDDEN_SIZE = 64
+from CONSTANTS import FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
+from CONFIG import ROLLOUT_LENGTH, NUM_UPDATES, STORE_FREQUENCY
 
-main_agent = CapstoneAgent(obs_size=OBS_SIZE, hidden_size=HIDDEN_SIZE)
-placement_agent = PlacementAgent(obs_size=OBS_SIZE, hidden_size=PLACEMENT_HIDDEN_SIZE)
+main_agent = MainPlayAgent(obs_size=FEATURE_SPACE_SIZE, hidden_size=MAIN_PLAY_AGENT_HIDDEN_SIZE)
+placement_agent = PlacementAgent(obs_size=FEATURE_SPACE_SIZE, hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE)
 env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
-agent = AgentRouter(placement_agent, main_agent, env)
+agent = CapstoneAgent(placement_agent, main_agent)
 validate_action_mapping()
-
-ROLLOUT_LENGTH = 2048
-NUM_UPDATES = 500
 
 obs, info = env.reset()
 mask = info["action_mask"]
@@ -52,7 +48,7 @@ for update in range(NUM_UPDATES):
         )
     agent.train(last_value.item())
 
-    if (update + 1) % 10 == 0:
+    if (update + 1) % STORE_FREQUENCY == 0:
         print(f"Update {update + 1}/{NUM_UPDATES} complete  (step {step})")
 
 agent.save("capstone_agent/models/capstone_model.pt", "capstone_agent/models/placement_model.pt")
