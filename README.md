@@ -43,6 +43,9 @@ All flags for `python capstone_agent/run_simulation.py`:
 | `--enemy` | `random` | Opponent bot in environment (`random`, `alphabeta`, `alphabeta-prune`, `same-turn-ab`, `value`, `vp`, `weighted`). |
 | `--enemy-ab-depth` | `2` | AlphaBeta depth when using an AlphaBeta-type enemy. |
 | `--enemy-ab-prunning` | off | Enable pruning for `--enemy alphabeta`. |
+| `--map-template` | `BASE` | Board template (`BASE`, `MINI`, `TOURNAMENT`). |
+| `--map-mode` | `fixed` | Map layout mode: `fixed` (deterministic) or `random` (reshuffled each game). |
+| `--fixed-map-seed` | `0` | Seed used when `--map-mode fixed` to generate the deterministic map. |
 | `--fresh-start` | off | In train mode, ignore existing save paths and start from scratch. |
 | `--run-name` | auto timestamp | Optional run label for benchmark CSV rows. |
 | `--benchmark-csv` | `capstone_agent/benchmarks/training_metrics.csv` | Output CSV path for per-game benchmark logs. |
@@ -79,10 +82,18 @@ python capstone_agent/run_simulation.py \
   --games 10 \
   --enemy alphabeta \
   --enemy-ab-depth 2 \
+  --map-mode fixed \
   --placement-strategy model \
   --placement-model capstone_agent/models/placement_model.pt \
   --save-games-json-dir capstone_agent/replays/ab_placement_eval \
   --save-games-json-every 1
+
+# Randomize map each game (non-tournament templates)
+python capstone_agent/run_simulation.py \
+  --games 200 \
+  --enemy random \
+  --map-template BASE \
+  --map-mode random
 ```
 
 ## Command Line Interface

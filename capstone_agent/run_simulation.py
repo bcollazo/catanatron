@@ -287,6 +287,9 @@ def make_agent_and_env(
     enemy_type: str = "random",
     enemy_ab_depth: int = 2,
     enemy_ab_prunning: bool = False,
+    map_template: str = "BASE",
+    map_mode: str = "fixed",
+    fixed_map_seed: int = 0,
 ):
     """Create a routed agent + env pair.
 
@@ -294,6 +297,9 @@ def make_agent_and_env(
         placement_strategy: ``"model"`` for the learned PlacementAgent,
             ``"random"`` for uniform-random placement.
         enemy_type: Opponent bot for all non-blue turns in environment.
+        map_template: Board template ("BASE", "MINI", or "TOURNAMENT").
+        map_mode: "fixed" for deterministic map layout, "random" for reshuffled map.
+        fixed_map_seed: Seed used when map_mode is "fixed".
 
     Returns an AgentRouter that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
@@ -319,7 +325,16 @@ def make_agent_and_env(
         alphabeta_depth=enemy_ab_depth,
         alphabeta_prunning=enemy_ab_prunning,
     )
-    env = gymnasium.make("catanatron/CapstoneCatanatron-v0", config={"enemies": [enemy]})
+    randomize_map = map_mode == "random" and map_template != "TOURNAMENT"
+    env = gymnasium.make(
+        "catanatron/CapstoneCatanatron-v0",
+        config={
+            "enemies": [enemy],
+            "map_type": map_template,
+            "randomize_map": randomize_map,
+            "fixed_map_seed": fixed_map_seed,
+        },
+    )
     router = AgentRouter(placement_agent, main_agent, env)
     return router, env
 
@@ -418,6 +433,29 @@ def main():
         help="Enable AlphaBeta pruning when --enemy=alphabeta.",
     )
     parser.add_argument(
+        "--map-template",
+        type=str,
+        default="BASE",
+        choices=["BASE", "MINI", "TOURNAMENT"],
+        help="Board template to use for simulation games.",
+    )
+    parser.add_argument(
+        "--map-mode",
+        type=str,
+        default="fixed",
+        choices=["fixed", "random"],
+        help=(
+            "Map layout mode: 'fixed' (default, deterministic by seed) "
+            "or 'random' (reshuffle each game)."
+        ),
+    )
+    parser.add_argument(
+        "--fixed-map-seed",
+        type=int,
+        default=0,
+        help="Seed used to generate deterministic map layout when --map-mode=fixed.",
+    )
+    parser.add_argument(
         "--fresh-start",
         action="store_true",
         help="Ignore existing saved weights and train from scratch.",
@@ -463,6 +501,8 @@ def main():
         parser.error("--train-every-games must be >= 1")
     if args.enemy_ab_depth < 1:
         parser.error("--enemy-ab-depth must be >= 1")
+    if args.fixed_map_seed < 0:
+        parser.error("--fixed-map-seed must be >= 0")
 
     loaded_model_path = args.load
     loaded_placement_path = args.placement_model
@@ -486,6 +526,9 @@ def main():
         enemy_type=args.enemy,
         enemy_ab_depth=args.enemy_ab_depth,
         enemy_ab_prunning=args.enemy_ab_prunning,
+        map_template=args.map_template,
+        map_mode=args.map_mode,
+        fixed_map_seed=args.fixed_map_seed,
     )
     main_params = sum(p.numel() for p in agent.main_agent.model.parameters())
     pa = agent.placement_agent
@@ -494,19 +537,45 @@ def main():
     else:
         place_desc = args.placement_strategy
     device = get_device()
-    print(
-        f"Main agent ready      ({main_params:,} params, obs={OBS_SIZE}, actions=245)\n"
-        f"Placement agent ready ({place_desc})\n"
-        f"Opponent: {args.enemy}\n"
-        f"Device: {device}"
-    )
+    enemy_detail = args.enemy
+    if args.enemy in {"alphabeta", "alphabeta-prune", "same-turn-ab"}:
+        enemy_detail += f" (depth={args.enemy_ab_depth}"
+        if args.enemy == "alphabeta":
+            enemy_detail += f", prunning={args.enemy_ab_prunning}"
+        enemy_detail += ")"
+    map_detail = f"{args.map_template} / {args.map_mode}"
+    if args.map_mode == "fixed":
+        map_detail += f" (seed={args.fixed_map_seed})"
+    if args.map_template == "TOURNAMENT" and args.map_mode == "random":
+        map_detail += " [TOURNAMENT map is always fixed]"
+    training_detail = "disabled"
     if args.train:
         if args.train_update_trigger == "steps":
-            print(
-                f"Training trigger: every {args.train_every_steps} buffered transitions"
+            training_detail = (
+                f"enabled, trigger=steps, every {args.train_every_steps} transitions"
             )
         else:
-            print(f"Training trigger: every {args.train_every_games} completed games")
+            training_detail = (
+                f"enabled, trigger=games, every {args.train_every_games} games"
+            )
+    replay_detail = "disabled"
+    if args.save_games_json_dir:
+        replay_detail = (
+            f"enabled, dir={args.save_games_json_dir}, every {args.save_games_json_every} games"
+        )
+    print(
+        "Run configuration:\n"
+        f"  Main agent: {main_params:,} params (obs={OBS_SIZE}, actions=245)\n"
+        f"  Main weights: {loaded_model_path or '[fresh/random init]'}\n"
+        f"  Placement agent: strategy={args.placement_strategy}, {place_desc}\n"
+        f"  Placement weights: {loaded_placement_path or '[none loaded]'}\n"
+        f"  Opponent: {enemy_detail}\n"
+        f"  Map: {map_detail}\n"
+        f"  Training: {training_detail}\n"
+        f"  Replay JSON save: {replay_detail}\n"
+        f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
+        f"  Device: {device}"
+    )
     print()
 
     run_name = args.run_name or datetime.now(timezone.utc).strftime(
