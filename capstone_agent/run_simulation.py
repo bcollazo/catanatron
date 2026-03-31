@@ -9,6 +9,8 @@ Usage:
                                                       # PPO update every 4096 steps
     python capstone_agent/run_simulation.py --train --train-update-trigger games \
         --train-every-games 20                       # PPO update every 20 games
+    python capstone_agent/run_simulation.py --games 10 --enemy alphabeta
+                                                      # evaluate/train vs AlphaBeta
 
     # Or import and call from your own code:
     from run_simulation import simulate_game, simulate_and_train
@@ -38,7 +40,11 @@ import numpy as np
 import gymnasium
 import catanatron.gym
 from catanatron.json import GameEncoder
-from catanatron.models.player import Color
+from catanatron.models.player import Color, RandomPlayer
+from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
+from catanatron.players.search import VictoryPointPlayer
+from catanatron.players.value import ValueFunctionPlayer
+from catanatron.players.weighted_random import WeightedRandomPlayer
 
 
 def _timestamped_path(path: str) -> str:
@@ -171,6 +177,32 @@ def _buffer_transition_count(agent) -> int:
     return total
 
 
+def make_enemy_player(
+    enemy_type: str,
+    color: Color = Color.RED,
+    alphabeta_depth: int = 2,
+    alphabeta_prunning: bool = False,
+):
+    """Construct the training/eval opponent used by CapstoneCatanatronEnv."""
+    if enemy_type == "random":
+        return RandomPlayer(color)
+    if enemy_type == "alphabeta":
+        return AlphaBetaPlayer(
+            color, depth=alphabeta_depth, prunning=alphabeta_prunning
+        )
+    if enemy_type == "alphabeta-prune":
+        return AlphaBetaPlayer(color, depth=alphabeta_depth, prunning=True)
+    if enemy_type == "same-turn-ab":
+        return SameTurnAlphaBetaPlayer(color, depth=alphabeta_depth)
+    if enemy_type == "value":
+        return ValueFunctionPlayer(color)
+    if enemy_type == "vp":
+        return VictoryPointPlayer(color)
+    if enemy_type == "weighted":
+        return WeightedRandomPlayer(color)
+    raise ValueError(f"Unknown enemy type: {enemy_type}")
+
+
 def simulate_game(
     agent: CapstoneAgent,
     env,
@@ -252,12 +284,16 @@ def make_agent_and_env(
     model_path: Optional[str] = None,
     placement_model_path: Optional[str] = None,
     placement_strategy: str = "model",
+    enemy_type: str = "random",
+    enemy_ab_depth: int = 2,
+    enemy_ab_prunning: bool = False,
 ):
     """Create a routed agent + env pair.
 
     Args:
         placement_strategy: ``"model"`` for the learned PlacementAgent,
             ``"random"`` for uniform-random placement.
+        enemy_type: Opponent bot for all non-blue turns in environment.
 
     Returns an AgentRouter that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
@@ -277,7 +313,13 @@ def make_agent_and_env(
     if placement_model_path is not None:
         placement_agent.load(placement_model_path)
 
-    env = gymnasium.make("catanatron/CapstoneCatanatron-v0")
+    enemy = make_enemy_player(
+        enemy_type,
+        color=Color.RED,
+        alphabeta_depth=enemy_ab_depth,
+        alphabeta_prunning=enemy_ab_prunning,
+    )
+    env = gymnasium.make("catanatron/CapstoneCatanatron-v0", config={"enemies": [enemy]})
     router = AgentRouter(placement_agent, main_agent, env)
     return router, env
 
@@ -347,6 +389,35 @@ def main():
         help="Path to save placement-agent weights after all games.",
     )
     parser.add_argument(
+        "--enemy",
+        type=str,
+        default="random",
+        choices=[
+            "random",
+            "alphabeta",
+            "alphabeta-prune",
+            "same-turn-ab",
+            "value",
+            "vp",
+            "weighted",
+        ],
+        help=(
+            "Opponent bot in env (controls non-blue turns). "
+            "Use 'alphabeta' to train/eval directly vs AlphaBeta."
+        ),
+    )
+    parser.add_argument(
+        "--enemy-ab-depth",
+        type=int,
+        default=2,
+        help="AlphaBeta depth when --enemy is alphabeta/alphabeta-prune/same-turn-ab.",
+    )
+    parser.add_argument(
+        "--enemy-ab-prunning",
+        action="store_true",
+        help="Enable AlphaBeta pruning when --enemy=alphabeta.",
+    )
+    parser.add_argument(
         "--fresh-start",
         action="store_true",
         help="Ignore existing saved weights and train from scratch.",
@@ -390,6 +461,8 @@ def main():
         parser.error("--train-every-steps must be >= 1")
     if args.train_every_games < 1:
         parser.error("--train-every-games must be >= 1")
+    if args.enemy_ab_depth < 1:
+        parser.error("--enemy-ab-depth must be >= 1")
 
     loaded_model_path = args.load
     loaded_placement_path = args.placement_model
@@ -410,6 +483,9 @@ def main():
         model_path=loaded_model_path,
         placement_model_path=loaded_placement_path,
         placement_strategy=args.placement_strategy,
+        enemy_type=args.enemy,
+        enemy_ab_depth=args.enemy_ab_depth,
+        enemy_ab_prunning=args.enemy_ab_prunning,
     )
     main_params = sum(p.numel() for p in agent.main_agent.model.parameters())
     pa = agent.placement_agent
@@ -421,6 +497,7 @@ def main():
     print(
         f"Main agent ready      ({main_params:,} params, obs={OBS_SIZE}, actions=245)\n"
         f"Placement agent ready ({place_desc})\n"
+        f"Opponent: {args.enemy}\n"
         f"Device: {device}"
     )
     if args.train:
