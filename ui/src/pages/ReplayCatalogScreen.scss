@@ -1,0 +1,220 @@
+@use "../variables.scss";
+
+.replay-catalog-page {
+  padding: variables.$sm-gutter;
+  min-height: 100vh;
+  background: variables.$dark-gray;
+
+  &.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .catalog-card {
+    margin: 0 auto;
+    max-width: 1200px;
+    border-radius: 6px;
+    background: #1f1f1f;
+    padding: variables.$sm-gutter;
+    overflow: auto;
+  }
+
+  .catalog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: variables.$sm-gutter;
+  }
+
+  .catalog-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: #cecece;
+    }
+
+    select {
+      background: #141414;
+      color: #efefef;
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 4px;
+      padding: 4px 6px;
+    }
+  }
+
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+
+    .filter-chip {
+      background: rgb(77 163 255 / 15%);
+      color: #d8ebff;
+      border: 1px solid rgb(77 163 255 / 40%);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+  }
+
+  .catalog-body {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .catalog-table {
+    overflow: auto;
+  }
+
+  .stats-panel {
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 6px;
+    padding: 10px;
+    max-height: 75vh;
+    overflow: auto;
+
+    h3,
+    h4 {
+      margin: 0 0 8px;
+    }
+
+    .stats-block {
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgb(255 255 255 / 10%);
+    }
+
+    .stats-block:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+    }
+
+    .interactive-chart {
+      .chart-readout {
+        margin-bottom: 6px;
+        font-size: 0.78rem;
+        color: #c8c8c8;
+      }
+
+      .chart-legend {
+        margin-top: 4px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .legend-item {
+        font-size: 0.72rem;
+        border: 1px solid rgb(255 255 255 / 16%);
+        border-radius: 10px;
+        padding: 2px 6px;
+      }
+
+      .legend-item.build {
+        color: #4da3ff;
+      }
+      .legend-item.trade {
+        color: #54d38b;
+      }
+      .legend-item.dev {
+        color: #c68cff;
+      }
+      .legend-item.robber {
+        color: #f7c45a;
+      }
+    }
+
+    .chart-empty {
+      font-size: 0.8rem;
+      color: #9e9e9e;
+    }
+
+    .split-bars {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: end;
+
+      .bar-column {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .bar-label {
+        font-size: 0.78rem;
+        color: #bcbcbc;
+      }
+
+      .bar-track {
+        height: 110px;
+        border: 1px solid rgb(255 255 255 / 15%);
+        border-radius: 4px;
+        display: flex;
+        align-items: flex-end;
+        padding: 4px;
+        background: rgb(255 255 255 / 2%);
+      }
+
+      .bar-fill {
+        width: 100%;
+        border-radius: 3px;
+      }
+
+      .bar-fill.first {
+        background: linear-gradient(180deg, #4da3ff 0%, #2b6ebb 100%);
+      }
+
+      .bar-fill.second {
+        background: linear-gradient(180deg, #54d38b 0%, #27955a 100%);
+      }
+    }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid rgb(255 255 255 / 15%);
+    text-align: left;
+    padding: 8px;
+    white-space: nowrap;
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+  }
+
+  @media (max-width: variables.$lg-breakpoint) {
+    .catalog-body {
+      grid-template-columns: 1fr;
+    }
+  }
+}

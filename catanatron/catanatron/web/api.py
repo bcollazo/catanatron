@@ -4,7 +4,7 @@ import traceback
 
 from flask import Response, Blueprint, jsonify, abort, request
 
-from catanatron.web.models import upsert_game_state, get_game_state
+from catanatron.web.models import upsert_game_state, get_game_state, list_replay_catalog
 from catanatron.json import GameEncoder, action_from_json
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.game import Game
@@ -81,6 +81,13 @@ def post_action_endpoint(game_id):
         status=200,
         mimetype="application/json",
     )
+
+
+@bp.route("/replays", methods=["GET"])
+def get_replay_catalog_endpoint():
+    limit = request.args.get("limit", default=200, type=int)
+    limit = max(1, min(limit, 2000))
+    return jsonify({"replays": list_replay_catalog(limit=limit)})
 
 
 @bp.route("/stress-test", methods=["GET"])

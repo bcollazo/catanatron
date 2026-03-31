@@ -146,6 +146,15 @@ python capstone_agent/import_replays_to_gui.py \
 
 Then open `http://localhost:3000/replays/<game_id>` (printed by the importer).
 
+If some replay files contain inconsistent actions, import what can be replayed
+and skip bad actions while printing their indices:
+
+```bash
+python capstone_agent/import_replays_to_gui.py \
+  --input-dir capstone_agent/replays/iter_full \
+  --skip-invalid-actions
+```
+
 Unified analytics script (benchmarks, first-vs-second, placements):
 
 ```bash
