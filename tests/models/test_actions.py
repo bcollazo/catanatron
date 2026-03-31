@@ -60,7 +60,7 @@ def test_monopoly_possible_actions():
 def test_discard_possibilities_are_per_resource():
     player = SimplePlayer(Color.RED)
     state = State([player])
-    state.discard_counts[player.color] = 2
+    state.discard_counts[0] = 2
 
     player_deck_replenish(state, player.color, WHEAT, 2)
     player_deck_replenish(state, player.color, BRICK, 1)
@@ -84,7 +84,7 @@ def test_discard_possibilities_empty_when_player_does_not_need_to_discard():
 def test_discard_possibilities_do_not_repeat_same_resource():
     player = SimplePlayer(Color.RED)
     state = State([player])
-    state.discard_counts[player.color] = 3
+    state.discard_counts[0] = 3
 
     player_deck_replenish(state, player.color, WHEAT, 3)
 
@@ -96,7 +96,7 @@ def test_discard_possibilities_do_not_repeat_same_resource():
 def test_discard_possibilities_include_each_resource_in_resource_order():
     player = SimplePlayer(Color.RED)
     state = State([player])
-    state.discard_counts[player.color] = len(RESOURCES)
+    state.discard_counts[0] = len(RESOURCES)
 
     for resource in RESOURCES:
         player_deck_replenish(state, player.color, resource)

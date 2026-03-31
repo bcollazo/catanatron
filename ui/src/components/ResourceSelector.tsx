@@ -17,42 +17,38 @@ type ResourceSelectorProps = {
   onClose: () => void;
   onSelect: (option: SelectorOption) => void;
   options: SelectorOption[];
-  mode: "discard" | "monopoly" | "yearOfPlenty";
+  mode: "monopoly" | "yearOfPlenty";
 };
 
-const ResourceSelector = ({
+const RESOURCE_ORDER: ResourceCard[] = [
+  "WOOD",
+  "BRICK",
+  "SHEEP",
+  "WHEAT",
+  "ORE",
+];
+
+export default function ResourceSelector({
   open,
   onClose,
   options,
   onSelect,
   mode,
-}: ResourceSelectorProps) => {
-  const resourceOrder: ResourceCard[] = [
-    "WOOD",
-    "BRICK",
-    "SHEEP",
-    "WHEAT",
-    "ORE",
-  ];
+}: ResourceSelectorProps) {
   const isSingleResourceOption = (
-    option: SelectorOption
+    option: SelectorOption,
   ): option is ResourceCard => !Array.isArray(option);
 
   const sortedOptions = React.useMemo(() => {
     if (mode === "monopoly") {
-      return resourceOrder;
-    }
-    if (mode === "discard") {
-      return options
-        .filter(isSingleResourceOption)
-        .sort((a, b) => resourceOrder.indexOf(a) - resourceOrder.indexOf(b));
+      return RESOURCE_ORDER;
     }
 
     const yearOfPlentyOptions = options.filter(
-      (option): option is ResourceCard[] => Array.isArray(option)
+      (option): option is ResourceCard[] => Array.isArray(option),
     );
     const hasDoubleOptions = yearOfPlentyOptions.some(
-      (option) => option.length === 2
+      (option) => option.length === 2,
     );
     const filteredOptions = hasDoubleOptions
       ? yearOfPlentyOptions.filter((option) => option.length === 2)
@@ -63,12 +59,12 @@ const ResourceSelector = ({
       const bFirstResource = b[0];
       if (aFirstResource !== bFirstResource) {
         return (
-          resourceOrder.indexOf(aFirstResource) -
-          resourceOrder.indexOf(bFirstResource)
+          RESOURCE_ORDER.indexOf(aFirstResource) -
+          RESOURCE_ORDER.indexOf(bFirstResource)
         );
       }
       if (a.length === 2 && b.length === 2) {
-        return resourceOrder.indexOf(a[1]) - resourceOrder.indexOf(b[1]);
+        return RESOURCE_ORDER.indexOf(a[1]) - RESOURCE_ORDER.indexOf(b[1]);
       }
       return a.length === 1 ? 1 : -1;
     });
@@ -91,15 +87,14 @@ const ResourceSelector = ({
           <span className="plus">x1</span>
         </>
       );
-    } else {
-      return (
-        <>
-          {getResourceSpan(option[0])}
-          <span className="plus">+</span>
-          {getResourceSpan(option[1])}
-        </>
-      );
     }
+    return (
+      <>
+        {getResourceSpan(option[0])}
+        <span className="plus">+</span>
+        {getResourceSpan(option[1])}
+      </>
+    );
   };
 
   return (
@@ -111,9 +106,7 @@ const ResourceSelector = ({
       fullWidth
     >
       <DialogTitle>
-        {mode === "discard"
-          ? "Select Resource to Discard"
-          : mode === "monopoly"
+        {mode === "monopoly"
           ? "Select Resource to Monopolize"
           : "Select Resources for Year of Plenty"}
       </DialogTitle>
@@ -140,6 +133,4 @@ const ResourceSelector = ({
       </DialogActions>
     </Dialog>
   );
-};
-
-export default ResourceSelector;
+}

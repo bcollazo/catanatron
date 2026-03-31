@@ -131,7 +131,7 @@ undoing actions to a State.
 
 The "result" field is polymorphic depending on the action_type.
 - ROLL: result is (int, int) 2 dice rolled
-- DISCARD_RESOURCE: result is List[Resource] discarded in this action
+- DISCARD_RESOURCE: result is Resource discarded in this action
 - MOVE_ROBBER: result is card stolen (Resource|None)
 - BUY_DEVELOPMENT_CARD: result is card
 - ...for the rest, result is None since they are deterministic actions

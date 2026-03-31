@@ -181,7 +181,7 @@ describe("humanizeAction", () => {
     expect(
       humanizeActionRecord(baseGameState, [
         ["ORANGE", "DISCARD_RESOURCE", "WHEAT"],
-        ["WHEAT"],
+        "WHEAT",
       ])
     ).toBe("YOU DISCARDED WHEAT");
   });

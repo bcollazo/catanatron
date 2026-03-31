@@ -11,7 +11,7 @@ export type TileCoordinate = [number, number, number];
 export type GameActionRecord =
   // These are the special cases
   | [RollGameAction, [number, number]]
-  | [DiscardGameAction, ResourceCard[]]
+  | [DiscardGameAction, ResourceCard]
   | [MoveRobberAction, ResourceCard | null]
   | [BuyDevelopmentCardAction, DevelopmentCard]
   // These are deterministic and carry no extra info
@@ -25,12 +25,8 @@ export type GameActionRecord =
   | [MaritimeTradeAction, null]
   | [EndTurnAction, null];
 
-export type RollGameAction = [Color, "ROLL", [number, number] | null];
-export type DiscardGameAction = [
-  Color,
-  "DISCARD" | "DISCARD_RESOURCE",
-  ResourceCard | null
-];
+export type RollGameAction = [Color, "ROLL", null];
+export type DiscardGameAction = [Color, "DISCARD_RESOURCE", ResourceCard];
 export type BuyDevelopmentCardAction = [Color, "BUY_DEVELOPMENT_CARD", null];
 export type BuildSettlementAction = [Color, "BUILD_SETTLEMENT", number];
 export type BuildCityAction = [Color, "BUILD_CITY", number];
@@ -41,17 +37,17 @@ export type PlayMonopolyAction = [Color, "PLAY_MONOPOLY", ResourceCard];
 export type PlayYearOfPlentyAction = [
   Color,
   "PLAY_YEAR_OF_PLENTY",
-  [ResourceCard] | [ResourceCard, ResourceCard]
+  [ResourceCard] | [ResourceCard, ResourceCard],
 ];
 export type MoveRobberAction = [
   Color,
   "MOVE_ROBBER",
-  [TileCoordinate, string?, string?]
+  [TileCoordinate, string?],
 ];
 export type MaritimeTradeAction = [
   Color,
   "MARITIME_TRADE",
-  (ResourceCard | null)[]
+  (ResourceCard | null)[],
 ];
 export type EndTurnAction = [Color, "END_TURN", null];
 
@@ -110,9 +106,9 @@ export type GameState = {
   winning_color?: Color;
   current_prompt: string;
   player_state: Record<string, PlayerState>;
-  action_records?: GameActionRecord[];
-  actions?: GameAction[];
+  action_records: GameActionRecord[];
   robber_coordinate: TileCoordinate;
+  current_discard_count: number;
   nodes: Array<{
     id: number;
     tile_coordinate: TileCoordinate;

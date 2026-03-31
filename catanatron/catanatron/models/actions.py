@@ -279,7 +279,7 @@ def initial_road_possibilities(state, color) -> List[Action]:
 
 
 def discard_possibilities(state: State, color) -> List[Action]:
-    if state.discard_counts[color] <= 0:
+    if state.discard_counts[state.color_to_index[color]] <= 0:
         return []
 
     return [
