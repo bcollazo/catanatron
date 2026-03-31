@@ -140,6 +140,24 @@ def test_post_action_bot_turn(client):
     assert len(data_after["action_records"]) > len(data_before["action_records"])
 
 
+def test_repeated_bot_actions_advance_latest_state(client):
+    """Latest state should keep advancing across persisted bot turns."""
+    post_response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    assert post_response.status_code == 200
+    game_id = json.loads(post_response.data)["game_id"]
+
+    latest_before = json.loads(client.get(f"/api/games/{game_id}/states/latest").data)
+    first_tick = json.loads(client.post(f"/api/games/{game_id}/actions", json={}).data)
+    second_tick = json.loads(client.post(f"/api/games/{game_id}/actions", json={}).data)
+    latest_after = json.loads(client.get(f"/api/games/{game_id}/states/latest").data)
+
+    assert first_tick["state_index"] == latest_before["state_index"] + 1
+    assert second_tick["state_index"] == first_tick["state_index"] + 1
+    assert len(second_tick["action_records"]) == len(first_tick["action_records"]) + 1
+    assert latest_after["state_index"] == second_tick["state_index"]
+    assert latest_after["action_records"] == second_tick["action_records"]
+
+
 def test_mcts_analysis_endpoint(client):
     """Test the MCTS analysis endpoint."""
     post_response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})

@@ -20,7 +20,7 @@ def get_action_array(
     actions_array = sorted(
         [
             (ActionType.ROLL, None),
-            (ActionType.DISCARD, None),
+            *[(ActionType.DISCARD_RESOURCE, resource) for resource in RESOURCES],
             *[
                 (ActionType.BUILD_ROAD, tuple(sorted(edge)))
                 for edge in get_edges(catan_map.land_nodes)
@@ -69,7 +69,7 @@ def get_action_array(
             ],
             (ActionType.END_TURN, None),
         ],
-        key=lambda x: str(x),
+        key=lambda action: str(action),
     )
     return actions_array
 

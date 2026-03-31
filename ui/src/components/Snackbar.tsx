@@ -7,27 +7,26 @@ import { humanizeActionRecord } from "../utils/promptUtils";
 type SnackbarKey = string | number;
 
 export const snackbarActions =
-  (closeSnackbar: (key?: SnackbarKey) => void) => (key: string) =>
-    (
-      <>
-        <IconButton
-          size="small"
-          aria-label="close"
-          color="inherit"
-          onClick={() => closeSnackbar(key)}
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </>
-    );
+  (closeSnackbar: (key?: SnackbarKey) => void) => (key: string) => (
+    <>
+      <IconButton
+        size="small"
+        aria-label="close"
+        color="inherit"
+        onClick={() => closeSnackbar(key)}
+      >
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </>
+  );
 
 export function dispatchSnackbar(
   enqueueSnackbar: (
     message: string,
-    options: { action: (key: string) => React.ReactNode; onClick: () => void }
+    options: { action: (key: string) => React.ReactNode; onClick: () => void },
   ) => SnackbarKey,
   closeSnackbar: (key?: string | number) => void,
-  gameState: GameState
+  gameState: GameState,
 ) {
   enqueueSnackbar(
     humanizeActionRecord(gameState, gameState.action_records.slice(-1)[0]),
@@ -36,6 +35,6 @@ export function dispatchSnackbar(
       onClick: () => {
         closeSnackbar();
       },
-    }
+    },
   );
 }

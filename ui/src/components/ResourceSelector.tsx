@@ -10,50 +10,61 @@ import {
 import "./ResourceSelector.scss";
 import type { ResourceCard } from "../utils/api.types";
 
+type SelectorOption = ResourceCard | ResourceCard[];
+
 type ResourceSelectorProps = {
   open: boolean;
   onClose: () => void;
-  onSelect: (option: ResourceCard | ResourceCard[]) => void;
-  options: ResourceCard[][]; // this is only used when mode == "yearOfPlenty"
+  onSelect: (option: SelectorOption) => void;
+  options: SelectorOption[];
   mode: "monopoly" | "yearOfPlenty";
 };
 
-const ResourceSelector = ({
+const RESOURCE_ORDER: ResourceCard[] = [
+  "WOOD",
+  "BRICK",
+  "SHEEP",
+  "WHEAT",
+  "ORE",
+];
+
+export default function ResourceSelector({
   open,
   onClose,
   options,
   onSelect,
   mode,
-}: ResourceSelectorProps) => {
-  const sortedOptions = React.useMemo(() => {
-    const resourceOrder: ResourceCard[] = [
-      "WOOD",
-      "BRICK",
-      "SHEEP",
-      "WHEAT",
-      "ORE",
-    ];
+}: ResourceSelectorProps) {
+  const isSingleResourceOption = (
+    option: SelectorOption,
+  ): option is ResourceCard => !Array.isArray(option);
 
+  const sortedOptions = React.useMemo(() => {
     if (mode === "monopoly") {
-      return resourceOrder;
+      return RESOURCE_ORDER;
     }
 
-    const hasDoubleOptions = options.some((option) => option.length === 2);
+    const yearOfPlentyOptions = options.filter(
+      (option): option is ResourceCard[] => Array.isArray(option),
+    );
+    const hasDoubleOptions = yearOfPlentyOptions.some(
+      (option) => option.length === 2,
+    );
     const filteredOptions = hasDoubleOptions
-      ? options.filter((option) => option.length === 2)
-      : options;
+      ? yearOfPlentyOptions.filter((option) => option.length === 2)
+      : yearOfPlentyOptions;
 
     return filteredOptions.sort((a: ResourceCard[], b: ResourceCard[]) => {
       const aFirstResource = a[0];
       const bFirstResource = b[0];
       if (aFirstResource !== bFirstResource) {
         return (
-          resourceOrder.indexOf(aFirstResource) -
-          resourceOrder.indexOf(bFirstResource)
+          RESOURCE_ORDER.indexOf(aFirstResource) -
+          RESOURCE_ORDER.indexOf(bFirstResource)
         );
       }
       if (a.length === 2 && b.length === 2) {
-        return resourceOrder.indexOf(a[1]) - resourceOrder.indexOf(b[1]);
+        return RESOURCE_ORDER.indexOf(a[1]) - RESOURCE_ORDER.indexOf(b[1]);
       }
       return a.length === 1 ? 1 : -1;
     });
@@ -65,28 +76,25 @@ const ResourceSelector = ({
     </span>
   );
 
-  const isMonopolyOption = (
-    option: ResourceCard | ResourceCard[]
-  ): option is ResourceCard => mode === "monopoly" && !!option;
-  const optionToResourceSpan = (option: ResourceCard | ResourceCard[]) => {
-    if (isMonopolyOption(option)) {
+  const optionToResourceSpan = (option: SelectorOption) => {
+    if (isSingleResourceOption(option)) {
       return getResourceSpan(option);
-    } else if (option.length === 1) {
+    }
+    if (option.length === 1) {
       return (
         <>
           {getResourceSpan(option[0])}
           <span className="plus">x1</span>
         </>
       );
-    } else {
-      return (
-        <>
-          {getResourceSpan(option[0])}
-          <span className="plus">+</span>
-          {getResourceSpan(option[1])}
-        </>
-      );
     }
+    return (
+      <>
+        {getResourceSpan(option[0])}
+        <span className="plus">+</span>
+        {getResourceSpan(option[1])}
+      </>
+    );
   };
 
   return (
@@ -125,6 +133,4 @@ const ResourceSelector = ({
       </DialogActions>
     </Dialog>
   );
-};
-
-export default ResourceSelector;
+}

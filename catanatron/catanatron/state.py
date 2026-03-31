@@ -1,7 +1,7 @@
-import random
 import pickle
+import random
 from collections import defaultdict
-from typing import Any, List, Sequence, Tuple, Dict
+from typing import Any, Dict, List, Sequence, Tuple
 
 from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap, NumberPlacement
 from catanatron.models.board import Board
@@ -76,6 +76,8 @@ class State:
         current_prompt (ActionPrompt): DEPRECATED. Not needed; use is_initial_build_phase,
             is_moving_knight, etc... instead.
         is_discarding (bool): If current player needs to discard.
+        discard_counts (List[int]): Color-index aligned number of cards each player
+            must discard in the current discard sequence.
         is_moving_knight (bool): If current player needs to move robber.
         is_road_building (bool): If current player needs to build free roads per Road
             Building dev card.
@@ -131,6 +133,7 @@ class State:
             self.current_prompt = ActionPrompt.BUILD_INITIAL_SETTLEMENT
             self.is_initial_build_phase = True
             self.is_discarding = False
+            self.discard_counts: List[int] = [0] * len(self.colors)
             self.is_moving_knight = False
             self.is_road_building = False
             self.free_roads_available = 0
@@ -182,6 +185,7 @@ class State:
         state_copy.current_prompt = self.current_prompt
         state_copy.is_initial_build_phase = self.is_initial_build_phase
         state_copy.is_discarding = self.is_discarding
+        state_copy.discard_counts = self.discard_counts.copy()
         state_copy.is_moving_knight = self.is_moving_knight
         state_copy.is_road_building = self.is_road_building
         state_copy.free_roads_available = self.free_roads_available

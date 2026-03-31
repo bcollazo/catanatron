@@ -52,6 +52,14 @@ def test_action_from_json_play_year_of_plenty_one_resource():
     assert action.value == (SHEEP,)
 
 
+def test_action_from_json_discard():
+    data = ["BLUE", "DISCARD_RESOURCE", WOOD]
+    action = action_from_json(data)
+    assert action.color == Color.BLUE
+    assert action.action_type == ActionType.DISCARD_RESOURCE
+    assert action.value == WOOD
+
+
 def test_action_from_json_play_year_of_plenty_invalid():
     data = ["WHITE", "PLAY_YEAR_OF_PLENTY", [WOOD, BRICK, SHEEP]]
     with pytest.raises(

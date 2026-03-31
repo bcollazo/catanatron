@@ -62,7 +62,7 @@ export default function LeftDrawer() {
 
       dispatch({ type: ACTIONS.SET_LEFT_DRAWER_OPENED, data: true });
     },
-    [dispatch]
+    [dispatch],
   );
   const closeLeftDrawer = useCallback(
     (event: InteractionEvent) => {
@@ -72,7 +72,7 @@ export default function LeftDrawer() {
 
       dispatch({ type: ACTIONS.SET_LEFT_DRAWER_OPENED, data: false });
     },
-    [dispatch]
+    [dispatch],
   );
 
   return (

@@ -44,7 +44,7 @@ def test_accumulators():
     discard_actions = [
         (i, ar.action)
         for i, ar in enumerate(game.state.action_records)
-        if ar.action.action_type == ActionType.DISCARD
+        if ar.action.action_type == ActionType.DISCARD_RESOURCE
     ]
     for index, action in discard_actions:
         game_snapshot = accumulator.games[index]

@@ -31,7 +31,7 @@ DETERMINISTIC_ACTIONS = set(
         ActionType.PLAY_YEAR_OF_PLENTY,
         ActionType.PLAY_ROAD_BUILDING,
         ActionType.MARITIME_TRADE,
-        ActionType.DISCARD,  # for simplicity... ok if reality is slightly different
+        ActionType.DISCARD_RESOURCE,  # for simplicity... ok if reality is slightly different
         ActionType.PLAY_MONOPOLY,  # for simplicity... we assume good card-counting and bank is visible...
     ]
 )
