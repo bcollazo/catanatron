@@ -1,4 +1,4 @@
-from capstone_agent.MainPlayModel import MainPlayModel
+from MainPlayModel import MainPlayModel
 from RolloutBuffer import RolloutBuffer
 from PPOHyperparams import PPOHyperparams
 from device import get_device
@@ -146,7 +146,7 @@ class MainPlayAgent:
 
 
     def load(self, path):
-        self.model.load_state_dict(torch.load(path, map_location=self.device))
+        self.model.load_state_dict(torch.load(path, weights_only=True, map_location=self.device))
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)
