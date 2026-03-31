@@ -34,11 +34,17 @@ function DrawerContent({ gameState }: { gameState: GameState }) {
     <>
       {playerSections}
       <div className="log">
-        {gameState.action_records?.slice().reverse().map((actionRecord, i) => (
-          <div key={i} className={cn("action foreground", actionRecord[0][0])}>
-            {humanizeActionRecord(gameState, actionRecord)}
-          </div>
-        ))}
+        {gameState.action_records
+          .slice()
+          .reverse()
+          .map((actionRecord, i) => (
+            <div
+              key={i}
+              className={cn("action foreground", actionRecord[0][0])}
+            >
+              {humanizeActionRecord(gameState, actionRecord)}
+            </div>
+          ))}
       </div>
     </>
   );
@@ -56,7 +62,7 @@ export default function LeftDrawer() {
 
       dispatch({ type: ACTIONS.SET_LEFT_DRAWER_OPENED, data: true });
     },
-    [dispatch]
+    [dispatch],
   );
   const closeLeftDrawer = useCallback(
     (event: InteractionEvent) => {
@@ -66,7 +72,7 @@ export default function LeftDrawer() {
 
       dispatch({ type: ACTIONS.SET_LEFT_DRAWER_OPENED, data: false });
     },
-    [dispatch]
+    [dispatch],
   );
 
   return (

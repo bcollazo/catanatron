@@ -13,7 +13,7 @@ import type { GameState } from "./api.types";
 
 export function humanizeActionRecord(
   gameState: GameState,
-  actionRecord: GameActionRecord
+  actionRecord: GameActionRecord,
 ) {
   const botColors = gameState.bot_colors;
   const action = actionRecord[0];
@@ -23,11 +23,8 @@ export function humanizeActionRecord(
       const action = actionRecord[1] as [number, number];
       return `${player} ROLLED A ${action[0] + action[1]}`;
     }
-    case "DISCARD":
     case "DISCARD_RESOURCE":
-      return `${player} DISCARDED ${
-        (actionRecord[1] as ResourceCard[])[0]
-      }`;
+      return `${player} DISCARDED ${actionRecord[1] as ResourceCard}`;
     case "BUY_DEVELOPMENT_CARD":
       return `${player} BOUGHT DEVELOPMENT CARD`;
     case "BUILD_SETTLEMENT":
@@ -47,7 +44,7 @@ export function humanizeActionRecord(
       const b = gameState.adjacent_tiles[edge[1]].map((t) => t.id);
       const intersection = a.filter((t) => b.includes(t));
       const tiles = intersection.map(
-        (tileId) => findTileById(gameState, tileId).tile
+        (tileId) => findTileById(gameState, tileId).tile,
       );
       const edgeString = tiles.map(getShortTileString).join("-");
       return `${player} BUILT ROAD ON ${edgeString}`;
@@ -96,15 +93,6 @@ export function humanizeTradeAction(action: MaritimeTradeAction): string {
   return `${out.length} ${out[0]} => ${action[2][4]}`;
 }
 
-export function latestActionText(gameState: GameState) {
-  const latestActionRecord = gameState.action_records?.slice(-1)[0];
-  if (latestActionRecord) {
-    return humanizeActionRecord(gameState, latestActionRecord);
-  }
-
-  return "";
-}
-
 export function findTileByCoordinate(gameState: GameState, coordinate: any) {
   for (const tile of Object.values(gameState.tiles)) {
     if (JSON.stringify(tile.coordinate) === JSON.stringify(coordinate)) {
@@ -112,7 +100,7 @@ export function findTileByCoordinate(gameState: GameState, coordinate: any) {
     }
   }
   throw new Error(
-    `Tile not found for coordinate: ${JSON.stringify(coordinate)}`
+    `Tile not found for coordinate: ${JSON.stringify(coordinate)}`,
   );
 }
 

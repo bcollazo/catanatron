@@ -60,7 +60,7 @@ function PlayButtons() {
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
       dispatchSnackbar(enqueueSnackbar, closeSnackbar, gameState);
     }),
-    [enqueueSnackbar, closeSnackbar]
+    [enqueueSnackbar, closeSnackbar],
   );
 
   const {
@@ -83,21 +83,19 @@ function PlayButtons() {
   const playableDevCardTypes = new Set(
     gameState.current_playable_actions
       .filter((action) => action[1].startsWith("PLAY"))
-      .map((action) => action[1])
+      .map((action) => action[1]),
   );
   const humanColor = getHumanColor(gameState);
   const discardActionType =
     gameState.current_playable_actions.find(
-      (action) => action[1] === "DISCARD" || action[1] === "DISCARD_RESOURCE"
+      (action) => action[1] === "DISCARD_RESOURCE",
     )?.[1] ?? "DISCARD_RESOURCE";
   const setIsPlayingMonopoly = useCallback(() => {
     dispatch({ type: ACTIONS.SET_IS_PLAYING_MONOPOLY });
   }, [dispatch]);
   const getValidDiscardOptions = useCallback(() => {
     const discardOptions = gameState.current_playable_actions
-      .filter(
-        (action) => action[1] === "DISCARD" || action[1] === "DISCARD_RESOURCE"
-      )
+      .filter((action) => action[1] === "DISCARD_RESOURCE")
       .map((action) => action[2] as ResourceCard);
     if (discardOptions.length > 0) {
       return discardOptions;
@@ -105,7 +103,7 @@ function PlayButtons() {
 
     // Fallback to the current hand if the discard actions are missing from the payload.
     return RESOURCE_ORDER.filter(
-      (resource) => gameState.player_state[`${key}_${resource}_IN_HAND`] > 0
+      (resource) => gameState.player_state[`${key}_${resource}_IN_HAND`] > 0,
     );
   }, [gameState.current_playable_actions, gameState.player_state, key]);
   const getValidYearOfPlentyOptions = useCallback(() => {
@@ -153,7 +151,7 @@ function PlayButtons() {
       isPlayingYearOfPlenty,
       isDiscard,
       discardActionType,
-    ]
+    ],
   );
   const handleOpenResourceSelector = useCallback(() => {
     setResourceSelectorOpen(true);
@@ -203,9 +201,9 @@ function PlayButtons() {
       : gameState.current_playable_actions
           .filter(
             (action) =>
-              action[1].startsWith("BUY") || action[1].startsWith("BUILD")
+              action[1].startsWith("BUY") || action[1].startsWith("BUILD"),
           )
-          .map((a) => a[1])
+          .map((a) => a[1]),
   );
   const buyDevCard = useCallback(async () => {
     const action: GameAction = [humanColor, "BUY_DEVELOPMENT_CARD", null];
@@ -246,7 +244,7 @@ function PlayButtons() {
   ];
 
   const tradeActions = gameState.current_playable_actions.filter(
-    (action) => action[1] === "MARITIME_TRADE"
+    (action) => action[1] === "MARITIME_TRADE",
   );
   const tradeItems = React.useMemo(() => {
     const items = tradeActions.map((action) => {
@@ -301,23 +299,23 @@ function PlayButtons() {
           isDiscard
             ? handleOpenResourceSelector
             : isMoveRobber
-            ? setIsMovingRobber
-            : isPlayingYearOfPlenty || isPlayingMonopoly
-            ? handleOpenResourceSelector
-            : isRoll
-            ? rollAction
-            : endTurnAction
+              ? setIsMovingRobber
+              : isPlayingYearOfPlenty || isPlayingMonopoly
+                ? handleOpenResourceSelector
+                : isRoll
+                  ? rollAction
+                  : endTurnAction
         }
       >
         {isDiscard
           ? "DISCARD"
           : isMoveRobber
-          ? "ROB"
-          : isPlayingYearOfPlenty || isPlayingMonopoly
-          ? "SELECT"
-          : isRoll
-          ? "ROLL"
-          : "END"}
+            ? "ROB"
+            : isPlayingYearOfPlenty || isPlayingMonopoly
+              ? "SELECT"
+              : isRoll
+                ? "ROLL"
+                : "END"}
       </Button>
       <ResourceSelector
         open={resourceSelectorOpen}
@@ -334,8 +332,8 @@ function PlayButtons() {
           isDiscard
             ? "discard"
             : isPlayingMonopoly
-            ? "monopoly"
-            : "yearOfPlenty"
+              ? "monopoly"
+              : "yearOfPlenty"
         }
       />
     </>
@@ -518,7 +516,7 @@ function OptionsButton({
                       key={item.label}
                       onClick={
                         handleClose(
-                          item.onClick
+                          item.onClick,
                         ) as unknown as React.MouseEventHandler
                       }
                       disabled={item.disabled}
