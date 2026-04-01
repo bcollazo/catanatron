@@ -23,6 +23,7 @@ import os
 import argparse
 import csv
 import json
+from collections import deque
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -601,6 +602,7 @@ def main():
 
     wins, losses, truncations = 0, 0, 0
     games_since_update = 0
+    recent_wins = deque(maxlen=300)
 
     for g in range(1, args.games + 1):
         if args.train:
@@ -614,11 +616,15 @@ def main():
         wins += result.won
         losses += result.terminated and not result.won
         truncations += result.truncated
+        recent_wins.append(int(result.won))
+        rolling_n = len(recent_wins)
+        rolling_300_win_rate = sum(recent_wins) / rolling_n if rolling_n > 0 else 0.0
 
         status = "WON" if result.won else ("TRUNCATED" if result.truncated else "LOST")
         print(
             f"Game {g:4d}/{args.games}:  {status:>9s}  "
-            f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}"
+            f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}  "
+            f"rolling_300_win_rate={rolling_300_win_rate:.1%} (n={rolling_n})"
         )
         saved_game_path = maybe_save_game_json(
             env,

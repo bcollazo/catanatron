@@ -13,6 +13,17 @@ Join our Discord: https://discord.gg/FgFmb75TWd!
 
 ## Capstone RL Quick Start (Top-Level)
 
+### Current Agent Architecture (Post-Refactor)
+
+- `capstone_agent/CapstoneAgent.py` is now the combined router agent.
+- Split policy modules are:
+  - `capstone_agent/PlacementAgent.py` (initial settlement/road phase)
+  - `capstone_agent/MainPlayAgent.py` (main gameplay phase)
+- Feature space is now `1259` (adds an `is_settlement_phase` binary feature).
+- A Catanatron-compatible player exists at
+  `catanatron/catanatron/players/rl_capstone_agent.py` for loading trained
+  placement/main-play weights into a playable bot class.
+
 Base training run (recommended default: step-buffered PPO updates):
 
 ```bash
@@ -36,7 +47,7 @@ All flags for `python capstone_agent/run_simulation.py`:
 | `--train-every-games` | `20` | If trigger is `games`, run PPO every N completed games. |
 | `--verbose` | off | Print selected per-step action logs during simulation. |
 | `--load` | `None` | Path to load main-agent model weights before running. |
-| `--save` | `capstone_agent/models/capstone_model.pt` | Path to save main-agent weights at the end (also used for auto-resume in train mode when present). |
+| `--save` | `capstone_agent/models/capstone_model.pt` | Path to save main-play model weights at the end (also used for auto-resume in train mode when present). |
 | `--placement-strategy` | `model` | Placement policy: `model` or `random`. |
 | `--placement-model` | `None` | Path to load placement-agent weights (ignored for `--placement-strategy random`). |
 | `--save-placement-model` | `capstone_agent/models/placement_model.pt` | Path to save placement-agent weights at the end (model strategy only). |
@@ -154,6 +165,31 @@ python capstone_agent/run_simulation.py \
   --save capstone_agent/capstone_model.pt \
   --run-name iter_full \
   --save-games-json-dir capstone_agent/replays/iter_full
+```
+
+### Capstone Smoke Tests (Paths + Commands)
+
+Use these from repo root to verify the current refactor wiring:
+
+```bash
+# 1) Syntax sanity for key files
+python -m py_compile \
+  capstone_agent/run_simulation.py \
+  capstone_agent/CapstoneAgent.py \
+  capstone_agent/MainPlayAgent.py \
+  capstone_agent/PlacementAgent.py \
+  catanatron/catanatron/players/rl_capstone_agent.py
+
+# 2) Short run vs random (fixed map default)
+python capstone_agent/run_simulation.py --games 10 --enemy random
+
+# 3) Short run vs AlphaBeta with learned placement
+python capstone_agent/run_simulation.py \
+  --games 10 \
+  --enemy alphabeta \
+  --enemy-ab-depth 2 \
+  --placement-strategy model \
+  --placement-model capstone_agent/models/placement_model.pt
 ```
 
 Run this command repeatedly (or in a loop) to keep training on top of the
