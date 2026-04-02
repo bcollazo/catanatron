@@ -30,7 +30,7 @@ from typing import List, Optional
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from capstone_agent.MainPlayAgent import MainPlayAgent
+from MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
 from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping, describe_action
@@ -46,6 +46,7 @@ from catanatron.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
 from catanatron.players.search import VictoryPointPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
+from catanatron.players.rl_capstone_agent import RLCapstonePlayer
 
 from CONSTANTS import (FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, 
                        MAX_STEPS_PER_GAME,
@@ -177,6 +178,8 @@ def make_enemy_player(
     color: Color = Color.RED,
     alphabeta_depth: int = 2,
     alphabeta_prunning: bool = False,
+    settlement_model_file = None,
+    main_play_model_file = None
 ):
     """Construct the training/eval opponent used by CapstoneCatanatronEnv."""
     if enemy_type == "random":
@@ -195,6 +198,8 @@ def make_enemy_player(
         return VictoryPointPlayer(color)
     if enemy_type == "weighted":
         return WeightedRandomPlayer(color)
+    if enemy_type == "self":
+        return RLCapstonePlayer(color, settlement_play_load_file=settlement_model_file, main_play_load_file=main_play_model_file)
     raise ValueError(f"Unknown enemy type: {enemy_type}")
 
 
