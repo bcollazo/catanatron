@@ -63,6 +63,13 @@ All flags for `python capstone_agent/run_simulation.py`:
 | `--no-benchmark` | off | Disable benchmark CSV logging. |
 | `--save-games-json-dir` | `None` | Directory to export replay JSONs for GUI replay/import. |
 | `--save-games-json-every` | `100` | Save replay JSON for first game in each N-game block. |
+| `--self-play-ladder` | off | Enable champion/challenger self-play training with promotion checks. |
+| `--self-play-winner-only` | on | In self-play mode, only keep winner (challenger-win) rollouts for updates. |
+| `--champion-main-model` | `capstone_agent/models/champion_capstone_model.pt` | Stable champion main-play weights used as self-play opponent. |
+| `--champion-placement-model` | `capstone_agent/models/champion_placement_model.pt` | Stable champion placement weights used as self-play opponent. |
+| `--self-play-eval-every-games` | `1000` | Run challenger-vs-champion evaluation every N training games. |
+| `--self-play-eval-games` | `400` | Number of head-to-head games per promotion check (seat-balanced). |
+| `--self-play-promotion-threshold` | `0.55` | Promote challenger to champion when eval win-rate reaches this threshold. |
 
 Common variants:
 
@@ -118,6 +125,22 @@ python -m capstone_agent.run_simulation \
 
 python capstone_agent/import_replays_to_gui.py \
   --input-dir capstone_agent/replays/quick5
+
+# 1b) Self-play ladder (challenger vs champion with auto-promotion)
+python -m capstone_agent.run_simulation \
+  --games 20000 \
+  --train \
+  --self-play-ladder \
+  --self-play-winner-only \
+  --self-play-eval-every-games 1000 \
+  --self-play-eval-games 400 \
+  --self-play-promotion-threshold 0.55 \
+  --save capstone_agent/models/capstone_model.pt \
+  --save-placement-model capstone_agent/models/placement_model.pt \
+  --champion-main-model capstone_agent/models/champion_capstone_model.pt \
+  --champion-placement-model capstone_agent/models/champion_placement_model.pt \
+  --run-name ladder_run \
+  --benchmark-csv capstone_agent/benchmarks/training_metrics.csv
 
 # 2) Long DCC run: 1,000,000 games as 100 x 10,000 chunks in tmux
 tmux new -s dcc_train

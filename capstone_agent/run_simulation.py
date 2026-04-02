@@ -23,6 +23,7 @@ import os
 import argparse
 import csv
 import json
+import shutil
 from collections import deque
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
@@ -178,8 +179,8 @@ def make_enemy_player(
     color: Color = Color.RED,
     alphabeta_depth: int = 2,
     alphabeta_prunning: bool = False,
-    settlement_model_file = None,
-    main_play_model_file = None
+    main_model_path: Optional[str] = None,
+    placement_model_path: Optional[str] = None,
 ):
     """Construct the training/eval opponent used by CapstoneCatanatronEnv."""
     if enemy_type == "random":
@@ -198,8 +199,14 @@ def make_enemy_player(
         return VictoryPointPlayer(color)
     if enemy_type == "weighted":
         return WeightedRandomPlayer(color)
-    if enemy_type == "self":
-        return RLCapstonePlayer(color, settlement_play_load_file=settlement_model_file, main_play_load_file=main_play_model_file)
+    if enemy_type == "rl-capstone":
+        if main_model_path is None:
+            raise ValueError("main_model_path is required for enemy_type='rl-capstone'")
+        return RLCapstonePlayer(
+            color,
+            settlement_play_load_file=placement_model_path,
+            main_play_load_file=main_model_path,
+        )
     raise ValueError(f"Unknown enemy type: {enemy_type}")
 
 
@@ -208,6 +215,81 @@ def resolve_map_template(map_template: str, map_mode: str) -> str:
     if map_template != "AUTO":
         return map_template
     return "TOURNAMENT" if map_mode == "fixed" else "BASE"
+
+
+def make_env(
+    enemy_type: str,
+    enemy_ab_depth: int,
+    enemy_ab_prunning: bool,
+    map_template: str,
+    map_mode: str,
+    fixed_map_seed: int,
+    enemy_main_model_path: Optional[str] = None,
+    enemy_placement_model_path: Optional[str] = None,
+):
+    enemy = make_enemy_player(
+        enemy_type,
+        color=Color.RED,
+        alphabeta_depth=enemy_ab_depth,
+        alphabeta_prunning=enemy_ab_prunning,
+        main_model_path=enemy_main_model_path,
+        placement_model_path=enemy_placement_model_path,
+    )
+    randomize_map = map_mode == "random" and map_template != "TOURNAMENT"
+    return gymnasium.make(
+        "catanatron/CapstoneCatanatron-v0",
+        config={
+            "enemies": [enemy],
+            "map_type": map_template,
+            "randomize_map": randomize_map,
+            "fixed_map_seed": fixed_map_seed,
+        },
+    )
+
+
+def clear_agent_buffers(agent):
+    if hasattr(agent, "main_agent") and hasattr(agent.main_agent, "buffer"):
+        agent.main_agent.buffer.clear()
+    if hasattr(agent, "placement_agent") and hasattr(agent.placement_agent, "buffer"):
+        agent.placement_agent.buffer.clear()
+
+
+def _get_buffer_lengths(buffer):
+    return {
+        "states": len(buffer.states),
+        "masks": len(buffer.masks),
+        "actions": len(buffer.actions),
+        "log_probs": len(buffer.log_probs),
+        "rewards": len(buffer.rewards),
+        "values": len(buffer.values),
+        "dones": len(buffer.dones),
+    }
+
+
+def snapshot_agent_buffer_lengths(agent):
+    snaps = {}
+    if hasattr(agent, "main_agent") and hasattr(agent.main_agent, "buffer"):
+        snaps["main"] = _get_buffer_lengths(agent.main_agent.buffer)
+    if hasattr(agent, "placement_agent") and hasattr(agent.placement_agent, "buffer"):
+        snaps["placement"] = _get_buffer_lengths(agent.placement_agent.buffer)
+    return snaps
+
+
+def _truncate_buffer_to(buffer, snap):
+    buffer.states = buffer.states[: snap["states"]]
+    buffer.masks = buffer.masks[: snap["masks"]]
+    buffer.actions = buffer.actions[: snap["actions"]]
+    buffer.log_probs = buffer.log_probs[: snap["log_probs"]]
+    buffer.rewards = buffer.rewards[: snap["rewards"]]
+    buffer.values = buffer.values[: snap["values"]]
+    buffer.dones = buffer.dones[: snap["dones"]]
+
+
+def truncate_agent_buffers_to_snapshot(agent, snapshots):
+    if "main" in snapshots and hasattr(agent, "main_agent"):
+        _truncate_buffer_to(agent.main_agent.buffer, snapshots["main"])
+    if "placement" in snapshots and hasattr(agent, "placement_agent"):
+        _truncate_buffer_to(agent.placement_agent.buffer, snapshots["placement"])
 
 
 def simulate_game(
@@ -297,6 +379,8 @@ def make_agent_and_env(
     map_template: str = "BASE",
     map_mode: str = "fixed",
     fixed_map_seed: int = 0,
+    enemy_main_model_path: Optional[str] = None,
+    enemy_placement_model_path: Optional[str] = None,
 ):
     """Create a routed agent + env pair.
 
@@ -307,6 +391,8 @@ def make_agent_and_env(
         map_template: Board template ("BASE", "MINI", or "TOURNAMENT").
         map_mode: "fixed" for deterministic map layout, "random" for reshuffled map.
         fixed_map_seed: Seed used when map_mode is "fixed".
+        enemy_main_model_path: Main-play weights for rl-capstone enemy.
+        enemy_placement_model_path: Placement weights for rl-capstone enemy.
 
     Returns a CapstoneAgent that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
@@ -326,25 +412,77 @@ def make_agent_and_env(
     if placement_model_path is not None:
         placement_agent.load(placement_model_path)
 
-    enemy = make_enemy_player(
-        enemy_type,
-        color=Color.RED,
-        alphabeta_depth=enemy_ab_depth,
-        alphabeta_prunning=enemy_ab_prunning,
-    )
-    randomize_map = map_mode == "random" and map_template != "TOURNAMENT"
-    env = gymnasium.make(
-        "catanatron/CapstoneCatanatron-v0",
-        config={
-            "enemies": [enemy],
-            "map_type": map_template,
-            "randomize_map": randomize_map,
-            "fixed_map_seed": fixed_map_seed,
-        },
+    env = make_env(
+        enemy_type=enemy_type,
+        enemy_ab_depth=enemy_ab_depth,
+        enemy_ab_prunning=enemy_ab_prunning,
+        map_template=map_template,
+        map_mode=map_mode,
+        fixed_map_seed=fixed_map_seed,
+        enemy_main_model_path=enemy_main_model_path,
+        enemy_placement_model_path=enemy_placement_model_path,
     )
     router = CapstoneAgent(placement_agent, main_agent)
 
     return router, env
+
+
+def evaluate_challenger_vs_champion(
+    num_games: int,
+    challenger_main_model_path: str,
+    challenger_placement_model_path: Optional[str],
+    champion_main_model_path: str,
+    champion_placement_model_path: Optional[str],
+    map_template: str,
+    map_mode: str,
+    fixed_map_seed: int,
+):
+    """Seat-balanced evaluation: half games challenger as Blue, half as Red."""
+    if num_games <= 0:
+        return {"wins": 0, "games": 0, "win_rate": 0.0}
+
+    challenger_blue_games = (num_games + 1) // 2
+    champion_blue_games = num_games // 2
+    challenger_wins = 0
+
+    # Challenger plays as Blue.
+    challenger_agent, challenger_env = make_agent_and_env(
+        model_path=challenger_main_model_path,
+        placement_model_path=challenger_placement_model_path,
+        placement_strategy="model",
+        enemy_type="rl-capstone",
+        map_template=map_template,
+        map_mode=map_mode,
+        fixed_map_seed=fixed_map_seed,
+        enemy_main_model_path=champion_main_model_path,
+        enemy_placement_model_path=champion_placement_model_path,
+    )
+    for _ in range(challenger_blue_games):
+        result = simulate_game(challenger_agent, challenger_env, store_in_buffer=False)
+        challenger_wins += int(result.won)
+
+    # Champion plays as Blue. Challenger wins when Blue loses.
+    champion_agent, champion_env = make_agent_and_env(
+        model_path=champion_main_model_path,
+        placement_model_path=champion_placement_model_path,
+        placement_strategy="model",
+        enemy_type="rl-capstone",
+        map_template=map_template,
+        map_mode=map_mode,
+        fixed_map_seed=fixed_map_seed,
+        enemy_main_model_path=challenger_main_model_path,
+        enemy_placement_model_path=challenger_placement_model_path,
+    )
+    for _ in range(champion_blue_games):
+        result = simulate_game(champion_agent, champion_env, store_in_buffer=False)
+        if result.terminated and not result.won:
+            challenger_wins += 1
+
+    return {
+        "wins": challenger_wins,
+        "games": num_games,
+        "win_rate": challenger_wins / num_games,
+    }
 
 
 def main():
@@ -423,6 +561,7 @@ def main():
             "value",
             "vp",
             "weighted",
+            "rl-capstone",
         ],
         help=(
             "Opponent bot in env (controls non-blue turns). "
@@ -505,6 +644,50 @@ def main():
             "saving the first game of each N-game block."
         ),
     )
+    parser.add_argument(
+        "--self-play-ladder",
+        action="store_true",
+        help=(
+            "Enable champion/challenger self-play loop. Challenger trains "
+            "against champion and promotes when eval win-rate is high enough."
+        ),
+    )
+    parser.add_argument(
+        "--self-play-winner-only",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="In self-play-ladder mode, keep rollout only from challenger wins.",
+    )
+    parser.add_argument(
+        "--champion-main-model",
+        type=str,
+        default="capstone_agent/models/champion_capstone_model.pt",
+        help="Champion main-play model path for self-play-ladder mode.",
+    )
+    parser.add_argument(
+        "--champion-placement-model",
+        type=str,
+        default="capstone_agent/models/champion_placement_model.pt",
+        help="Champion placement model path for self-play-ladder mode.",
+    )
+    parser.add_argument(
+        "--self-play-eval-every-games",
+        type=int,
+        default=1000,
+        help="Run promotion evaluation every N training games in self-play-ladder mode.",
+    )
+    parser.add_argument(
+        "--self-play-eval-games",
+        type=int,
+        default=400,
+        help="Number of head-to-head games per promotion evaluation.",
+    )
+    parser.add_argument(
+        "--self-play-promotion-threshold",
+        type=float,
+        default=0.55,
+        help="Promote challenger when eval win-rate is >= this value.",
+    )
     args = parser.parse_args()
     if args.train_every_steps < 1:
         parser.error("--train-every-steps must be >= 1")
@@ -514,6 +697,12 @@ def main():
         parser.error("--enemy-ab-depth must be >= 1")
     if args.fixed_map_seed < 0:
         parser.error("--fixed-map-seed must be >= 0")
+    if args.self_play_eval_every_games < 1:
+        parser.error("--self-play-eval-every-games must be >= 1")
+    if args.self_play_eval_games < 20:
+        parser.error("--self-play-eval-games must be >= 20")
+    if not (0.0 <= args.self_play_promotion_threshold <= 1.0):
+        parser.error("--self-play-promotion-threshold must be between 0 and 1")
     resolved_map_template = resolve_map_template(args.map_template, args.map_mode)
 
     loaded_model_path = args.load
@@ -542,6 +731,35 @@ def main():
         map_mode=args.map_mode,
         fixed_map_seed=args.fixed_map_seed,
     )
+    champion_main_model_path = args.champion_main_model
+    champion_placement_model_path = args.champion_placement_model
+    if args.self_play_ladder:
+        if not args.train:
+            parser.error("--self-play-ladder currently requires --train")
+        if args.placement_strategy != "model":
+            parser.error("--self-play-ladder requires --placement-strategy model")
+        if not os.path.exists(champion_main_model_path):
+            print(
+                "Champion main model missing; bootstrapping from challenger current weights."
+            )
+            os.makedirs(os.path.dirname(champion_main_model_path), exist_ok=True)
+            agent.main_agent.save(champion_main_model_path)
+        if not os.path.exists(champion_placement_model_path):
+            print(
+                "Champion placement model missing; bootstrapping from challenger current weights."
+            )
+            os.makedirs(os.path.dirname(champion_placement_model_path), exist_ok=True)
+            agent.placement_agent.save(champion_placement_model_path)
+        env = make_env(
+            enemy_type="rl-capstone",
+            enemy_ab_depth=args.enemy_ab_depth,
+            enemy_ab_prunning=args.enemy_ab_prunning,
+            map_template=resolved_map_template,
+            map_mode=args.map_mode,
+            fixed_map_seed=args.fixed_map_seed,
+            enemy_main_model_path=champion_main_model_path,
+            enemy_placement_model_path=champion_placement_model_path,
+        )
     main_params = sum(p.numel() for p in agent.main_agent.model.parameters())
     pa = agent.placement_agent
     if hasattr(pa, "model"):
@@ -592,6 +810,7 @@ def main():
         f"  Placement agent: strategy={args.placement_strategy}, {place_desc}\n"
         f"  Placement weights: {loaded_placement_path or '[none loaded]'}\n"
         f"  Opponent: {enemy_detail}\n"
+        f"  Self-play ladder: {'enabled' if args.self_play_ladder else 'disabled'}\n"
         f"  Map: {map_detail}\n"
         f"  Training: {training_detail}\n"
         f"  Replay JSON save: {replay_detail}\n"
@@ -608,13 +827,24 @@ def main():
     wins, losses, truncations = 0, 0, 0
     games_since_update = 0
     recent_wins = deque(maxlen=300)
+    promotions = 0
 
     for g in range(1, args.games + 1):
+        keep_game_for_training = True
         if args.train:
+            buffer_snapshot = (
+                snapshot_agent_buffer_lengths(agent)
+                if args.self_play_ladder and args.self_play_winner_only
+                else None
+            )
             result = simulate_game(
                 agent, env, verbose=args.verbose, store_in_buffer=True
             )
-            games_since_update += 1
+            if args.self_play_ladder and args.self_play_winner_only and not result.won:
+                keep_game_for_training = False
+                truncate_agent_buffers_to_snapshot(agent, buffer_snapshot or {})
+            if keep_game_for_training:
+                games_since_update += 1
         else:
             result = simulate_game(agent, env, verbose=args.verbose)
 
@@ -690,6 +920,63 @@ def main():
                 )
                 games_since_update = 0
 
+        if (
+            args.self_play_ladder
+            and args.train
+            and g % args.self_play_eval_every_games == 0
+        ):
+            # Save challenger snapshot for evaluation and potential promotion.
+            if args.save:
+                os.makedirs(os.path.dirname(args.save), exist_ok=True)
+                challenger_main_eval_path = args.save
+            else:
+                challenger_main_eval_path = DEFAULT_MAIN_PLAY_MODEL_PATH
+            if args.save_placement_model:
+                os.makedirs(os.path.dirname(args.save_placement_model), exist_ok=True)
+                challenger_placement_eval_path = args.save_placement_model
+            else:
+                challenger_placement_eval_path = DEFAULT_PLACEMENT_MODEL_PATH
+            agent.save(challenger_main_eval_path, challenger_placement_eval_path)
+
+            eval_result = evaluate_challenger_vs_champion(
+                num_games=args.self_play_eval_games,
+                challenger_main_model_path=challenger_main_eval_path,
+                challenger_placement_model_path=challenger_placement_eval_path,
+                champion_main_model_path=champion_main_model_path,
+                champion_placement_model_path=champion_placement_model_path,
+                map_template=resolved_map_template,
+                map_mode=args.map_mode,
+                fixed_map_seed=args.fixed_map_seed,
+            )
+            eval_wr = eval_result["win_rate"]
+            print(
+                "  self-play eval: "
+                f"challenger_wins={eval_result['wins']}/{eval_result['games']} "
+                f"win_rate={eval_wr:.1%} "
+                f"(promotion threshold={args.self_play_promotion_threshold:.1%})"
+            )
+            if eval_wr >= args.self_play_promotion_threshold:
+                shutil.copy2(challenger_main_eval_path, champion_main_model_path)
+                if challenger_placement_eval_path:
+                    shutil.copy2(
+                        challenger_placement_eval_path, champion_placement_model_path
+                    )
+                promotions += 1
+                print(
+                    f"  PROMOTION #{promotions}: challenger -> champion "
+                    f"(new champion win_rate threshold met)"
+                )
+                env = make_env(
+                    enemy_type="rl-capstone",
+                    enemy_ab_depth=args.enemy_ab_depth,
+                    enemy_ab_prunning=args.enemy_ab_prunning,
+                    map_template=resolved_map_template,
+                    map_mode=args.map_mode,
+                    fixed_map_seed=args.fixed_map_seed,
+                    enemy_main_model_path=champion_main_model_path,
+                    enemy_placement_model_path=champion_placement_model_path,
+                )
+
     if args.train:
         buffered = _buffer_transition_count(agent)
         if buffered > 0:
@@ -702,6 +989,11 @@ def main():
 
     print()
     print(f"Results: {wins}W / {losses}L / {truncations}T  ({args.games} games)")
+    if args.self_play_ladder:
+        print(
+            f"Self-play ladder promotions: {promotions} "
+            f"(champion main={champion_main_model_path})"
+        )
     if benchmark is not None:
         print(f"Benchmarks logged to: {args.benchmark_csv} (run_name={run_name})")
 
