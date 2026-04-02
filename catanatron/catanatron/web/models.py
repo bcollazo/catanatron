@@ -15,8 +15,6 @@ from sqlalchemy import (
     create_engine,
     and_,
     func,
-    inspect,
-    text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
@@ -36,16 +34,10 @@ class GameState(Base):
     state_index = Column(Integer, nullable=False)
     state = Column(String, nullable=False)
     pickle_data = Column(LargeBinary, nullable=False)
-    replay_source_folder = Column(String(1024), nullable=True)
-    imported_at_utc = Column(String(64), nullable=True)
 
     # TODO: unique uuid and state_index
     @staticmethod
-    def from_game(
-        game: Game,
-        replay_source_folder: str | None = None,
-        imported_at_utc: str | None = None,
-    ):
+    def from_game(game: Game):
         state = json.dumps(game, cls=GameEncoder)
         pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
         return GameState(
@@ -53,8 +45,6 @@ class GameState(Base):
             state_index=get_state_index(game.state),
             state=state,
             pickle_data=pickle_data,
-            replay_source_folder=replay_source_folder,
-            imported_at_utc=imported_at_utc,
         )
 
 
@@ -80,41 +70,12 @@ def database_session():
         session.close()
 
 
-def upsert_game_state(
-    game: Game,
-    session_param=None,
-    replay_source_folder: str | None = None,
-    imported_at_utc: str | None = None,
-):
-    game_state = GameState.from_game(
-        game,
-        replay_source_folder=replay_source_folder,
-        imported_at_utc=imported_at_utc,
-    )
+def upsert_game_state(game: Game, session_param=None):
+    game_state = GameState.from_game(game)
     session = session_param or db.session
     session.add(game_state)
     session.commit()
     return game_state
-
-
-def ensure_game_state_metadata_columns():
-    """Add replay metadata columns for existing DBs if missing."""
-    inspector = inspect(db.engine)
-    existing = {col["name"] for col in inspector.get_columns("game_states")}
-    statements: list[str] = []
-    if "replay_source_folder" not in existing:
-        statements.append(
-            "ALTER TABLE game_states ADD COLUMN replay_source_folder VARCHAR(1024)"
-        )
-    if "imported_at_utc" not in existing:
-        statements.append("ALTER TABLE game_states ADD COLUMN imported_at_utc VARCHAR(64)")
-
-    if not statements:
-        return
-
-    with db.engine.begin() as conn:
-        for stmt in statements:
-            conn.execute(text(stmt))
 
 
 def get_game_state(game_id, state_index=None) -> Game | None:
@@ -349,8 +310,6 @@ def list_replay_catalog(limit: int = 200):
                 "us_action_dev": us_dev_actions,
                 "us_action_robber": us_robber_actions,
                 "us_action_total": us_total_actions,
-                "replay_source_folder": row.replay_source_folder,
-                "imported_at_utc": row.imported_at_utc,
             }
         )
 
