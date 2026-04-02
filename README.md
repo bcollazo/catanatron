@@ -41,6 +41,9 @@ All flags for `python capstone_agent/run_simulation.py`:
 | Parameter | Default | What it does |
 | --- | --- | --- |
 | `--games` | `1` | Number of full games to simulate. |
+| `--preset` | `none` | High-level preset: `warmup`, `blend`, `ab-ramp`, `self-play` (or `none`). |
+| `--difficulty` | `medium` | Preset scale: `easy`, `medium`, `hard`. |
+| `--print-effective-config` | on | Print resolved config after preset + manual overrides are applied. |
 | `--train` | off | Enable PPO training during the run. |
 | `--train-update-trigger` | `steps` | Update schedule mode: `steps` or `games`. |
 | `--train-every-steps` | `2048` | If trigger is `steps`, run PPO every N buffered transitions. |
@@ -54,11 +57,20 @@ All flags for `python capstone_agent/run_simulation.py`:
 | `--save-placement-model` | `capstone_agent/models/placement_model.pt` | Path to save placement-agent weights at the end (model strategy only). |
 | `--placement-ab-depth` | `2` | AlphaBeta depth when `--placement-strategy alphabeta`. |
 | `--placement-ab-prunning` | on | Enable/disable pruning for `--placement-strategy alphabeta`. |
-| `--enemy` | `random` | Opponent bot in environment (`random`, `alphabeta`, `alphabeta-prune`, `same-turn-ab`, `value`, `vp`, `weighted`). |
+| `--enemy` | `random` | Opponent bot in environment (`random`, `alphabeta`, `alphabeta-prune`, `same-turn-ab`, `value`, `vp`, `weighted`, `mcts`, `greedy`). |
 | `--enemy-ab-depth` | `2` | AlphaBeta depth when using an AlphaBeta-type enemy. |
 | `--enemy-ab-prunning` | off | Enable pruning for `--enemy alphabeta`. |
+| `--enemy-mcts-n` | `100` | Simulation count for `--enemy mcts` and default `mcts` parameter in schedule/mix specs. |
+| `--enemy-greedy-n` | `25` | Playout count for `--enemy greedy` and default `greedy` parameter in schedule/mix specs. |
 | `--enemy-fixed-schedule` | off | Enable fixed phase-based opponent curriculum controlled by `--enemy-schedule`. |
-| `--enemy-schedule` | `weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:50000` | Fixed curriculum string: `<enemy>:<games>,<enemy>@<ab_depth>:<games>,...` |
+| `--enemy-schedule` | `weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:50000` | Fixed curriculum string: `<enemy>:<games>,<enemy>@<param>:<games>,...` |
+| `--enemy-smooth-mix` | off | Enable true probabilistic enemy mixing with linear interpolation from start to end mix. |
+| `--enemy-mix-start` | `weighted:1.0` | Starting probability mix: `<enemy>:<prob>,<enemy>@<param>:<prob>,...` |
+| `--enemy-mix-end` | `value:1.0` | Ending probability mix with same format as `--enemy-mix-start`. |
+| `--enemy-mix-games` | `50000` | Number of games used to interpolate start -> end mix. |
+| `--enemy-mix-seed` | `0` | RNG seed for per-game enemy sampling in smooth-mix mode. |
+| `--enemy-switch-log-every` | `0` | Enemy-switch debug log frequency (games); `0` disables switch logs. |
+| `--per-enemy-min-samples` | `20` | Minimum samples before a per-enemy rolling win-rate is shown in logs. |
 | `--map-template` | `AUTO` | Board template (`AUTO`, `BASE`, `MINI`, `TOURNAMENT`). `AUTO` selects `TOURNAMENT` for fixed mode and `BASE` for random mode. |
 | `--map-mode` | `fixed` | Map layout mode: `fixed` (deterministic) or `random` (reshuffled each game). |
 | `--fixed-map-seed` | `0` | Seed used when `--map-mode fixed` to generate the deterministic map. |
@@ -111,6 +123,24 @@ python -m capstone_agent.run_simulation \
   --save-games-json-dir capstone_agent/replays/ab_placement_eval \
   --save-games-json-every 1
 
+# Preset: warmup
+python -m capstone_agent.run_simulation \
+  --preset warmup \
+  --difficulty medium \
+  --save capstone_agent/models/capstone_model.pt
+
+# Preset: smooth blend (weighted -> value)
+python -m capstone_agent.run_simulation \
+  --preset blend \
+  --difficulty medium \
+  --save capstone_agent/models/capstone_model.pt
+
+# Preset: AlphaBeta ramp
+python -m capstone_agent.run_simulation \
+  --preset ab-ramp \
+  --difficulty medium \
+  --save capstone_agent/models/capstone_model.pt
+
 # Use AlphaBeta placement for our own setup phase
 python -m capstone_agent.run_simulation \
   --games 10000 \
@@ -131,12 +161,112 @@ python -m capstone_agent.run_simulation \
   --save capstone_agent/models/capstone_model.pt \
   --save-placement-model capstone_agent/models/placement_model.pt
 
+# Smooth probabilistic blend (70/30 -> 30/70 over 100k games)
+python -m capstone_agent.run_simulation \
+  --games 200000 \
+  --train \
+  --enemy-smooth-mix \
+  --enemy-mix-start "weighted:0.7,value:0.3" \
+  --enemy-mix-end "weighted:0.3,value:0.7" \
+  --enemy-mix-games 100000 \
+  --enemy-mix-seed 7 \
+  --save-every-games 1000 \
+  --save capstone_agent/models/capstone_model.pt \
+  --save-placement-model capstone_agent/models/placement_model.pt
+
+# Constant 80/20 mix: MCTS(100) prioritized over Greedy(25) for 200k games
+python -m capstone_agent.run_simulation \
+  --games 200000 \
+  --train \
+  --enemy-smooth-mix \
+  --enemy-mix-start "mcts@100:0.8,greedy@25:0.2" \
+  --enemy-mix-end "mcts@100:0.8,greedy@25:0.2" \
+  --enemy-mix-games 200000 \
+  --save-every-games 1000 \
+  --save capstone_agent/models/capstone_model.pt \
+  --save-placement-model capstone_agent/models/placement_model.pt \
+  --map-mode fixed
+
+# Ramp from 100/0 -> 80/20 (MCTS/Greedy) over 200k games
+python -m capstone_agent.run_simulation \
+  --games 200000 \
+  --train \
+  --enemy-smooth-mix \
+  --enemy-mix-start "mcts@100:1.0,greedy@25:0.0" \
+  --enemy-mix-end "mcts@100:0.8,greedy@25:0.2" \
+  --enemy-mix-games 200000 \
+  --save-every-games 1000 \
+  --save capstone_agent/models/capstone_model.pt \
+  --save-placement-model capstone_agent/models/placement_model.pt \
+  --map-mode fixed
+
 # Randomize map each game (non-tournament templates)
 python -m capstone_agent.run_simulation \
   --games 200 \
   --enemy random \
   --map-mode random
 ```
+
+#### Enemy Fixed Schedule Semantics
+
+`--enemy-fixed-schedule` is **sequential**, not proportional mixing.
+
+- The run uses phase 1 first, then phase 2, etc., in the exact order listed.
+- Each token in `--enemy-schedule` is parsed as:
+  - `<enemy>:<games>` or
+  - `<enemy>@<param>:<games>` (e.g., `alphabeta@2`, `mcts@100`, `greedy@25`)
+- Example:
+  - `weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:50000`
+  - means games `1-50000` vs `weighted`, `50001-100000` vs `value`, etc.
+- If `--games` is **larger** than the total scheduled games, the final phase is reused for the remaining games.
+- If `--games` is **smaller**, only the prefix phases that fit are used.
+- `--enemy-ab-prunning` still applies when the scheduled phase enemy is `alphabeta` (unless a future phase-specific toggle is added).
+
+Quick smoke-test schedule:
+
+```bash
+python -m capstone_agent.run_simulation \
+  --games 20000 \
+  --train \
+  --enemy-fixed-schedule \
+  --enemy-schedule "weighted:5000,value:5000,alphabeta@1:5000,alphabeta@2:5000" \
+  --save-every-games 1000 \
+  --save capstone_agent/models/capstone_model.pt \
+  --save-placement-model capstone_agent/models/placement_model.pt
+```
+
+#### Enemy Smooth-Mix Semantics
+
+`--enemy-smooth-mix` performs **true probabilistic sampling per game** with a
+linearly changing distribution.
+
+- `--enemy-mix-start` defines game-1 probabilities.
+- `--enemy-mix-end` defines the target probabilities after interpolation.
+- `--enemy-mix-games N` means:
+  - games `1..N` smoothly interpolate start -> end,
+  - games `N+1..` keep using end probabilities.
+- Tokens support optional AlphaBeta depth:
+  - `alphabeta@1:0.4,weighted:0.6`
+- MCTS and Greedy also support optional parameters:
+  - `mcts@100:0.8,greedy@25:0.2`
+- Probabilities are normalized automatically (they do not have to sum to 1.0).
+- `--enemy-mix-seed` makes sampling deterministic/reproducible.
+- `--enemy-smooth-mix` cannot be combined with `--enemy-fixed-schedule`.
+- Set `--enemy-switch-log-every 0` (default) to keep logs clean.
+- Per-enemy rates are hidden until each enemy reaches `--per-enemy-min-samples` (default 20).
+
+#### Preset Semantics
+
+Presets set sensible defaults, but **explicit flags still win**.
+
+- Example:
+  - `--preset blend --difficulty medium --games 300000`
+  - keeps blend defaults but overrides total games to `300000`.
+- Presets are shorthand for common training modes:
+  - `warmup`: weighted-only baseline
+  - `blend`: smooth weighted/value mixing
+  - `ab-ramp`: sequential weighted -> value -> AB1 -> AB2
+  - `self-play`: champion/challenger ladder defaults
 
 ### Quick Ops (Copy/Paste)
 
