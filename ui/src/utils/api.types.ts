@@ -153,6 +153,8 @@ export type ReplayCatalogItem = {
   us_action_dev: number;
   us_action_robber: number;
   us_action_total: number;
+  replay_source_folder: string | null;
+  imported_at_utc: string | null;
 };
 const DIRECTIONS = [
   "NORTH",

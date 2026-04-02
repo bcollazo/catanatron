@@ -15,7 +15,7 @@ class CapstoneReward:
     PIP_MULTIPLIER = 1/10
     BUY_DEV_CARD_REWARD = 0.005
     PLAY_KNIGHT_REWARD = 0.005
-    BUILD_ROAD_REWARD = 0.002
+    BUILD_ROAD_REWARD = 0.001
 
     """Reward manager for CapstoneCatanatronEnv."""
 

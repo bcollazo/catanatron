@@ -33,11 +33,11 @@ class CapstoneAgent:
         is_settlement_phase = bool(state[IS_SETTLEMENT_PHASE_FEATURE_INDEX])
         return is_settlement_phase
 
-    def select_action(self, state, mask):
+    def select_action(self, state, mask, **kwargs):
         self._last_was_placement = self._is_placement_phase(state)
         if self._last_was_placement:
-            return self.placement_agent.select_action(state, mask)
-        return self.main_agent.select_action(state, mask)
+            return self.placement_agent.select_action(state, mask, **kwargs)
+        return self.main_agent.select_action(state, mask, **kwargs)
 
     def store(self, state, mask, action, log_prob, reward, value, done, next_obs=None):
         """Store transition. *next_obs* after env.step enables correct placement GAE:

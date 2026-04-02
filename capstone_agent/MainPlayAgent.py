@@ -19,7 +19,7 @@ class MainPlayAgent:
         self.buffer = RolloutBuffer()
 
 
-    def select_action(self, state, mask):
+    def select_action(self, state, mask, **_kwargs):
         """
         Given state + mask, sample an action and return 
         everything PPO needs to store.
