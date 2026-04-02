@@ -148,6 +148,13 @@ def _unwrap_env(env):
     return current
 
 
+def _action_context(env):
+    core = _unwrap_env(env)
+    game = getattr(core, "game", None)
+    playable_actions = getattr(game, "playable_actions", None) if game is not None else None
+    return game, playable_actions
+
+
 def maybe_save_game_json(env, out_dir: Optional[str], game_index: int, every: int):
     if not out_dir:
         return None
@@ -406,7 +413,10 @@ def simulate_game(
     result = GameResult()
 
     for step in range(1, max_steps + 1):
-        action, log_prob, value = agent.select_action(obs, mask)
+        game_ctx, playable_ctx = _action_context(env)
+        action, log_prob, value = agent.select_action(
+            obs, mask, game=game_ctx, playable_actions=playable_ctx
+        )
         next_obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
         next_mask = info["action_mask"]
@@ -470,6 +480,8 @@ def make_agent_and_env(
     fixed_map_seed: int = 0,
     enemy_main_model_path: Optional[str] = None,
     enemy_placement_model_path: Optional[str] = None,
+    placement_ab_depth: int = 2,
+    placement_ab_prunning: bool = True,
 ):
     """Create a routed agent + env pair.
 
@@ -482,6 +494,8 @@ def make_agent_and_env(
         fixed_map_seed: Seed used when map_mode is "fixed".
         enemy_main_model_path: Main-play weights for rl-capstone enemy.
         enemy_placement_model_path: Placement weights for rl-capstone enemy.
+        placement_ab_depth: AlphaBeta depth for placement strategy ``alphabeta``.
+        placement_ab_prunning: AlphaBeta pruning flag for placement strategy ``alphabeta``.
 
     Returns a CapstoneAgent that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
@@ -497,6 +511,8 @@ def make_agent_and_env(
         placement_strategy,
         obs_size=obs_size,
         hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE,
+        depth=placement_ab_depth,
+        prunning=placement_ab_prunning,
     )
     if placement_model_path is not None:
         placement_agent.load(placement_model_path)
@@ -627,16 +643,31 @@ def main():
     )
     parser.add_argument(
         "--placement-strategy", type=str, default="model",
-        choices=["model", "random"],
-        help="Placement agent strategy: 'model' (learned) or 'random'.",
+        choices=["model", "random", "alphabeta"],
+        help="Placement agent strategy: 'model' (learned), 'random', or 'alphabeta'.",
     )
     parser.add_argument(
         "--placement-model", type=str, default=None,
-        help="Path to saved placement-agent model weights (ignored for --placement-strategy random)",
+        help=(
+            "Path to saved placement-agent model weights "
+            "(ignored for --placement-strategy random/alphabeta)"
+        ),
     )
     parser.add_argument(
         "--save-placement-model", type=str, default=DEFAULT_PLACEMENT_MODEL_PATH,
         help="Path to save placement-agent weights after all games.",
+    )
+    parser.add_argument(
+        "--placement-ab-depth",
+        type=int,
+        default=2,
+        help="AlphaBeta depth when --placement-strategy=alphabeta.",
+    )
+    parser.add_argument(
+        "--placement-ab-prunning",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable AlphaBeta pruning for --placement-strategy=alphabeta.",
     )
     parser.add_argument(
         "--save-every-games",
@@ -810,6 +841,8 @@ def main():
         parser.error("--train-every-games must be >= 1")
     if args.enemy_ab_depth < 1:
         parser.error("--enemy-ab-depth must be >= 1")
+    if args.placement_ab_depth < 1:
+        parser.error("--placement-ab-depth must be >= 1")
     if args.save_every_games < 0:
         parser.error("--save-every-games must be >= 0")
     if args.fixed_map_seed < 0:
@@ -860,6 +893,8 @@ def main():
         map_template=resolved_map_template,
         map_mode=args.map_mode,
         fixed_map_seed=args.fixed_map_seed,
+        placement_ab_depth=args.placement_ab_depth,
+        placement_ab_prunning=args.placement_ab_prunning,
     )
     champion_main_model_path = args.champion_main_model
     champion_placement_model_path = args.champion_placement_model
@@ -894,6 +929,11 @@ def main():
     pa = agent.placement_agent
     if hasattr(pa, "model"):
         place_desc = f"{sum(p.numel() for p in pa.model.parameters()):,} params"
+    elif args.placement_strategy == "alphabeta":
+        place_desc = (
+            f"alphabeta(depth={args.placement_ab_depth}, "
+            f"prunning={args.placement_ab_prunning})"
+        )
     else:
         place_desc = args.placement_strategy
     device = get_device()

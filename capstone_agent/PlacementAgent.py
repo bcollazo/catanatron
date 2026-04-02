@@ -9,6 +9,9 @@ import torch
 import torch.nn as nn
 from torch.distributions import Categorical
 from CONSTANTS import FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
+from catanatron.players.minimax import AlphaBetaPlayer
+from catanatron.models.player import Color
+from catanatron.gym.envs.capstone_env import to_action_space
 
 # ── registry of available strategies ─────────────────────────────
 
@@ -28,7 +31,7 @@ def make_placement_agent(strategy: str = "model", **kwargs):
 
     Args:
         strategy: One of the keys in PLACEMENT_STRATEGIES
-                  (currently ``"model"`` or ``"random"``).
+                  (currently ``"model"``, ``"random"``, or ``"alphabeta"``).
         **kwargs: Forwarded to the chosen class constructor.
 
     Returns:
@@ -51,13 +54,64 @@ class RandomPlacementAgent:
     def __init__(self, **_kwargs):
         pass
 
-    def select_action(self, state, mask):
+    def select_action(self, state, mask, **_kwargs):
         valid = np.where(np.asarray(mask) > 0.5)[0]
         action = int(np.random.choice(valid))
         n_valid = len(valid)
         log_prob = -math.log(n_valid) if n_valid > 0 else 0.0
         value = 0.0
         return (action, log_prob, value)
+
+    def store(self, state, mask, action, log_prob, reward, value, done):
+        pass
+
+    def train(self, last_value):
+        pass
+
+    def load(self, path):
+        pass
+
+    def save(self, path):
+        pass
+
+
+# ── AlphaBeta placement baseline ────────────────────────────────
+
+@register_strategy("alphabeta")
+class AlphaBetaPlacementAgent:
+    """Uses AlphaBeta search for placement-phase decisions only.
+
+    This is a non-learning placement baseline intended for robust setup play
+    when the learned placement model is unstable.
+    """
+
+    def __init__(self, depth: int = 2, prunning: bool = True, **_kwargs):
+        self.depth = depth
+        self.prunning = prunning
+        self._player = AlphaBetaPlayer(Color.BLUE, depth=self.depth, prunning=self.prunning)
+
+    def select_action(self, state, mask, game=None, playable_actions=None, **_kwargs):
+        valid = np.where(np.asarray(mask) > 0.5)[0]
+        if len(valid) == 0:
+            return (0, 0.0, 0.0)
+
+        # Prefer true AlphaBeta placement when live game context is available.
+        if game is not None and playable_actions is not None:
+            try:
+                chosen = self._player.decide(game, playable_actions)
+                action_idx = int(to_action_space(chosen))
+                if action_idx in valid:
+                    n_valid = len(valid)
+                    log_prob = -math.log(n_valid) if n_valid > 0 else 0.0
+                    return (action_idx, log_prob, 0.0)
+            except Exception:
+                # Fall back to random valid action if search fails for any reason.
+                pass
+
+        action = int(np.random.choice(valid))
+        n_valid = len(valid)
+        log_prob = -math.log(n_valid) if n_valid > 0 else 0.0
+        return (action, log_prob, 0.0)
 
     def store(self, state, mask, action, log_prob, reward, value, done):
         pass
@@ -98,7 +152,7 @@ class PlacementAgent:
         )
         self.buffer = RolloutBuffer()
 
-    def select_action(self, state, mask):
+    def select_action(self, state, mask, **_kwargs):
         """Sample an action from the policy and return (action, log_prob, value)."""
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         mask_tensor = torch.FloatTensor(mask).unsqueeze(0).to(self.device)
