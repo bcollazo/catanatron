@@ -68,28 +68,28 @@ Common variants:
 
 ```bash
 # Step-buffered training with larger PPO batches
-python capstone_agent/run_simulation.py \
+python -m capstone_agent.run_simulation \
   --games 1000 \
   --train \
   --train-update-trigger steps \
   --train-every-steps 4096
 
 # Game-buffered training
-python capstone_agent/run_simulation.py \
+python -m capstone_agent.run_simulation \
   --games 1000 \
   --train \
   --train-update-trigger games \
   --train-every-games 20
 
 # Training + replay export + explicit run label
-python capstone_agent/run_simulation.py \
+python -m capstone_agent.run_simulation \
   --games 1000 \
   --train \
   --run-name iter_full \
   --save-games-json-dir capstone_agent/replays/iter_full
 
 # Train/eval directly against AlphaBeta
-python capstone_agent/run_simulation.py \
+python -m capstone_agent.run_simulation \
   --games 10 \
   --enemy alphabeta \
   --enemy-ab-depth 2 \
@@ -100,10 +100,43 @@ python capstone_agent/run_simulation.py \
   --save-games-json-every 1
 
 # Randomize map each game (non-tournament templates)
-python capstone_agent/run_simulation.py \
+python -m capstone_agent.run_simulation \
   --games 200 \
   --enemy random \
   --map-mode random
+```
+
+### Quick Ops (Copy/Paste)
+
+```bash
+# 1) Run 5 games, save every replay, then import into GUI
+python -m capstone_agent.run_simulation \
+  --games 5 \
+  --enemy random \
+  --save-games-json-dir capstone_agent/replays/quick5 \
+  --save-games-json-every 1
+
+python capstone_agent/import_replays_to_gui.py \
+  --input-dir capstone_agent/replays/quick5
+
+# 2) Long DCC run: 1,000,000 games as 100 x 10,000 chunks in tmux
+tmux new -s dcc_train
+for i in $(seq 1 100); do
+  python -u -m capstone_agent.run_simulation \
+    --games 10000 \
+    --train \
+    --save capstone_agent/models/capstone_model.pt \
+    --save-placement-model capstone_agent/models/placement_model.pt \
+    --run-name dcc_1m \
+    --benchmark-csv capstone_agent/benchmarks/training_metrics.csv \
+    --save-games-json-dir capstone_agent/replays/dcc_1m \
+    --save-games-json-every 10000 \
+    --enemy random 2>&1 | tee -a dcc_1m_pretty.log
+done
+
+# Detach from tmux (job keeps running): Ctrl+b then d
+# Re-attach later:
+tmux attach -t dcc_train
 ```
 
 ## Command Line Interface
