@@ -2,7 +2,10 @@ from PlacementAgent import PlacementAgent
 from MainPlayAgent import MainPlayAgent
 import os
 
-from CONSTANTS import (IS_SETTLEMENT_PHASE_FEATURE_INDEX, )
+import torch
+
+from CONSTANTS import IS_SETTLEMENT_PHASE_FEATURE_INDEX
+from device import get_device
 
 # TODO -> delete
 # def _unwrap_env(env):
@@ -36,26 +39,52 @@ class CapstoneAgent:
             return self.placement_agent.select_action(state, mask, **kwargs)
         return self.main_agent.select_action(state, mask, **kwargs)
 
-    def store(self, state, mask, action, log_prob, reward, value, done):
+    def store(self, state, mask, action, log_prob, reward, value, done, next_obs=None):
+        """Store transition. *next_obs* after env.step enables correct placement GAE:
+        when setup ends, we mark the transition terminal for the placement buffer so
+        advantages do not stitch into the next game's setup."""
         if self._last_was_placement:
-            self.placement_agent.store(state, mask, action, log_prob, reward, value, done)
+            placement_done = done
+            if next_obs is not None:
+                placement_done = placement_done or not self._is_placement_phase(
+                    next_obs
+                )
+            self.placement_agent.store(
+                state, mask, action, log_prob, reward, value, placement_done
+            )
         else:
-            self.main_agent.store(state, mask, action, log_prob, reward, value, done)
+            self.main_agent.store(
+                state, mask, action, log_prob, reward, value, done, next_obs=next_obs
+            )
 
-    def train(self, last_value):
-        """Run PPO updates on both sub-agents (placement only if it has data)."""
-        # TODO -> training happens at a different time for each, as a game only has 4 settlement actions and
-        # many more main play actions... this will need to be updated
-        self.main_agent.train(last_value)
-        self.placement_agent.train(last_value)
+    def train(self, last_obs, last_mask):
+        """Run PPO on both sub-agents with correct bootstrap values from each critic."""
+        device = get_device()
+        if last_obs is None or last_mask is None:
+            last_v_main = 0.0
+            last_v_place = 0.0
+        else:
+            obs_t = torch.as_tensor(
+                last_obs, dtype=torch.float32, device=device
+            ).unsqueeze(0)
+            mask_t = torch.as_tensor(
+                last_mask, dtype=torch.float32, device=device
+            ).unsqueeze(0)
+            with torch.no_grad():
+                _, v_main = self.main_agent.model(obs_t, mask_t)
+                last_v_main = v_main.item()
+                place_model = getattr(self.placement_agent, "model", None)
+                if place_model is not None:
+                    _, v_place = self.placement_agent.model(obs_t, mask_t)
+                    last_v_place = v_place.item()
+                else:
+                    last_v_place = 0.0
+        self.main_agent.train(last_v_main)
+        self.placement_agent.train(last_v_place)
 
     @property
     def model(self):
-        """Convenience accessor used by simulate_and_train to compute last_value.
-
-        Returns the main agent's model since last_value is needed for the
-        main-game value estimate (placement is already over by end-of-game).
-        """
+        """Main play policy/value (used by training loops for last-state bootstrap)."""
         return self.main_agent.model
 
     def load(self, main_path, placement_path=None):

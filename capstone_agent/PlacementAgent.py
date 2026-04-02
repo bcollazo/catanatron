@@ -62,7 +62,7 @@ class RandomPlacementAgent:
         value = 0.0
         return (action, log_prob, value)
 
-    def store(self, state, mask, action, log_prob, reward, value, done):
+    def store(self, state, mask, action, log_prob, reward, value, done, next_obs=None):
         pass
 
     def train(self, last_value):
@@ -166,7 +166,7 @@ class PlacementAgent:
 
         return (action.item(), log_prob.item(), value.item())
 
-    def store(self, state, mask, action, log_prob, reward, value, done):
+    def store(self, state, mask, action, log_prob, reward, value, done, next_obs=None):
         self.buffer.store(state, mask, action, log_prob, reward, value, done)
 
     def compute_advantages(self, last_value):
