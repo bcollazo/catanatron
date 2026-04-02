@@ -194,7 +194,8 @@ def get_hand_features(game, self_color: Color, opp_color: Color) -> list:
 
     self_res = [ps[f"P{si}_{r}_IN_HAND"]/num_resource_per_type for r in RESOURCES]
     self_total_res = sum(self_res)/(num_resource_per_type*len(RESOURCES))
-    self_over_limit = int(self_total_res > game.state.discard_limit)
+    self_total_cards = sum(ps[f"P{si}_{r}_IN_HAND"] for r in RESOURCES)
+    self_over_limit = int(self_total_cards > game.state.discard_limit)
     self_devs = [ps[f"P{si}_{d}_IN_HAND"]/count for d, count in zip(DEVELOPMENT_CARDS, DEV_CARD_COUNTS)]
     self_total_devs = sum(self_devs)/NUM_DEV_CARDS
     self_buildings = [
@@ -203,7 +204,8 @@ def get_hand_features(game, self_color: Color, opp_color: Color) -> list:
 
     opp_res = [ps[f"P{oi}_{r}_IN_HAND"]/num_resource_per_type for r in RESOURCES]
     opp_total_res = sum(opp_res)/(num_resource_per_type*len(RESOURCES))
-    opp_over_limit = int(opp_total_res > game.state.discard_limit)
+    opp_total_cards = sum(ps[f"P{oi}_{r}_IN_HAND"] for r in RESOURCES)
+    opp_over_limit = int(opp_total_cards > game.state.discard_limit)
     opp_devs = [ps[f"P{oi}_{d}_IN_HAND"]/count for d, count in zip(DEVELOPMENT_CARDS, DEV_CARD_COUNTS)]
     opp_total_devs = sum(opp_devs)/NUM_DEV_CARDS
     opp_buildings = [

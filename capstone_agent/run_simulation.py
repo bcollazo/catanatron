@@ -70,6 +70,9 @@ class GameResult:
     truncated: bool = False
     won: bool = False
     action_log: List[int] = field(default_factory=list)
+    # State after the last env.step (for PPO bootstrap); same as next_obs on final tick.
+    bootstrap_obs: Optional[np.ndarray] = None
+    bootstrap_mask: Optional[np.ndarray] = None
 
     @property
     def done(self):
@@ -160,6 +163,22 @@ def _self_seat(env, self_color: Color = Color.BLUE) -> Optional[int]:
     return game.state.color_to_index.get(self_color)
 
 
+def _ppo_train_with_bootstrap(agent, bootstrap_obs, bootstrap_mask) -> None:
+    """CapstoneAgent.train expects (obs, mask); standalone agents use scalar bootstrap."""
+    if hasattr(agent, "placement_agent") and hasattr(agent, "main_agent"):
+        agent.train(bootstrap_obs, bootstrap_mask)
+        return
+    if bootstrap_obs is None or bootstrap_mask is None:
+        agent.train(0.0)
+        return
+    device = get_device()
+    with torch.no_grad():
+        obs_t = torch.FloatTensor(bootstrap_obs).unsqueeze(0).to(device)
+        mask_t = torch.FloatTensor(bootstrap_mask).unsqueeze(0).to(device)
+        _, last_v = agent.model(obs_t, mask_t)
+    agent.train(last_v.item())
+
+
 def _buffer_transition_count(agent) -> int:
     """Return total rollout transitions currently buffered on an agent/router."""
     total = 0
@@ -236,7 +255,12 @@ def simulate_game(
         next_mask = info["action_mask"]
 
         if store_in_buffer:
-            agent.store(obs, mask, action, log_prob, reward, value, done)
+            agent.store(
+                obs, mask, action, log_prob, reward, value, done, next_obs=next_obs
+            )
+
+        result.bootstrap_obs = next_obs
+        result.bootstrap_mask = next_mask
 
         result.steps = step
         result.cumulative_reward += reward
@@ -273,9 +297,8 @@ def simulate_and_train(
 
     # Replay JSON export happens after this function returns. Avoid resetting the
     # env here, otherwise the saved replay may capture a fresh game instead of
-    # the one we just finished. Because episodes are terminal at this point,
-    # bootstrap value for GAE is 0.
-    agent.train(0.0)
+    # the one we just finished.
+    _ppo_train_with_bootstrap(agent, result.bootstrap_obs, result.bootstrap_mask)
 
     return result
 
@@ -603,12 +626,16 @@ def main():
     wins, losses, truncations = 0, 0, 0
     games_since_update = 0
     recent_wins = deque(maxlen=300)
+    last_bootstrap_obs: Optional[np.ndarray] = None
+    last_bootstrap_mask: Optional[np.ndarray] = None
 
     for g in range(1, args.games + 1):
         if args.train:
             result = simulate_game(
                 agent, env, verbose=args.verbose, store_in_buffer=True
             )
+            last_bootstrap_obs = result.bootstrap_obs
+            last_bootstrap_mask = result.bootstrap_mask
             games_since_update += 1
         else:
             result = simulate_game(agent, env, verbose=args.verbose)
@@ -678,7 +705,9 @@ def main():
 
             if should_update and buffered > 0:
                 batch_games = games_since_update
-                agent.train(0.0)
+                _ppo_train_with_bootstrap(
+                    agent, last_bootstrap_obs, last_bootstrap_mask
+                )
                 print(
                     f"  trained PPO on {buffered} buffered transitions "
                     f"(games in batch: {batch_games}; trigger={args.train_update_trigger}: {update_reason})"
@@ -689,7 +718,9 @@ def main():
         buffered = _buffer_transition_count(agent)
         if buffered > 0:
             batch_games = games_since_update
-            agent.train(0.0)
+            _ppo_train_with_bootstrap(
+                agent, last_bootstrap_obs, last_bootstrap_mask
+            )
             print(
                 f"Final PPO flush on {buffered} buffered transitions "
                 f"(games in batch: {batch_games})"

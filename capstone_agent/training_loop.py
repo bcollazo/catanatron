@@ -7,8 +7,6 @@ from MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent
 from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping
-from device import get_device
-import torch
 import gymnasium
 
 from CONSTANTS import FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
@@ -31,7 +29,9 @@ for update in range(NUM_UPDATES):
         done = terminated or truncated
         next_mask = info["action_mask"]
 
-        agent.store(obs, mask, action, log_prob, reward, value, done)
+        agent.store(
+            obs, mask, action, log_prob, reward, value, done, next_obs=next_obs
+        )
         step += 1
 
         if done:
@@ -40,13 +40,7 @@ for update in range(NUM_UPDATES):
         else:
             obs, mask = next_obs, next_mask
 
-    device = get_device()
-    with torch.no_grad():
-        _, last_value = agent.model(
-            torch.FloatTensor(obs).unsqueeze(0).to(device),
-            torch.FloatTensor(mask).unsqueeze(0).to(device),
-        )
-    agent.train(last_value.item())
+    agent.train(obs, mask)
 
     if (update + 1) % STORE_FREQUENCY == 0:
         print(f"Update {update + 1}/{NUM_UPDATES} complete  (step {step})")

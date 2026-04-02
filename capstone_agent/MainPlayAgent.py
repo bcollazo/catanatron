@@ -42,8 +42,7 @@ class MainPlayAgent:
             value.item()
         )
     
-    def store(self, state, mask, action, log_prob, reward, value, done):
-        # Store the experiences 
+    def store(self, state, mask, action, log_prob, reward, value, done, next_obs=None):
         self.buffer.store(state, mask, action, log_prob, reward, value, done)
 
     def compute_advantages(self, last_value):
