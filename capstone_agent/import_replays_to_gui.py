@@ -13,6 +13,7 @@ import json
 import random
 import sys
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Iterable
 
 # Allow running from repo root without editable install.
@@ -131,6 +132,8 @@ def import_replay_json(
     replace_existing: bool = True,
     id_prefix: str | None = None,
     skip_invalid_actions: bool = False,
+    replay_source_folder: str | None = None,
+    imported_at_utc: str | None = None,
 ):
     payload = json.loads(json_path.read_text())
     players = _build_players(payload["colors"])
@@ -147,7 +150,12 @@ def import_replay_json(
             session.commit()
 
         # Initial state (index 0)
-        upsert_game_state(game, session)
+        upsert_game_state(
+            game,
+            session,
+            replay_source_folder=replay_source_folder,
+            imported_at_utc=imported_at_utc,
+        )
 
         # One DB row per action so GUI can step through every state.
         imported_actions = 0
@@ -158,7 +166,12 @@ def import_replay_json(
             try:
                 game.execute(action, validate_action=False, action_record=action_record)
                 imported_actions += 1
-                upsert_game_state(game, session)
+                upsert_game_state(
+                    game,
+                    session,
+                    replay_source_folder=replay_source_folder,
+                    imported_at_utc=imported_at_utc,
+                )
             except Exception as exc:
                 if not skip_invalid_actions:
                     raise RuntimeError(
@@ -186,6 +199,8 @@ def import_replay_json(
         "result": result_label,
         "state_index": payload.get("state_index"),
         "url": f"http://localhost:3000/replays/{game_id}",
+        "replay_source_folder": replay_source_folder,
+        "imported_at_utc": imported_at_utc,
         "skipped_action_details": skipped_rows,
     }
 
@@ -248,11 +263,16 @@ def main():
     failed_rows: list[tuple[str, str]] = []
     for path in paths:
         try:
+            imported_at_utc = (
+                datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+            )
             row = import_replay_json(
                 path,
                 replace_existing=not args.no_replace,
                 id_prefix=args.id_prefix,
                 skip_invalid_actions=args.skip_invalid_actions,
+                replay_source_folder=str(path.parent),
+                imported_at_utc=imported_at_utc,
             )
             imported += 1
             imported_rows.append(row)
@@ -274,6 +294,7 @@ def main():
                 f"- {row['file']} | result={row['result']} | "
                 f"winner={row['winner']} | actions={row['actions']}/{row['total_actions']} | "
                 f"states={row['states']} | state_index={row['state_index']} | "
+                f"folder={row['replay_source_folder']} | imported_at={row['imported_at_utc']} | "
                 f"{row['url']}"
             )
             if row["skipped_actions"] > 0:

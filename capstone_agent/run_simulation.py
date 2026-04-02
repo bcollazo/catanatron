@@ -64,6 +64,14 @@ def _timestamped_path(path: str) -> str:
     return f"{root}_{stamp}{ext}"
 
 
+def _ensure_parent_dir(path: Optional[str]):
+    if not path:
+        return
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
 @dataclass
 class GameResult:
     steps: int = 0
@@ -76,6 +84,13 @@ class GameResult:
     @property
     def done(self):
         return self.terminated or self.truncated
+
+
+@dataclass
+class ScheduledEnemyPhase:
+    enemy_type: str
+    games: int
+    enemy_ab_depth: Optional[int] = None
 
 
 class BenchmarkLogger:
@@ -245,6 +260,80 @@ def make_env(
             "fixed_map_seed": fixed_map_seed,
         },
     )
+
+
+def parse_enemy_schedule(schedule: str) -> list[ScheduledEnemyPhase]:
+    """Parse fixed enemy schedule string.
+
+    Format:
+      "<enemy>[:<games>],<enemy>@<ab_depth>:<games>,..."
+    Example:
+      "weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:100000"
+    """
+    phases: list[ScheduledEnemyPhase] = []
+    if not schedule.strip():
+        raise ValueError("enemy schedule is empty")
+
+    allowed = {
+        "random",
+        "alphabeta",
+        "alphabeta-prune",
+        "same-turn-ab",
+        "value",
+        "vp",
+        "weighted",
+        "rl-capstone",
+    }
+    for raw_token in schedule.split(","):
+        token = raw_token.strip()
+        if not token:
+            continue
+        if ":" not in token:
+            raise ValueError(
+                f"Invalid schedule token '{token}'. Expected '<enemy>[:depth]:<games>' format."
+            )
+        enemy_spec, games_str = token.rsplit(":", 1)
+        games = int(games_str)
+        if games <= 0:
+            raise ValueError(f"Invalid games count in schedule token '{token}'")
+
+        ab_depth = None
+        if "@" in enemy_spec:
+            enemy_type, depth_str = enemy_spec.split("@", 1)
+            enemy_type = enemy_type.strip()
+            ab_depth = int(depth_str)
+            if ab_depth <= 0:
+                raise ValueError(f"Invalid AlphaBeta depth in schedule token '{token}'")
+        else:
+            enemy_type = enemy_spec.strip()
+        if enemy_type not in allowed:
+            raise ValueError(f"Unknown enemy type '{enemy_type}' in schedule token '{token}'")
+        phases.append(
+            ScheduledEnemyPhase(
+                enemy_type=enemy_type,
+                games=games,
+                enemy_ab_depth=ab_depth,
+            )
+        )
+
+    if not phases:
+        raise ValueError("enemy schedule is empty after parsing")
+    return phases
+
+
+def schedule_phase_for_game(
+    game_index_1_based: int, phases: list[ScheduledEnemyPhase]
+) -> tuple[int, ScheduledEnemyPhase]:
+    """Return (phase_index, phase) for current game index.
+
+    If game index exceeds scheduled total, continue using the final phase.
+    """
+    remaining = game_index_1_based
+    for idx, phase in enumerate(phases):
+        if remaining <= phase.games:
+            return idx, phase
+        remaining -= phase.games
+    return len(phases) - 1, phases[-1]
 
 
 def clear_agent_buffers(agent):
@@ -550,6 +639,15 @@ def main():
         help="Path to save placement-agent weights after all games.",
     )
     parser.add_argument(
+        "--save-every-games",
+        type=int,
+        default=0,
+        help=(
+            "When > 0 in --train mode, periodically overwrite --save "
+            "(and --save-placement-model) every N completed games."
+        ),
+    )
+    parser.add_argument(
         "--enemy",
         type=str,
         default="random",
@@ -578,6 +676,23 @@ def main():
         "--enemy-ab-prunning",
         action="store_true",
         help="Enable AlphaBeta pruning when --enemy=alphabeta.",
+    )
+    parser.add_argument(
+        "--enemy-fixed-schedule",
+        action="store_true",
+        help=(
+            "Use a fixed, phase-based opponent curriculum. "
+            "When enabled, --enemy-schedule controls opponent switches by game count."
+        ),
+    )
+    parser.add_argument(
+        "--enemy-schedule",
+        type=str,
+        default="weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:50000",
+        help=(
+            "Fixed opponent schedule string used with --enemy-fixed-schedule. "
+            "Format: '<enemy>:<games>,<enemy>@<ab_depth>:<games>,...'"
+        ),
     )
     parser.add_argument(
         "--map-template",
@@ -695,6 +810,8 @@ def main():
         parser.error("--train-every-games must be >= 1")
     if args.enemy_ab_depth < 1:
         parser.error("--enemy-ab-depth must be >= 1")
+    if args.save_every_games < 0:
+        parser.error("--save-every-games must be >= 0")
     if args.fixed_map_seed < 0:
         parser.error("--fixed-map-seed must be >= 0")
     if args.self_play_eval_every_games < 1:
@@ -703,6 +820,14 @@ def main():
         parser.error("--self-play-eval-games must be >= 20")
     if not (0.0 <= args.self_play_promotion_threshold <= 1.0):
         parser.error("--self-play-promotion-threshold must be between 0 and 1")
+    schedule_phases: list[ScheduledEnemyPhase] = []
+    if args.enemy_fixed_schedule:
+        try:
+            schedule_phases = parse_enemy_schedule(args.enemy_schedule)
+        except Exception as exc:
+            parser.error(f"--enemy-schedule parse error: {exc}")
+        if args.self_play_ladder:
+            parser.error("--enemy-fixed-schedule cannot be combined with --self-play-ladder")
     resolved_map_template = resolve_map_template(args.map_template, args.map_mode)
 
     loaded_model_path = args.load
@@ -720,12 +845,17 @@ def main():
             loaded_placement_path = args.save_placement_model
             print(f"Resuming training from existing placement weights: {loaded_placement_path}")
 
+    first_phase = schedule_phases[0] if schedule_phases else None
     agent, env = make_agent_and_env(
         model_path=loaded_model_path,
         placement_model_path=loaded_placement_path,
         placement_strategy=args.placement_strategy,
-        enemy_type=args.enemy,
-        enemy_ab_depth=args.enemy_ab_depth,
+        enemy_type=first_phase.enemy_type if first_phase else args.enemy,
+        enemy_ab_depth=(
+            first_phase.enemy_ab_depth
+            if first_phase and first_phase.enemy_ab_depth is not None
+            else args.enemy_ab_depth
+        ),
         enemy_ab_prunning=args.enemy_ab_prunning,
         map_template=resolved_map_template,
         map_mode=args.map_mode,
@@ -774,12 +904,20 @@ def main():
         f"Device: {device}"
     )
 
-    enemy_detail = args.enemy
-    if args.enemy in {"alphabeta", "alphabeta-prune", "same-turn-ab"}:
-        enemy_detail += f" (depth={args.enemy_ab_depth}"
-        if args.enemy == "alphabeta":
+    effective_enemy = first_phase.enemy_type if first_phase else args.enemy
+    effective_ab_depth = (
+        first_phase.enemy_ab_depth
+        if first_phase and first_phase.enemy_ab_depth is not None
+        else args.enemy_ab_depth
+    )
+    enemy_detail = effective_enemy
+    if effective_enemy in {"alphabeta", "alphabeta-prune", "same-turn-ab"}:
+        enemy_detail += f" (depth={effective_ab_depth}"
+        if effective_enemy == "alphabeta":
             enemy_detail += f", prunning={args.enemy_ab_prunning}"
         enemy_detail += ")"
+    if schedule_phases:
+        enemy_detail += " [fixed schedule enabled]"
     map_detail = f"{resolved_map_template} / {args.map_mode}"
     if args.map_template == "AUTO":
         map_detail += " (auto-selected)"
@@ -798,6 +936,8 @@ def main():
             training_detail = (
                 f"enabled, trigger=games, every {args.train_every_games} games"
             )
+        if args.save and args.save_every_games > 0:
+            training_detail += f", periodic_save_every={args.save_every_games} games"
     replay_detail = "disabled"
     if args.save_games_json_dir:
         replay_detail = (
@@ -828,154 +968,205 @@ def main():
     games_since_update = 0
     recent_wins = deque(maxlen=300)
     promotions = 0
+    games_completed = 0
+    interrupted = False
+    placement_save = (
+        args.save_placement_model
+        if args.placement_strategy == "model"
+        else None
+    )
 
-    for g in range(1, args.games + 1):
-        keep_game_for_training = True
-        if args.train:
-            buffer_snapshot = (
-                snapshot_agent_buffer_lengths(agent)
-                if args.self_play_ladder and args.self_play_winner_only
-                else None
-            )
-            result = simulate_game(
-                agent, env, verbose=args.verbose, store_in_buffer=True
-            )
-            if args.self_play_ladder and args.self_play_winner_only and not result.won:
-                keep_game_for_training = False
-                truncate_agent_buffers_to_snapshot(agent, buffer_snapshot or {})
-            if keep_game_for_training:
-                games_since_update += 1
-        else:
-            result = simulate_game(agent, env, verbose=args.verbose)
+    current_schedule_phase_index = 0 if schedule_phases else None
 
-        wins += result.won
-        losses += result.terminated and not result.won
-        truncations += result.truncated
-        recent_wins.append(int(result.won))
-        rolling_n = len(recent_wins)
-        rolling_300_win_rate = sum(recent_wins) / rolling_n if rolling_n > 0 else 0.0
-
-        status = "WON" if result.won else ("TRUNCATED" if result.truncated else "LOST")
-        print(
-            f"Game {g:4d}/{args.games}:  {status:>9s}  "
-            f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}  "
-            f"rolling_300_win_rate={rolling_300_win_rate:.1%} (n={rolling_n})"
-        )
-        saved_game_path = maybe_save_game_json(
-            env,
-            args.save_games_json_dir,
-            g,
-            args.save_games_json_every,
-        )
-        if saved_game_path is not None:
-            print(f"  saved replay json: {saved_game_path}")
-
-        if benchmark is not None:
-            self_seat = _self_seat(env)
-            benchmark.write_row(
-                {
-                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                    "run_name": run_name,
-                    "mode": "train" if args.train else "eval",
-                    "loaded_model_path": loaded_model_path or "",
-                    "game_index": g,
-                    "games_total": args.games,
-                    "status": status,
-                    "won": int(result.won),
-                    "terminated": int(result.terminated),
-                    "truncated": int(result.truncated),
-                    "steps": result.steps,
-                    "reward": float(result.cumulative_reward),
-                    "cum_wins": wins,
-                    "cum_losses": losses,
-                    "cum_truncations": truncations,
-                    "cum_win_rate": float(wins / g),
-                    "self_seat": self_seat if self_seat is not None else "",
-                    "went_first": (
-                        int(self_seat == 0) if self_seat is not None else ""
-                    ),
-                }
-            )
-
-        if args.train:
-            buffered = _buffer_transition_count(agent)
-            should_update = False
-            update_reason = ""
-
-            if args.train_update_trigger == "steps":
-                if buffered >= args.train_every_steps:
-                    should_update = True
-                    update_reason = f"buffered transitions reached {buffered}"
-            else:
-                if games_since_update >= args.train_every_games:
-                    should_update = True
-                    update_reason = f"completed games in batch reached {games_since_update}"
-
-            if should_update and buffered > 0:
-                batch_games = games_since_update
-                agent.train(0.0)
-                print(
-                    f"  trained PPO on {buffered} buffered transitions "
-                    f"(games in batch: {batch_games}; trigger={args.train_update_trigger}: {update_reason})"
-                )
-                games_since_update = 0
-
-        if (
-            args.self_play_ladder
-            and args.train
-            and g % args.self_play_eval_every_games == 0
-        ):
-            # Save challenger snapshot for evaluation and potential promotion.
-            if args.save:
-                os.makedirs(os.path.dirname(args.save), exist_ok=True)
-                challenger_main_eval_path = args.save
-            else:
-                challenger_main_eval_path = DEFAULT_MAIN_PLAY_MODEL_PATH
-            if args.save_placement_model:
-                os.makedirs(os.path.dirname(args.save_placement_model), exist_ok=True)
-                challenger_placement_eval_path = args.save_placement_model
-            else:
-                challenger_placement_eval_path = DEFAULT_PLACEMENT_MODEL_PATH
-            agent.save(challenger_main_eval_path, challenger_placement_eval_path)
-
-            eval_result = evaluate_challenger_vs_champion(
-                num_games=args.self_play_eval_games,
-                challenger_main_model_path=challenger_main_eval_path,
-                challenger_placement_model_path=challenger_placement_eval_path,
-                champion_main_model_path=champion_main_model_path,
-                champion_placement_model_path=champion_placement_model_path,
-                map_template=resolved_map_template,
-                map_mode=args.map_mode,
-                fixed_map_seed=args.fixed_map_seed,
-            )
-            eval_wr = eval_result["win_rate"]
-            print(
-                "  self-play eval: "
-                f"challenger_wins={eval_result['wins']}/{eval_result['games']} "
-                f"win_rate={eval_wr:.1%} "
-                f"(promotion threshold={args.self_play_promotion_threshold:.1%})"
-            )
-            if eval_wr >= args.self_play_promotion_threshold:
-                shutil.copy2(challenger_main_eval_path, champion_main_model_path)
-                if challenger_placement_eval_path:
-                    shutil.copy2(
-                        challenger_placement_eval_path, champion_placement_model_path
+    try:
+        for g in range(1, args.games + 1):
+            if schedule_phases:
+                next_phase_index, next_phase = schedule_phase_for_game(g, schedule_phases)
+                if (
+                    current_schedule_phase_index is None
+                    or next_phase_index != current_schedule_phase_index
+                ):
+                    phase_depth = (
+                        next_phase.enemy_ab_depth
+                        if next_phase.enemy_ab_depth is not None
+                        else args.enemy_ab_depth
                     )
-                promotions += 1
-                print(
-                    f"  PROMOTION #{promotions}: challenger -> champion "
-                    f"(new champion win_rate threshold met)"
+                    env = make_env(
+                        enemy_type=next_phase.enemy_type,
+                        enemy_ab_depth=phase_depth,
+                        enemy_ab_prunning=args.enemy_ab_prunning,
+                        map_template=resolved_map_template,
+                        map_mode=args.map_mode,
+                        fixed_map_seed=args.fixed_map_seed,
+                    )
+                    current_schedule_phase_index = next_phase_index
+                    print(
+                        "  switched scheduled enemy phase: "
+                        f"phase={next_phase_index + 1}/{len(schedule_phases)} "
+                        f"enemy={next_phase.enemy_type} "
+                        f"games={next_phase.games} "
+                        f"ab_depth={phase_depth}"
+                    )
+
+            keep_game_for_training = True
+            if args.train:
+                buffer_snapshot = (
+                    snapshot_agent_buffer_lengths(agent)
+                    if args.self_play_ladder and args.self_play_winner_only
+                    else None
                 )
-                env = make_env(
-                    enemy_type="rl-capstone",
-                    enemy_ab_depth=args.enemy_ab_depth,
-                    enemy_ab_prunning=args.enemy_ab_prunning,
+                result = simulate_game(
+                    agent, env, verbose=args.verbose, store_in_buffer=True
+                )
+                if args.self_play_ladder and args.self_play_winner_only and not result.won:
+                    keep_game_for_training = False
+                    truncate_agent_buffers_to_snapshot(agent, buffer_snapshot or {})
+                if keep_game_for_training:
+                    games_since_update += 1
+            else:
+                result = simulate_game(agent, env, verbose=args.verbose)
+
+            wins += result.won
+            losses += result.terminated and not result.won
+            truncations += result.truncated
+            recent_wins.append(int(result.won))
+            rolling_n = len(recent_wins)
+            rolling_300_win_rate = sum(recent_wins) / rolling_n if rolling_n > 0 else 0.0
+
+            status = "WON" if result.won else ("TRUNCATED" if result.truncated else "LOST")
+            print(
+                f"Game {g:4d}/{args.games}:  {status:>9s}  "
+                f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}  "
+                f"rolling_300_win_rate={rolling_300_win_rate:.1%} (n={rolling_n})"
+            )
+            saved_game_path = maybe_save_game_json(
+                env,
+                args.save_games_json_dir,
+                g,
+                args.save_games_json_every,
+            )
+            if saved_game_path is not None:
+                print(f"  saved replay json: {saved_game_path}")
+
+            if benchmark is not None:
+                self_seat = _self_seat(env)
+                benchmark.write_row(
+                    {
+                        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                        "run_name": run_name,
+                        "mode": "train" if args.train else "eval",
+                        "loaded_model_path": loaded_model_path or "",
+                        "game_index": g,
+                        "games_total": args.games,
+                        "status": status,
+                        "won": int(result.won),
+                        "terminated": int(result.terminated),
+                        "truncated": int(result.truncated),
+                        "steps": result.steps,
+                        "reward": float(result.cumulative_reward),
+                        "cum_wins": wins,
+                        "cum_losses": losses,
+                        "cum_truncations": truncations,
+                        "cum_win_rate": float(wins / g),
+                        "self_seat": self_seat if self_seat is not None else "",
+                        "went_first": (
+                            int(self_seat == 0) if self_seat is not None else ""
+                        ),
+                    }
+                )
+
+            if args.train:
+                buffered = _buffer_transition_count(agent)
+                should_update = False
+                update_reason = ""
+
+                if args.train_update_trigger == "steps":
+                    if buffered >= args.train_every_steps:
+                        should_update = True
+                        update_reason = f"buffered transitions reached {buffered}"
+                else:
+                    if games_since_update >= args.train_every_games:
+                        should_update = True
+                        update_reason = f"completed games in batch reached {games_since_update}"
+
+                if should_update and buffered > 0:
+                    batch_games = games_since_update
+                    agent.train(0.0)
+                    print(
+                        f"  trained PPO on {buffered} buffered transitions "
+                        f"(games in batch: {batch_games}; trigger={args.train_update_trigger}: {update_reason})"
+                    )
+                    games_since_update = 0
+
+                if args.save and args.save_every_games > 0 and g % args.save_every_games == 0:
+                    _ensure_parent_dir(args.save)
+                    _ensure_parent_dir(placement_save)
+                    agent.save(args.save, placement_save)
+                    print(
+                        f"  periodic checkpoint saved at game {g}: "
+                        f"main={args.save}"
+                    )
+
+            if (
+                args.self_play_ladder
+                and args.train
+                and g % args.self_play_eval_every_games == 0
+            ):
+                # Save challenger snapshot for evaluation and potential promotion.
+                if args.save:
+                    _ensure_parent_dir(args.save)
+                    challenger_main_eval_path = args.save
+                else:
+                    challenger_main_eval_path = DEFAULT_MAIN_PLAY_MODEL_PATH
+                if args.save_placement_model:
+                    _ensure_parent_dir(args.save_placement_model)
+                    challenger_placement_eval_path = args.save_placement_model
+                else:
+                    challenger_placement_eval_path = DEFAULT_PLACEMENT_MODEL_PATH
+                agent.save(challenger_main_eval_path, challenger_placement_eval_path)
+
+                eval_result = evaluate_challenger_vs_champion(
+                    num_games=args.self_play_eval_games,
+                    challenger_main_model_path=challenger_main_eval_path,
+                    challenger_placement_model_path=challenger_placement_eval_path,
+                    champion_main_model_path=champion_main_model_path,
+                    champion_placement_model_path=champion_placement_model_path,
                     map_template=resolved_map_template,
                     map_mode=args.map_mode,
                     fixed_map_seed=args.fixed_map_seed,
-                    enemy_main_model_path=champion_main_model_path,
-                    enemy_placement_model_path=champion_placement_model_path,
                 )
+                eval_wr = eval_result["win_rate"]
+                print(
+                    "  self-play eval: "
+                    f"challenger_wins={eval_result['wins']}/{eval_result['games']} "
+                    f"win_rate={eval_wr:.1%} "
+                    f"(promotion threshold={args.self_play_promotion_threshold:.1%})"
+                )
+                if eval_wr >= args.self_play_promotion_threshold:
+                    shutil.copy2(challenger_main_eval_path, champion_main_model_path)
+                    if challenger_placement_eval_path:
+                        shutil.copy2(
+                            challenger_placement_eval_path, champion_placement_model_path
+                        )
+                    promotions += 1
+                    print(
+                        f"  PROMOTION #{promotions}: challenger -> champion "
+                        f"(new champion win_rate threshold met)"
+                    )
+                    env = make_env(
+                        enemy_type="rl-capstone",
+                        enemy_ab_depth=args.enemy_ab_depth,
+                        enemy_ab_prunning=args.enemy_ab_prunning,
+                        map_template=resolved_map_template,
+                        map_mode=args.map_mode,
+                        fixed_map_seed=args.fixed_map_seed,
+                        enemy_main_model_path=champion_main_model_path,
+                        enemy_placement_model_path=champion_placement_model_path,
+                    )
+            games_completed = g
+    except KeyboardInterrupt:
+        interrupted = True
+        print("\nInterrupted by user; flushing pending updates and saving latest weights...")
 
     if args.train:
         buffered = _buffer_transition_count(agent)
@@ -988,7 +1179,13 @@ def main():
             )
 
     print()
-    print(f"Results: {wins}W / {losses}L / {truncations}T  ({args.games} games)")
+    if interrupted:
+        print(
+            f"Results: {wins}W / {losses}L / {truncations}T  "
+            f"(completed {games_completed}/{args.games} games)"
+        )
+    else:
+        print(f"Results: {wins}W / {losses}L / {truncations}T  ({args.games} games)")
     if args.self_play_ladder:
         print(
             f"Self-play ladder promotions: {promotions} "
@@ -998,14 +1195,11 @@ def main():
         print(f"Benchmarks logged to: {args.benchmark_csv} (run_name={run_name})")
 
     if args.train and args.save:
-        placement_save = (
-            args.save_placement_model
-            if args.placement_strategy == "model"
-            else None
-        )
         main_ckpt = _timestamped_path(args.save)
         place_ckpt = _timestamped_path(placement_save) if placement_save else None
 
+        _ensure_parent_dir(args.save)
+        _ensure_parent_dir(placement_save)
         agent.save(args.save, placement_save)
         agent.save(main_ckpt, place_ckpt)
 

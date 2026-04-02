@@ -44,6 +44,13 @@ function formatWon(value: boolean | null, winner: ReplayCatalogItem["winner"]) {
   return value ? "YES" : "NO";
 }
 
+function formatImportedAt(value: string | null) {
+  if (!value) return "N/A";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+}
+
 function average(values: number[]) {
   if (values.length === 0) return 0;
   return values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -820,6 +827,8 @@ export default function ReplayCatalogScreen() {
               <thead>
                 <tr>
                   <th>Replay ID</th>
+                  <th>Folder</th>
+                  <th>Uploaded</th>
                   <th>Game #</th>
                   <th>Turn #</th>
                   <th>State #</th>
@@ -832,6 +841,8 @@ export default function ReplayCatalogScreen() {
                 {filteredRows.map((row) => (
                   <tr key={row.game_id}>
                     <td className="mono">{row.game_id}</td>
+                    <td className="mono">{row.replay_source_folder ?? "N/A"}</td>
+                    <td>{formatImportedAt(row.imported_at_utc)}</td>
                     <td>{gameNumberById.get(row.game_id) ?? "N/A"}</td>
                     <td>{row.turn_count}</td>
                     <td>{row.state_index}</td>

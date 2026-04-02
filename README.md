@@ -48,12 +48,15 @@ All flags for `python capstone_agent/run_simulation.py`:
 | `--verbose` | off | Print selected per-step action logs during simulation. |
 | `--load` | `None` | Path to load main-agent model weights before running. |
 | `--save` | `capstone_agent/models/capstone_model.pt` | Path to save main-play model weights at the end (also used for auto-resume in train mode when present). |
+| `--save-every-games` | `0` | In train mode, periodically overwrite save paths every N games (`0` disables periodic checkpointing). |
 | `--placement-strategy` | `model` | Placement policy: `model` or `random`. |
 | `--placement-model` | `None` | Path to load placement-agent weights (ignored for `--placement-strategy random`). |
 | `--save-placement-model` | `capstone_agent/models/placement_model.pt` | Path to save placement-agent weights at the end (model strategy only). |
 | `--enemy` | `random` | Opponent bot in environment (`random`, `alphabeta`, `alphabeta-prune`, `same-turn-ab`, `value`, `vp`, `weighted`). |
 | `--enemy-ab-depth` | `2` | AlphaBeta depth when using an AlphaBeta-type enemy. |
 | `--enemy-ab-prunning` | off | Enable pruning for `--enemy alphabeta`. |
+| `--enemy-fixed-schedule` | off | Enable fixed phase-based opponent curriculum controlled by `--enemy-schedule`. |
+| `--enemy-schedule` | `weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:50000` | Fixed curriculum string: `<enemy>:<games>,<enemy>@<ab_depth>:<games>,...` |
 | `--map-template` | `AUTO` | Board template (`AUTO`, `BASE`, `MINI`, `TOURNAMENT`). `AUTO` selects `TOURNAMENT` for fixed mode and `BASE` for random mode. |
 | `--map-mode` | `fixed` | Map layout mode: `fixed` (deterministic) or `random` (reshuffled each game). |
 | `--fixed-map-seed` | `0` | Seed used when `--map-mode fixed` to generate the deterministic map. |
@@ -106,6 +109,16 @@ python -m capstone_agent.run_simulation \
   --save-games-json-dir capstone_agent/replays/ab_placement_eval \
   --save-games-json-every 1
 
+# Fixed schedule curriculum (weighted -> value -> AB depth 1 -> AB depth 2)
+python -m capstone_agent.run_simulation \
+  --games 200000 \
+  --train \
+  --enemy-fixed-schedule \
+  --enemy-schedule "weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:50000" \
+  --save-every-games 1000 \
+  --save capstone_agent/models/capstone_model.pt \
+  --save-placement-model capstone_agent/models/placement_model.pt
+
 # Randomize map each game (non-tournament templates)
 python -m capstone_agent.run_simulation \
   --games 200 \
@@ -148,6 +161,7 @@ for i in $(seq 1 100); do
   python -u -m capstone_agent.run_simulation \
     --games 10000 \
     --train \
+    --save-every-games 1000 \
     --save capstone_agent/models/capstone_model.pt \
     --save-placement-model capstone_agent/models/placement_model.pt \
     --run-name dcc_1m \

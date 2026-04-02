@@ -23,11 +23,12 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     # ===== Initialize Database
-    from catanatron.web.models import db
+    from catanatron.web.models import db, ensure_game_state_metadata_columns
 
     with app.app_context():
         db.init_app(app)
         db.create_all()
+        ensure_game_state_metadata_columns()
 
     # ===== Initialize Routes
     from . import api
