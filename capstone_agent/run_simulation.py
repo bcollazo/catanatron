@@ -74,6 +74,21 @@ def _ensure_parent_dir(path: Optional[str]):
         os.makedirs(parent, exist_ok=True)
 
 
+def _champion_history_paths(
+    history_dir: str,
+    promotion_index: int,
+    game_index: int,
+    eval_win_rate: float,
+) -> Tuple[str, str]:
+    """Unique archive paths for a promoted champion (main + placement)."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
+    wr_tag = f"{eval_win_rate:.4f}".replace(".", "p")
+    stem = f"promo{promotion_index:04d}_game{game_index}_wr{wr_tag}_{stamp}"
+    main_p = os.path.join(history_dir, f"champion_main_{stem}.pt")
+    place_p = os.path.join(history_dir, f"champion_placement_{stem}.pt")
+    return main_p, place_p
+
+
 @dataclass
 class GameResult:
     steps: int = 0
@@ -1161,6 +1176,16 @@ def main():
         default=0.55,
         help="Promote challenger when eval win-rate is >= this value.",
     )
+    parser.add_argument(
+        "--champion-history-dir",
+        type=str,
+        default=None,
+        help=(
+            "With --self-play-ladder, each successful promotion also copies the new "
+            "champion main (and placement, if used) into this directory. Filenames "
+            "include promotion index, training game index, eval win rate, and UTC time."
+        ),
+    )
     args = parser.parse_args()
     apply_training_preset(args)
     if args.train_every_steps < 1:
@@ -1193,6 +1218,8 @@ def main():
         parser.error("--self-play-eval-games must be >= 20")
     if not (0.0 <= args.self_play_promotion_threshold <= 1.0):
         parser.error("--self-play-promotion-threshold must be between 0 and 1")
+    if args.champion_history_dir and not args.self_play_ladder:
+        parser.error("--champion-history-dir requires --self-play-ladder")
     schedule_phases: list[ScheduledEnemyPhase] = []
     start_mix: Dict[EnemySpec, float] = {}
     end_mix: Dict[EnemySpec, float] = {}
@@ -1391,12 +1418,17 @@ def main():
         f"  Placement agent: strategy={args.placement_strategy}, {place_desc}\n"
         f"  Placement weights: {loaded_placement_path or '[none loaded]'}\n"
         f"  Opponent: {enemy_detail}\n"
-        f"  Self-play ladder: {'enabled' if args.self_play_ladder else 'disabled'}\n"
-        f"  Map: {map_detail}\n"
-        f"  Training: {training_detail}\n"
-        f"  Replay JSON save: {replay_detail}\n"
-        f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
-        f"  Device: {device}"
+        f"  Self-play ladder: {'enabled' if args.self_play_ladder else 'disabled'}"
+        + (
+            f"\n  Champion history dir: {args.champion_history_dir}"
+            if args.self_play_ladder and args.champion_history_dir
+            else ""
+        )
+        + f"\n  Map: {map_detail}\n"
+        + f"  Training: {training_detail}\n"
+        + f"  Replay JSON save: {replay_detail}\n"
+        + f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
+        + f"  Device: {device}"
     )
     print()
 
@@ -1688,6 +1720,27 @@ def main():
                         f"  PROMOTION #{promotions}: challenger -> champion "
                         f"(new champion win_rate threshold met)"
                     )
+                    if args.champion_history_dir:
+                        os.makedirs(args.champion_history_dir, exist_ok=True)
+                        hist_main, hist_place = _champion_history_paths(
+                            args.champion_history_dir,
+                            promotions,
+                            g,
+                            eval_wr,
+                        )
+                        shutil.copy2(champion_main_model_path, hist_main)
+                        if (
+                            challenger_placement_eval_path
+                            and os.path.isfile(champion_placement_model_path)
+                        ):
+                            shutil.copy2(champion_placement_model_path, hist_place)
+                            print(
+                                f"  champion history saved:\n"
+                                f"    main      {hist_main}\n"
+                                f"    placement {hist_place}"
+                            )
+                        else:
+                            print(f"  champion history saved:\n    main {hist_main}")
                     env = make_env(
                         enemy_type="rl-capstone",
                         enemy_ab_depth=args.enemy_ab_depth,
