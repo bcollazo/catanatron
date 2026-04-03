@@ -18,23 +18,28 @@ REPO_ROOT="${REPO_ROOT:-$HOME/catan_ai}"
 cd "$REPO_ROOT"
 mkdir -p logs
 
+# Unbuffered Python + immediate shell line so Slurm .out files show progress while
+# imports / model load run (can be minutes before first Python print otherwise).
+export PYTHONUNBUFFERED=1
+echo "=== $(date -Is) job start cwd=$(pwd) ==="
+
 export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
 # shellcheck source=/dev/null
 source ~/.micromamba.sh
 micromamba activate catan311
 
-python capstone_agent/run_simulation.py \
+python -u capstone_agent/run_simulation.py \
   --train \
   --self-play-ladder \
   --champion-history-dir capstone_agent/models/champion_history/selfplay_run1 \
-  --load capstone_model.pt \
+  --load capstone_agent/models/capstone_model.pt \
   --placement-model capstone_agent/models/placement_model.pt \
   --save capstone_agent/models/challenger_main_play.pt \
   --save-placement-model capstone_agent/models/challenger_placement.pt \
   --champion-main-model capstone_agent/models/champion_main_play.pt \
   --champion-placement-model capstone_agent/models/champion_placement.pt \
   --placement-strategy model \
-  --games 10000000 \
+  --games 1000000 \
   --save-every-games 10000 \
   --train-update-trigger steps \
   --train-every-steps 4096 \
