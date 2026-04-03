@@ -1409,6 +1409,11 @@ def main():
             f" [smooth-mix seed={args.enemy_mix_seed}, "
             f"blend_games={args.enemy_mix_games}, start=({start_desc}), end=({end_desc})]"
         )
+    if args.self_play_ladder:
+        enemy_detail = (
+            "rl-capstone [frozen champion: "
+            f"main={champion_main_model_path}, placement={champion_placement_model_path}]"
+        )
     map_detail = f"{resolved_map_template} / {args.map_mode}"
     if args.map_template == "AUTO":
         map_detail += " (auto-selected)"
@@ -1585,6 +1590,9 @@ def main():
                             f"(mix={mix_desc})"
                         )
                         last_switch_log_game = g
+
+            if args.self_play_ladder:
+                active_enemy_for_game = "rl-capstone(champion)"
 
             keep_game_for_training = True
             if args.train:
