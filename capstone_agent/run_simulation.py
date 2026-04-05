@@ -657,6 +657,8 @@ def simulate_game(
     max_steps: int = MAX_STEPS_PER_GAME,
     verbose: bool = False,
     store_in_buffer: bool = False,
+    progress_env_steps: int = 0,
+    game_index: Optional[int] = None,
 ) -> GameResult:
     """Play one full game using the agent and return a GameResult.
 
@@ -667,6 +669,8 @@ def simulate_game(
         verbose: Print per-step action descriptions.
         store_in_buffer: If True, store transitions in the agent's rollout
             buffer (needed if you plan to call agent.train() afterward).
+        progress_env_steps: If > 0 and store_in_buffer, print every N env steps.
+        game_index: 1-based game number for progress messages (optional).
 
     Returns:
         A GameResult with stats about the game.
@@ -701,6 +705,17 @@ def simulate_game(
             print(
                 f"  Step {step:4d}: action={action:3d} ({desc})  "
                 f"reward={reward:+.1f}  value_est={value:+.4f}"
+            )
+
+        if (
+            store_in_buffer
+            and progress_env_steps > 0
+            and step % progress_env_steps == 0
+        ):
+            label = f"Game {game_index}: " if game_index is not None else ""
+            print(
+                f"  ... {label}env step {step}/{max_steps} (in progress)",
+                flush=True,
             )
 
         if done:
@@ -925,6 +940,16 @@ def main():
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Print per-step action log"
+    )
+    parser.add_argument(
+        "--progress-env-steps",
+        type=int,
+        default=0,
+        metavar="N",
+        help=(
+            "During training games, print a heartbeat every N env steps (0=off). "
+            "Use on batch systems: logs only show after each full game unless this is set."
+        ),
     )
     parser.add_argument(
         "--load", type=str, default=None, help="Path to saved main-agent model weights"
@@ -1602,7 +1627,12 @@ def main():
                     else None
                 )
                 result = simulate_game(
-                    agent, env, verbose=args.verbose, store_in_buffer=True
+                    agent,
+                    env,
+                    verbose=args.verbose,
+                    store_in_buffer=True,
+                    progress_env_steps=args.progress_env_steps,
+                    game_index=g,
                 )
                 if args.self_play_ladder and args.self_play_winner_only and not result.won:
                     keep_game_for_training = False
