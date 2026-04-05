@@ -9,7 +9,7 @@ import numpy as np
 from catanatron.models.enums import ActionPrompt
 
 try:
-    from .CONSTANTS import ROAD_ACTION_SLICE, SETTLEMENT_ACTION_SLICE
+    from ..CONSTANTS import ROAD_ACTION_SLICE, SETTLEMENT_ACTION_SLICE
 except ImportError:  # pragma: no cover - supports script-style imports
     from CONSTANTS import ROAD_ACTION_SLICE, SETTLEMENT_ACTION_SLICE
 

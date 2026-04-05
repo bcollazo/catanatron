@@ -37,6 +37,7 @@ import numpy as np
 import torch
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from PlacementModel import PlacementModel
 from device import get_device

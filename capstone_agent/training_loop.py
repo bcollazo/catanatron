@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 from MainPlayAgent import MainPlayAgent
-from PlacementAgent import PlacementAgent
+from Placement.PlacementAgent import PlacementAgent
 from CapstoneAgent import CapstoneAgent
 from action_map import validate as validate_action_mapping
 from device import get_device

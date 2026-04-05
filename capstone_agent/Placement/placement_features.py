@@ -22,7 +22,7 @@ from catanatron.models.enums import RESOURCES
 from catanatron.models.player import Color
 
 try:
-    from .CONSTANTS import EDGE_FEATURE_SLICE, VERTEX_FEATURE_SLICE
+    from ..CONSTANTS import EDGE_FEATURE_SLICE, VERTEX_FEATURE_SLICE
 except ImportError:  # pragma: no cover - supports script-style imports
     from CONSTANTS import EDGE_FEATURE_SLICE, VERTEX_FEATURE_SLICE
 

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 try:
-    from .CONSTANTS import PLACEMENT_AGENT_HIDDEN_SIZE
+    from ..CONSTANTS import PLACEMENT_AGENT_HIDDEN_SIZE
     from .placement_features import COMPACT_PLACEMENT_FEATURE_SIZE
 except ImportError:  # pragma: no cover - supports script-style imports
     from CONSTANTS import PLACEMENT_AGENT_HIDDEN_SIZE

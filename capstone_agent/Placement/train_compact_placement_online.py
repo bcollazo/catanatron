@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from PlacementAgent import make_placement_agent
 from benchmark_placement import HybridPlayer, run_group
@@ -342,6 +343,7 @@ class CollectorManager(threading.Thread):
             os.path.join(
                 self.repo_root,
                 "capstone_agent",
+                "Placement",
                 "collect_compact_placement_data.py",
             ),
             "--games",

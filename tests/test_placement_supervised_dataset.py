@@ -1,17 +1,17 @@
 import numpy as np
 
-from capstone_agent.benchmark_placement import HybridPlayer
-from capstone_agent.placement_action_space import (
+from capstone_agent.Placement.benchmark_placement import HybridPlayer
+from capstone_agent.Placement.placement_action_space import (
     PlacementPrompt,
     capstone_action_to_local,
     capstone_mask_to_local_mask,
     prompt_from_game,
 )
-from capstone_agent.placement_features import (
+from capstone_agent.Placement.placement_features import (
     get_compact_placement_observation,
     validate_static_node_feature_order,
 )
-from capstone_agent.placement_supervised_dataset import (
+from capstone_agent.Placement.placement_supervised_dataset import (
     OPENING_STEP_COUNT,
     CompactPlacementAccumulator,
     decode_opening_action_onehot,
@@ -24,7 +24,7 @@ from capstone_agent.placement_supervised_dataset import (
     reconstruct_local_mask,
     save_chunk_records,
 )
-from capstone_agent.router_search_player import (
+from capstone_agent.Placement.router_search_player import (
     EnginePlayerMainAgentAdapter,
     RouterCapstonePlayer,
     get_capstone_action_mask,

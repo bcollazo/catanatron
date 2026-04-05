@@ -15,8 +15,8 @@ from catanatron.models.player import Player
 from catanatron.players.minimax import AlphaBetaPlayer
 
 try:
-    from .CapstoneAgent import CapstoneAgent
-    from .CONSTANTS import ACTION_SPACE_SIZE
+    from ..CapstoneAgent import CapstoneAgent
+    from ..CONSTANTS import ACTION_SPACE_SIZE
 except ImportError:  # pragma: no cover - supports script-style imports
     from CapstoneAgent import CapstoneAgent
     from CONSTANTS import ACTION_SPACE_SIZE

@@ -6,11 +6,11 @@ import torch.nn as nn
 from torch.distributions import Categorical
 
 try:
-    from .CONSTANTS import FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
-    from .PPOHyperparams import PPOHyperparams
+    from ..CONSTANTS import FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
+    from ..PPOHyperparams import PPOHyperparams
     from .PlacementModel import PlacementModel
-    from .RolloutBuffer import RolloutBuffer
-    from .device import get_device
+    from ..RolloutBuffer import RolloutBuffer
+    from ..device import get_device
     from .placement_action_space import (
         PlacementPrompt,
         capstone_action_to_local,

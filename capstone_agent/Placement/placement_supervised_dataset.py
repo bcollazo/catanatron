@@ -14,7 +14,7 @@ from catanatron.models.board import STATIC_GRAPH, get_edges
 from catanatron.models.enums import ActionType
 
 try:
-    from .CONSTANTS import EDGE_ACTION_SIZE, ROAD_ACTION_SLICE, SETTLEMENT_ACTION_SLICE, VERTEX_ACTION_SIZE
+    from ..CONSTANTS import EDGE_ACTION_SIZE, ROAD_ACTION_SLICE, SETTLEMENT_ACTION_SLICE, VERTEX_ACTION_SIZE
     from .placement_action_space import PlacementPrompt, capstone_action_to_local, local_action_size
     from .placement_features import (
         STATIC_NODE_FEATURE_SIZE,

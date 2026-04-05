@@ -26,6 +26,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player

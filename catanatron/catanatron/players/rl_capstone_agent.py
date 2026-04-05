@@ -18,7 +18,7 @@ if normalized_path not in sys.path:
     sys.path.append(normalized_path)
 from capstone_agent.CapstoneAgent import CapstoneAgent # main gameplay agent
 from capstone_agent.MainPlayAgent import MainPlayAgent
-from capstone_agent.PlacementAgent import PlacementAgent
+from capstone_agent.Placement.PlacementAgent import PlacementAgent
 
 from capstone_agent.CONSTANTS import ACTION_SPACE_SIZE
 

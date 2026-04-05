@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-from capstone_agent.train_compact_placement_online import (
+from capstone_agent.Placement.train_compact_placement_online import (
     ChunkRecord,
     atomic_write_json,
     create_output_paths,

@@ -1,15 +1,15 @@
 import numpy as np
 import torch
 
-from capstone_agent.PlacementAgent import PlacementAgent
-from capstone_agent.placement_action_space import (
+from capstone_agent.Placement.PlacementAgent import PlacementAgent
+from capstone_agent.Placement.placement_action_space import (
     PlacementPrompt,
     capstone_action_to_local,
     capstone_mask_to_local_mask,
     infer_placement_prompt,
     local_action_to_capstone,
 )
-from capstone_agent.placement_features import (
+from capstone_agent.Placement.placement_features import (
     COMPACT_PLACEMENT_FEATURE_SIZE,
     get_compact_placement_observation,
     project_capstone_to_compact_placement,
