@@ -38,7 +38,7 @@ from catanatron.gym.envs.capstone_env import (
 from catanatron.gym.envs.action_translator import capstone_to_action
 from PlacementAgent import make_placement_agent
 
-from CONSTANTS import FEATURE_SPACE_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE
+from CONSTANTS import PLACEMENT_AGENT_HIDDEN_SIZE
 
 
 def _make_action_mask(game):
@@ -166,7 +166,8 @@ def main():
 
     # ── test: our placement strategy + AlphaBeta rest ─────────────
     placement_agent = make_placement_agent(
-        args.strategy, obs_size=FEATURE_SPACE_SIZE, hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE, # TODO -> does this need to be the whole feature space?
+        args.strategy,
+        hidden_size=PLACEMENT_AGENT_HIDDEN_SIZE,
     )
     if args.placement_model:
         placement_agent.load(args.placement_model)
