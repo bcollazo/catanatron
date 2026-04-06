@@ -66,7 +66,7 @@ class RandomPlacementAgent:
         pass
 
     def train(self, last_value):
-        pass
+        return {}
 
     def load(self, path):
         pass
@@ -117,7 +117,7 @@ class AlphaBetaPlacementAgent:
         pass
 
     def train(self, last_value):
-        pass
+        return {}
 
     def load(self, path):
         pass
@@ -204,7 +204,7 @@ class PlacementAgent:
     def train(self, last_value):
         """PPO update over collected placement transitions."""
         if len(self.buffer.rewards) == 0:
-            return
+            return {}
 
         advantages, returns = self.compute_advantages(last_value)
 
@@ -268,6 +268,7 @@ class PlacementAgent:
                 self.optimizer.step()
 
         self.buffer.clear()
+        return {}
 
     # ── supervised learning interface ────────────────────────────
 

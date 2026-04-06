@@ -4,14 +4,18 @@
 # Submit from repo root (or anywhere): sbatch capstone_agent/jobs/selfplay_dcc_slurm.sh
 # Docs: https://oit-rc.pages.oit.duke.edu/rcsupportdocs/dcc/slurm/
 #
-# Wall time: 30 days. If sbatch rejects with MaxTime, your GPU partition may cap lower
-# (e.g. gpu-common is often 2d). Then use a lab/courses GPU partition, or chain jobs with
-# --dependency=afterok:<jobid> and rely on checkpoint resume (--save paths + existing weights).
+# Wall time must be <= partition MaxTime. gpu-common / courses-gpu are typically 2 days max
+# (30 days will be rejected). For longer training: re-submit with
+#   sbatch --dependency=afterok:<JOBID> capstone_agent/jobs/selfplay_dcc_slurm.sh
+# Check limits:  scontrol show partition gpu-common | grep -i max
+# scavenger-gpu often allows ~7d (lower priority): uncomment partition line below if you use it.
 #
 #SBATCH --job-name=catan_selfplay_gpu
 #SBATCH --partition=gpu-common
 #SBATCH --gres=gpu:1
-#SBATCH --time=30-00:00:00
+#SBATCH --time=2-00:00:00
+## SBATCH --time=7-00:00:00
+## SBATCH --partition=scavenger-gpu
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --output=logs/%x-%j.out
@@ -40,12 +44,40 @@ echo "=== GPU check ==="
 nvidia-smi -L || true
 python -u -c "import torch; print('torch', torch.__version__, 'cuda_available', torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'cpu-only')"
 
+# Challenger initial weights (NOT the champion — see below):
+#   Resume last job:  leave LOAD_MAIN unset (default) so run_simulation auto-loads
+#     --save / --save-placement-model if those files exist; else falls back to *_FALLBACK.
+#   Start from champion:  export LOAD_MAIN LOAD_PLACEMENT to champion paths (or *_FALLBACK).
+# Champion opponent files: always --champion-main-model / --champion-placement-model.
+CHAMP_MAIN="$REPO_ROOT/capstone_agent/models/champion_main_play.pt"
+CHAMP_PLACE="$REPO_ROOT/capstone_agent/models/champion_placement.pt"
+CHAL_MAIN="$REPO_ROOT/capstone_agent/models/challenger_main_play.pt"
+CHAL_PLACE="$REPO_ROOT/capstone_agent/models/challenger_placement.pt"
+LOAD_MAIN_FALLBACK="${LOAD_MAIN_FALLBACK:-$REPO_ROOT/capstone_agent/models/capstone_model.pt}"
+LOAD_PLACE_FALLBACK="${LOAD_PLACE_FALLBACK:-$REPO_ROOT/capstone_agent/models/placement_model.pt}"
+if [[ -n "${LOAD_MAIN:-}" ]]; then
+  MAIN_SRC="$LOAD_MAIN"
+elif [[ -f "$CHAL_MAIN" ]]; then
+  MAIN_SRC="" # omit --load → run_simulation resumes from --save (challenger_main_play.pt)
+else
+  MAIN_SRC="$LOAD_MAIN_FALLBACK"
+fi
+if [[ -n "${LOAD_PLACEMENT:-}" ]]; then
+  PLACE_SRC="$LOAD_PLACEMENT"
+elif [[ -f "$CHAL_PLACE" ]]; then
+  PLACE_SRC="" # omit → resume from --save-placement-model
+else
+  PLACE_SRC="$LOAD_PLACE_FALLBACK"
+fi
+LOAD_ARGS=()
+[[ -n "$MAIN_SRC" ]] && LOAD_ARGS+=(--load "$MAIN_SRC")
+[[ -n "$PLACE_SRC" ]] && LOAD_ARGS+=(--placement-model "$PLACE_SRC")
+
 python -u capstone_agent/run_simulation.py \
   --train \
   --self-play-ladder \
   --champion-history-dir capstone_agent/models/champion_history/selfplay_run1 \
-  --load capstone_agent/models/capstone_model.pt \
-  --placement-model capstone_agent/models/placement_model.pt \
+  "${LOAD_ARGS[@]}" \
   --save capstone_agent/models/challenger_main_play.pt \
   --save-placement-model capstone_agent/models/challenger_placement.pt \
   --champion-main-model capstone_agent/models/champion_main_play.pt \

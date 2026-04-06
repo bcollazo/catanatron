@@ -27,7 +27,7 @@ import shutil
 from collections import deque
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -256,6 +256,39 @@ class BenchmarkLogger:
             writer.writerow(filtered)
 
 
+class PPOTrainingMetricsLogger:
+    """One CSV row per main-play PPO update (loss breakdown)."""
+
+    DEFAULT_HEADER = [
+        "timestamp_utc",
+        "run_name",
+        "game_index",
+        "buffered_transitions",
+        "games_in_batch",
+        "train_update_trigger",
+        "update_reason",
+        "ppo_total_loss",
+        "ppo_actor_loss",
+        "ppo_critic_loss",
+        "ppo_entropy_mean",
+    ]
+
+    def __init__(self, csv_path: str):
+        self.csv_path = csv_path
+        parent = os.path.dirname(csv_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        if not os.path.exists(csv_path):
+            with open(csv_path, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(self.DEFAULT_HEADER)
+
+    def write_row(self, row: Dict[str, Any]):
+        with open(self.csv_path, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=self.DEFAULT_HEADER)
+            writer.writerow({k: row.get(k, "") for k in self.DEFAULT_HEADER})
+
+
 def _unwrap_env(env):
     current = env
     while hasattr(current, "env"):
@@ -275,8 +308,8 @@ def maybe_save_game_json(env, out_dir: Optional[str], game_index: int, every: in
         return None
     if every <= 0:
         every = 100
-    # Save first game of each block: 1, 1+every, 1+2*every, ...
-    if (game_index - 1) % every != 0:
+    # Save every Nth completed game: N, 2N, 3N, ... (e.g. 100, 200, 300 when every=100).
+    if game_index % every != 0:
         return None
 
     core_env = _unwrap_env(env)
@@ -299,20 +332,26 @@ def _self_seat(env, self_color: Color = Color.BLUE) -> Optional[int]:
     return game.state.color_to_index.get(self_color)
 
 
-def _ppo_train_with_bootstrap(agent, bootstrap_obs, bootstrap_mask) -> None:
-    """CapstoneAgent.train expects (obs, mask); standalone agents use scalar bootstrap."""
+def _ppo_train_with_bootstrap(
+    agent, bootstrap_obs, bootstrap_mask
+) -> Optional[Dict[str, float]]:
+    """CapstoneAgent.train expects (obs, mask); standalone agents use scalar bootstrap.
+
+    Returns main-play PPO metrics when available (CapstoneAgent / MainPlayAgent.train).
+    """
     if hasattr(agent, "placement_agent") and hasattr(agent, "main_agent"):
-        agent.train(bootstrap_obs, bootstrap_mask)
-        return
+        out = agent.train(bootstrap_obs, bootstrap_mask)
+        return out if isinstance(out, dict) else None
     if bootstrap_obs is None or bootstrap_mask is None:
-        agent.train(0.0)
-        return
+        out = agent.train(0.0)
+        return out if isinstance(out, dict) else None
     device = get_device()
     with torch.no_grad():
         obs_t = torch.FloatTensor(bootstrap_obs).unsqueeze(0).to(device)
         mask_t = torch.FloatTensor(bootstrap_mask).unsqueeze(0).to(device)
         _, last_v = agent.model(obs_t, mask_t)
-    agent.train(last_v.item())
+    out = agent.train(last_v.item())
+    return out if isinstance(out, dict) else None
 
 
 def _buffer_transition_count(agent) -> int:
@@ -999,6 +1038,24 @@ def main():
         ),
     )
     parser.add_argument(
+        "--save-numbered-checkpoints",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "With --save-every-games, also copy the main checkpoint to "
+            "<save_dir>/<save_basename>_game_<G>.pt each time (keeps history for long runs)."
+        ),
+    )
+    parser.add_argument(
+        "--training-metrics-csv",
+        type=str,
+        default=None,
+        help=(
+            "Append one CSV row per main-play PPO update with loss / entropy means "
+            "(ppo_total_loss, ppo_actor_loss, ppo_critic_loss, ppo_entropy_mean)."
+        ),
+    )
+    parser.add_argument(
         "--enemy",
         type=str,
         default="random",
@@ -1176,8 +1233,7 @@ def main():
         type=int,
         default=100,
         help=(
-            "Save one game JSON every N games (default: 100), "
-            "saving the first game of each N-game block."
+            "Save one game JSON on every Nth completed game (default: 100 → games 100, 200, …)."
         ),
     )
     parser.add_argument(
@@ -1459,6 +1515,8 @@ def main():
             )
         if args.save and args.save_every_games > 0:
             training_detail += f", periodic_save_every={args.save_every_games} games"
+            if args.save_numbered_checkpoints:
+                training_detail += ", numbered main checkpoint copies"
     replay_detail = "disabled"
     if args.save_games_json_dir:
         replay_detail = (
@@ -1481,6 +1539,11 @@ def main():
         + f"  Training: {training_detail}\n"
         + f"  Replay JSON save: {replay_detail}\n"
         + f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
+        + (
+            f"  PPO metrics CSV: {args.training_metrics_csv}\n"
+            if args.training_metrics_csv
+            else ""
+        )
         + f"  Device: {device}"
     )
     print()
@@ -1489,6 +1552,11 @@ def main():
         "run_%Y%m%dT%H%M%SZ"
     )
     benchmark = None if args.no_benchmark else BenchmarkLogger(args.benchmark_csv)
+    ppo_metrics_logger = (
+        PPOTrainingMetricsLogger(args.training_metrics_csv)
+        if args.training_metrics_csv
+        else None
+    )
 
     wins, losses, truncations = 0, 0, 0
     games_since_update = 0
@@ -1727,19 +1795,38 @@ def main():
 
                 if should_update and buffered > 0:
                     batch_games = games_since_update
-                    _ppo_train_with_bootstrap(
+                    ppo_stats = _ppo_train_with_bootstrap(
                         agent, last_bootstrap_obs, last_bootstrap_mask
                     )
                     print(
                         f"  trained PPO on {buffered} buffered transitions "
                         f"(games in batch: {batch_games}; trigger={args.train_update_trigger}: {update_reason})"
                     )
+                    if ppo_metrics_logger is not None and ppo_stats:
+                        ppo_metrics_logger.write_row(
+                            {
+                                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                                "run_name": run_name,
+                                "game_index": g,
+                                "buffered_transitions": buffered,
+                                "games_in_batch": batch_games,
+                                "train_update_trigger": args.train_update_trigger,
+                                "update_reason": update_reason,
+                                **ppo_stats,
+                            }
+                        )
                     games_since_update = 0
 
                 if args.save and args.save_every_games > 0 and g % args.save_every_games == 0:
                     _ensure_parent_dir(args.save)
                     _ensure_parent_dir(placement_save)
                     agent.save(args.save, placement_save)
+                    if args.save_numbered_checkpoints:
+                        save_abs = os.path.abspath(args.save)
+                        save_dir = os.path.dirname(save_abs) or "."
+                        base = os.path.splitext(os.path.basename(save_abs))[0]
+                        snap = os.path.join(save_dir, f"{base}_game_{g:08d}.pt")
+                        shutil.copy2(save_abs, snap)
                     print(
                         f"  periodic checkpoint saved at game {g}: "
                         f"main={args.save}"
@@ -1833,13 +1920,26 @@ def main():
         buffered = _buffer_transition_count(agent)
         if buffered > 0:
             batch_games = games_since_update
-            _ppo_train_with_bootstrap(
+            ppo_stats = _ppo_train_with_bootstrap(
                 agent, last_bootstrap_obs, last_bootstrap_mask
             )
             print(
                 f"Final PPO flush on {buffered} buffered transitions "
                 f"(games in batch: {batch_games})"
             )
+            if ppo_metrics_logger is not None and ppo_stats:
+                ppo_metrics_logger.write_row(
+                    {
+                        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                        "run_name": run_name,
+                        "game_index": games_completed,
+                        "buffered_transitions": buffered,
+                        "games_in_batch": batch_games,
+                        "train_update_trigger": args.train_update_trigger,
+                        "update_reason": "final_flush_on_exit",
+                        **ppo_stats,
+                    }
+                )
 
     print()
     if interrupted:
@@ -1856,6 +1956,8 @@ def main():
         )
     if benchmark is not None:
         print(f"Benchmarks logged to: {args.benchmark_csv} (run_name={run_name})")
+    if ppo_metrics_logger is not None:
+        print(f"PPO metrics logged to: {args.training_metrics_csv}")
 
     if args.train and args.save:
         main_ckpt = _timestamped_path(args.save)

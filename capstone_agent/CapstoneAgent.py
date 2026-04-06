@@ -79,8 +79,9 @@ class CapstoneAgent:
                     last_v_place = v_place.item()
                 else:
                     last_v_place = 0.0
-        self.main_agent.train(last_v_main)
+        main_metrics = self.main_agent.train(last_v_main)
         self.placement_agent.train(last_v_place)
+        return main_metrics if isinstance(main_metrics, dict) else {}
 
     @property
     def model(self):
