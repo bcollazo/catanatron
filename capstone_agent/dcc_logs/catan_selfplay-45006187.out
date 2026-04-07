@@ -1,0 +1,7 @@
+Effective config:
+  preset=none difficulty=medium
+  games=10000000 train=True
+  placement_strategy=model
+  enemy_fixed_schedule=False
+  enemy_smooth_mix=False
+

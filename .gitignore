@@ -6,6 +6,8 @@ data/
 profile.pstats
 catanatron-venv
 .DS_Store
+Python-3.12.0.tgz
+Python-3.12.0/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

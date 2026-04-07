@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/hpc/home/wjn7/catan_ai/capstone_agent/run_simulation.py", line 1845, in <module>
+    main()
+  File "/hpc/home/wjn7/catan_ai/capstone_agent/run_simulation.py", line 1296, in main
+    agent, env = make_agent_and_env(
+                 ^^^^^^^^^^^^^^^^^^^
+  File "/hpc/home/wjn7/catan_ai/capstone_agent/run_simulation.py", line 777, in make_agent_and_env
+    main_agent.load(model_path)
+  File "/hpc/home/wjn7/catan_ai/capstone_agent/MainPlayAgent.py", line 148, in load
+    self.model.load_state_dict(torch.load(path, weights_only=True, map_location=self.device))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/hpc/home/wjn7/micromamba/envs/catan311/lib/python3.11/site-packages/torch/serialization.py", line 1500, in load
+    with _open_file_like(f, "rb") as opened_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/hpc/home/wjn7/micromamba/envs/catan311/lib/python3.11/site-packages/torch/serialization.py", line 768, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/hpc/home/wjn7/micromamba/envs/catan311/lib/python3.11/site-packages/torch/serialization.py", line 749, in __init__
+    super().__init__(open(name, mode))  # noqa: SIM115
+                     ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'capstone_model.pt'
