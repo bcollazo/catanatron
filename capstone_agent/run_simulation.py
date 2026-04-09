@@ -760,7 +760,14 @@ def simulate_game(
         if done:
             result.terminated = terminated
             result.truncated = truncated
-            result.won = reward > 0
+            # Prefer engine outcome: shaped rewards can be >0 on a truncated non-win.
+            core_env = _unwrap_env(env)
+            game = getattr(core_env, "game", None)
+            if game is not None:
+                wc = game.winning_color()
+                result.won = wc == Color.BLUE if wc is not None else False
+            else:
+                result.won = reward > 0
             break
 
         obs, mask = next_obs, next_mask

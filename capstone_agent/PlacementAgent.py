@@ -246,11 +246,7 @@ class PlacementAgent:
                     )
                     * b_advantages
                 )
-                actor_loss = -torch.where(
-                    b_advantages >= 0,
-                    torch.min(surr1, surr2),
-                    torch.max(surr1, surr2),
-                ).mean()
+                actor_loss = -torch.min(surr1, surr2).mean()
 
                 critic_loss = nn.MSELoss()(values.view(-1), b_returns.view(-1))
 

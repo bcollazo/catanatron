@@ -128,15 +128,18 @@ class MainPlayAgent:
                 new_log_probs = dist.log_prob(b_actions)
                 entropy       = dist.entropy().mean()
 
-                # --- PPO Clipped Objective ---
-                ratio       = torch.exp(new_log_probs - b_old_lp)
-                surr1       = ratio * b_advantages
-                surr2       = torch.clamp(ratio, 1 - self.hyperparams.clip_eps, 1 + self.hyperparams.clip_eps) * b_advantages
-                actor_loss = -torch.where(
-                    b_advantages >= 0,
-                    torch.min(surr1, surr2),  # positive advantage → min limits over-rewarding ✓
-                    torch.max(surr1, surr2)   # negative advantage → max limits over-punishing ✓
-                ).mean()
+                # --- PPO clipped surrogate (Schulman et al.): always min(r*A, clip(r)*A) ---
+                ratio = torch.exp(new_log_probs - b_old_lp)
+                surr1 = ratio * b_advantages
+                surr2 = (
+                    torch.clamp(
+                        ratio,
+                        1 - self.hyperparams.clip_eps,
+                        1 + self.hyperparams.clip_eps,
+                    )
+                    * b_advantages
+                )
+                actor_loss = -torch.min(surr1, surr2).mean()
 
                 # --- Critic Loss ---
                 # Keep both tensors 1D to avoid scalar-vs-vector broadcasting when batch size is 1.
