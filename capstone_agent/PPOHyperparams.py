@@ -8,6 +8,6 @@ class PPOHyperparams:
     clip_eps    = 0.2       # PPO clip range
     value_coef  = 0.5       # how much critic loss contributes
     entropy_coef = 0.01     # encourages exploration
-    epochs      = 10        # how many times to train on each rollout
+    epochs      = 6      # how many times to train on each rollout
     batch_size  = 64
     max_grad_norm = 0.5

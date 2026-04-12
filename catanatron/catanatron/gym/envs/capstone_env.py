@@ -211,7 +211,9 @@ class CapstoneCatanatronEnv(gym.Env):
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
-        reward = self.reward_manager.reward(self.game, self.self_player.color)
+        reward = self.reward_manager.reward(
+            self.game, self.self_player.color, acting_action=catan_action
+        )
         info = dict(
             valid_actions=self.get_valid_actions(),
             action_mask=self.get_action_mask(),
