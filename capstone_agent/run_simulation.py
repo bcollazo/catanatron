@@ -11,6 +11,9 @@ Usage:
         --train-every-games 20                       # PPO update every 20 games
     python capstone_agent/run_simulation.py --games 10 --enemy alphabeta
                                                       # evaluate/train vs AlphaBeta
+    python capstone_agent/run_simulation.py --eval-challenger-main path/A.pt \\
+        --eval-champion-main path/B.pt --eval-head-to-head-games 2000
+                                                      # seat-balanced RL vs RL, then exit
 
     # Or import and call from your own code:
     from run_simulation import simulate_game, simulate_and_train
@@ -426,6 +429,7 @@ def make_env(
     fixed_map_seed: int,
     enemy_main_model_path: Optional[str] = None,
     enemy_placement_model_path: Optional[str] = None,
+    reward_function: str = "full",
 ):
     enemy = make_enemy_player(
         enemy_type,
@@ -445,6 +449,7 @@ def make_env(
             "map_type": map_template,
             "randomize_map": randomize_map,
             "fixed_map_seed": fixed_map_seed,
+            "reward_function": reward_function,
         },
     )
 
@@ -812,6 +817,7 @@ def make_agent_and_env(
     enemy_placement_model_path: Optional[str] = None,
     placement_ab_depth: int = 2,
     placement_ab_prunning: bool = True,
+    reward_function: str = "full",
 ):
     """Create a routed agent + env pair.
 
@@ -826,6 +832,7 @@ def make_agent_and_env(
         enemy_placement_model_path: Placement weights for rl-capstone enemy.
         placement_ab_depth: AlphaBeta depth for placement strategy ``alphabeta``.
         placement_ab_prunning: AlphaBeta pruning flag for placement strategy ``alphabeta``.
+        reward_function: ``"full"`` (dense shaping) or ``"simple"`` (terminal ±1).
 
     Returns a CapstoneAgent that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
@@ -859,6 +866,7 @@ def make_agent_and_env(
         fixed_map_seed=fixed_map_seed,
         enemy_main_model_path=enemy_main_model_path,
         enemy_placement_model_path=enemy_placement_model_path,
+        reward_function=reward_function,
     )
     router = CapstoneAgent(placement_agent, main_agent)
 
@@ -874,6 +882,8 @@ def evaluate_challenger_vs_champion(
     map_template: str,
     map_mode: str,
     fixed_map_seed: int,
+    verbose: bool = False,
+    reward_function: str = "full",
 ):
     """Seat-balanced evaluation: half games challenger as Blue, half as Red."""
     if num_games <= 0:
@@ -894,10 +904,19 @@ def evaluate_challenger_vs_champion(
         fixed_map_seed=fixed_map_seed,
         enemy_main_model_path=champion_main_model_path,
         enemy_placement_model_path=champion_placement_model_path,
+        reward_function=reward_function,
     )
-    for _ in range(challenger_blue_games):
+    for i in range(challenger_blue_games):
         result = simulate_game(challenger_agent, challenger_env, store_in_buffer=False)
-        challenger_wins += int(result.won)
+        won = int(result.won)
+        challenger_wins += won
+        if verbose:
+            g = i + 1
+            st = "CH_BLUE_WIN" if result.won else ("TRUNC" if result.truncated else "CH_BLUE_LOSS")
+            print(
+                f"[eval {g}/{challenger_blue_games} challenger=BLUE] {st:14s} "
+                f"steps={result.steps:4d} reward={result.cumulative_reward:+.1f}"
+            )
 
     # Champion plays as Blue. Challenger wins when Blue loses.
     champion_agent, champion_env = make_agent_and_env(
@@ -910,11 +929,19 @@ def evaluate_challenger_vs_champion(
         fixed_map_seed=fixed_map_seed,
         enemy_main_model_path=challenger_main_model_path,
         enemy_placement_model_path=challenger_placement_model_path,
+        reward_function=reward_function,
     )
-    for _ in range(champion_blue_games):
+    for j in range(champion_blue_games):
         result = simulate_game(champion_agent, champion_env, store_in_buffer=False)
-        if result.terminated and not result.won:
-            challenger_wins += 1
+        ch_won_red = result.terminated and not result.won
+        challenger_wins += int(ch_won_red)
+        if verbose:
+            g = challenger_blue_games + j + 1
+            st = "CH_RED_WIN" if ch_won_red else ("TRUNC" if result.truncated else "CH_RED_LOSS")
+            print(
+                f"[eval {g}/{num_games} challenger=RED] {st:14s} "
+                f"steps={result.steps:4d} reward={result.cumulative_reward:+.1f}"
+            )
 
     return {
         "wins": challenger_wins,
@@ -1206,6 +1233,16 @@ def main():
         help="Seed used to generate deterministic map layout when --map-mode=fixed.",
     )
     parser.add_argument(
+        "--reward-function",
+        type=str,
+        choices=["full", "simple"],
+        default="full",
+        help=(
+            "Capstone env reward: 'full' (dense shaping) or 'simple' (sparse: 0 in-game, "
+            "±1 on terminal win/loss)."
+        ),
+    )
+    parser.add_argument(
         "--fresh-start",
         action="store_true",
         help="Ignore existing saved weights and train from scratch.",
@@ -1297,6 +1334,45 @@ def main():
             "include promotion index, training game index, eval win rate, and UTC time."
         ),
     )
+    parser.add_argument(
+        "--eval-challenger-main",
+        type=str,
+        default=None,
+        help=(
+            "With --eval-champion-main, run seat-balanced RL vs RL games and exit. "
+            "Challenger is counted as winning when it wins as Blue or when champion "
+            "loses as Blue. Omit --train."
+        ),
+    )
+    parser.add_argument(
+        "--eval-challenger-placement",
+        type=str,
+        default=None,
+        help="Optional placement weights for challenger in --eval-* head-to-head.",
+    )
+    parser.add_argument(
+        "--eval-champion-main",
+        type=str,
+        default=None,
+        help="Main weights for champion in --eval-* head-to-head (see --eval-challenger-main).",
+    )
+    parser.add_argument(
+        "--eval-champion-placement",
+        type=str,
+        default=None,
+        help="Optional placement weights for champion in --eval-* head-to-head.",
+    )
+    parser.add_argument(
+        "--eval-head-to-head-games",
+        type=int,
+        default=400,
+        help="Number of games for --eval-challenger-main/--eval-champion-main (>= 20).",
+    )
+    parser.add_argument(
+        "--eval-verbose",
+        action="store_true",
+        help="Print one line per game during --eval-* head-to-head (not per-env-step).",
+    )
     args = parser.parse_args()
     apply_training_preset(args)
     if args.train_every_steps < 1:
@@ -1331,6 +1407,44 @@ def main():
         parser.error("--self-play-promotion-threshold must be between 0 and 1")
     if args.champion_history_dir and not args.self_play_ladder:
         parser.error("--champion-history-dir requires --self-play-ladder")
+    if (
+        args.eval_challenger_main
+        or args.eval_champion_main
+        or args.eval_challenger_placement
+        or args.eval_champion_placement
+    ):
+        if not (args.eval_challenger_main and args.eval_champion_main):
+            parser.error(
+                "Head-to-head eval requires both --eval-challenger-main and "
+                "--eval-champion-main (optional placement paths may be added separately)."
+            )
+        if args.train:
+            parser.error("--eval-* head-to-head cannot be combined with --train")
+        if args.self_play_ladder:
+            parser.error("--eval-* head-to-head cannot be combined with --self-play-ladder")
+        if args.eval_head_to_head_games < 20:
+            parser.error("--eval-head-to-head-games must be >= 20")
+        resolved_map = resolve_map_template(args.map_template, args.map_mode)
+        stats = evaluate_challenger_vs_champion(
+            num_games=args.eval_head_to_head_games,
+            challenger_main_model_path=args.eval_challenger_main,
+            challenger_placement_model_path=args.eval_challenger_placement,
+            champion_main_model_path=args.eval_champion_main,
+            champion_placement_model_path=args.eval_champion_placement,
+            map_template=resolved_map,
+            map_mode=args.map_mode,
+            fixed_map_seed=args.fixed_map_seed,
+            verbose=args.eval_verbose,
+            reward_function=args.reward_function,
+        )
+        print(
+            "Head-to-head (challenger win rate vs champion):\n"
+            f"  games={stats['games']}  challenger_wins={stats['wins']}  "
+            f"win_rate={stats['win_rate']:.4f}\n"
+            f"  challenger_main={args.eval_challenger_main}\n"
+            f"  champion_main={args.eval_champion_main}"
+        )
+        return
     schedule_phases: list[ScheduledEnemyPhase] = []
     start_mix: Dict[EnemySpec, float] = {}
     end_mix: Dict[EnemySpec, float] = {}
@@ -1359,6 +1473,7 @@ def main():
             f"  preset={args.preset} difficulty={args.difficulty}\n"
             f"  games={args.games} train={args.train}\n"
             f"  placement_strategy={args.placement_strategy}\n"
+            f"  reward_function={args.reward_function}\n"
             f"  enemy_fixed_schedule={args.enemy_fixed_schedule}\n"
             f"  enemy_smooth_mix={args.enemy_smooth_mix}\n"
         )
@@ -1407,6 +1522,7 @@ def main():
         fixed_map_seed=args.fixed_map_seed,
         placement_ab_depth=args.placement_ab_depth,
         placement_ab_prunning=args.placement_ab_prunning,
+        reward_function=args.reward_function,
     )
     champion_main_model_path = args.champion_main_model
     champion_placement_model_path = args.champion_placement_model
@@ -1438,6 +1554,7 @@ def main():
             fixed_map_seed=args.fixed_map_seed,
             enemy_main_model_path=champion_main_model_path,
             enemy_placement_model_path=champion_placement_model_path,
+            reward_function=args.reward_function,
         )
     main_params = sum(p.numel() for p in agent.main_agent.model.parameters())
     pa = agent.placement_agent
@@ -1543,6 +1660,7 @@ def main():
             else ""
         )
         + f"\n  Map: {map_detail}\n"
+        + f"  Reward: {args.reward_function}\n"
         + f"  Training: {training_detail}\n"
         + f"  Replay JSON save: {replay_detail}\n"
         + f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
@@ -1623,6 +1741,7 @@ def main():
                         map_template=resolved_map_template,
                         map_mode=args.map_mode,
                         fixed_map_seed=args.fixed_map_seed,
+                        reward_function=args.reward_function,
                     )
                     current_schedule_phase_index = next_phase_index
                     if (
@@ -1671,6 +1790,7 @@ def main():
                         map_template=resolved_map_template,
                         map_mode=args.map_mode,
                         fixed_map_seed=args.fixed_map_seed,
+                        reward_function=args.reward_function,
                     )
                     current_mix_enemy = sampled_enemy
                     if (
@@ -1866,6 +1986,7 @@ def main():
                     map_template=resolved_map_template,
                     map_mode=args.map_mode,
                     fixed_map_seed=args.fixed_map_seed,
+                    reward_function=args.reward_function,
                 )
                 eval_wr = eval_result["win_rate"]
                 print(
@@ -1917,6 +2038,7 @@ def main():
                         fixed_map_seed=args.fixed_map_seed,
                         enemy_main_model_path=champion_main_model_path,
                         enemy_placement_model_path=champion_placement_model_path,
+                        reward_function=args.reward_function,
                     )
             games_completed = g
     except KeyboardInterrupt:
