@@ -27,6 +27,7 @@
 #
 # Optional environment overrides:
 #   MODEL_DIR=...              output dir (default includes reward name)
+#   RUN_NAME=...               benchmark/run label passed to run_simulation
 #   START_CKPT=/path/main.pt   explicit weights (highest priority over START_MODEL_DIR)
 #   START_MODEL_DIR=...        if START_CKPT unset: use <dir>/main_play.pt first,
 #                              then newest main_play_game_*.pt fallback.
@@ -60,6 +61,7 @@ fi
 
 MODEL_DIR="${MODEL_DIR:-$REPO_ROOT/capstone_agent/models/neuner_value_ab123_curriculum_${REWARD_FUNCTION}}"
 mkdir -p "$MODEL_DIR/replays"
+RUN_NAME="${RUN_NAME:-neuner_value_ab123_${REWARD_FUNCTION}}"
 
 GAMES="${GAMES:-400000}"
 SAVE_EVERY_GAMES="${SAVE_EVERY_GAMES:-10000}"
@@ -102,7 +104,7 @@ else
 fi
 
 echo "=== $(date -Is) neuner_value_ab123 curriculum start ==="
-echo "REWARD_FUNCTION=$REWARD_FUNCTION PLACEMENT_STRATEGY=$PLACEMENT_STRATEGY MODEL_DIR=$MODEL_DIR GAMES=$GAMES"
+echo "REWARD_FUNCTION=$REWARD_FUNCTION PLACEMENT_STRATEGY=$PLACEMENT_STRATEGY MODEL_DIR=$MODEL_DIR GAMES=$GAMES RUN_NAME=$RUN_NAME"
 echo "LOAD_ARGS=${LOAD_ARGS[*]:-none}"
 
 export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
@@ -137,6 +139,6 @@ python3 -u capstone_agent/run_simulation.py \
   --map-template TOURNAMENT \
   --map-mode fixed \
   --fixed-map-seed 0 \
-  --run-name "neuner_value_ab123_${REWARD_FUNCTION}" \
+  --run-name "$RUN_NAME" \
   --progress-env-steps 250 \
   "${LOAD_ARGS[@]}"
