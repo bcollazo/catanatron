@@ -1,9 +1,13 @@
 """Plot benchmark metrics with smoothing, confidence bands, and chunk summaries.
 
+Trailing win rates default to 500, 5000, and 50000 games (strict windows). Use
+--rolling-windows to customize. Per-game reward smoothing still uses --rolling-window.
+
 Example:
     python capstone_agent/plot_benchmarks.py \
       --csv capstone_agent/benchmarks/training_metrics.csv \
       --run-name iter_full \
+      --rolling-windows 500,5000,50000 \
       --rolling-window 100 \
       --ema-span 100 \
       --chunk-size 100
@@ -37,20 +41,51 @@ def _load(csv_path: str, run_name: str | None, mode: str):
     return df
 
 
-def _with_metrics(df: pd.DataFrame, rolling_window: int, ema_span: int, ci_z: float):
+def _parse_rolling_windows(spec: str) -> list[int]:
+    out: list[int] = []
+    seen: set[int] = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        w = int(part)
+        if w < 1:
+            raise SystemExit(f"rolling window must be >= 1, got {w}")
+        if w not in seen:
+            seen.add(w)
+            out.append(w)
+    if not out:
+        return [500, 5000, 50000]
+    return out
+
+
+def _with_metrics(
+    df: pd.DataFrame,
+    reward_rolling_window: int,
+    ema_span: int,
+    ci_z: float,
+    rolling_win_windows: list[int],
+):
     out = df.copy().reset_index(drop=True)
     out["idx"] = np.arange(1, len(out) + 1)
     out["won_f"] = out["won"].astype(float)
     out["reward_f"] = out["reward"].astype(float)
 
     out["cum_win_rate"] = out["won_f"].expanding().mean()
-    out["rolling_win_rate"] = out["won_f"].rolling(rolling_window, min_periods=1).mean()
+    for w in rolling_win_windows:
+        col = f"rolling_win_rate_{w}"
+        out[col] = out["won_f"].rolling(w, min_periods=w).mean()
+
+    ci_window = min(rolling_win_windows)
+    out["rolling_win_rate"] = out[f"rolling_win_rate_{ci_window}"].copy()
     out["ema_win_rate"] = out["won_f"].ewm(span=ema_span, adjust=False).mean()
 
-    out["rolling_reward"] = out["reward_f"].rolling(rolling_window, min_periods=1).mean()
+    out["rolling_reward"] = out["reward_f"].rolling(
+        reward_rolling_window, min_periods=1
+    ).mean()
     out["ema_reward"] = out["reward_f"].ewm(span=ema_span, adjust=False).mean()
 
-    n = out["won_f"].rolling(rolling_window, min_periods=1).count()
+    n = out["won_f"].rolling(ci_window, min_periods=ci_window).count()
     p = out["rolling_win_rate"]
     se = np.sqrt((p * (1.0 - p)).clip(lower=0.0) / n.clip(lower=1.0))
     out["ci_low"] = (p - ci_z * se).clip(lower=0.0)
@@ -98,7 +133,16 @@ def main():
         "--rolling-window",
         type=int,
         default=100,
-        help="Rolling window for win-rate/reward smoothing.",
+        help="Rolling window for per-game reward smoothing only.",
+    )
+    parser.add_argument(
+        "--rolling-windows",
+        type=str,
+        default="500,5000,50000",
+        help=(
+            "Comma-separated trailing win-rate windows (strict: NaN until N games). "
+            "CI uses the smallest window."
+        ),
     )
     parser.add_argument(
         "--ema-span",
@@ -132,13 +176,20 @@ def main():
     if train_raw.empty and eval_raw.empty:
         raise SystemExit("No train/eval rows found after filtering.")
 
+    win_windows = _parse_rolling_windows(args.rolling_windows)
+    ci_w = min(win_windows)
+
     train = (
-        _with_metrics(train_raw, args.rolling_window, args.ema_span, args.ci_z)
+        _with_metrics(
+            train_raw, args.rolling_window, args.ema_span, args.ci_z, win_windows
+        )
         if not train_raw.empty
         else None
     )
     eval_df = (
-        _with_metrics(eval_raw, args.rolling_window, args.ema_span, args.ci_z)
+        _with_metrics(
+            eval_raw, args.rolling_window, args.ema_span, args.ci_z, win_windows
+        )
         if not eval_raw.empty
         else None
     )
@@ -147,40 +198,50 @@ def main():
 
     # --- Win-rate panel ---
     if train is not None:
-        axes[0].plot(train["idx"], train["cum_win_rate"], label="Train cumulative")
         axes[0].plot(
-            train["idx"],
-            train["rolling_win_rate"],
-            label=f"Train rolling ({args.rolling_window})",
-            alpha=0.85,
+            train["idx"], train["cum_win_rate"], label="Train cumulative", color="0.35"
         )
+        for w in win_windows:
+            col = f"rolling_win_rate_{w}"
+            axes[0].plot(
+                train["idx"],
+                train[col],
+                label=f"Train trailing {w} games",
+                linewidth=1.4 if w <= 1000 else 1.8,
+                alpha=0.9 if w <= 1000 else 1.0,
+            )
         axes[0].plot(
             train["idx"],
             train["ema_win_rate"],
             label=f"Train EMA ({args.ema_span})",
-            linewidth=2,
+            linewidth=1.5,
+            linestyle=":",
+            color="0.25",
         )
         axes[0].fill_between(
             train["idx"],
             train["ci_low"],
             train["ci_high"],
-            alpha=0.15,
-            label=f"Train CI (z={args.ci_z:g})",
+            alpha=0.12,
+            label=f"Train CI on {ci_w}-game window (z={args.ci_z:g})",
         )
     if eval_df is not None:
-        axes[0].plot(
-            eval_df["idx"],
-            eval_df["rolling_win_rate"],
-            label=f"Eval rolling ({args.rolling_window})",
-            linestyle="--",
-            linewidth=2,
-        )
+        for w in win_windows:
+            col = f"rolling_win_rate_{w}"
+            axes[0].plot(
+                eval_df["idx"],
+                eval_df[col],
+                label=f"Eval trailing {w} games",
+                linestyle="--",
+                linewidth=1.2,
+                alpha=0.85,
+            )
         axes[0].plot(
             eval_df["idx"],
             eval_df["ema_win_rate"],
             label=f"Eval EMA ({args.ema_span})",
             linestyle=":",
-            linewidth=2,
+            linewidth=1.5,
         )
 
     axes[0].set_ylabel("Win rate")
@@ -253,21 +314,27 @@ def main():
 
     # Brief terminal summary to complement the image in SSH workflows.
     if train is not None and len(train) > 0:
-        print(
-            "Train summary: "
-            f"games={len(train)} "
-            f"cum_win={train['cum_win_rate'].iloc[-1]:.3f} "
-            f"roll_win={train['rolling_win_rate'].iloc[-1]:.3f} "
-            f"ema_win={train['ema_win_rate'].iloc[-1]:.3f}"
-        )
+        parts = [
+            f"games={len(train)}",
+            f"cum_win={train['cum_win_rate'].iloc[-1]:.3f}",
+            f"ema_win={train['ema_win_rate'].iloc[-1]:.3f}",
+        ]
+        for w in win_windows:
+            col = f"rolling_win_rate_{w}"
+            v = train[col].iloc[-1]
+            parts.append(f"trail{w}={v:.3f}" if pd.notna(v) else f"trail{w}=nan")
+        print("Train summary: " + " ".join(parts))
     if eval_df is not None and len(eval_df) > 0:
-        print(
-            "Eval summary: "
-            f"games={len(eval_df)} "
-            f"cum_win={eval_df['cum_win_rate'].iloc[-1]:.3f} "
-            f"roll_win={eval_df['rolling_win_rate'].iloc[-1]:.3f} "
-            f"ema_win={eval_df['ema_win_rate'].iloc[-1]:.3f}"
-        )
+        parts = [
+            f"games={len(eval_df)}",
+            f"cum_win={eval_df['cum_win_rate'].iloc[-1]:.3f}",
+            f"ema_win={eval_df['ema_win_rate'].iloc[-1]:.3f}",
+        ]
+        for w in win_windows:
+            col = f"rolling_win_rate_{w}"
+            v = eval_df[col].iloc[-1]
+            parts.append(f"trail{w}={v:.3f}" if pd.notna(v) else f"trail{w}=nan")
+        print("Eval summary: " + " ".join(parts))
 
 
 if __name__ == "__main__":

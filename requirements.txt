@@ -3,6 +3,7 @@ asttokens==3.0.1
 black==26.1.0
 blinker==1.9.0
 -e git+ssh://git@github.com/banyasp/catan_ai.git@fdc0e2931095d83054d32ec29340a2c3f80d09c8#egg=catanatron
+# -e .
 certifi==2026.1.4
 charset-normalizer==3.4.4
 click==8.3.1

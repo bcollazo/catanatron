@@ -15,16 +15,16 @@ class CapstoneReward:
 
     WIN_REWARD = 1.0
     LOSE_PENALTY = -1.0
-    STEP_PENALTY = -0.001
-    GAIN_VP_REWARD = 0.05
-    PIP_MULTIPLIER = 1/10
-    BUY_DEV_CARD_REWARD = 0.005
-    PLAY_KNIGHT_REWARD = 0.005
-    BUILD_ROAD_REWARD = 0.001
+    STEP_PENALTY = -0.0001
+    GAIN_VP_REWARD = 0.0008
+    PIP_MULTIPLIER = 0.0008
+    BUY_DEV_CARD_REWARD = 0.0005
+    PLAY_KNIGHT_REWARD = 0.0005
+    BUILD_ROAD_REWARD = 0.0001
     # When > 0, only on our MOVE_ROBBER: reward pip production we recover (robber off us)
     # and opponent pips blocked (their sum(..., consider_robber=True) drops).
-    ROBBER_SELF_ROBBED_PIP_COEF = 0.01
-    ROBBER_OPP_ROBBED_PIP_COEF = 0.01
+    ROBBER_SELF_ROBBED_PIP_COEF = 0.0001
+    ROBBER_OPP_ROBBED_PIP_COEF = 0.0001
 
     """Reward manager for CapstoneCatanatronEnv."""
 

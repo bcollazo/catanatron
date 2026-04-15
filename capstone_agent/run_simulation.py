@@ -1207,6 +1207,15 @@ def main():
         ),
     )
     parser.add_argument(
+        "--rolling-win-rate-window",
+        type=int,
+        default=1000,
+        help=(
+            "Number of recent games for the rolling win rate in per-game logs "
+            "(wr*=[...] and per-enemy deques). Larger = smoother, less reactive."
+        ),
+    )
+    parser.add_argument(
         "--map-template",
         type=str,
         default="AUTO",
@@ -1397,6 +1406,8 @@ def main():
         parser.error("--enemy-switch-log-every must be >= 0")
     if args.per_enemy_min_samples < 1:
         parser.error("--per-enemy-min-samples must be >= 1")
+    if args.rolling_win_rate_window < 1:
+        parser.error("--rolling-win-rate-window must be >= 1")
     if args.fixed_map_seed < 0:
         parser.error("--fixed-map-seed must be >= 0")
     if args.self_play_eval_every_games < 1:
@@ -1685,7 +1696,8 @@ def main():
 
     wins, losses, truncations = 0, 0, 0
     games_since_update = 0
-    recent_wins = deque(maxlen=300)
+    roll_wr_n = args.rolling_win_rate_window
+    recent_wins = deque(maxlen=roll_wr_n)
 
     last_bootstrap_obs: Optional[np.ndarray] = None
     last_bootstrap_mask: Optional[np.ndarray] = None
@@ -1844,11 +1856,11 @@ def main():
             truncations += result.truncated
             recent_wins.append(int(result.won))
             enemy_recent = recent_wins_by_enemy.setdefault(
-                active_enemy_for_game, deque(maxlen=300)
+                active_enemy_for_game, deque(maxlen=roll_wr_n)
             )
             enemy_recent.append(int(result.won))
             rolling_n = len(recent_wins)
-            rolling_300_win_rate = sum(recent_wins) / rolling_n if rolling_n > 0 else 0.0
+            rolling_win_rate = sum(recent_wins) / rolling_n if rolling_n > 0 else 0.0
             per_enemy_parts = []
             for enemy_key in sorted(recent_wins_by_enemy.keys()):
                 samples = recent_wins_by_enemy[enemy_key]
@@ -1868,7 +1880,7 @@ def main():
             print(
                 f"Game {g:4d}/{args.games}:  {status:>9s}  "
                 f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}  "
-                f"[wr300={rolling_300_win_rate:.1%}({rolling_n}); by_enemy: {per_enemy_summary}]"
+                f"[wr{roll_wr_n}={rolling_win_rate:.1%}({rolling_n}); by_enemy: {per_enemy_summary}]"
             )
             saved_game_path = maybe_save_game_json(
                 env,

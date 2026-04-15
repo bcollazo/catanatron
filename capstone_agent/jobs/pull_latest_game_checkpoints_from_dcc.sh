@@ -40,36 +40,50 @@ quoted_path="$(printf '%q' "${DCC_CATAN_PATH:-}")"
 set -o pipefail
 # Remote: only tar bytes on stdout; all logging on stderr.
 if ! ssh "$SSH_TARGET" "DCC_CATAN_PATH=$quoted_path bash -s" <<'EOS' | tar xf - -C "$LOCAL_MODELS"
-set -euo pipefail
+set -uo pipefail
+# nullglob: empty match does not break set -e via failed ls on a bad glob.
+shopt -s nullglob
 if [[ -n "${DCC_CATAN_PATH:-}" ]]; then
   BASE="$DCC_CATAN_PATH"
 else
   BASE="$HOME/catan_ai"
 fi
 MODELS="$BASE/capstone_agent/models"
-cd "$MODELS" || { echo "Cannot cd to $MODELS" >&2; exit 1; }
+if ! cd "$MODELS"; then
+  echo "Cannot cd to $MODELS (set DCC_CATAN_PATH if repo is not ~/catan_ai)" >&2
+  exit 1
+fi
 
 files=()
 for exp in neuner_vs_alphabeta neuner_vs_random neuner_vs_random_ab_placement; do
-  f="$(ls -1v "$exp"/main_play_game_*.pt 2>/dev/null | tail -1)"
+  candidates=("$exp"/main_play_game_*.pt)
+  if ((${#candidates[@]} == 0)); then
+    echo "[$exp] no main_play_game_*.pt (skip)" >&2
+    continue
+  fi
+  f="$(printf '%s\n' "${candidates[@]}" | sort -V | tail -n 1)"
   if [[ -n "$f" && -f "$f" ]]; then
     files+=("$f")
     echo "[$exp] including $(basename "$f")" >&2
-  else
-    echo "[$exp] no main_play_game_*.pt (skip)" >&2
   fi
 done
 
 if ((${#files[@]} == 0)); then
-  echo "No numbered checkpoints to pack." >&2
+  echo "No numbered checkpoints to pack under $MODELS." >&2
   exit 1
 fi
 
 tar cf - "${files[@]}"
 EOS
 then
-  echo "Pull failed (SSH or tar extract). See messages above." >&2
+  echo "Pull failed (SSH, remote error, or tar extract). Check:" >&2
+  echo "  - SSH works: ssh $SSH_TARGET 'ls ~/catan_ai/capstone_agent/models/neuner_vs_alphabeta/main_play_game_*.pt'" >&2
+  echo "  - If repo is not ~/catan_ai: export DCC_CATAN_PATH=/your/path/to/catan_ai" >&2
   exit 1
 fi
 
+echo "Extracted under: $LOCAL_MODELS"
+ls -la "$LOCAL_MODELS"/neuner_vs_alphabeta/*.pt 2>/dev/null || true
+ls -la "$LOCAL_MODELS"/neuner_vs_random/*.pt 2>/dev/null || true
+ls -la "$LOCAL_MODELS"/neuner_vs_random_ab_placement/*.pt 2>/dev/null || true
 echo "Done."
