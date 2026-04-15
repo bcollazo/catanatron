@@ -20,3 +20,22 @@ class RolloutBuffer:
 
     def clear(self):
         self.__init__()
+
+    def extend_from_lists(
+        self,
+        states,
+        masks,
+        actions,
+        log_probs,
+        rewards,
+        values,
+        dones,
+    ) -> None:
+        """Append transitions from plain lists (pickled from worker processes)."""
+        self.states.extend(states)
+        self.masks.extend(masks)
+        self.actions.extend(actions)
+        self.log_probs.extend(log_probs)
+        self.rewards.extend(rewards)
+        self.values.extend(values)
+        self.dones.extend(dones)

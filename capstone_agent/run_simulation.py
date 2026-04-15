@@ -9,6 +9,8 @@ Usage:
                                                       # PPO update every 4096 steps
     python capstone_agent/run_simulation.py --train --train-update-trigger games \
         --train-every-games 20                       # PPO update every 20 games
+    python capstone_agent/run_simulation.py --train --rollout-collection-workers 8 \
+        --enemy-fixed-schedule --enemy-schedule 'value:1000,...'   # parallel CPU rollouts
     python capstone_agent/run_simulation.py --games 10 --enemy alphabeta
                                                       # evaluate/train vs AlphaBeta
     python capstone_agent/run_simulation.py --eval-challenger-main path/A.pt \\
@@ -23,10 +25,12 @@ Usage:
 
 import sys
 import os
+import io
 import argparse
 import csv
 import json
 import shutil
+import multiprocessing
 from collections import deque
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
@@ -695,6 +699,202 @@ def truncate_agent_buffers_to_snapshot(agent, snapshots):
         _truncate_buffer_to(agent.placement_agent.buffer, snapshots["placement"])
 
 
+def _make_env_kwargs_for_training_game_index(
+    game_index: int,
+    args,
+    schedule_phases: Optional[List[ScheduledEnemyPhase]],
+    resolved_map_template: str,
+) -> Tuple[Dict[str, Any], str]:
+    """Opponent + map kwargs for ``make_env`` at a 1-based game index, plus log label."""
+    if schedule_phases:
+        _, phase = schedule_phase_for_game(game_index, schedule_phases)
+        enemy_type = phase.enemy_type
+        depth_spec = phase.enemy_ab_depth
+    else:
+        enemy_type = args.enemy
+        depth_spec = None
+    enemy_ab_depth = _resolved_enemy_param(enemy_type, depth_spec, args)
+    enemy_mcts_n = enemy_ab_depth if enemy_type == "mcts" else args.enemy_mcts_n
+    enemy_greedy_n = enemy_ab_depth if enemy_type == "greedy" else args.enemy_greedy_n
+    label = _enemy_spec_label(EnemySpec(enemy_type, depth_spec), args.enemy_ab_depth)
+    env_kw: Dict[str, Any] = {
+        "enemy_type": enemy_type,
+        "enemy_ab_depth": enemy_ab_depth,
+        "enemy_mcts_n": enemy_mcts_n,
+        "enemy_greedy_n": enemy_greedy_n,
+        "enemy_ab_prunning": args.enemy_ab_prunning,
+        "map_template": resolved_map_template,
+        "map_mode": args.map_mode,
+        "fixed_map_seed": args.fixed_map_seed,
+        "enemy_main_model_path": None,
+        "enemy_placement_model_path": None,
+        "reward_function": args.reward_function,
+    }
+    return env_kw, label
+
+
+def _make_train_mac_kwargs_for_rollout(
+    game_index: int,
+    args,
+    schedule_phases: Optional[List[ScheduledEnemyPhase]],
+    resolved_map_template: str,
+) -> Dict[str, Any]:
+    """Keyword args for ``make_agent_and_env`` in rollout workers (no file paths)."""
+    env_kw, _ = _make_env_kwargs_for_training_game_index(
+        game_index, args, schedule_phases, resolved_map_template
+    )
+    return {
+        "obs_size": FEATURE_SPACE_SIZE,
+        "hidden_size": MAIN_PLAY_AGENT_HIDDEN_SIZE,
+        "model_path": None,
+        "placement_model_path": None,
+        "placement_strategy": args.placement_strategy,
+        "placement_ab_depth": args.placement_ab_depth,
+        "placement_ab_prunning": args.placement_ab_prunning,
+        "reward_function": args.reward_function,
+        **env_kw,
+    }
+
+
+def _serialize_rollout_weights_cpu(agent: CapstoneAgent, placement_strategy: str) -> Tuple[bytes, Optional[bytes]]:
+    """Pickle-friendly CPU state dicts for multiprocessing rollout collection."""
+    bio = io.BytesIO()
+    torch.save(
+        {k: v.detach().cpu() for k, v in agent.main_agent.model.state_dict().items()},
+        bio,
+    )
+    main_b = bio.getvalue()
+    place_b: Optional[bytes] = None
+    if placement_strategy == "model" and hasattr(agent.placement_agent, "model"):
+        bio2 = io.BytesIO()
+        torch.save(
+            {
+                k: v.detach().cpu()
+                for k, v in agent.placement_agent.model.state_dict().items()
+            },
+            bio2,
+        )
+        place_b = bio2.getvalue()
+    return main_b, place_b
+
+
+def _retarget_capstone_agent_cpu(agent: CapstoneAgent) -> None:
+    cpu = torch.device("cpu")
+    agent.main_agent.device = cpu
+    agent.main_agent.model.to(cpu)
+    if hasattr(agent.placement_agent, "model"):
+        agent.placement_agent.device = cpu
+        agent.placement_agent.model.to(cpu)
+
+
+def _rollout_buffer_lists(buf) -> Dict[str, List[Any]]:
+    if buf is None or len(getattr(buf, "rewards", [])) == 0:
+        return {
+            "states": [],
+            "masks": [],
+            "actions": [],
+            "log_probs": [],
+            "rewards": [],
+            "values": [],
+            "dones": [],
+        }
+    return {
+        "states": list(buf.states),
+        "masks": list(buf.masks),
+        "actions": list(buf.actions),
+        "log_probs": list(buf.log_probs),
+        "rewards": list(buf.rewards),
+        "values": list(buf.values),
+        "dones": list(buf.dones),
+    }
+
+
+def _merge_rollout_lists_into_agent(agent: CapstoneAgent, main_d: Dict[str, List[Any]], place_d: Dict[str, List[Any]]):
+    agent.main_agent.buffer.extend_from_lists(
+        main_d["states"],
+        main_d["masks"],
+        main_d["actions"],
+        main_d["log_probs"],
+        main_d["rewards"],
+        main_d["values"],
+        main_d["dones"],
+    )
+    if hasattr(agent.placement_agent, "buffer"):
+        agent.placement_agent.buffer.extend_from_lists(
+            place_d["states"],
+            place_d["masks"],
+            place_d["actions"],
+            place_d["log_probs"],
+            place_d["rewards"],
+            place_d["values"],
+            place_d["dones"],
+        )
+
+
+def _parallel_rollout_worker_init() -> None:
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+
+def _parallel_rollout_collect_game(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Spawned worker: one game with CPU policy snapshot; returns buffers + stats."""
+    _parallel_rollout_worker_init()
+    torch.set_num_threads(int(payload.get("torch_num_threads", 1)))
+
+    main_sd = torch.load(
+        io.BytesIO(payload["main_sd"]), map_location="cpu", weights_only=True
+    )
+    place_sd = None
+    if payload.get("placement_sd") is not None:
+        place_sd = torch.load(
+            io.BytesIO(payload["placement_sd"]), map_location="cpu", weights_only=True
+        )
+
+    mac = dict(payload["make_agent_kwargs"])
+    mac["main_state_dict"] = main_sd
+    mac["placement_state_dict"] = place_sd
+    agent, env = make_agent_and_env(**mac)
+    _retarget_capstone_agent_cpu(agent)
+
+    gi = int(payload["game_index"])
+    result = simulate_game(
+        agent,
+        env,
+        verbose=False,
+        store_in_buffer=True,
+        progress_env_steps=0,
+        game_index=gi,
+    )
+    main_d = _rollout_buffer_lists(agent.main_agent.buffer)
+    place_buf = getattr(agent.placement_agent, "buffer", None)
+    place_d = _rollout_buffer_lists(place_buf)
+
+    self_seat = _self_seat(env)
+    went_first = int(self_seat == 0) if self_seat is not None else ""
+
+    saved_path = maybe_save_game_json(
+        env,
+        payload.get("save_games_json_dir"),
+        gi,
+        int(payload.get("save_games_json_every", 0) or 0),
+    )
+
+    return {
+        "game_index": gi,
+        "won": result.won,
+        "terminated": result.terminated,
+        "truncated": result.truncated,
+        "steps": result.steps,
+        "cumulative_reward": result.cumulative_reward,
+        "bootstrap_obs": result.bootstrap_obs,
+        "bootstrap_mask": result.bootstrap_mask,
+        "main_buffer": main_d,
+        "placement_buffer": place_d,
+        "bench_self_seat": self_seat if self_seat is not None else "",
+        "bench_went_first": went_first,
+        "saved_replay_json": saved_path,
+    }
+
+
 def simulate_game(
     agent,
     env,
@@ -818,6 +1018,8 @@ def make_agent_and_env(
     placement_ab_depth: int = 2,
     placement_ab_prunning: bool = True,
     reward_function: str = "full",
+    main_state_dict: Optional[dict] = None,
+    placement_state_dict: Optional[dict] = None,
 ):
     """Create a routed agent + env pair.
 
@@ -833,6 +1035,9 @@ def make_agent_and_env(
         placement_ab_depth: AlphaBeta depth for placement strategy ``alphabeta``.
         placement_ab_prunning: AlphaBeta pruning flag for placement strategy ``alphabeta``.
         reward_function: ``"full"`` (dense shaping) or ``"simple"`` (terminal ±1).
+        main_state_dict: Optional in-memory main weights (CPU tensors), e.g. for
+            multiprocessing rollout workers (mutually exclusive with ``model_path``).
+        placement_state_dict: Optional in-memory placement weights (CPU tensors).
 
     Returns a CapstoneAgent that delegates initial-placement decisions to
     the chosen placement agent and all other decisions to the main
@@ -840,8 +1045,13 @@ def make_agent_and_env(
     """
     validate_action_mapping()
 
+    if model_path is not None and main_state_dict is not None:
+        raise ValueError("Provide at most one of model_path and main_state_dict")
+
     main_agent = MainPlayAgent(obs_size=obs_size, hidden_size=hidden_size)
-    if model_path is not None:
+    if main_state_dict is not None:
+        main_agent.model.load_state_dict(main_state_dict)
+    elif model_path is not None:
         main_agent.load(model_path)
 
     placement_kwargs = {
@@ -852,7 +1062,14 @@ def make_agent_and_env(
         placement_kwargs["depth"] = placement_ab_depth
         placement_kwargs["prunning"] = placement_ab_prunning
     placement_agent = make_placement_agent(placement_strategy, **placement_kwargs)
-    if placement_model_path is not None:
+    if placement_state_dict is not None:
+        if not hasattr(placement_agent, "model"):
+            raise ValueError(
+                "placement_state_dict requires --placement-strategy model "
+                "(learned placement agent)"
+            )
+        placement_agent.model.load_state_dict(placement_state_dict)
+    elif placement_model_path is not None:
         placement_agent.load(placement_model_path)
 
     env = make_env(
@@ -1216,6 +1433,19 @@ def main():
         ),
     )
     parser.add_argument(
+        "--rollout-collection-workers",
+        type=int,
+        default=1,
+        help=(
+            "With --train, collect full games in parallel using this many spawned "
+            "CPU worker processes (spawn context). Each worker uses a CPU snapshot "
+            "of the current policy; buffers are merged on the main process (thread-safe "
+            "merge order). Requires --enemy-fixed-schedule or a static --enemy (not "
+            "compatible with --enemy-smooth-mix or --self-play-ladder). "
+            "1 disables parallel collection."
+        ),
+    )
+    parser.add_argument(
         "--map-template",
         type=str,
         default="AUTO",
@@ -1408,6 +1638,19 @@ def main():
         parser.error("--per-enemy-min-samples must be >= 1")
     if args.rolling_win_rate_window < 1:
         parser.error("--rolling-win-rate-window must be >= 1")
+    if args.rollout_collection_workers < 1:
+        parser.error("--rollout-collection-workers must be >= 1")
+    if args.rollout_collection_workers > 1:
+        if not args.train:
+            parser.error("--rollout-collection-workers > 1 requires --train")
+        if args.enemy_smooth_mix:
+            parser.error(
+                "--rollout-collection-workers > 1 is not supported with --enemy-smooth-mix"
+            )
+        if args.self_play_ladder:
+            parser.error(
+                "--rollout-collection-workers > 1 is not supported with --self-play-ladder"
+            )
     if args.fixed_map_seed < 0:
         parser.error("--fixed-map-seed must be >= 0")
     if args.self_play_eval_every_games < 1:
@@ -1681,6 +1924,12 @@ def main():
             else ""
         )
         + f"  Device: {device}"
+        + (
+            f"\n  Rollout collection workers: {args.rollout_collection_workers} "
+            f"(parallel CPU game collection)"
+            if args.train and args.rollout_collection_workers > 1
+            else ""
+        )
     )
     print()
 
@@ -1716,8 +1965,20 @@ def main():
     current_mix_enemy: Optional[EnemySpec] = None if args.enemy_smooth_mix else None
     last_switch_log_game = -10**9
 
+    rollout_pool = None
+    parallel_rollout = (
+        args.train
+        and args.rollout_collection_workers > 1
+        and not args.enemy_smooth_mix
+        and not args.self_play_ladder
+    )
+    if parallel_rollout:
+        ctx = multiprocessing.get_context("spawn")
+        rollout_pool = ctx.Pool(processes=args.rollout_collection_workers)
+
     try:
-        for g in range(1, args.games + 1):
+        g = 1
+        while g <= args.games:
             active_enemy_for_game = _enemy_spec_label(
                 EnemySpec(args.enemy, _resolved_enemy_param(args.enemy, None, args)),
                 args.enemy_ab_depth,
@@ -1825,6 +2086,202 @@ def main():
 
             if args.self_play_ladder:
                 active_enemy_for_game = "rl-capstone(champion)"
+
+            batch_len = min(args.rollout_collection_workers, args.games - g + 1)
+            use_parallel_batch = (
+                rollout_pool is not None and args.train and batch_len > 1
+            )
+            sched_list = schedule_phases if schedule_phases else None
+            if use_parallel_batch:
+                main_b, place_b = _serialize_rollout_weights_cpu(
+                    agent, args.placement_strategy
+                )
+                n_cpu = os.cpu_count() or 8
+                per_w = max(1, n_cpu // (batch_len + 2))
+                payloads: List[Dict[str, Any]] = []
+                for gi in range(g, g + batch_len):
+                    mac = _make_train_mac_kwargs_for_rollout(
+                        gi, args, sched_list, resolved_map_template
+                    )
+                    payloads.append(
+                        {
+                            "game_index": gi,
+                            "main_sd": main_b,
+                            "placement_sd": place_b,
+                            "make_agent_kwargs": mac,
+                            "torch_num_threads": per_w,
+                            "save_games_json_dir": args.save_games_json_dir,
+                            "save_games_json_every": args.save_games_json_every,
+                        }
+                    )
+                batch_out = rollout_pool.map(
+                    _parallel_rollout_collect_game, payloads
+                )
+                for res in batch_out:
+                    gi = res["game_index"]
+                    _, active_enemy_for_game = _make_env_kwargs_for_training_game_index(
+                        gi, args, sched_list, resolved_map_template
+                    )
+                    _merge_rollout_lists_into_agent(
+                        agent, res["main_buffer"], res["placement_buffer"]
+                    )
+                    result = GameResult(
+                        won=res["won"],
+                        terminated=res["terminated"],
+                        truncated=res["truncated"],
+                        steps=res["steps"],
+                        cumulative_reward=res["cumulative_reward"],
+                        bootstrap_obs=res["bootstrap_obs"],
+                        bootstrap_mask=res["bootstrap_mask"],
+                    )
+                    games_since_update += 1
+                    last_bootstrap_obs = result.bootstrap_obs
+                    last_bootstrap_mask = result.bootstrap_mask
+
+                    wins += result.won
+                    losses += result.terminated and not result.won
+                    truncations += result.truncated
+                    recent_wins.append(int(result.won))
+                    enemy_recent = recent_wins_by_enemy.setdefault(
+                        active_enemy_for_game, deque(maxlen=roll_wr_n)
+                    )
+                    enemy_recent.append(int(result.won))
+                    rolling_n = len(recent_wins)
+                    rolling_win_rate = (
+                        sum(recent_wins) / rolling_n if rolling_n > 0 else 0.0
+                    )
+                    per_enemy_parts = []
+                    for enemy_key in sorted(recent_wins_by_enemy.keys()):
+                        samples = recent_wins_by_enemy[enemy_key]
+                        if len(samples) < args.per_enemy_min_samples:
+                            continue
+                        wr = sum(samples) / len(samples)
+                        per_enemy_parts.append(
+                            f"{enemy_key}={wr:.1%}({len(samples)})"
+                        )
+                    per_enemy_summary = (
+                        ", ".join(per_enemy_parts)
+                        if per_enemy_parts
+                        else f"- (min_samples={args.per_enemy_min_samples})"
+                    )
+
+                    status = "WON" if result.won else (
+                        "TRUNCATED" if result.truncated else "LOST"
+                    )
+                    print(
+                        f"Game {gi:4d}/{args.games}:  {status:>9s}  "
+                        f"steps={result.steps:4d}  reward={result.cumulative_reward:+.1f}  "
+                        f"[wr{roll_wr_n}={rolling_win_rate:.1%}({rolling_n}); "
+                        f"by_enemy: {per_enemy_summary}]"
+                    )
+                    if res.get("saved_replay_json"):
+                        print(f"  saved replay json: {res['saved_replay_json']}")
+
+                    if benchmark is not None:
+                        benchmark.write_row(
+                            {
+                                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                                "run_name": run_name,
+                                "mode": "train" if args.train else "eval",
+                                "loaded_model_path": loaded_model_path or "",
+                                "game_index": gi,
+                                "games_total": args.games,
+                                "status": status,
+                                "won": int(result.won),
+                                "terminated": int(result.terminated),
+                                "truncated": int(result.truncated),
+                                "steps": result.steps,
+                                "reward": float(result.cumulative_reward),
+                                "cum_wins": wins,
+                                "cum_losses": losses,
+                                "cum_truncations": truncations,
+                                "cum_win_rate": float(wins / gi),
+                                "self_seat": res["bench_self_seat"],
+                                "went_first": res["bench_went_first"],
+                            }
+                        )
+
+                    if args.train:
+                        buffered = _buffer_transition_count(agent)
+                        should_update = False
+                        update_reason = ""
+
+                        if args.train_update_trigger == "steps":
+                            if buffered >= args.train_every_steps:
+                                should_update = True
+                                update_reason = (
+                                    f"buffered transitions reached {buffered}"
+                                )
+                        else:
+                            if games_since_update >= args.train_every_games:
+                                should_update = True
+                                update_reason = (
+                                    "completed games in batch reached "
+                                    f"{games_since_update}"
+                                )
+
+                        if should_update and buffered > 0:
+                            batch_games = games_since_update
+                            ppo_stats = _ppo_train_with_bootstrap(
+                                agent, last_bootstrap_obs, last_bootstrap_mask
+                            )
+                            print(
+                                f"  trained PPO on {buffered} buffered transitions "
+                                f"(games in batch: {batch_games}; "
+                                f"trigger={args.train_update_trigger}: {update_reason})"
+                            )
+                            if ppo_metrics_logger is not None and ppo_stats:
+                                ppo_metrics_logger.write_row(
+                                    {
+                                        "timestamp_utc": datetime.now(
+                                            timezone.utc
+                                        ).isoformat(),
+                                        "run_name": run_name,
+                                        "game_index": gi,
+                                        "buffered_transitions": buffered,
+                                        "games_in_batch": batch_games,
+                                        "train_update_trigger": args.train_update_trigger,
+                                        "update_reason": update_reason,
+                                        **ppo_stats,
+                                    }
+                                )
+                            games_since_update = 0
+
+                        if (
+                            args.save
+                            and args.save_every_games > 0
+                            and gi % args.save_every_games == 0
+                        ):
+                            _ensure_parent_dir(args.save)
+                            _ensure_parent_dir(placement_save)
+                            agent.save(args.save, placement_save)
+                            if args.save_numbered_checkpoints:
+                                save_abs = os.path.abspath(args.save)
+                                save_dir = os.path.dirname(save_abs) or "."
+                                base = os.path.splitext(os.path.basename(save_abs))[0]
+                                snap = os.path.join(
+                                    save_dir, f"{base}_game_{gi:08d}.pt"
+                                )
+                                shutil.copy2(save_abs, snap)
+                            print(
+                                f"  periodic checkpoint saved at game {gi}: "
+                                f"main={args.save}"
+                            )
+
+                    games_completed = gi
+
+                g += batch_len
+                last_g = g - 1
+                env = make_env(
+                    **_make_env_kwargs_for_training_game_index(
+                        last_g, args, sched_list, resolved_map_template
+                    )[0]
+                )
+                if schedule_phases:
+                    current_schedule_phase_index, _ = schedule_phase_for_game(
+                        last_g, schedule_phases
+                    )
+                continue
 
             keep_game_for_training = True
             if args.train:
@@ -2053,9 +2510,14 @@ def main():
                         reward_function=args.reward_function,
                     )
             games_completed = g
+            g += 1
     except KeyboardInterrupt:
         interrupted = True
         print("\nInterrupted by user; flushing pending updates and saving latest weights...")
+    finally:
+        if rollout_pool is not None:
+            rollout_pool.close()
+            rollout_pool.join()
 
     if args.train:
         buffered = _buffer_transition_count(agent)
