@@ -4,20 +4,35 @@
 # Saves every 10k games; optional numbered checkpoints.
 # Uses parallel CPU rollout workers (--rollout-collection-workers); PPO stays on the GPU process.
 #
-# Submit (simple reward, default):
+# Placement: AlphaBeta for initial settlements/roads (--placement-strategy alphabeta).
+#   Override with PLACEMENT_STRATEGY=model|random if needed.
+#
+# Cancel a job:
+#   squeue -u "$USER"              # note JOBID in first column
+#   scancel <JOBID>                # cancel one job
+#   scancel -u "$USER"             # cancel ALL your jobs (use carefully)
+#
+# Restart examples (AlphaBeta placement is default for both):
+#
+# Simple reward — same dirs you used before:
+#   START_MODEL_DIR=$HOME/catan_ai/capstone_agent/models/neuner_simple_ab_ramp \
+#   MODEL_DIR=$HOME/catan_ai/capstone_agent/models/neuner_simple_value_ab123_curr \
 #   sbatch capstone_agent/jobs/neuner_value_ab123_curriculum_from_ckpt_gpu.slurm
 #
-# Submit (full / dense reward):
-#   REWARD_FUNCTION=full sbatch capstone_agent/jobs/neuner_value_ab123_curriculum_from_ckpt_gpu.slurm
+# Full reward — separate output dir:
+#   REWARD_FUNCTION=full \
+#   START_MODEL_DIR=$HOME/catan_ai/capstone_agent/models/neuner_simple_ab_ramp \
+#   MODEL_DIR=$HOME/catan_ai/capstone_agent/models/neuner_full_value_ab123_curr \
+#   sbatch capstone_agent/jobs/neuner_value_ab123_curriculum_from_ckpt_gpu.slurm
 #
 # Optional environment overrides:
 #   MODEL_DIR=...              output dir (default includes reward name)
-#   START_CKPT=/path/main.pt   explicit weights (highest priority)
+#   START_CKPT=/path/main.pt   explicit weights (highest priority over START_MODEL_DIR)
 #   START_MODEL_DIR=...        if START_CKPT unset: newest main_play_game_*.pt in dir, else main_play.pt
 #   GAMES=400000
 #   ROLLOUT_WORKERS=6          parallel game collection (match cpus-per-task roughly)
 #   SAVE_EVERY_GAMES=10000
-#   PLACEMENT_STRATEGY=model|random|alphabeta
+#   PLACEMENT_STRATEGY=...     default alphabeta; set to model or random to override
 #
 #SBATCH --job-name=neuner_vab123
 #SBATCH --partition=gpu-common
@@ -48,7 +63,7 @@ mkdir -p "$MODEL_DIR/replays"
 GAMES="${GAMES:-400000}"
 SAVE_EVERY_GAMES="${SAVE_EVERY_GAMES:-10000}"
 ROLLOUT_WORKERS="${ROLLOUT_WORKERS:-6}"
-PLACEMENT="${PLACEMENT_STRATEGY:-}"
+PLACEMENT_STRATEGY="${PLACEMENT_STRATEGY:-alphabeta}"
 
 SCHEDULE="value:100000,alphabeta@1:100000,alphabeta@2:100000,alphabeta@3:100000"
 
@@ -87,7 +102,7 @@ else
 fi
 
 echo "=== $(date -Is) neuner_value_ab123 curriculum start ==="
-echo "REWARD_FUNCTION=$REWARD_FUNCTION MODEL_DIR=$MODEL_DIR GAMES=$GAMES"
+echo "REWARD_FUNCTION=$REWARD_FUNCTION PLACEMENT_STRATEGY=$PLACEMENT_STRATEGY MODEL_DIR=$MODEL_DIR GAMES=$GAMES"
 echo "LOAD_ARGS=${LOAD_ARGS[*]:-none}"
 
 export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
@@ -100,14 +115,11 @@ nvidia-smi -L || true
 python3 -u -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 
 MAIN_PT="$MODEL_DIR/main_play.pt"
-EXTRA=()
-if [[ -n "$PLACEMENT" ]]; then
-  EXTRA+=(--placement-strategy "$PLACEMENT")
-fi
 
 python3 -u capstone_agent/run_simulation.py \
   --train \
   --preset none \
+  --placement-strategy "$PLACEMENT_STRATEGY" \
   --enemy-fixed-schedule \
   --enemy-schedule "$SCHEDULE" \
   --reward-function "$REWARD_FUNCTION" \
@@ -127,5 +139,4 @@ python3 -u capstone_agent/run_simulation.py \
   --fixed-map-seed 0 \
   --run-name "neuner_value_ab123_${REWARD_FUNCTION}" \
   --progress-env-steps 250 \
-  "${EXTRA[@]}" \
   "${LOAD_ARGS[@]}"
