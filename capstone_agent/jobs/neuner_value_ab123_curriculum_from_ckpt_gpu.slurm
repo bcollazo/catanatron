@@ -28,9 +28,10 @@
 # Optional environment overrides:
 #   MODEL_DIR=...              output dir (default includes reward name)
 #   START_CKPT=/path/main.pt   explicit weights (highest priority over START_MODEL_DIR)
-#   START_MODEL_DIR=...        if START_CKPT unset: newest main_play_game_*.pt in dir, else main_play.pt
+#   START_MODEL_DIR=...        if START_CKPT unset: use <dir>/main_play.pt first,
+#                              then newest main_play_game_*.pt fallback.
 #   GAMES=400000
-#   ROLLOUT_WORKERS=6          parallel game collection (match cpus-per-task roughly)
+#   ROLLOUT_WORKERS=4          parallel game collection (match cpus-per-task roughly)
 #   SAVE_EVERY_GAMES=10000
 #   PLACEMENT_STRATEGY=...     default alphabeta; set to model or random to override
 #
@@ -62,7 +63,7 @@ mkdir -p "$MODEL_DIR/replays"
 
 GAMES="${GAMES:-400000}"
 SAVE_EVERY_GAMES="${SAVE_EVERY_GAMES:-10000}"
-ROLLOUT_WORKERS="${ROLLOUT_WORKERS:-6}"
+ROLLOUT_WORKERS="${ROLLOUT_WORKERS:-4}"
 PLACEMENT_STRATEGY="${PLACEMENT_STRATEGY:-alphabeta}"
 
 SCHEDULE="value:100000,alphabeta@1:100000,alphabeta@2:100000,alphabeta@3:100000"
@@ -80,11 +81,10 @@ elif [[ -n "${START_MODEL_DIR:-}" ]]; then
     exit 1
   fi
   PICK=""
-  if compgen -G "$START_MODEL_DIR"/main_play_game_*.pt > /dev/null; then
-    PICK="$(ls -t "$START_MODEL_DIR"/main_play_game_*.pt 2>/dev/null | head -1)"
-  fi
-  if [[ -z "$PICK" && -f "$START_MODEL_DIR/main_play.pt" ]]; then
+  if [[ -f "$START_MODEL_DIR/main_play.pt" ]]; then
     PICK="$START_MODEL_DIR/main_play.pt"
+  elif compgen -G "$START_MODEL_DIR"/main_play_game_*.pt > /dev/null; then
+    PICK="$(ls -t "$START_MODEL_DIR"/main_play_game_*.pt 2>/dev/null | head -1)"
   fi
   if [[ -z "$PICK" ]]; then
     echo "No main_play.pt or main_play_game_*.pt under START_MODEL_DIR=$START_MODEL_DIR" >&2

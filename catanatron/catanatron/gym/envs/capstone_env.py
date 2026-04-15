@@ -140,7 +140,7 @@ class CapstoneCatanatronEnv(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", "full")
+        self.reward_function = self.config.get("reward_function", "simple")
         self.reward_manager = CapstoneReward(self.reward_function)
         self.map_type = self.config.get("map_type", "TOURNAMENT")
         self.randomize_map = self.config.get("randomize_map", False)

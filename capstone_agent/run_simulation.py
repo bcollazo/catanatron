@@ -2087,7 +2087,12 @@ def main():
             if args.self_play_ladder:
                 active_enemy_for_game = "rl-capstone(champion)"
 
-            batch_len = min(args.rollout_collection_workers, args.games - g + 1)
+            # Keep a deeper in-flight queue than worker count so fast workers
+            # immediately pick up more games while we stream results.
+            batch_len = min(
+                max(args.rollout_collection_workers * 8, args.rollout_collection_workers),
+                args.games - g + 1,
+            )
             use_parallel_batch = (
                 rollout_pool is not None and args.train and batch_len > 1
             )
@@ -2097,7 +2102,7 @@ def main():
                     agent, args.placement_strategy
                 )
                 n_cpu = os.cpu_count() or 8
-                per_w = max(1, n_cpu // (batch_len + 2))
+                per_w = max(1, n_cpu // (args.rollout_collection_workers + 2))
                 payloads: List[Dict[str, Any]] = []
                 for gi in range(g, g + batch_len):
                     mac = _make_train_mac_kwargs_for_rollout(
@@ -2114,10 +2119,9 @@ def main():
                             "save_games_json_every": args.save_games_json_every,
                         }
                     )
-                batch_out = rollout_pool.map(
-                    _parallel_rollout_collect_game, payloads
-                )
-                for res in batch_out:
+                for res in rollout_pool.imap_unordered(
+                    _parallel_rollout_collect_game, payloads, chunksize=1
+                ):
                     gi = res["game_index"]
                     _, active_enemy_for_game = _make_env_kwargs_for_training_game_index(
                         gi, args, sched_list, resolved_map_template
