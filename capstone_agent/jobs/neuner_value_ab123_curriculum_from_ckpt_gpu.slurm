@@ -52,6 +52,9 @@ REPO_ROOT="${REPO_ROOT:-$HOME/catan_ai}"
 cd "$REPO_ROOT"
 mkdir -p logs
 
+# Repo layout: $REPO_ROOT/catanatron/catanatron/... (package root is catanatron/)
+export PYTHONPATH="$REPO_ROOT/catanatron${PYTHONPATH:+:$PYTHONPATH}"
+
 export PYTHONUNBUFFERED=1
 REWARD_FUNCTION="${REWARD_FUNCTION:-simple}"
 if [[ "$REWARD_FUNCTION" != "simple" && "$REWARD_FUNCTION" != "full" ]]; then
@@ -63,12 +66,12 @@ MODEL_DIR="${MODEL_DIR:-$REPO_ROOT/capstone_agent/models/neuner_value_ab123_curr
 mkdir -p "$MODEL_DIR/replays"
 RUN_NAME="${RUN_NAME:-neuner_value_ab123_${REWARD_FUNCTION}}"
 
-GAMES="${GAMES:-400000}"
+GAMES="${GAMES:-1000000}"
 SAVE_EVERY_GAMES="${SAVE_EVERY_GAMES:-10000}"
 ROLLOUT_WORKERS="${ROLLOUT_WORKERS:-4}"
 PLACEMENT_STRATEGY="${PLACEMENT_STRATEGY:-alphabeta}"
 
-SCHEDULE="value:100000,alphabeta@1:100000,alphabeta@2:100000,alphabeta@3:100000"
+SCHEDULE="value:200000,alphabeta@1:200000,alphabeta@2:200000,alphabeta@3:200000"
 
 LOAD_ARGS=()
 if [[ -n "${START_CKPT:-}" ]]; then
@@ -115,6 +118,27 @@ micromamba activate catan311
 echo "=== GPU check ==="
 nvidia-smi -L || true
 python3 -u -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
+python3 - <<'PY'
+import inspect
+from catanatron.gym.envs.CapstoneReward import CapstoneReward
+print("=== Reward import check ===")
+print("CapstoneReward source:", inspect.getsourcefile(CapstoneReward))
+print(
+    "WIN", CapstoneReward.WIN_REWARD,
+    "LOSE", CapstoneReward.LOSE_PENALTY,
+    "STEP", CapstoneReward.STEP_PENALTY,
+    "VP", CapstoneReward.GAIN_VP_REWARD,
+    "PIP", CapstoneReward.PIP_MULTIPLIER,
+    "DEV", CapstoneReward.BUY_DEV_CARD_REWARD,
+    "KNT", CapstoneReward.PLAY_KNIGHT_REWARD,
+    "ROAD", CapstoneReward.BUILD_ROAD_REWARD,
+)
+if hasattr(CapstoneReward, "ROBBER_SELF_ROBBED_PIP_COEF"):
+    print(
+        "ROBBER_SELF", CapstoneReward.ROBBER_SELF_ROBBED_PIP_COEF,
+        "ROBBER_OPP", CapstoneReward.ROBBER_OPP_ROBBED_PIP_COEF,
+    )
+PY
 
 MAIN_PT="$MODEL_DIR/main_play.pt"
 
