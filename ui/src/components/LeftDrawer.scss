@@ -1,11 +1,48 @@
 @use "../variables.scss";
 
+/* Default until LeftDrawer mounts and syncs JS width */
+:root {
+  --left-drawer-width: 340px;
+}
+
 $dark-divider: rgb(0 0 0 / 80%);
 
 .left-drawer {
+  /* Paper width set in LeftDrawer.tsx (draggable); keep non-width styles here */
+
   .MuiDrawer-paper {
-    width: 280px;
     background: variables.$dark-gray;
+  }
+
+  .left-drawer-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    margin-right: -4px;
+    cursor: col-resize;
+    z-index: 2;
+    touch-action: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 10%;
+      bottom: 10%;
+      right: 3px;
+      width: 2px;
+      border-radius: 2px;
+      background: rgb(255 255 255 / 18%);
+    }
+
+    &:hover::after {
+      background: rgb(255 255 255 / 35%);
+    }
+
+    &:active::after {
+      background: rgb(129 212 250 / 70%);
+    }
   }
 
   .MuiDivider-root {

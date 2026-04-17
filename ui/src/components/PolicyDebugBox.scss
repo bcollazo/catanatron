@@ -1,0 +1,133 @@
+.policy-debug-box {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  background: #161616;
+  color: #e6e6e6;
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .policy-debug-legend {
+    margin: 0 0 8px;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: #9a9a9a;
+  }
+
+  .meta {
+    margin: 6px 0;
+    font-size: 0.88rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .chosen,
+  .chosen-prob {
+    word-break: break-word;
+  }
+
+  .chosen-prob .muted {
+    margin-left: 6px;
+    font-size: 0.78rem;
+    color: #8a8a8a;
+  }
+
+  .policy-table-head {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 2fr);
+    gap: 6px 8px;
+    align-items: end;
+    padding: 4px 0 6px;
+    margin-top: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #808080;
+    border-bottom: 1px solid #333;
+  }
+
+  .rows {
+    margin-top: 0;
+    max-height: 360px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 2fr);
+    gap: 6px 8px;
+    align-items: start;
+    padding: 5px 0;
+    font-size: 0.76rem;
+    line-height: 1.2;
+    border-bottom: 1px solid #252525;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .rank {
+    color: #888;
+    font-family: monospace;
+    padding-top: 1px;
+  }
+
+  .prob {
+    font-family: monospace;
+    font-variant-numeric: tabular-nums;
+    padding-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .prob-legal {
+    color: #c8e8c8;
+  }
+
+  .prob-global {
+    color: #a8a8c8;
+    font-size: 0.72rem;
+  }
+
+  .prob-among {
+    color: #a8d4e8;
+    font-family: monospace;
+    font-variant-numeric: tabular-nums;
+    padding-top: 1px;
+    white-space: nowrap;
+    font-size: 0.74rem;
+  }
+
+  .desc-block {
+    min-width: 0;
+  }
+
+  .desc-main {
+    color: #f0f0f0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-size: 0.78rem;
+    line-height: 1.28;
+  }
+
+  .desc-meta {
+    margin-top: 2px;
+    font-size: 0.66rem;
+    color: #777;
+    font-family: monospace;
+  }
+}

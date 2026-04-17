@@ -1,4 +1,11 @@
-import React, { useCallback, useContext } from "react";
+import React, {
+  PropsWithChildren,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import cn from "classnames";
 import SwipeableDrawer from "@mui/material/SwipeableDrawer";
 import Divider from "@mui/material/Divider";
@@ -15,7 +22,27 @@ import { isTabOrShift, type InteractionEvent } from "../utils/events";
 
 import "./LeftDrawer.scss";
 
-function DrawerContent({ gameState }: { gameState: GameState }) {
+const LEFT_DRAWER_LS_KEY = "catanatron_left_drawer_width_px";
+const LEFT_DRAWER_MIN = 260;
+const LEFT_DRAWER_MAX = 720;
+const LEFT_DRAWER_DEFAULT = 340;
+
+function readStoredDrawerWidth(): number {
+  try {
+    const raw = localStorage.getItem(LEFT_DRAWER_LS_KEY);
+    if (!raw) return LEFT_DRAWER_DEFAULT;
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n)) return LEFT_DRAWER_DEFAULT;
+    return Math.min(Math.max(n, LEFT_DRAWER_MIN), LEFT_DRAWER_MAX);
+  } catch {
+    return LEFT_DRAWER_DEFAULT;
+  }
+}
+
+function DrawerContent({
+  gameState,
+  children,
+}: PropsWithChildren<{ gameState: GameState }>) {
   const playerLabel = (color: Color) => {
     const botLabel = gameState.bot_labels?.[color];
     if (botLabel) return botLabel;
@@ -42,6 +69,7 @@ function DrawerContent({ gameState }: { gameState: GameState }) {
   return (
     <>
       {playerSections}
+      {children}
       <div className="log">
         {gameState.action_records
           .slice()
@@ -59,9 +87,68 @@ function DrawerContent({ gameState }: { gameState: GameState }) {
   );
 }
 
-export default function LeftDrawer() {
+export default function LeftDrawer({ children }: PropsWithChildren) {
   const { state, dispatch } = useContext(store);
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  const [paperWidth, setPaperWidth] = useState(readStoredDrawerWidth);
+  const dragStartRef = useRef<{ x: number; width: number } | null>(null);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--left-drawer-width", `${paperWidth}px`);
+  }, [paperWidth]);
+
+  const clampWidth = useCallback((w: number) => {
+    const max =
+      typeof window !== "undefined"
+        ? Math.min(LEFT_DRAWER_MAX, Math.floor(window.innerWidth * 0.85))
+        : LEFT_DRAWER_MAX;
+    return Math.min(Math.max(Math.round(w), LEFT_DRAWER_MIN), max);
+  }, []);
+
+  const startResize = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      dragStartRef.current = { x: event.clientX, width: paperWidth };
+
+      const onMove = (ev: MouseEvent) => {
+        const start = dragStartRef.current;
+        if (!start) return;
+        const dx = ev.clientX - start.x;
+        setPaperWidth(clampWidth(start.width + dx));
+      };
+
+      const onUp = () => {
+        dragStartRef.current = null;
+        document.body.style.removeProperty("user-select");
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        setPaperWidth((w) => {
+          const next = clampWidth(w);
+          try {
+            localStorage.setItem(LEFT_DRAWER_LS_KEY, String(next));
+          } catch {
+            /* ignore quota */
+          }
+          return next;
+        });
+      };
+
+      document.body.style.setProperty("user-select", "none");
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [clampWidth, paperWidth]
+  );
+
+  // Do not set position on Paper — MUI permanent drawers use fixed positioning.
+  // Forcing `relative` pulls the panel into normal flow and the docked root becomes
+  // a full-width strip (black bar) covering the board area.
+  const drawerPaperSx = {
+    width: paperWidth,
+    boxSizing: "border-box" as const,
+    maxWidth: "min(720px, 85vw)",
+  };
 
   const openLeftDrawer = useCallback(
     (event: InteractionEvent) => {
@@ -84,6 +171,25 @@ export default function LeftDrawer() {
     [dispatch]
   );
 
+  const drawerInner = (
+    <>
+      {/* Right edge = inner edge toward the board; drag horizontally to widen/narrow */}
+      <div
+        className="left-drawer-resize-handle"
+        onMouseDown={startResize}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize left panel"
+        aria-valuemin={LEFT_DRAWER_MIN}
+        aria-valuemax={LEFT_DRAWER_MAX}
+        aria-valuenow={paperWidth}
+      />
+      <DrawerContent gameState={state.gameState as GameState}>
+        {children}
+      </DrawerContent>
+    </>
+  );
+
   return (
     <>
       <Hidden breakpoint={{ size: "md", direction: "up" }} implementation="js">
@@ -96,16 +202,23 @@ export default function LeftDrawer() {
           disableBackdropTransition={!iOS}
           disableDiscovery={iOS}
           onKeyDown={closeLeftDrawer}
+          slotProps={{ paper: { sx: drawerPaperSx } }}
         >
-          <DrawerContent gameState={state.gameState as GameState} />
+          {drawerInner}
         </SwipeableDrawer>
       </Hidden>
       <Hidden
         breakpoint={{ size: "sm", direction: "down" }}
         implementation="css"
       >
-        <Drawer className="left-drawer" anchor="left" variant="permanent" open>
-          <DrawerContent gameState={state.gameState as GameState} />
+        <Drawer
+          className="left-drawer"
+          anchor="left"
+          variant="permanent"
+          open
+          slotProps={{ paper: { sx: drawerPaperSx } }}
+        >
+          {drawerInner}
         </Drawer>
       </Hidden>
     </>

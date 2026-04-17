@@ -41,7 +41,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 from MainPlayAgent import MainPlayAgent
 from PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
 from CapstoneAgent import CapstoneAgent
-from action_map import validate as validate_action_mapping, describe_action
+from action_map import (
+    validate as validate_action_mapping,
+    describe_action,
+    describe_action_detailed,
+)
 from device import get_device
 
 import torch
@@ -308,6 +312,79 @@ def _action_context(env):
     game = getattr(core, "game", None)
     playable_actions = getattr(game, "playable_actions", None) if game is not None else None
     return game, playable_actions
+
+
+def _active_policy_model(agent):
+    """Return the model used for the just-selected action, if available."""
+    if hasattr(agent, "main_agent") and hasattr(agent, "placement_agent"):
+        was_placement = bool(getattr(agent, "_last_was_placement", False))
+        if was_placement and hasattr(agent.placement_agent, "model"):
+            return agent.placement_agent.model
+        if hasattr(agent.main_agent, "model"):
+            return agent.main_agent.model
+    if hasattr(agent, "model"):
+        return agent.model
+    return None
+
+
+def _policy_debug_step_payload(agent, obs, mask, chosen_action: int, top_k: int):
+    """Compute policy debug info for one selected action."""
+    if top_k <= 0:
+        return None
+    model = _active_policy_model(agent)
+    if model is None:
+        return None
+    device = getattr(agent, "device", get_device())
+    obs_t = torch.as_tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
+    mask_t = torch.as_tensor(mask, dtype=torch.float32, device=device).unsqueeze(0)
+    with torch.no_grad():
+        probs_t, value_t = model(obs_t, mask_t)
+    probs = probs_t.squeeze(0).detach().cpu().numpy()
+    mask_arr = np.asarray(mask) > 0.5
+    valid_probs_sum = float(probs[mask_arr].sum())
+    valid = np.where(mask_arr)[0].astype(int).tolist()
+    ranked = sorted(valid, key=lambda i: float(probs[i]), reverse=True)
+    top = ranked[:top_k]
+    chosen_i = int(chosen_action)
+
+    def _p_valid(i: int) -> float:
+        if valid_probs_sum <= 1e-12:
+            return 0.0
+        return float(probs[int(i)]) / valid_probs_sum
+
+    return {
+        "chosen_action_index": chosen_i,
+        "chosen_action_probability": float(probs[chosen_i]),
+        "chosen_action_probability_given_valid": _p_valid(chosen_i),
+        "chosen_action_description": describe_action(chosen_i),
+        "chosen_action_description_detailed": describe_action_detailed(chosen_i),
+        "state_value_estimate": float(value_t.item()),
+        "top_actions": [
+            {
+                "action_index": int(i),
+                "probability": float(probs[i]),
+                "probability_given_valid": _p_valid(i),
+                "description": describe_action(int(i)),
+                "description_detailed": describe_action_detailed(int(i)),
+            }
+            for i in top
+        ],
+    }
+
+
+def _append_policy_debug_records(game, before_n: int, after_n: int, first_entry):
+    """Keep game.state.policy_debug_records aligned with action_records length."""
+    if game is None or after_n <= before_n:
+        return
+    recs = getattr(game.state, "policy_debug_records", None)
+    if recs is None:
+        recs = []
+        setattr(game.state, "policy_debug_records", recs)
+    while len(recs) < before_n:
+        recs.append(None)
+    recs.append(first_entry)
+    for _ in range(after_n - before_n - 1):
+        recs.append(None)
 
 
 def maybe_save_game_json(env, out_dir: Optional[str], game_index: int, every: int):
@@ -863,6 +940,9 @@ def _parallel_rollout_collect_game(payload: Dict[str, Any]) -> Dict[str, Any]:
         store_in_buffer=True,
         progress_env_steps=0,
         game_index=gi,
+                    collect_policy_debug_top_k=int(
+                        payload.get("save_policy_debug_top_k", 0) or 0
+                    ),
     )
     main_d = _rollout_buffer_lists(agent.main_agent.buffer)
     place_buf = getattr(agent.placement_agent, "buffer", None)
@@ -903,6 +983,7 @@ def simulate_game(
     store_in_buffer: bool = False,
     progress_env_steps: int = 0,
     game_index: Optional[int] = None,
+    collect_policy_debug_top_k: int = 0,
 ) -> GameResult:
     """Play one full game using the agent and return a GameResult.
 
@@ -928,7 +1009,15 @@ def simulate_game(
         action, log_prob, value = agent.select_action(
             obs, mask, game=game_ctx, playable_actions=playable_ctx
         )
+        step_policy_debug = _policy_debug_step_payload(
+            agent, obs, mask, action, collect_policy_debug_top_k
+        )
+        core_env = _unwrap_env(env)
+        game = getattr(core_env, "game", None)
+        before_n = len(getattr(game.state, "action_records", [])) if game is not None else 0
         next_obs, reward, terminated, truncated, info = env.step(action)
+        after_n = len(getattr(game.state, "action_records", [])) if game is not None else 0
+        _append_policy_debug_records(game, before_n, after_n, step_policy_debug)
         done = terminated or truncated
         next_mask = info["action_mask"]
 
@@ -1520,6 +1609,17 @@ def main():
         ),
     )
     parser.add_argument(
+        "--save-policy-debug-top-k",
+        type=int,
+        default=10,
+        help=(
+            "When saving replay JSONs, attach per-step policy debug metadata "
+            "(chosen action + top-K probabilities from the playing agent). "
+            "0 disables policy debug logging. Older replays without this field "
+            "remain supported by the UI."
+        ),
+    )
+    parser.add_argument(
         "--self-play-ladder",
         action="store_true",
         help=(
@@ -1657,6 +1757,8 @@ def main():
         parser.error("--self-play-eval-every-games must be >= 1")
     if args.self_play_eval_games < 20:
         parser.error("--self-play-eval-games must be >= 20")
+    if args.save_policy_debug_top_k < 0:
+        parser.error("--save-policy-debug-top-k must be >= 0")
     if not (0.0 <= args.self_play_promotion_threshold <= 1.0):
         parser.error("--self-play-promotion-threshold must be between 0 and 1")
     if args.champion_history_dir and not args.self_play_ladder:
@@ -2117,6 +2219,7 @@ def main():
                             "torch_num_threads": per_w,
                             "save_games_json_dir": args.save_games_json_dir,
                             "save_games_json_every": args.save_games_json_every,
+                            "save_policy_debug_top_k": args.save_policy_debug_top_k,
                         }
                     )
                 for res in rollout_pool.imap_unordered(
@@ -2301,6 +2404,7 @@ def main():
                     store_in_buffer=True,
                     progress_env_steps=args.progress_env_steps,
                     game_index=g,
+                    collect_policy_debug_top_k=args.save_policy_debug_top_k,
                 )
                 if args.self_play_ladder and args.self_play_winner_only and not result.won:
                     keep_game_for_training = False
@@ -2310,7 +2414,17 @@ def main():
                     last_bootstrap_obs = result.bootstrap_obs
                     last_bootstrap_mask = result.bootstrap_mask
             else:
-                result = simulate_game(agent, env, verbose=args.verbose)
+                policy_k = (
+                    args.save_policy_debug_top_k
+                    if args.save_games_json_dir and args.save_policy_debug_top_k > 0
+                    else 0
+                )
+                result = simulate_game(
+                    agent,
+                    env,
+                    verbose=args.verbose,
+                    collect_policy_debug_top_k=policy_k,
+                )
 
             wins += result.won
             losses += result.terminated and not result.won

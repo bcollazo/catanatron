@@ -13,6 +13,7 @@ import { getState } from "../utils/apiClient";
 import AnalysisBox from "../components/AnalysisBox";
 import { Button, Divider } from "@mui/material";
 import ReplayBox from "../components/ReplayBox";
+import PolicyDebugBox from "../components/PolicyDebugBox";
 
 function ReplayScreen() {
   const { gameId } = useParams();
@@ -60,7 +61,9 @@ function ReplayScreen() {
     <main>
       <h1 className="logo">Catanatron</h1>
       <ZoomableBoard replayMode={true} />
-      <LeftDrawer />
+      <LeftDrawer>
+        <PolicyDebugBox stateIndex={stateIndex} />
+      </LeftDrawer>
       <RightDrawer>
         <Button className="catalog-link" component={Link} variant="outlined" to="/replays">
           Back to Replay Catalog

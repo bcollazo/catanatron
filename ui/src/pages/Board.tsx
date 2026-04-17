@@ -40,7 +40,6 @@ type BoardProps = {
   edgeActions?: Record<EdgeId, GameAction>;
   replayMode: boolean;
   gameState: GameState;
-  isMobile: boolean;
   show: boolean;
   isMovingRobber: boolean;
 }
@@ -59,9 +58,9 @@ export default function Board({
   show,
   isMovingRobber,
 }: BoardProps) {
-  // TODO: Keep in sync with CSS
-  const containerHeight = height - 144 - 38 - 40;
-  const containerWidth = isMobile ? width - 280 : width;
+  // width/height are the actual board slot from ResizeObserver (between drawer padding)
+  const containerWidth = width;
+  const containerHeight = Math.max(80, height - 24);
   const center: [number, number] = [containerWidth / 2, containerHeight / 2];
   const size = computeDefaultSize(containerWidth, containerHeight);
   if (!size) {

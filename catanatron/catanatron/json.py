@@ -87,6 +87,7 @@ class GameEncoder(json.JSONEncoder):
                 "nodes": nodes,
                 "edges": list(edges.values()),
                 "action_records": [self.default(a) for a in obj.state.action_records],
+                "policy_debug_records": getattr(obj.state, "policy_debug_records", None),
                 "player_state": obj.state.player_state,
                 "colors": obj.state.colors,
                 "bot_colors": list(

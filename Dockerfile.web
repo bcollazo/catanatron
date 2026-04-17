@@ -7,7 +7,10 @@ WORKDIR /app
 RUN pip install --upgrade pip
 
 COPY . .
-RUN pip install -e .[web]
+# Policy-debug API needs torch + gymnasium. Use CPU-only torch (much smaller than default CUDA
+# builds) and --no-cache-dir to avoid filling the disk during docker build.
+RUN pip install --no-cache-dir -e ".[web,gym]" \
+    && pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
 EXPOSE 5001
 

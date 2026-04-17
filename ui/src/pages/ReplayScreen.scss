@@ -23,3 +23,11 @@ main {
     width: 100%;
   }
 }
+
+// Match GameScreen: reserve space for docked drawers so board stays centered between them
+@media (min-width: variables.$md-breakpoint) {
+  main {
+    padding-left: var(--left-drawer-width, 340px);
+    padding-right: var(--right-drawer-width, 280px);
+  }
+}

@@ -108,6 +108,24 @@ export type GameState = {
   current_prompt: string;
   player_state: Record<string, PlayerState>;
   action_records: GameActionRecord[];
+  policy_debug_records?: Array<{
+    chosen_action_index: number;
+    chosen_action_probability: number;
+    /** Renormalized over legal actions only (recommended for reading the policy). */
+    chosen_action_probability_given_valid?: number;
+    chosen_action_description?: string;
+    chosen_action_description_detailed?: string;
+    state_value_estimate: number;
+    top_actions: Array<{
+      action_index: number;
+      /** Raw softmax mass (often tiny except the peak). */
+      probability: number;
+      /** Share of mass among legal moves; sums to 1 over all legal indices. */
+      probability_given_valid?: number;
+      description: string;
+      description_detailed: string;
+    }>;
+  } | null>;
   robber_coordinate: TileCoordinate;
   nodes: Array<{
     id: number;
@@ -155,6 +173,28 @@ export type ReplayCatalogItem = {
   us_action_total: number;
   replay_source_folder: string | null;
   imported_at_utc: string | null;
+};
+
+export type PolicyActionAnalysis = {
+  action_index: number;
+  probability: number;
+  description: string;
+  description_detailed: string;
+  next_state_value_estimate: number | null;
+};
+
+export type PolicyAnalysis = {
+  success: true;
+  state_index: number;
+  model_path: string;
+  top_n: number;
+  state_value_estimate: number;
+  top_actions: PolicyActionAnalysis[];
+  chosen_action: {
+    action_index: number;
+    description: string;
+    description_detailed: string;
+  } | null;
 };
 const DIRECTIONS = [
   "NORTH",

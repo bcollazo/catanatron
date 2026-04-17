@@ -1,5 +1,9 @@
 @use "../variables.scss";
 
+:root {
+  --right-drawer-width: 280px;
+}
+
 $dark-divider: rgb(0 0 0 / 80%);
 
 .right-drawer {
@@ -12,7 +16,7 @@ $dark-divider: rgb(0 0 0 / 80%);
   }
 
   .MuiDrawer-paper {
-    width: 280px;
+    width: var(--right-drawer-width, 280px);
     background: variables.$dark-gray;
     color: white;
   }

@@ -1,7 +1,13 @@
 import axios from "axios";
 
 import { API_URL } from "../configuration";
-import type { Color, GameAction, GameState, ReplayCatalogItem } from "./api.types";
+import type {
+  Color,
+  GameAction,
+  GameState,
+  ReplayCatalogItem,
+  PolicyAnalysis,
+} from "./api.types";
 
 type Player = "HUMAN" | "RANDOM" | "CATANATRON";
 export type StateIndex = number | `${number}` | "latest";
@@ -83,4 +89,15 @@ export async function getReplayCatalog(limit = 200): Promise<ReplayCatalogItem[]
     `${API_URL}/api/replays?limit=${limit}`
   );
   return response.data.replays;
+}
+
+export async function getPolicyAnalysis(
+  gameId: string,
+  stateIndex: StateIndex = "latest",
+  topN = 5
+): Promise<PolicyAnalysis> {
+  const response = await axios.get<PolicyAnalysis>(
+    `${API_URL}/api/games/${gameId}/states/${stateIndex}/policy-analysis?top_n=${topN}`
+  );
+  return response.data;
 }

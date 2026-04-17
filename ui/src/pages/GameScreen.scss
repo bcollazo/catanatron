@@ -96,22 +96,15 @@ main {
   }
 }
 
-// Medium screens - Left drawer permanent
+// Medium+ — docked left/right drawers: reserve horizontal space so the board centers in the gap
 @media (min-width: variables.$md-breakpoint) {
   main {
-    padding-left: 280px;
+    padding-left: var(--left-drawer-width, 340px);
+    padding-right: var(--right-drawer-width, 280px);
+
     .board-container {
       margin-right: 0;
-    }
-  }
-}
-
-// Large screens - Both drawers permanent
-@media (min-width: variables.$lg-breakpoint) {
-  main {
-    padding-left: 0px;
-    .board-container {
-      margin-left: 140px;
+      margin-left: 0;
     }
   }
 }

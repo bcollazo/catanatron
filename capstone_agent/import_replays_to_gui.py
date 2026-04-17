@@ -127,6 +127,23 @@ def _build_players(colors: list[str]):
     return [SimplePlayer(Color[color]) for color in colors]
 
 
+def _sync_policy_debug_from_payload(game: Game, payload: dict) -> None:
+    """Align policy_debug_records with the current replay prefix (same length as action_records).
+
+    Saved replay JSON includes policy_debug_records from GameEncoder; replay import must copy
+    them onto game.state or the GUI always sees empty metadata after unpickle.
+    """
+    full = payload.get("policy_debug_records")
+    if full is None:
+        return
+    n = len(game.state.action_records)
+    if n == 0:
+        game.state.policy_debug_records = []
+        return
+    # Truncate to match how many actions have been replayed so far.
+    game.state.policy_debug_records = list(full[:n])
+
+
 def import_replay_json(
     json_path: Path,
     replace_existing: bool = True,
@@ -149,6 +166,8 @@ def import_replay_json(
             session.query(GameState).filter_by(uuid=game_id).delete()
             session.commit()
 
+        _sync_policy_debug_from_payload(game, payload)
+
         # Initial state (index 0)
         upsert_game_state(
             game,
@@ -166,6 +185,7 @@ def import_replay_json(
             try:
                 game.execute(action, validate_action=False, action_record=action_record)
                 imported_actions += 1
+                _sync_policy_debug_from_payload(game, payload)
                 upsert_game_state(
                     game,
                     session,
