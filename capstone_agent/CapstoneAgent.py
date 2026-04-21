@@ -1,4 +1,4 @@
-from PlacementAgent import PlacementAgent
+from Placement.PlacementAgent import PlacementAgent
 from MainPlayAgent import MainPlayAgent
 import os
 
