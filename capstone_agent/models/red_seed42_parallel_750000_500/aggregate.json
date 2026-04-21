@@ -1,0 +1,19 @@
+{
+  "baseline_only_wins": 92,
+  "baseline_win_rate": 0.51,
+  "baseline_wins": 255,
+  "board_seed": 42,
+  "both_won": 163,
+  "discordant": 257,
+  "event": "parallel_aggregate_paired_mcnemar",
+  "game_seed_end": 750499,
+  "game_seed_start": 750000,
+  "games": 500,
+  "mcnemar_pvalue": 3.092268036098321e-06,
+  "neither_won": 80,
+  "strategy": "rollout_value_stable",
+  "target_color": "RED",
+  "test_only_wins": 165,
+  "test_win_rate": 0.656,
+  "test_wins": 328
+}

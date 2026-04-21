@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from catanatron.game import Game
+from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.player import Color
 
 from PlacementAgent import RandomPlacementAgent
@@ -35,8 +36,14 @@ def _append_manifest_row(manifest_path: str, row: dict):
         handle.write(json.dumps(row, sort_keys=True) + "\n")
 
 
+def _fixed_map_from_seed(board_seed: int):
+    random.seed(board_seed)
+    return CatanMap.from_template(BASE_MAP_TEMPLATE)
+
+
 def _play_one_game(args):
-    game_seed, ab_depth = args
+    game_seed, ab_depth, board_seed = args
+    fixed_map = _fixed_map_from_seed(board_seed) if board_seed is not None else None
     random.seed(game_seed)
     np.random.seed(game_seed % (2**32 - 1))
 
@@ -50,7 +57,7 @@ def _play_one_game(args):
         RandomPlacementAgent(),
         AlphaBetaMainAgentAdapter(Color.RED, depth=ab_depth),
     )
-    game = Game(players=[blue, red], seed=game_seed)
+    game = Game(players=[blue, red], seed=game_seed, catan_map=fixed_map)
     accumulator = CompactPlacementAccumulator()
     winner = game.play(accumulators=[accumulator])
 
@@ -122,6 +129,8 @@ def collect(
     num_workers: int | None = None,
     seed: int = 0,
     ab_depth: int = 2,
+    fixed_board: bool = True,
+    board_seed: int = 42,
 ):
     os.makedirs(out_dir, exist_ok=True)
     num_workers = _resolve_workers(num_workers)
@@ -139,11 +148,17 @@ def collect(
             "workers": num_workers,
             "seed": seed,
             "ab_depth": ab_depth,
+            "fixed_board": fixed_board,
+            "board_seed": board_seed,
         },
     )
 
     seeds = [seed + game_idx for game_idx in range(num_games)]
-    work_items = [(game_seed, ab_depth) for game_seed in seeds]
+    worker_board_seed = board_seed if fixed_board else None
+    work_items = [
+        (game_seed, ab_depth, worker_board_seed)
+        for game_seed in seeds
+    ]
 
     attempted_total = 0
     saved_total = 0
@@ -241,6 +256,7 @@ def collect(
         "\nFinished compact placement collection\n"
         f"  output_dir: {out_dir}\n"
         f"  manifest:   {manifest_path}\n"
+        f"  fixed_board:{fixed_board}  board_seed={board_seed if fixed_board else 'n/a'}\n"
         f"  attempted:  {attempted_total}\n"
         f"  saved:      {saved_total}\n"
         f"  skipped:    {skipped_total}\n"
@@ -286,6 +302,18 @@ def main():
         default=2,
         help="AlphaBeta search depth for the post-placement main-game policy",
     )
+    parser.add_argument(
+        "--fixed-board",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Reuse one deterministic board layout across all games",
+    )
+    parser.add_argument(
+        "--board-seed",
+        type=int,
+        default=42,
+        help="Seed used to construct the shared fixed board layout",
+    )
     args = parser.parse_args()
 
     collect(
@@ -295,6 +323,8 @@ def main():
         num_workers=args.workers,
         seed=args.seed,
         ab_depth=args.ab_depth,
+        fixed_board=args.fixed_board,
+        board_seed=args.board_seed,
     )
 
 

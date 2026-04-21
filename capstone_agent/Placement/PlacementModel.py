@@ -19,7 +19,7 @@ class PlacementModel(nn.Module):
         self,
         obs_size: int = COMPACT_PLACEMENT_FEATURE_SIZE,
         hidden_size: int = PLACEMENT_AGENT_HIDDEN_SIZE,
-        dropout: float = 0.1,
+        dropout: float = 0.2,
     ):
         super().__init__()
 

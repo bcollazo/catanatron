@@ -1,0 +1,13 @@
+=== Baseline: RED AlphaBeta placement (31 games) ===
+
+=== Test: RED rollout_value_stable placement + AlphaBeta rest (31 games) ===
+
+========================================================================
+RESULTS
+========================================================================
+  RED AlphaBeta (baseline)    14W /   17L /    0D  win_rate=45.2%  95% CI=[27.6%, 62.7%]  (83s)
+  RED rollout_value_stable    17W /   14L /    0D  win_rate=54.8%  95% CI=[37.3%, 72.4%]  (113s)
+
+  Delta (test - baseline): +9.7%
+  McNemar exact test: b=6, c=9, p=0.303619
+  Test strategy wins 9/15 discordant pairs

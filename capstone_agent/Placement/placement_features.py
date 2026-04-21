@@ -36,9 +36,11 @@ CAPSTONE_EDGE_FEATURE_SIZE = 4
 COMPACT_NODE_FEATURE_SIZE = 13
 STATIC_NODE_FEATURE_SIZE = 11
 COMPACT_EDGE_FEATURE_SIZE = 2
+STEP_INDICATOR_SIZE = 4
 COMPACT_PLACEMENT_FEATURE_SIZE = (
     NUM_NODES * COMPACT_NODE_FEATURE_SIZE
     + NUM_EDGES * COMPACT_EDGE_FEATURE_SIZE
+    + STEP_INDICATOR_SIZE
 )
 
 VERTEX_SETTLEMENT_STATUS_IDX = 0
@@ -164,7 +166,40 @@ def assemble_compact_placement_observation(
       `[self_settlement, opp_settlement, 5x resource_pips, 6x port_channels]`
     - edge block second, one edge at a time:
       `[self_road, opp_road]`
+    - step indicators third:
+      `[self_settlement_count, opp_settlement_count, self_road_count, opp_road_count]`
     """
+
+    compact_vertex, step_indicators = assemble_graph_placement_inputs(
+        self_settlements,
+        opp_settlements,
+        static_node_features,
+        self_roads,
+        opp_roads,
+    )
+    self_settlements = np.asarray(self_settlements, dtype=np.float32).reshape(NUM_NODES)
+    opp_settlements = np.asarray(opp_settlements, dtype=np.float32).reshape(NUM_NODES)
+    self_roads = np.asarray(self_roads, dtype=np.float32).reshape(NUM_EDGES)
+    opp_roads = np.asarray(opp_roads, dtype=np.float32).reshape(NUM_EDGES)
+
+    compact_edge = np.concatenate(
+        [self_roads[:, None], opp_roads[:, None]],
+        axis=1,
+    )
+    return np.concatenate(
+        [compact_vertex.reshape(-1), compact_edge.reshape(-1), step_indicators],
+        axis=0,
+    ).astype(np.float32)
+
+
+def assemble_graph_placement_inputs(
+    self_settlements: np.ndarray,
+    opp_settlements: np.ndarray,
+    static_node_features: np.ndarray,
+    self_roads: np.ndarray,
+    opp_roads: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return structured graph inputs for the GNN placement model."""
 
     self_settlements = np.asarray(self_settlements, dtype=np.float32).reshape(NUM_NODES)
     opp_settlements = np.asarray(opp_settlements, dtype=np.float32).reshape(NUM_NODES)
@@ -174,7 +209,7 @@ def assemble_compact_placement_observation(
     self_roads = np.asarray(self_roads, dtype=np.float32).reshape(NUM_EDGES)
     opp_roads = np.asarray(opp_roads, dtype=np.float32).reshape(NUM_EDGES)
 
-    compact_vertex = np.concatenate(
+    node_features = np.concatenate(
         [
             self_settlements[:, None],
             opp_settlements[:, None],
@@ -182,13 +217,16 @@ def assemble_compact_placement_observation(
         ],
         axis=1,
     )
-    compact_edge = np.concatenate(
-        [self_roads[:, None], opp_roads[:, None]],
-        axis=1,
+    step_indicators = np.array(
+        [
+            self_settlements.sum(),
+            opp_settlements.sum(),
+            self_roads.sum(),
+            opp_roads.sum(),
+        ],
+        dtype=np.float32,
     )
-    return np.concatenate(
-        [compact_vertex.reshape(-1), compact_edge.reshape(-1)], axis=0
-    ).astype(np.float32)
+    return node_features, step_indicators
 
 
 def _project_vertex_matrix(
