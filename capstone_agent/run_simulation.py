@@ -74,6 +74,21 @@ def _ensure_parent_dir(path: Optional[str]):
         os.makedirs(parent, exist_ok=True)
 
 
+def _champion_history_paths(
+    history_dir: str,
+    promotion_index: int,
+    game_index: int,
+    eval_win_rate: float,
+) -> Tuple[str, str]:
+    """Unique archive paths for a promoted champion (main + placement)."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
+    wr_tag = f"{eval_win_rate:.4f}".replace(".", "p")
+    stem = f"promo{promotion_index:04d}_game{game_index}_wr{wr_tag}_{stamp}"
+    main_p = os.path.join(history_dir, f"champion_main_{stem}.pt")
+    place_p = os.path.join(history_dir, f"champion_placement_{stem}.pt")
+    return main_p, place_p
+
+
 @dataclass
 class GameResult:
     steps: int = 0
@@ -82,6 +97,9 @@ class GameResult:
     truncated: bool = False
     won: bool = False
     action_log: List[int] = field(default_factory=list)
+    # State after the last env.step (for PPO bootstrap); same as next_obs on final tick.
+    bootstrap_obs: Optional[np.ndarray] = None
+    bootstrap_mask: Optional[np.ndarray] = None
 
     @property
     def done(self):
@@ -279,6 +297,22 @@ def _self_seat(env, self_color: Color = Color.BLUE) -> Optional[int]:
     if game is None:
         return None
     return game.state.color_to_index.get(self_color)
+
+
+def _ppo_train_with_bootstrap(agent, bootstrap_obs, bootstrap_mask) -> None:
+    """CapstoneAgent.train expects (obs, mask); standalone agents use scalar bootstrap."""
+    if hasattr(agent, "placement_agent") and hasattr(agent, "main_agent"):
+        agent.train(bootstrap_obs, bootstrap_mask)
+        return
+    if bootstrap_obs is None or bootstrap_mask is None:
+        agent.train(0.0)
+        return
+    device = get_device()
+    with torch.no_grad():
+        obs_t = torch.FloatTensor(bootstrap_obs).unsqueeze(0).to(device)
+        mask_t = torch.FloatTensor(bootstrap_mask).unsqueeze(0).to(device)
+        _, last_v = agent.model(obs_t, mask_t)
+    agent.train(last_v.item())
 
 
 def _buffer_transition_count(agent) -> int:
@@ -623,6 +657,8 @@ def simulate_game(
     max_steps: int = MAX_STEPS_PER_GAME,
     verbose: bool = False,
     store_in_buffer: bool = False,
+    progress_env_steps: int = 0,
+    game_index: Optional[int] = None,
 ) -> GameResult:
     """Play one full game using the agent and return a GameResult.
 
@@ -633,6 +669,8 @@ def simulate_game(
         verbose: Print per-step action descriptions.
         store_in_buffer: If True, store transitions in the agent's rollout
             buffer (needed if you plan to call agent.train() afterward).
+        progress_env_steps: If > 0 and store_in_buffer, print every N env steps.
+        game_index: 1-based game number for progress messages (optional).
 
     Returns:
         A GameResult with stats about the game.
@@ -651,7 +689,12 @@ def simulate_game(
         next_mask = info["action_mask"]
 
         if store_in_buffer:
-            agent.store(obs, mask, action, log_prob, reward, value, done)
+            agent.store(
+                obs, mask, action, log_prob, reward, value, done, next_obs=next_obs
+            )
+
+        result.bootstrap_obs = next_obs
+        result.bootstrap_mask = next_mask
 
         result.steps = step
         result.cumulative_reward += reward
@@ -662,6 +705,17 @@ def simulate_game(
             print(
                 f"  Step {step:4d}: action={action:3d} ({desc})  "
                 f"reward={reward:+.1f}  value_est={value:+.4f}"
+            )
+
+        if (
+            store_in_buffer
+            and progress_env_steps > 0
+            and step % progress_env_steps == 0
+        ):
+            label = f"Game {game_index}: " if game_index is not None else ""
+            print(
+                f"  ... {label}env step {step}/{max_steps} (in progress)",
+                flush=True,
             )
 
         if done:
@@ -688,9 +742,8 @@ def simulate_and_train(
 
     # Replay JSON export happens after this function returns. Avoid resetting the
     # env here, otherwise the saved replay may capture a fresh game instead of
-    # the one we just finished. Because episodes are terminal at this point,
-    # bootstrap value for GAE is 0.
-    agent.train(0.0)
+    # the one we just finished.
+    _ppo_train_with_bootstrap(agent, result.bootstrap_obs, result.bootstrap_mask)
 
     return result
 
@@ -887,6 +940,16 @@ def main():
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Print per-step action log"
+    )
+    parser.add_argument(
+        "--progress-env-steps",
+        type=int,
+        default=0,
+        metavar="N",
+        help=(
+            "During training games, print a heartbeat every N env steps (0=off). "
+            "Use on batch systems: logs only show after each full game unless this is set."
+        ),
     )
     parser.add_argument(
         "--load", type=str, default=None, help="Path to saved main-agent model weights"
@@ -1161,6 +1224,16 @@ def main():
         default=0.55,
         help="Promote challenger when eval win-rate is >= this value.",
     )
+    parser.add_argument(
+        "--champion-history-dir",
+        type=str,
+        default=None,
+        help=(
+            "With --self-play-ladder, each successful promotion also copies the new "
+            "champion main (and placement, if used) into this directory. Filenames "
+            "include promotion index, training game index, eval win rate, and UTC time."
+        ),
+    )
     args = parser.parse_args()
     apply_training_preset(args)
     if args.train_every_steps < 1:
@@ -1193,6 +1266,8 @@ def main():
         parser.error("--self-play-eval-games must be >= 20")
     if not (0.0 <= args.self_play_promotion_threshold <= 1.0):
         parser.error("--self-play-promotion-threshold must be between 0 and 1")
+    if args.champion_history_dir and not args.self_play_ladder:
+        parser.error("--champion-history-dir requires --self-play-ladder")
     schedule_phases: list[ScheduledEnemyPhase] = []
     start_mix: Dict[EnemySpec, float] = {}
     end_mix: Dict[EnemySpec, float] = {}
@@ -1359,6 +1434,11 @@ def main():
             f" [smooth-mix seed={args.enemy_mix_seed}, "
             f"blend_games={args.enemy_mix_games}, start=({start_desc}), end=({end_desc})]"
         )
+    if args.self_play_ladder:
+        enemy_detail = (
+            "rl-capstone [frozen champion: "
+            f"main={champion_main_model_path}, placement={champion_placement_model_path}]"
+        )
     map_detail = f"{resolved_map_template} / {args.map_mode}"
     if args.map_template == "AUTO":
         map_detail += " (auto-selected)"
@@ -1391,12 +1471,17 @@ def main():
         f"  Placement agent: strategy={args.placement_strategy}, {place_desc}\n"
         f"  Placement weights: {loaded_placement_path or '[none loaded]'}\n"
         f"  Opponent: {enemy_detail}\n"
-        f"  Self-play ladder: {'enabled' if args.self_play_ladder else 'disabled'}\n"
-        f"  Map: {map_detail}\n"
-        f"  Training: {training_detail}\n"
-        f"  Replay JSON save: {replay_detail}\n"
-        f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
-        f"  Device: {device}"
+        f"  Self-play ladder: {'enabled' if args.self_play_ladder else 'disabled'}"
+        + (
+            f"\n  Champion history dir: {args.champion_history_dir}"
+            if args.self_play_ladder and args.champion_history_dir
+            else ""
+        )
+        + f"\n  Map: {map_detail}\n"
+        + f"  Training: {training_detail}\n"
+        + f"  Replay JSON save: {replay_detail}\n"
+        + f"  Benchmark CSV: {'disabled' if args.no_benchmark else args.benchmark_csv}\n"
+        + f"  Device: {device}"
     )
     print()
 
@@ -1408,6 +1493,10 @@ def main():
     wins, losses, truncations = 0, 0, 0
     games_since_update = 0
     recent_wins = deque(maxlen=300)
+
+    last_bootstrap_obs: Optional[np.ndarray] = None
+    last_bootstrap_mask: Optional[np.ndarray] = None
+
     recent_wins_by_enemy: Dict[str, deque] = {}
     promotions = 0
     games_completed = 0
@@ -1433,7 +1522,9 @@ def main():
                 active_enemy_for_game = _enemy_spec_label(
                     EnemySpec(
                         next_phase.enemy_type,
-                        _resolved_enemy_param(next_phase.enemy_type, next_phase.enemy_ab_depth, args),
+                        _resolved_enemy_param(
+                            next_phase.enemy_type, next_phase.enemy_ab_depth, args
+                        ),
                     ),
                     args.enemy_ab_depth,
                 )
@@ -1525,6 +1616,9 @@ def main():
                         )
                         last_switch_log_game = g
 
+            if args.self_play_ladder:
+                active_enemy_for_game = "rl-capstone(champion)"
+
             keep_game_for_training = True
             if args.train:
                 buffer_snapshot = (
@@ -1533,13 +1627,20 @@ def main():
                     else None
                 )
                 result = simulate_game(
-                    agent, env, verbose=args.verbose, store_in_buffer=True
+                    agent,
+                    env,
+                    verbose=args.verbose,
+                    store_in_buffer=True,
+                    progress_env_steps=args.progress_env_steps,
+                    game_index=g,
                 )
                 if args.self_play_ladder and args.self_play_winner_only and not result.won:
                     keep_game_for_training = False
                     truncate_agent_buffers_to_snapshot(agent, buffer_snapshot or {})
                 if keep_game_for_training:
                     games_since_update += 1
+                    last_bootstrap_obs = result.bootstrap_obs
+                    last_bootstrap_mask = result.bootstrap_mask
             else:
                 result = simulate_game(agent, env, verbose=args.verbose)
 
@@ -1626,7 +1727,9 @@ def main():
 
                 if should_update and buffered > 0:
                     batch_games = games_since_update
-                    agent.train(0.0)
+                    _ppo_train_with_bootstrap(
+                        agent, last_bootstrap_obs, last_bootstrap_mask
+                    )
                     print(
                         f"  trained PPO on {buffered} buffered transitions "
                         f"(games in batch: {batch_games}; trigger={args.train_update_trigger}: {update_reason})"
@@ -1688,6 +1791,27 @@ def main():
                         f"  PROMOTION #{promotions}: challenger -> champion "
                         f"(new champion win_rate threshold met)"
                     )
+                    if args.champion_history_dir:
+                        os.makedirs(args.champion_history_dir, exist_ok=True)
+                        hist_main, hist_place = _champion_history_paths(
+                            args.champion_history_dir,
+                            promotions,
+                            g,
+                            eval_wr,
+                        )
+                        shutil.copy2(champion_main_model_path, hist_main)
+                        if (
+                            challenger_placement_eval_path
+                            and os.path.isfile(champion_placement_model_path)
+                        ):
+                            shutil.copy2(champion_placement_model_path, hist_place)
+                            print(
+                                f"  champion history saved:\n"
+                                f"    main      {hist_main}\n"
+                                f"    placement {hist_place}"
+                            )
+                        else:
+                            print(f"  champion history saved:\n    main {hist_main}")
                     env = make_env(
                         enemy_type="rl-capstone",
                         enemy_ab_depth=args.enemy_ab_depth,
@@ -1709,7 +1833,9 @@ def main():
         buffered = _buffer_transition_count(agent)
         if buffered > 0:
             batch_games = games_since_update
-            agent.train(0.0)
+            _ppo_train_with_bootstrap(
+                agent, last_bootstrap_obs, last_bootstrap_mask
+            )
             print(
                 f"Final PPO flush on {buffered} buffered transitions "
                 f"(games in batch: {batch_games})"

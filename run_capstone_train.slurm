@@ -10,7 +10,9 @@
 
 set -euo pipefail
 
+export PYTHONUNBUFFERED=1
 cd ~/catan_ai
+echo "=== $(date -Is) capstone-train start cwd=$(pwd) ==="
 eval "$(micromamba shell hook --shell bash)"
 micromamba activate catan311
 
@@ -18,7 +20,8 @@ mkdir -p capstone_agent/benchmarks
 
 # Continue from current weights (auto-resume), train 5000 more games in chunks
 for i in $(seq 1 50); do
-  python capstone_agent/run_simulation.py \
+  echo "=== iteration $i / 50 ==="
+  python -u capstone_agent/run_simulation.py \
     --games 100 \
     --train \
     --save capstone_agent/capstone_model.pt \
