@@ -11,6 +11,9 @@ from catanatron.gym.envs.capstone_features import (
     NUM_STARTING_ROADS,
 )
 
+# TODO -> add better reward for robber (to stop robbing ourselves)
+# TODO -> add a discard penalty
+
 class CapstoneReward:
 
     WIN_REWARD = 1.0
@@ -18,13 +21,13 @@ class CapstoneReward:
     STEP_PENALTY = -0.0001
     GAIN_VP_REWARD = 0.0008
     PIP_MULTIPLIER = 0.0008
-    BUY_DEV_CARD_REWARD = 0.0005
+    BUY_DEV_CARD_REWARD = 0.0001
     PLAY_KNIGHT_REWARD = 0.0005
-    BUILD_ROAD_REWARD = 0.0001
+    BUILD_ROAD_REWARD = 0.0002
     # When > 0, only on our MOVE_ROBBER: reward pip production we recover (robber off us)
     # and opponent pips blocked (their sum(..., consider_robber=True) drops).
-    ROBBER_SELF_ROBBED_PIP_COEF = 0.0001
-    ROBBER_OPP_ROBBED_PIP_COEF = 0.0001
+    ROBBER_SELF_ROBBED_PIP_COEF = 0.001
+    ROBBER_OPP_ROBBED_PIP_COEF = 0.001
 
     """Reward manager for CapstoneCatanatronEnv."""
 

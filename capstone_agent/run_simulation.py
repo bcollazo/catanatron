@@ -11,6 +11,11 @@ Usage:
         --train-every-games 20                       # PPO update every 20 games
     python capstone_agent/run_simulation.py --train --rollout-collection-workers 8 \
         --enemy-fixed-schedule --enemy-schedule 'value:1000,...'   # parallel CPU rollouts
+    python capstone_agent/run_simulation.py --train --rollout-collection-workers 1 \
+        --enemy-fixed-schedule --schedule-advance-by-winrate \
+        --enemy-schedule 'random:99999999,weighted:99999999,alphabeta@1:99999999' \
+        --placement-strategy random --enemy-random-initial-build \
+        --map-template TOURNAMENT --map-mode fixed
     python capstone_agent/run_simulation.py --games 10 --enemy alphabeta
                                                       # evaluate/train vs AlphaBeta
     python capstone_agent/run_simulation.py --eval-challenger-main path/A.pt \\
@@ -61,6 +66,7 @@ from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron.players.mcts import MCTSPlayer
 from catanatron.players.playouts import GreedyPlayoutsPlayer
 from catanatron.players.rl_capstone_agent import RLCapstonePlayer
+from catanatron.players.initial_build_random import InitialBuildRandomPlayer
 
 from CONSTANTS import (FEATURE_SPACE_SIZE, MAIN_PLAY_AGENT_HIDDEN_SIZE, PLACEMENT_AGENT_HIDDEN_SIZE, 
                        MAX_STEPS_PER_GAME,
@@ -459,37 +465,42 @@ def make_enemy_player(
     alphabeta_prunning: bool = False,
     main_model_path: Optional[str] = None,
     placement_model_path: Optional[str] = None,
+    random_initial_build: bool = False,
 ):
     """Construct the training/eval opponent used by CapstoneCatanatronEnv."""
     if enemy_type == "random":
         return RandomPlayer(color)
     if enemy_type == "alphabeta":
-        return AlphaBetaPlayer(
+        player = AlphaBetaPlayer(
             color, depth=alphabeta_depth, prunning=alphabeta_prunning
         )
-    if enemy_type == "alphabeta-prune":
-        return AlphaBetaPlayer(color, depth=alphabeta_depth, prunning=True)
-    if enemy_type == "same-turn-ab":
-        return SameTurnAlphaBetaPlayer(color, depth=alphabeta_depth)
-    if enemy_type == "value":
-        return ValueFunctionPlayer(color)
-    if enemy_type == "vp":
-        return VictoryPointPlayer(color)
-    if enemy_type == "weighted":
-        return WeightedRandomPlayer(color)
-    if enemy_type == "mcts":
-        return MCTSPlayer(color, num_simulations=mcts_simulations)
-    if enemy_type == "greedy":
-        return GreedyPlayoutsPlayer(color, num_playouts=greedy_playouts)
-    if enemy_type == "rl-capstone":
+    elif enemy_type == "alphabeta-prune":
+        player = AlphaBetaPlayer(color, depth=alphabeta_depth, prunning=True)
+    elif enemy_type == "same-turn-ab":
+        player = SameTurnAlphaBetaPlayer(color, depth=alphabeta_depth)
+    elif enemy_type == "value":
+        player = ValueFunctionPlayer(color)
+    elif enemy_type == "vp":
+        player = VictoryPointPlayer(color)
+    elif enemy_type == "weighted":
+        player = WeightedRandomPlayer(color)
+    elif enemy_type == "mcts":
+        player = MCTSPlayer(color, num_simulations=mcts_simulations)
+    elif enemy_type == "greedy":
+        player = GreedyPlayoutsPlayer(color, num_playouts=greedy_playouts)
+    elif enemy_type == "rl-capstone":
         if main_model_path is None:
             raise ValueError("main_model_path is required for enemy_type='rl-capstone'")
-        return RLCapstonePlayer(
+        player = RLCapstonePlayer(
             color,
             settlement_play_load_file=placement_model_path,
             main_play_load_file=main_model_path,
         )
-    raise ValueError(f"Unknown enemy type: {enemy_type}")
+    else:
+        raise ValueError(f"Unknown enemy type: {enemy_type}")
+    if random_initial_build and enemy_type != "random":
+        return InitialBuildRandomPlayer(color, player)
+    return player
 
 
 def resolve_map_template(map_template: str, map_mode: str) -> str:
@@ -511,6 +522,7 @@ def make_env(
     enemy_main_model_path: Optional[str] = None,
     enemy_placement_model_path: Optional[str] = None,
     reward_function: str = "full",
+    enemy_random_initial_build: bool = False,
 ):
     enemy = make_enemy_player(
         enemy_type,
@@ -521,6 +533,7 @@ def make_env(
         alphabeta_prunning=enemy_ab_prunning,
         main_model_path=enemy_main_model_path,
         placement_model_path=enemy_placement_model_path,
+        random_initial_build=enemy_random_initial_build,
     )
     randomize_map = map_mode == "random" and map_template != "TOURNAMENT"
     return gymnasium.make(
@@ -781,10 +794,15 @@ def _make_env_kwargs_for_training_game_index(
     args,
     schedule_phases: Optional[List[ScheduledEnemyPhase]],
     resolved_map_template: str,
+    schedule_phase_index_override: Optional[int] = None,
 ) -> Tuple[Dict[str, Any], str]:
     """Opponent + map kwargs for ``make_env`` at a 1-based game index, plus log label."""
     if schedule_phases:
-        _, phase = schedule_phase_for_game(game_index, schedule_phases)
+        if schedule_phase_index_override is not None:
+            idx = max(0, min(schedule_phase_index_override, len(schedule_phases) - 1))
+            phase = schedule_phases[idx]
+        else:
+            _, phase = schedule_phase_for_game(game_index, schedule_phases)
         enemy_type = phase.enemy_type
         depth_spec = phase.enemy_ab_depth
     else:
@@ -806,6 +824,7 @@ def _make_env_kwargs_for_training_game_index(
         "enemy_main_model_path": None,
         "enemy_placement_model_path": None,
         "reward_function": args.reward_function,
+        "enemy_random_initial_build": bool(getattr(args, "enemy_random_initial_build", False)),
     }
     return env_kw, label
 
@@ -1107,6 +1126,7 @@ def make_agent_and_env(
     placement_ab_depth: int = 2,
     placement_ab_prunning: bool = True,
     reward_function: str = "full",
+    enemy_random_initial_build: bool = False,
     main_state_dict: Optional[dict] = None,
     placement_state_dict: Optional[dict] = None,
 ):
@@ -1173,6 +1193,7 @@ def make_agent_and_env(
         enemy_main_model_path=enemy_main_model_path,
         enemy_placement_model_path=enemy_placement_model_path,
         reward_function=reward_function,
+        enemy_random_initial_build=enemy_random_initial_build,
     )
     router = CapstoneAgent(placement_agent, main_agent)
 
@@ -1453,7 +1474,41 @@ def main():
         default="weighted:50000,value:50000,alphabeta@1:50000,alphabeta@2:50000",
         help=(
             "Fixed opponent schedule string used with --enemy-fixed-schedule. "
-            "Format: '<enemy>:<games>,<enemy>@<param>:<games>,...'"
+            "Format: '<enemy>:<games>,<enemy>@<param>:<games>,...'. "
+            "With --schedule-advance-by-winrate, the :<games> counts are ignored; "
+            "use a large placeholder (e.g. 99999999) for each phase."
+        ),
+    )
+    parser.add_argument(
+        "--schedule-advance-by-winrate",
+        action="store_true",
+        help=(
+            "With --enemy-fixed-schedule, do not change phase by the per-segment :games count. "
+            "After each game, if the last N (see --schedule-gate-window) have win rate at least "
+            "--schedule-gate-min-win-rate, advance to the next scheduled opponent. "
+            "Requires --rollout-collection-workers 1 (order-dependent curriculum)."
+        ),
+    )
+    parser.add_argument(
+        "--schedule-gate-window",
+        type=int,
+        default=1000,
+        help="Rolling number of games used with --schedule-advance-by-winrate (default: 1000).",
+    )
+    parser.add_argument(
+        "--schedule-gate-min-win-rate",
+        type=float,
+        default=0.6,
+        help="Min rolling win rate (0–1) required to advance with --schedule-advance-by-winrate "
+        "(default: 0.6).",
+    )
+    parser.add_argument(
+        "--enemy-random-initial-build",
+        action="store_true",
+        help=(
+            "For scripted opponents, choose uniformly among legal actions during the initial build "
+            "phase (settlements/roads), then use the normal policy. Does not change Blue when "
+            "--placement-strategy random; combine with that for both sides in random placement."
         ),
     )
     parser.add_argument(
@@ -1740,6 +1795,12 @@ def main():
         parser.error("--rolling-win-rate-window must be >= 1")
     if args.rollout_collection_workers < 1:
         parser.error("--rollout-collection-workers must be >= 1")
+    if args.schedule_advance_by_winrate and not args.enemy_fixed_schedule:
+        parser.error("--schedule-advance-by-winrate requires --enemy-fixed-schedule")
+    if args.schedule_gate_window < 1:
+        parser.error("--schedule-gate-window must be >= 1")
+    if not (0.0 < args.schedule_gate_min_win_rate <= 1.0):
+        parser.error("--schedule-gate-min-win-rate must be in (0, 1]")
     if args.rollout_collection_workers > 1:
         if not args.train:
             parser.error("--rollout-collection-workers > 1 requires --train")
@@ -1750,6 +1811,10 @@ def main():
         if args.self_play_ladder:
             parser.error(
                 "--rollout-collection-workers > 1 is not supported with --self-play-ladder"
+            )
+        if args.schedule_advance_by_winrate:
+            parser.error(
+                "--schedule-advance-by-winrate requires --rollout-collection-workers 1"
             )
     if args.fixed_map_seed < 0:
         parser.error("--fixed-map-seed must be >= 0")
@@ -1831,6 +1896,10 @@ def main():
             f"  placement_strategy={args.placement_strategy}\n"
             f"  reward_function={args.reward_function}\n"
             f"  enemy_fixed_schedule={args.enemy_fixed_schedule}\n"
+            f"  schedule_advance_by_winrate={getattr(args, 'schedule_advance_by_winrate', False)}\n"
+            f"  schedule_gate_window={getattr(args, 'schedule_gate_window', 1000)} "
+            f"schedule_gate_min_win_rate={getattr(args, 'schedule_gate_min_win_rate', 0.6)}\n"
+            f"  enemy_random_initial_build={getattr(args, 'enemy_random_initial_build', False)}\n"
             f"  enemy_smooth_mix={args.enemy_smooth_mix}\n"
         )
     resolved_map_template = resolve_map_template(args.map_template, args.map_mode)
@@ -1879,6 +1948,7 @@ def main():
         placement_ab_depth=args.placement_ab_depth,
         placement_ab_prunning=args.placement_ab_prunning,
         reward_function=args.reward_function,
+        enemy_random_initial_build=args.enemy_random_initial_build,
     )
     champion_main_model_path = args.champion_main_model
     champion_placement_model_path = args.champion_placement_model
@@ -1911,6 +1981,7 @@ def main():
             enemy_main_model_path=champion_main_model_path,
             enemy_placement_model_path=champion_placement_model_path,
             reward_function=args.reward_function,
+            enemy_random_initial_build=args.enemy_random_initial_build,
         )
     main_params = sum(p.numel() for p in agent.main_agent.model.parameters())
     pa = agent.placement_agent
@@ -2067,12 +2138,20 @@ def main():
     current_mix_enemy: Optional[EnemySpec] = None if args.enemy_smooth_mix else None
     last_switch_log_game = -10**9
 
+    gated_phase_idx = 0
+    env_built_for_gated_idx: Optional[int] = None
+    schedule_gate_wins: Optional[deque] = None
+    if schedule_phases and args.schedule_advance_by_winrate:
+        schedule_gate_wins = deque(maxlen=args.schedule_gate_window)
+        env_built_for_gated_idx = 0
+
     rollout_pool = None
     parallel_rollout = (
         args.train
         and args.rollout_collection_workers > 1
         and not args.enemy_smooth_mix
         and not args.self_play_ladder
+        and not args.schedule_advance_by_winrate
     )
     if parallel_rollout:
         ctx = multiprocessing.get_context("spawn")
@@ -2086,51 +2165,107 @@ def main():
                 args.enemy_ab_depth,
             )
             if schedule_phases:
-                next_phase_index, next_phase = schedule_phase_for_game(g, schedule_phases)
-                active_enemy_for_game = _enemy_spec_label(
-                    EnemySpec(
-                        next_phase.enemy_type,
-                        _resolved_enemy_param(
+                if args.schedule_advance_by_winrate:
+                    active_idx = min(gated_phase_idx, len(schedule_phases) - 1)
+                    next_phase = schedule_phases[active_idx]
+                    if env_built_for_gated_idx != active_idx:
+                        phase_depth = _resolved_enemy_param(
                             next_phase.enemy_type, next_phase.enemy_ab_depth, args
-                        ),
-                    ),
-                    args.enemy_ab_depth,
-                )
-                if (
-                    current_schedule_phase_index is None
-                    or next_phase_index != current_schedule_phase_index
-                ):
-                    phase_depth = _resolved_enemy_param(
-                        next_phase.enemy_type, next_phase.enemy_ab_depth, args
-                    )
-                    env = make_env(
-                        enemy_type=next_phase.enemy_type,
-                        enemy_ab_depth=phase_depth,
-                        enemy_mcts_n=(
-                            phase_depth if next_phase.enemy_type == "mcts" else args.enemy_mcts_n
-                        ),
-                        enemy_greedy_n=(
-                            phase_depth if next_phase.enemy_type == "greedy" else args.enemy_greedy_n
-                        ),
-                        enemy_ab_prunning=args.enemy_ab_prunning,
-                        map_template=resolved_map_template,
-                        map_mode=args.map_mode,
-                        fixed_map_seed=args.fixed_map_seed,
-                        reward_function=args.reward_function,
-                    )
-                    current_schedule_phase_index = next_phase_index
-                    if (
-                        args.enemy_switch_log_every > 0
-                        and g - last_switch_log_game >= args.enemy_switch_log_every
-                    ):
-                        print(
-                            "  switched scheduled enemy phase: "
-                            f"phase={next_phase_index + 1}/{len(schedule_phases)} "
-                            f"enemy={next_phase.enemy_type} "
-                            f"games={next_phase.games} "
-                            f"param={phase_depth}"
                         )
-                        last_switch_log_game = g
+                        env = make_env(
+                            enemy_type=next_phase.enemy_type,
+                            enemy_ab_depth=phase_depth,
+                            enemy_mcts_n=(
+                                phase_depth
+                                if next_phase.enemy_type == "mcts"
+                                else args.enemy_mcts_n
+                            ),
+                            enemy_greedy_n=(
+                                phase_depth
+                                if next_phase.enemy_type == "greedy"
+                                else args.enemy_greedy_n
+                            ),
+                            enemy_ab_prunning=args.enemy_ab_prunning,
+                            map_template=resolved_map_template,
+                            map_mode=args.map_mode,
+                            fixed_map_seed=args.fixed_map_seed,
+                            reward_function=args.reward_function,
+                            enemy_random_initial_build=args.enemy_random_initial_build,
+                        )
+                        env_built_for_gated_idx = active_idx
+                        if (
+                            args.enemy_switch_log_every > 0
+                            and g - last_switch_log_game >= args.enemy_switch_log_every
+                        ):
+                            print(
+                                "  win-rate-gated schedule: built env for "
+                                f"phase={active_idx + 1}/{len(schedule_phases)} "
+                                f"enemy={next_phase.enemy_type} "
+                                f"param={phase_depth}"
+                            )
+                            last_switch_log_game = g
+                    active_enemy_for_game = _enemy_spec_label(
+                        EnemySpec(
+                            next_phase.enemy_type,
+                            _resolved_enemy_param(
+                                next_phase.enemy_type, next_phase.enemy_ab_depth, args
+                            ),
+                        ),
+                        args.enemy_ab_depth,
+                    )
+                else:
+                    next_phase_index, next_phase = schedule_phase_for_game(
+                        g, schedule_phases
+                    )
+                    active_enemy_for_game = _enemy_spec_label(
+                        EnemySpec(
+                            next_phase.enemy_type,
+                            _resolved_enemy_param(
+                                next_phase.enemy_type, next_phase.enemy_ab_depth, args
+                            ),
+                        ),
+                        args.enemy_ab_depth,
+                    )
+                    if (
+                        current_schedule_phase_index is None
+                        or next_phase_index != current_schedule_phase_index
+                    ):
+                        phase_depth = _resolved_enemy_param(
+                            next_phase.enemy_type, next_phase.enemy_ab_depth, args
+                        )
+                        env = make_env(
+                            enemy_type=next_phase.enemy_type,
+                            enemy_ab_depth=phase_depth,
+                            enemy_mcts_n=(
+                                phase_depth
+                                if next_phase.enemy_type == "mcts"
+                                else args.enemy_mcts_n
+                            ),
+                            enemy_greedy_n=(
+                                phase_depth
+                                if next_phase.enemy_type == "greedy"
+                                else args.enemy_greedy_n
+                            ),
+                            enemy_ab_prunning=args.enemy_ab_prunning,
+                            map_template=resolved_map_template,
+                            map_mode=args.map_mode,
+                            fixed_map_seed=args.fixed_map_seed,
+                            reward_function=args.reward_function,
+                            enemy_random_initial_build=args.enemy_random_initial_build,
+                        )
+                        current_schedule_phase_index = next_phase_index
+                        if (
+                            args.enemy_switch_log_every > 0
+                            and g - last_switch_log_game >= args.enemy_switch_log_every
+                        ):
+                            print(
+                                "  switched scheduled enemy phase: "
+                                f"phase={next_phase_index + 1}/{len(schedule_phases)} "
+                                f"enemy={next_phase.enemy_type} "
+                                f"games={next_phase.games} "
+                                f"param={phase_depth}"
+                            )
+                            last_switch_log_game = g
             if args.enemy_smooth_mix:
                 active_mix = interpolate_enemy_mix(
                     start_mix=start_mix,
@@ -2166,6 +2301,7 @@ def main():
                         map_mode=args.map_mode,
                         fixed_map_seed=args.fixed_map_seed,
                         reward_function=args.reward_function,
+                        enemy_random_initial_build=args.enemy_random_initial_build,
                     )
                     current_mix_enemy = sampled_enemy
                     if (
@@ -2626,7 +2762,29 @@ def main():
                         enemy_main_model_path=champion_main_model_path,
                         enemy_placement_model_path=champion_placement_model_path,
                         reward_function=args.reward_function,
+                        enemy_random_initial_build=args.enemy_random_initial_build,
                     )
+            if (
+                schedule_phases
+                and args.schedule_advance_by_winrate
+                and schedule_gate_wins is not None
+                and gated_phase_idx < len(schedule_phases) - 1
+            ):
+                schedule_gate_wins.append(1 if result.won else 0)
+                if len(schedule_gate_wins) == args.schedule_gate_window:
+                    wr_gate = sum(schedule_gate_wins) / len(schedule_gate_wins)
+                    if wr_gate >= args.schedule_gate_min_win_rate:
+                        gated_phase_idx += 1
+                        schedule_gate_wins.clear()
+                        new_idx = min(gated_phase_idx, len(schedule_phases) - 1)
+                        np = schedule_phases[new_idx]
+                        print(
+                            f"  schedule win-rate gate: {wr_gate:.1%} over last "
+                            f"{args.schedule_gate_window} games (>= "
+                            f"{args.schedule_gate_min_win_rate:.0%}) -> advance to "
+                            f"phase {new_idx + 1}/{len(schedule_phases)} "
+                            f"enemy={np.enemy_type}"
+                        )
             games_completed = g
             g += 1
     except KeyboardInterrupt:
