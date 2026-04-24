@@ -1503,6 +1503,16 @@ def main():
         "(default: 0.6).",
     )
     parser.add_argument(
+        "--schedule-initial-phase",
+        type=int,
+        default=0,
+        help=(
+            "0-based index into --enemy-schedule, only with --schedule-advance-by-winrate. "
+            "Start training (and the win-rate window) against that opponent, e.g. 4 to skip the "
+            "first four schedule segments when resuming a curriculum run."
+        ),
+    )
+    parser.add_argument(
         "--enemy-random-initial-build",
         action="store_true",
         help=(
@@ -1797,6 +1807,10 @@ def main():
         parser.error("--rollout-collection-workers must be >= 1")
     if args.schedule_advance_by_winrate and not args.enemy_fixed_schedule:
         parser.error("--schedule-advance-by-winrate requires --enemy-fixed-schedule")
+    if args.schedule_initial_phase != 0 and not args.schedule_advance_by_winrate:
+        parser.error("--schedule-initial-phase requires --schedule-advance-by-winrate")
+    if args.schedule_initial_phase < 0:
+        parser.error("--schedule-initial-phase must be >= 0")
     if args.schedule_gate_window < 1:
         parser.error("--schedule-gate-window must be >= 1")
     if not (0.0 < args.schedule_gate_min_win_rate <= 1.0):
@@ -1877,6 +1891,12 @@ def main():
             parser.error(f"--enemy-schedule parse error: {exc}")
         if args.self_play_ladder:
             parser.error("--enemy-fixed-schedule cannot be combined with --self-play-ladder")
+        if args.schedule_advance_by_winrate:
+            nph = len(schedule_phases)
+            if args.schedule_initial_phase >= nph:
+                parser.error(
+                    f"--schedule-initial-phase must be < {nph} (this schedule has {nph} phases)"
+                )
     if args.enemy_smooth_mix:
         if args.enemy_fixed_schedule:
             parser.error("--enemy-smooth-mix cannot be combined with --enemy-fixed-schedule")
@@ -1899,6 +1919,7 @@ def main():
             f"  schedule_advance_by_winrate={getattr(args, 'schedule_advance_by_winrate', False)}\n"
             f"  schedule_gate_window={getattr(args, 'schedule_gate_window', 1000)} "
             f"schedule_gate_min_win_rate={getattr(args, 'schedule_gate_min_win_rate', 0.6)}\n"
+            f"  schedule_initial_phase={getattr(args, 'schedule_initial_phase', 0)}\n"
             f"  enemy_random_initial_build={getattr(args, 'enemy_random_initial_build', False)}\n"
             f"  enemy_smooth_mix={args.enemy_smooth_mix}\n"
         )
@@ -1919,7 +1940,15 @@ def main():
             loaded_placement_path = args.save_placement_model
             print(f"Resuming training from existing placement weights: {loaded_placement_path}")
 
-    first_phase = schedule_phases[0] if schedule_phases else None
+    first_phase: Optional[ScheduledEnemyPhase] = None
+    if schedule_phases:
+        if args.schedule_advance_by_winrate:
+            sip = min(
+                max(0, args.schedule_initial_phase), len(schedule_phases) - 1
+            )
+            first_phase = schedule_phases[sip]
+        else:
+            first_phase = schedule_phases[0]
     first_mix_enemy = dominant_enemy_from_mix(start_mix) if args.enemy_smooth_mix else None
     agent, env = make_agent_and_env(
         model_path=loaded_model_path,
@@ -2138,12 +2167,16 @@ def main():
     current_mix_enemy: Optional[EnemySpec] = None if args.enemy_smooth_mix else None
     last_switch_log_game = -10**9
 
-    gated_phase_idx = 0
+    gated_phase_idx = (
+        min(max(0, args.schedule_initial_phase), len(schedule_phases) - 1)
+        if schedule_phases and args.schedule_advance_by_winrate
+        else 0
+    )
     env_built_for_gated_idx: Optional[int] = None
     schedule_gate_wins: Optional[deque] = None
     if schedule_phases and args.schedule_advance_by_winrate:
         schedule_gate_wins = deque(maxlen=args.schedule_gate_window)
-        env_built_for_gated_idx = 0
+        env_built_for_gated_idx = gated_phase_idx
 
     rollout_pool = None
     parallel_rollout = (

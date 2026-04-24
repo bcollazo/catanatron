@@ -5,6 +5,13 @@
 # Phases: random -> weighted -> mcts -> value -> alphabeta@1 -> @2 -> @3 (placeholder :games ignored).
 # Checkpoints every 10,000 games.
 #
+# Resume / override (export before sbatch):
+#   LOAD_MAIN=/path/to/main_play.pt     # explicit main weights (overrides auto pick below)
+#   TRAIN_FROM_SCRATCH=1                # random init, no --load
+#   FRESH_START=1                      # ignore existing --save weights for load (still set --save)
+#   SCHEDULE_INITIAL_PHASE=4            # 0-based; start curriculum at 5th enemy (e.g. skip to value/AB)
+#   MODEL_DIR=...                       # where main_play.pt and logs live
+#
 # Submit from repo root:
 #   sbatch capstone_agent/jobs/neuner_tournament_map_winrate_curriculum_gpu.slurm
 #
@@ -43,9 +50,15 @@ mkdir -p "$MODEL_DIR/replays"
 MAIN_PT="$MODEL_DIR/main_play.pt"
 SEED_PT="${SEED_PT:-$REPO_ROOT/capstone_model.pt}"
 LOAD_ARGS=()
+FRESH_ARGS=()
+if [[ "${FRESH_START:-0}" == "1" ]]; then
+  FRESH_ARGS+=(--fresh-start)
+  echo "FRESH_START=1: --fresh-start (will not auto-load from --save path if missing explicit --load)"
+fi
 if [[ "${TRAIN_FROM_SCRATCH:-0}" == "1" ]]; then
   echo "TRAIN_FROM_SCRATCH=1: no --load (random init)."
 elif [[ -n "${LOAD_MAIN:-}" ]]; then
+  echo "LOAD_MAIN: loading $LOAD_MAIN"
   LOAD_ARGS+=(--load "$LOAD_MAIN")
 elif [[ -f "$MAIN_PT" ]]; then
   LOAD_ARGS+=(--load "$MAIN_PT")
@@ -57,6 +70,10 @@ fi
 SCHEDULE="${SCHEDULE:-random:99999999,weighted:99999999,mcts:99999999,value:99999999,alphabeta@1:99999999,alphabeta@2:99999999,alphabeta@3:99999999}"
 
 GAMES="${GAMES:-20000000}"
+SCHEDULE_INITIAL_PHASE="${SCHEDULE_INITIAL_PHASE:-0}"
+if [[ "$SCHEDULE_INITIAL_PHASE" != "0" ]]; then
+  echo "SCHEDULE_INITIAL_PHASE=$SCHEDULE_INITIAL_PHASE (0-based index into --enemy-schedule)"
+fi
 
 python -u capstone_agent/run_simulation.py \
   --train \
@@ -71,6 +88,7 @@ python -u capstone_agent/run_simulation.py \
   --enemy-fixed-schedule \
   --enemy-schedule "$SCHEDULE" \
   --schedule-advance-by-winrate \
+  --schedule-initial-phase "$SCHEDULE_INITIAL_PHASE" \
   --schedule-gate-window "${SCHEDULE_GATE_WINDOW:-1000}" \
   --schedule-gate-min-win-rate "${SCHEDULE_GATE_MIN_WIN_RATE:-0.6}" \
   --rollout-collection-workers 1 \
@@ -86,4 +104,5 @@ python -u capstone_agent/run_simulation.py \
   --train-every-steps 4096 \
   --run-name neuner_tournament_map_wr_curriculum \
   --progress-env-steps 250 \
+  "${FRESH_ARGS[@]}" \
   "${LOAD_ARGS[@]}"
