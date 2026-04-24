@@ -14,11 +14,14 @@
 #
 # Submit from repo root:
 #   sbatch capstone_agent/jobs/neuner_tournament_map_winrate_curriculum_gpu.slurm
+# Shorter walltime if needed (overrides #SBATCH below), e.g. 24h:
+#   sbatch --time=24:00:00 capstone_agent/jobs/neuner_tournament_map_winrate_curriculum_gpu.slurm
 #
 #SBATCH --job-name=neuner_wr_gate
 #SBATCH --partition=gpu-common
 #SBATCH --gres=gpu:1
-#SBATCH --time=7-00:00:00
+# 48 hours — max allowed on DCC for this queue (do not exceed).
+#SBATCH --time=48:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --output=logs/%x-%j.out
