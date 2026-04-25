@@ -1246,10 +1246,21 @@ def evaluate_challenger_vs_champion(
     fixed_map_seed: int,
     verbose: bool = False,
     reward_function: str = "full",
+    placement_strategy: str = "model",
+    enemy_random_initial_build: bool = False,
 ):
     """Seat-balanced evaluation: half games challenger as Blue, half as Red."""
     if num_games <= 0:
         return {"wins": 0, "games": 0, "win_rate": 0.0}
+
+    ch_place = (
+        challenger_placement_model_path
+        if placement_strategy == "model"
+        else None
+    )
+    cap_place = (
+        champion_placement_model_path if placement_strategy == "model" else None
+    )
 
     challenger_blue_games = (num_games + 1) // 2
     champion_blue_games = num_games // 2
@@ -1258,15 +1269,16 @@ def evaluate_challenger_vs_champion(
     # Challenger plays as Blue.
     challenger_agent, challenger_env = make_agent_and_env(
         model_path=challenger_main_model_path,
-        placement_model_path=challenger_placement_model_path,
-        placement_strategy="model",
+        placement_model_path=ch_place,
+        placement_strategy=placement_strategy,
         enemy_type="rl-capstone",
         map_template=map_template,
         map_mode=map_mode,
         fixed_map_seed=fixed_map_seed,
         enemy_main_model_path=champion_main_model_path,
-        enemy_placement_model_path=champion_placement_model_path,
+        enemy_placement_model_path=cap_place,
         reward_function=reward_function,
+        enemy_random_initial_build=enemy_random_initial_build,
     )
     for i in range(challenger_blue_games):
         result = simulate_game(challenger_agent, challenger_env, store_in_buffer=False)
@@ -1283,15 +1295,16 @@ def evaluate_challenger_vs_champion(
     # Champion plays as Blue. Challenger wins when Blue loses.
     champion_agent, champion_env = make_agent_and_env(
         model_path=champion_main_model_path,
-        placement_model_path=champion_placement_model_path,
-        placement_strategy="model",
+        placement_model_path=cap_place,
+        placement_strategy=placement_strategy,
         enemy_type="rl-capstone",
         map_template=map_template,
         map_mode=map_mode,
         fixed_map_seed=fixed_map_seed,
         enemy_main_model_path=challenger_main_model_path,
-        enemy_placement_model_path=challenger_placement_model_path,
+        enemy_placement_model_path=ch_place,
         reward_function=reward_function,
+        enemy_random_initial_build=enemy_random_initial_build,
     )
     for j in range(champion_blue_games):
         result = simulate_game(champion_agent, champion_env, store_in_buffer=False)
@@ -2046,20 +2059,29 @@ def main():
     if args.self_play_ladder:
         if not args.train:
             parser.error("--self-play-ladder currently requires --train")
-        if args.placement_strategy != "model":
-            parser.error("--self-play-ladder requires --placement-strategy model")
+        if args.placement_strategy not in ("model", "random"):
+            parser.error(
+                "--self-play-ladder requires --placement-strategy model or random"
+            )
         if not os.path.exists(champion_main_model_path):
             print(
                 "Champion main model missing; bootstrapping from challenger current weights."
             )
             os.makedirs(os.path.dirname(champion_main_model_path), exist_ok=True)
             agent.main_agent.save(champion_main_model_path)
-        if not os.path.exists(champion_placement_model_path):
+        if args.placement_strategy == "model" and not os.path.exists(
+            champion_placement_model_path
+        ):
             print(
                 "Champion placement model missing; bootstrapping from challenger current weights."
             )
             os.makedirs(os.path.dirname(champion_placement_model_path), exist_ok=True)
             agent.placement_agent.save(champion_placement_model_path)
+        champion_place_for_rl = (
+            champion_placement_model_path
+            if args.placement_strategy == "model"
+            else None
+        )
         env = make_env(
             enemy_type="rl-capstone",
             enemy_ab_depth=args.enemy_ab_depth,
@@ -2070,7 +2092,7 @@ def main():
             map_mode=args.map_mode,
             fixed_map_seed=args.fixed_map_seed,
             enemy_main_model_path=champion_main_model_path,
-            enemy_placement_model_path=champion_placement_model_path,
+            enemy_placement_model_path=champion_place_for_rl,
             reward_function=args.reward_function,
             enemy_random_initial_build=args.enemy_random_initial_build,
         )
@@ -2133,10 +2155,17 @@ def main():
             f"blend_games={args.enemy_mix_games}, start=({start_desc}), end=({end_desc})]"
         )
     if args.self_play_ladder:
-        enemy_detail = (
-            "rl-capstone [frozen champion: "
-            f"main={champion_main_model_path}, placement={champion_placement_model_path}]"
-        )
+        if args.placement_strategy == "model":
+            enemy_detail = (
+                "rl-capstone [frozen champion: "
+                f"main={champion_main_model_path}, placement={champion_placement_model_path}]"
+            )
+        else:
+            enemy_detail = (
+                "rl-capstone [frozen champion: "
+                f"main={champion_main_model_path}, placement=random (no learned placement file); "
+                f"enemy_random_initial_build={args.enemy_random_initial_build}]"
+            )
     map_detail = f"{resolved_map_template} / {args.map_mode}"
     if args.map_template == "AUTO":
         map_detail += " (auto-selected)"
@@ -2792,23 +2821,38 @@ def main():
                     challenger_main_eval_path = args.save
                 else:
                     challenger_main_eval_path = DEFAULT_MAIN_PLAY_MODEL_PATH
-                if args.save_placement_model:
-                    _ensure_parent_dir(args.save_placement_model)
-                    challenger_placement_eval_path = args.save_placement_model
+                if args.placement_strategy == "model":
+                    if args.save_placement_model:
+                        _ensure_parent_dir(args.save_placement_model)
+                        challenger_placement_eval_path = args.save_placement_model
+                    else:
+                        challenger_placement_eval_path = DEFAULT_PLACEMENT_MODEL_PATH
                 else:
-                    challenger_placement_eval_path = DEFAULT_PLACEMENT_MODEL_PATH
-                agent.save(challenger_main_eval_path, challenger_placement_eval_path)
+                    challenger_placement_eval_path = None
+                agent.save(
+                    challenger_main_eval_path,
+                    challenger_placement_eval_path
+                    if args.placement_strategy == "model"
+                    else None,
+                )
 
+                cap_place_eval = (
+                    champion_placement_model_path
+                    if args.placement_strategy == "model"
+                    else None
+                )
                 eval_result = evaluate_challenger_vs_champion(
                     num_games=args.self_play_eval_games,
                     challenger_main_model_path=challenger_main_eval_path,
                     challenger_placement_model_path=challenger_placement_eval_path,
                     champion_main_model_path=champion_main_model_path,
-                    champion_placement_model_path=champion_placement_model_path,
+                    champion_placement_model_path=cap_place_eval,
                     map_template=resolved_map_template,
                     map_mode=args.map_mode,
                     fixed_map_seed=args.fixed_map_seed,
                     reward_function=args.reward_function,
+                    placement_strategy=args.placement_strategy,
+                    enemy_random_initial_build=args.enemy_random_initial_build,
                 )
                 eval_wr = eval_result["win_rate"]
                 print(
@@ -2819,7 +2863,11 @@ def main():
                 )
                 if eval_wr >= args.self_play_promotion_threshold:
                     shutil.copy2(challenger_main_eval_path, champion_main_model_path)
-                    if challenger_placement_eval_path:
+                    if (
+                        args.placement_strategy == "model"
+                        and challenger_placement_eval_path
+                        and os.path.isfile(challenger_placement_eval_path)
+                    ):
                         shutil.copy2(
                             challenger_placement_eval_path, champion_placement_model_path
                         )
@@ -2838,7 +2886,8 @@ def main():
                         )
                         shutil.copy2(champion_main_model_path, hist_main)
                         if (
-                            challenger_placement_eval_path
+                            args.placement_strategy == "model"
+                            and challenger_placement_eval_path
                             and os.path.isfile(champion_placement_model_path)
                         ):
                             shutil.copy2(champion_placement_model_path, hist_place)
@@ -2859,7 +2908,7 @@ def main():
                         map_mode=args.map_mode,
                         fixed_map_seed=args.fixed_map_seed,
                         enemy_main_model_path=champion_main_model_path,
-                        enemy_placement_model_path=champion_placement_model_path,
+                        enemy_placement_model_path=cap_place_eval,
                         reward_function=args.reward_function,
                         enemy_random_initial_build=args.enemy_random_initial_build,
                     )
