@@ -729,6 +729,41 @@ def parse_enemy_schedule(schedule: str) -> list[ScheduledEnemyPhase]:
     return phases
 
 
+def parse_schedule_gate_spec(spec: str) -> list[tuple[float, int]]:
+    """Parse per-phase gate rules for win-rate-advanced schedules.
+
+    Format:
+      "<wr>/<window>,<wr>/<window>,..."
+    Example:
+      "0.9/10000,0.8/1000,0.6/1000"
+    """
+    rules: list[tuple[float, int]] = []
+    raw = (spec or "").strip()
+    if not raw:
+        return rules
+    for token_raw in raw.split(","):
+        token = token_raw.strip()
+        if not token:
+            continue
+        if "/" not in token:
+            raise ValueError(
+                f"Invalid gate token '{token}'. Expected '<win_rate>/<window>'."
+            )
+        wr_s, win_s = token.split("/", 1)
+        min_wr = float(wr_s)
+        window = int(win_s)
+        if not (0.0 < min_wr <= 1.0):
+            raise ValueError(
+                f"Invalid win-rate in gate token '{token}'; expected value in (0, 1]."
+            )
+        if window < 1:
+            raise ValueError(
+                f"Invalid window in gate token '{token}'; expected integer >= 1."
+            )
+        rules.append((min_wr, window))
+    return rules
+
+
 def schedule_phase_for_game(
     game_index_1_based: int, phases: list[ScheduledEnemyPhase]
 ) -> tuple[int, ScheduledEnemyPhase]:
@@ -1503,6 +1538,18 @@ def main():
         "(default: 0.6).",
     )
     parser.add_argument(
+        "--schedule-gate-spec",
+        type=str,
+        default="",
+        help=(
+            "Optional per-phase gate overrides for --schedule-advance-by-winrate. "
+            "Format: '<win_rate>/<window>,<win_rate>/<window>,...'. "
+            "Must provide one entry per phase in --enemy-schedule. "
+            "When provided, this overrides --schedule-gate-min-win-rate and "
+            "--schedule-gate-window on a per-phase basis."
+        ),
+    )
+    parser.add_argument(
         "--schedule-initial-phase",
         type=int,
         default=0,
@@ -1815,6 +1862,14 @@ def main():
         parser.error("--schedule-gate-window must be >= 1")
     if not (0.0 < args.schedule_gate_min_win_rate <= 1.0):
         parser.error("--schedule-gate-min-win-rate must be in (0, 1]")
+    schedule_gate_rules: list[tuple[float, int]] = []
+    if args.schedule_gate_spec:
+        try:
+            schedule_gate_rules = parse_schedule_gate_spec(args.schedule_gate_spec)
+        except Exception as exc:
+            parser.error(f"--schedule-gate-spec parse error: {exc}")
+        if not args.schedule_advance_by_winrate:
+            parser.error("--schedule-gate-spec requires --schedule-advance-by-winrate")
     if args.rollout_collection_workers > 1:
         if not args.train:
             parser.error("--rollout-collection-workers > 1 requires --train")
@@ -1897,6 +1952,12 @@ def main():
                 parser.error(
                     f"--schedule-initial-phase must be < {nph} (this schedule has {nph} phases)"
                 )
+            if schedule_gate_rules and len(schedule_gate_rules) != nph:
+                parser.error(
+                    "--schedule-gate-spec must provide one '<win_rate>/<window>' rule "
+                    f"per phase in --enemy-schedule (expected {nph}, got "
+                    f"{len(schedule_gate_rules)})"
+                )
     if args.enemy_smooth_mix:
         if args.enemy_fixed_schedule:
             parser.error("--enemy-smooth-mix cannot be combined with --enemy-fixed-schedule")
@@ -1919,6 +1980,7 @@ def main():
             f"  schedule_advance_by_winrate={getattr(args, 'schedule_advance_by_winrate', False)}\n"
             f"  schedule_gate_window={getattr(args, 'schedule_gate_window', 1000)} "
             f"schedule_gate_min_win_rate={getattr(args, 'schedule_gate_min_win_rate', 0.6)}\n"
+            f"  schedule_gate_spec={getattr(args, 'schedule_gate_spec', '') or '[none]'}\n"
             f"  schedule_initial_phase={getattr(args, 'schedule_initial_phase', 0)}\n"
             f"  enemy_random_initial_build={getattr(args, 'enemy_random_initial_build', False)}\n"
             f"  enemy_smooth_mix={args.enemy_smooth_mix}\n"
@@ -2172,10 +2234,14 @@ def main():
         if schedule_phases and args.schedule_advance_by_winrate
         else 0
     )
+    current_gate_min_wr = args.schedule_gate_min_win_rate
+    current_gate_window = args.schedule_gate_window
+    if schedule_phases and args.schedule_advance_by_winrate and schedule_gate_rules:
+        current_gate_min_wr, current_gate_window = schedule_gate_rules[gated_phase_idx]
     env_built_for_gated_idx: Optional[int] = None
     schedule_gate_wins: Optional[deque] = None
     if schedule_phases and args.schedule_advance_by_winrate:
-        schedule_gate_wins = deque(maxlen=args.schedule_gate_window)
+        schedule_gate_wins = deque(maxlen=current_gate_window)
         env_built_for_gated_idx = gated_phase_idx
 
     rollout_pool = None
@@ -2804,17 +2870,26 @@ def main():
                 and gated_phase_idx < len(schedule_phases) - 1
             ):
                 schedule_gate_wins.append(1 if result.won else 0)
-                if len(schedule_gate_wins) == args.schedule_gate_window:
+                if len(schedule_gate_wins) == current_gate_window:
+                    gate_window_used = current_gate_window
+                    gate_min_wr_used = current_gate_min_wr
                     wr_gate = sum(schedule_gate_wins) / len(schedule_gate_wins)
-                    if wr_gate >= args.schedule_gate_min_win_rate:
+                    if wr_gate >= gate_min_wr_used:
                         gated_phase_idx += 1
-                        schedule_gate_wins.clear()
+                        if schedule_gate_rules:
+                            current_gate_min_wr, current_gate_window = schedule_gate_rules[
+                                gated_phase_idx
+                            ]
+                        else:
+                            current_gate_min_wr = args.schedule_gate_min_win_rate
+                            current_gate_window = args.schedule_gate_window
+                        schedule_gate_wins = deque(maxlen=current_gate_window)
                         new_idx = min(gated_phase_idx, len(schedule_phases) - 1)
                         np = schedule_phases[new_idx]
                         print(
                             f"  schedule win-rate gate: {wr_gate:.1%} over last "
-                            f"{args.schedule_gate_window} games (>= "
-                            f"{args.schedule_gate_min_win_rate:.0%}) -> advance to "
+                            f"{gate_window_used} games (>= "
+                            f"{gate_min_wr_used:.0%}) -> advance to "
                             f"phase {new_idx + 1}/{len(schedule_phases)} "
                             f"enemy={np.enemy_type}"
                         )
