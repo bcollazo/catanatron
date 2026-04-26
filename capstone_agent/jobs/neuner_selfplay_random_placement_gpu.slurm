@@ -7,21 +7,22 @@
 # (--load PHASE_DIR/main_play.pt). Boots champion copies if missing (same run_simulation logic).
 #
 # Promotion: built-in eval is seat-balanced (half games challenger as Blue, half as Red), which
-# removes first-player bias. Random openings still add variance: a 52% result over 500 games is
-# only a modest edge (noise can flip outcomes). If promotions feel random, raise SELF_PLAY_EVAL_GAMES
-# (e.g. 800–1200) before raising the threshold.
+# removes first-player bias. Random openings add variance; if promotions feel noisy, raise
+# SELF_PLAY_EVAL_GAMES (e.g. 800–1200) before changing the threshold.
 #
-# Defaults: 10k training games per job; eval every 10k; promotion if challenger wins >= 52% over
-# 500 eval games (override with env vars below).
+# Defaults: ONE long run of 1,000,000 training games (--games). Every 10,000 games the job runs
+# promotion eval (seat-balanced). Promotion if challenger wins >= 50% over 500 eval games.
+# If the cluster walltime is shorter than 1M games, submit with GAMES=200000 or use sbatch --time;
+# resubmitting loads challenger_main.pt and continues training from the last saved weights.
 #
 # Export before sbatch (optional):
 #   PHASE_DIR=.../neuner_phase_threshold_curriculum   # source main_play.pt
 #   MODEL_DIR=.../neuner_selfplay_random_ladder       # challenger + champion saves
 #   LOAD_MAIN=...                                     # override initial weights
-#   GAMES=10000
-#   SELF_PLAY_EVAL_EVERY=10000
+#   GAMES=1000000                                     # total games this process (default 1M)
+#   SELF_PLAY_EVAL_EVERY=10000                        # eval (and possible promotion) every 10k games
 #   SELF_PLAY_EVAL_GAMES=500
-#   SELF_PLAY_PROMOTION_THRESHOLD=0.52
+#   SELF_PLAY_PROMOTION_THRESHOLD=0.5
 #
 # Submit from repo root:
 #   sbatch capstone_agent/jobs/neuner_selfplay_random_placement_gpu.slurm
@@ -84,10 +85,10 @@ elif [[ -f "$SEED_PT" ]]; then
   LOAD_ARGS+=(--load "$SEED_PT")
 fi
 
-GAMES="${GAMES:-10000}"
+GAMES="${GAMES:-1000000}"
 SELF_PLAY_EVAL_EVERY="${SELF_PLAY_EVAL_EVERY:-10000}"
 SELF_PLAY_EVAL_GAMES="${SELF_PLAY_EVAL_GAMES:-500}"
-SELF_PLAY_PROMO="${SELF_PLAY_PROMOTION_THRESHOLD:-0.52}"
+SELF_PLAY_PROMO="${SELF_PLAY_PROMOTION_THRESHOLD:-0.5}"
 
 echo "GAMES=$GAMES  SELF_PLAY_EVAL_EVERY=$SELF_PLAY_EVAL_EVERY  SELF_PLAY_EVAL_GAMES=$SELF_PLAY_EVAL_GAMES  PROMO=$SELF_PLAY_PROMO"
 
