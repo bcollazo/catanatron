@@ -994,9 +994,10 @@ def _parallel_rollout_collect_game(payload: Dict[str, Any]) -> Dict[str, Any]:
         store_in_buffer=True,
         progress_env_steps=0,
         game_index=gi,
-                    collect_policy_debug_top_k=int(
-                        payload.get("save_policy_debug_top_k", 0) or 0
-                    ),
+        collect_policy_debug_top_k=int(
+            payload.get("save_policy_debug_top_k", 0) or 0
+        ),
+        deterministic_policy=bool(payload.get("deterministic_policy", False)),
     )
     main_d = _rollout_buffer_lists(agent.main_agent.buffer)
     place_buf = getattr(agent.placement_agent, "buffer", None)
@@ -1038,6 +1039,7 @@ def simulate_game(
     progress_env_steps: int = 0,
     game_index: Optional[int] = None,
     collect_policy_debug_top_k: int = 0,
+    deterministic_policy: bool = False,
 ) -> GameResult:
     """Play one full game using the agent and return a GameResult.
 
@@ -1061,7 +1063,11 @@ def simulate_game(
     for step in range(1, max_steps + 1):
         game_ctx, playable_ctx = _action_context(env)
         action, log_prob, value = agent.select_action(
-            obs, mask, game=game_ctx, playable_actions=playable_ctx
+            obs,
+            mask,
+            game=game_ctx,
+            playable_actions=playable_ctx,
+            deterministic=deterministic_policy,
         )
         step_policy_debug = _policy_debug_step_payload(
             agent, obs, mask, action, collect_policy_debug_top_k
@@ -1131,7 +1137,11 @@ def simulate_and_train(
 ) -> GameResult:
     """Play one game, then run a PPO update on the collected rollout."""
     result = simulate_game(
-        agent, env, max_steps=max_steps, verbose=verbose, store_in_buffer=True
+        agent,
+        env,
+        max_steps=max_steps,
+        verbose=verbose,
+        store_in_buffer=True,
     )
 
     # Replay JSON export happens after this function returns. Avoid resetting the
@@ -1248,6 +1258,7 @@ def evaluate_challenger_vs_champion(
     reward_function: str = "full",
     placement_strategy: str = "model",
     enemy_random_initial_build: bool = False,
+    deterministic_policy: bool = False,
 ):
     """Seat-balanced evaluation: half games challenger as Blue, half as Red."""
     if num_games <= 0:
@@ -1281,7 +1292,12 @@ def evaluate_challenger_vs_champion(
         enemy_random_initial_build=enemy_random_initial_build,
     )
     for i in range(challenger_blue_games):
-        result = simulate_game(challenger_agent, challenger_env, store_in_buffer=False)
+        result = simulate_game(
+            challenger_agent,
+            challenger_env,
+            store_in_buffer=False,
+            deterministic_policy=deterministic_policy,
+        )
         won = int(result.won)
         challenger_wins += won
         if verbose:
@@ -1307,7 +1323,12 @@ def evaluate_challenger_vs_champion(
         enemy_random_initial_build=enemy_random_initial_build,
     )
     for j in range(champion_blue_games):
-        result = simulate_game(champion_agent, champion_env, store_in_buffer=False)
+        result = simulate_game(
+            champion_agent,
+            champion_env,
+            store_in_buffer=False,
+            deterministic_policy=deterministic_policy,
+        )
         ch_won_red = result.terminated and not result.won
         challenger_wins += int(ch_won_red)
         if verbose:
@@ -1837,6 +1858,15 @@ def main():
         action="store_true",
         help="Print one line per game during --eval-* head-to-head (not per-env-step).",
     )
+    parser.add_argument(
+        "--deterministic-policy",
+        action="store_true",
+        help=(
+            "Choose argmax action instead of sampling from the policy. "
+            "Default is stochastic sampling (recommended for training). "
+            "Useful for deterministic evaluation/testing."
+        ),
+    )
     args = parser.parse_args()
     apply_training_preset(args)
     if args.train_every_steps < 1:
@@ -1939,6 +1969,7 @@ def main():
             fixed_map_seed=args.fixed_map_seed,
             verbose=args.eval_verbose,
             reward_function=args.reward_function,
+            deterministic_policy=args.deterministic_policy,
         )
         print(
             "Head-to-head (challenger win rate vs champion):\n"
@@ -1988,6 +2019,7 @@ def main():
             f"  preset={args.preset} difficulty={args.difficulty}\n"
             f"  games={args.games} train={args.train}\n"
             f"  placement_strategy={args.placement_strategy}\n"
+            f"  deterministic_policy={getattr(args, 'deterministic_policy', False)}\n"
             f"  reward_function={args.reward_function}\n"
             f"  enemy_fixed_schedule={args.enemy_fixed_schedule}\n"
             f"  schedule_advance_by_winrate={getattr(args, 'schedule_advance_by_winrate', False)}\n"
@@ -2484,6 +2516,7 @@ def main():
                             "save_games_json_dir": args.save_games_json_dir,
                             "save_games_json_every": args.save_games_json_every,
                             "save_policy_debug_top_k": args.save_policy_debug_top_k,
+                            "deterministic_policy": args.deterministic_policy,
                         }
                     )
                 for res in rollout_pool.imap_unordered(
@@ -2669,6 +2702,7 @@ def main():
                     progress_env_steps=args.progress_env_steps,
                     game_index=g,
                     collect_policy_debug_top_k=args.save_policy_debug_top_k,
+                    deterministic_policy=args.deterministic_policy,
                 )
                 if args.self_play_ladder and args.self_play_winner_only and not result.won:
                     keep_game_for_training = False
@@ -2688,6 +2722,7 @@ def main():
                     env,
                     verbose=args.verbose,
                     collect_policy_debug_top_k=policy_k,
+                    deterministic_policy=args.deterministic_policy,
                 )
 
             wins += result.won
@@ -2853,6 +2888,7 @@ def main():
                     reward_function=args.reward_function,
                     placement_strategy=args.placement_strategy,
                     enemy_random_initial_build=args.enemy_random_initial_build,
+                    deterministic_policy=args.deterministic_policy,
                 )
                 eval_wr = eval_result["win_rate"]
                 print(

@@ -152,8 +152,8 @@ class PlacementAgent:
         )
         self.buffer = RolloutBuffer()
 
-    def select_action(self, state, mask, **_kwargs):
-        """Sample an action from the policy and return (action, log_prob, value)."""
+    def select_action(self, state, mask, deterministic: bool = False, **_kwargs):
+        """Select an action from the policy and return (action, log_prob, value)."""
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         mask_tensor = torch.FloatTensor(mask).unsqueeze(0).to(self.device)
 
@@ -161,7 +161,7 @@ class PlacementAgent:
             probs, value = self.model(state_tensor, mask_tensor)
 
         dist = Categorical(probs)
-        action = dist.sample()
+        action = torch.argmax(probs, dim=-1) if deterministic else dist.sample()
         log_prob = dist.log_prob(action)
 
         return (action.item(), log_prob.item(), value.item())

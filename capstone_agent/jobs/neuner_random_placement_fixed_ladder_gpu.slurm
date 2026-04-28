@@ -3,7 +3,7 @@
 #
 # Default ladder (no mcts):
 #   random:100000,
-#   weighted:200000,
+#   weighted:100000,
 #   value:200000,
 #   alphabeta@1:200000,
 #   alphabeta@2:200000,
@@ -79,7 +79,7 @@ elif [[ -f "$SEED_PT" ]]; then
 fi
 
 PHASE_NAMES=("random" "weighted" "value" "alphabeta@1" "alphabeta@2" "alphabeta@3")
-PHASE_GAMES=(100000 200000 200000 200000 200000 200000)
+PHASE_GAMES=(100000 100000 200000 200000 200000 200000)
 
 START_PHASE="${START_PHASE:-0}"
 if ! [[ "$START_PHASE" =~ ^[0-9]+$ ]]; then

@@ -21,7 +21,7 @@ class MainPlayAgent:
         self.buffer = RolloutBuffer()
 
 
-    def select_action(self, state, mask, **_kwargs):
+    def select_action(self, state, mask, deterministic: bool = False, **_kwargs):
         """
         Given state + mask, sample an action and return 
         everything PPO needs to store.
@@ -33,7 +33,7 @@ class MainPlayAgent:
             probs, value = self.model(state_tensor, mask_tensor)
 
         dist = Categorical(probs)
-        action = dist.sample()
+        action = torch.argmax(probs, dim=-1) if deterministic else dist.sample()
         log_prob = dist.log_prob(action)
 
         # log prob and value are used for training
