@@ -44,7 +44,7 @@ from typing import Any, Dict, List, Optional, Tuple
 sys.path.insert(0, os.path.dirname(__file__))
 
 from MainPlayAgent import MainPlayAgent
-from PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
+from Placement.PlacementAgent import PlacementAgent, RandomPlacementAgent, make_placement_agent
 from CapstoneAgent import CapstoneAgent
 from action_map import (
     validate as validate_action_mapping,

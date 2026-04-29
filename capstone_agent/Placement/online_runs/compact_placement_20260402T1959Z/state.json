@@ -1,0 +1,50 @@
+{
+  "collection_windows_completed": 10,
+  "collection_windows_started": 10,
+  "data_dir": "/Users/peterb/Desktop/academia/catan_ai/capstone_agent/online_runs/compact_placement_20260402T1959Z/data",
+  "latest_benchmark": {
+    "baseline": {
+      "ci_high": 0.5779215686148869,
+      "ci_low": 0.3820784313851131,
+      "draws": 0,
+      "elapsed_seconds": 143.63014817237854,
+      "games": 100,
+      "losses": 52,
+      "win_rate": 0.48,
+      "wins": 48
+    },
+    "delta_win_rate": -0.37,
+    "games": 100,
+    "placement_model_path": "/Users/peterb/Desktop/academia/catan_ai/capstone_agent/online_runs/compact_placement_20260402T1959Z/models/placement_model_latest.pt",
+    "test": {
+      "ci_high": 0.1713263923608751,
+      "ci_low": 0.0486736076391249,
+      "draws": 0,
+      "elapsed_seconds": 118.10341668128967,
+      "games": 100,
+      "losses": 89,
+      "win_rate": 0.11,
+      "wins": 11
+    }
+  },
+  "latest_checkpoint_path": "/Users/peterb/Desktop/academia/catan_ai/capstone_agent/online_runs/compact_placement_20260402T1959Z/models/placement_model_latest_20260402T2111Z.pt",
+  "latest_model_path": "/Users/peterb/Desktop/academia/catan_ai/capstone_agent/online_runs/compact_placement_20260402T1959Z/models/placement_model_latest.pt",
+  "logs_dir": "/Users/peterb/Desktop/academia/catan_ai/capstone_agent/online_runs/compact_placement_20260402T1959Z/logs",
+  "models_dir": "/Users/peterb/Desktop/academia/catan_ai/capstone_agent/online_runs/compact_placement_20260402T1959Z/models",
+  "next_collection_seed": 10000,
+  "run_dir": "/Users/peterb/Desktop/academia/catan_ai/capstone_agent/online_runs/compact_placement_20260402T1959Z",
+  "state_version": 1,
+  "train_cycles_completed": 10,
+  "trained_new_chunk_files": [
+    "placement_compact_v1_20260402T195952Z_seed0_chunk0001.npz",
+    "placement_compact_v1_20260402T200227Z_seed1000_chunk0001.npz",
+    "placement_compact_v1_20260402T201330Z_seed2000_chunk0001.npz",
+    "placement_compact_v1_20260402T203404Z_seed3000_chunk0001.npz",
+    "placement_compact_v1_20260402T203626Z_seed4000_chunk0001.npz",
+    "placement_compact_v1_20260402T204615Z_seed5000_chunk0001.npz",
+    "placement_compact_v1_20260402T204834Z_seed6000_chunk0001.npz",
+    "placement_compact_v1_20260402T205347Z_seed7000_chunk0001.npz",
+    "placement_compact_v1_20260402T210320Z_seed8000_chunk0001.npz",
+    "placement_compact_v1_20260402T210558Z_seed9000_chunk0001.npz"
+  ]
+}
