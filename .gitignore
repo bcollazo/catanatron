@@ -148,6 +148,8 @@ capstone_agent/models/*_*T*Z.pt
 capstone_agent/data/*.npz
 capstone_agent/data/*.jsonl
 
+capstone_agent/dcc_training_models/
+
 # Atomic-save temp files
 *.tmp.npz
 *.pt.tmp
