@@ -143,6 +143,11 @@ class Board:
                     self.road_color, self.road_length = max(
                         self.road_lengths.items(), key=lambda e: e[1]
                     )
+                elif len(edges) == 1:
+                    # Endpoint blocked: remove node_id from opponent's component
+                    b_index = self._get_connected_component_index(node_id, edge_color)
+                    if b_index is not None:
+                        self.connected_components[edge_color][b_index].discard(node_id)
 
         self.board_buildable_ids.discard(node_id)
         for n in STATIC_GRAPH.neighbors(node_id):
