@@ -630,3 +630,27 @@ def test_trading_sequence(fake_roll_dice):
     expected[index_of_a_resource_owned] -= 1
     expected[missing_resource_index] += 1
     assert get_player_freqdeck(game.state, p0.color) == expected
+
+def test_cannot_extend_road_past_enemy_settlement_at_endpoint():
+    # Blue has a road whose far endpoint is node 10.
+    # Red then builds a settlement at node 10 (normal phase).
+    # Blue should no longer be able to build roads from node 10.
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    board = game.state.board
+
+    board.build_settlement(Color.BLUE, 12, initial_build_phase=True)
+    board.build_road(Color.BLUE, (12, 11))
+    board.build_road(Color.BLUE, (11, 10))
+
+    # Red reaches node 10 via their own road network and settles there.
+    board.build_settlement(Color.RED, 8, initial_build_phase=True)
+    board.build_road(Color.RED, (8, 9))
+    board.build_road(Color.RED, (9, 10))
+    board.build_settlement(Color.RED, 10, initial_build_phase=False)
+
+    blue_edges = board.buildable_edges(Color.BLUE)
+    assert all(10 not in edge for edge in blue_edges), (
+        f"Blue should not be able to build a road from enemy-settled node 10, "
+        f"but found: {[e for e in blue_edges if 10 in e]}"
+    )
