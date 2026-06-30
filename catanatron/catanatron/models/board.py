@@ -356,6 +356,12 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
         while len(agenda) > 0:
             node, path_thus_far = agenda.pop()
 
+            # Issue #378: Skip nodes occupied by enemy settlements.
+            # A settlement interrupts the road (Catan rule). We don't explore
+            # from a node that has an enemy settlement.
+            if board.is_enemy_node(node, color):
+                continue
+
             able_to_navigate = False
             for neighbor_node in STATIC_GRAPH.neighbors(node):
                 edge = tuple(sorted((node, neighbor_node)))
@@ -377,4 +383,4 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
 
         paths.extend(paths_from_this_node)
 
-    return max(paths, key=len)
+    return max(paths, key=len) if paths else []
