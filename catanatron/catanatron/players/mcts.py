@@ -1,7 +1,6 @@
 import math
 import time
 from collections import defaultdict
-import random
 
 from catanatron.game import Game
 from catanatron.models.player import Player
@@ -99,7 +98,9 @@ class StateNode:
         children = self.children[action]
         children_states = list(map(lambda c: c[0], children))
         children_probas = list(map(lambda c: c[1], children))
-        return random.choices(children_states, weights=children_probas, k=1)[0]
+        return self.game.state.random.choices(
+            children_states, weights=children_probas, k=1
+        )[0]
 
     def choose_best_action(self):
         scores = []

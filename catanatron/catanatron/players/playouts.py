@@ -1,5 +1,4 @@
 import time
-import random
 import multiprocessing
 from collections import Counter
 
@@ -75,5 +74,5 @@ def run_playout(action_applied_game_copy):
 
 
 def decide_fn(self, game, playable_actions):
-    index = random.randrange(0, len(playable_actions))
+    index = game.state.random.randrange(0, len(playable_actions))
     return playable_actions[index]

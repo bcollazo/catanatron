@@ -1,4 +1,3 @@
-import random
 
 from catanatron.state_functions import (
     get_longest_road_length,
@@ -162,8 +161,8 @@ class ValueFunctionPlayer(Player):
         if len(playable_actions) == 1:
             return playable_actions[0]
 
-        if self.epsilon is not None and random.random() < self.epsilon:
-            return random.choice(playable_actions)
+        if self.epsilon is not None and game.state.random.random() < self.epsilon:
+            return game.state.random.choice(playable_actions)
 
         best_value = float("-inf")
         best_action = None
