@@ -1,4 +1,3 @@
-
 from catanatron.state_functions import (
     player_key,
 )

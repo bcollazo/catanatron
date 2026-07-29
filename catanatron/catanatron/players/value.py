@@ -1,4 +1,3 @@
-
 from catanatron.state_functions import (
     get_longest_road_length,
     get_played_dev_cards,

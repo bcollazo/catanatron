@@ -10,7 +10,7 @@ import { store } from "../store";
 import { isPlayersTurn } from "../utils/stateUtils";
 import { postAction } from "../utils/apiClient";
 import type { CatanState } from "../store";
-import { useParams } from "react-router";
+import { useParams } from "react-router-dom";
 import ACTIONS from "../actions";
 import Board from "./Board";
 import type { GameAction, TileCoordinate } from "../utils/api.types";

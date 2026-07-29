@@ -59,6 +59,18 @@ def test_serialization_matches_gui_contract():
         "state_index",
     } <= set(result)
     assert "random" not in result
+    assert isinstance(result["tiles"], list)
+    assert isinstance(result["nodes"], dict)
+    assert isinstance(result["edges"], list)
+    assert result["winning_color"] is None
+
+    tile_types = {placed_tile["tile"]["type"] for placed_tile in result["tiles"]}
+    assert {"RESOURCE_TILE", "DESERT", "PORT", "WATER"} <= tile_types
+    assert any(
+        placed_tile["tile"]["type"] == "PORT"
+        and placed_tile["tile"]["resource"] is None
+        for placed_tile in result["tiles"]
+    )
 
 
 def test_action_from_json_maritime_trade():
