@@ -130,6 +130,27 @@ class Game:
             )
             self.playable_actions = generate_playable_actions(self.state)
 
+    def __setstate__(self, attributes):
+        """Restore pickled games and normalize their per-game RNG.
+
+        Legacy database rows have neither ``Game.random`` nor
+        ``State.random``. Their module-global RNG state was never persisted,
+        so the original stream cannot be resumed exactly. Seed a new per-game
+        stream from the stored game seed so legacy games remain playable;
+        subsequent saves preserve that stream.
+        """
+        self.__dict__.update(attributes)
+
+        state_rng = getattr(self.state, "random", None)
+        game_rng = getattr(self, "random", None)
+        rng = state_rng if state_rng is not None else game_rng
+        if rng is None:
+            rng = random.Random(self.seed)
+
+        # Game and State intentionally share one stream by reference.
+        self.random = rng
+        self.state.random = rng
+
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
 

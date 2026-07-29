@@ -28,6 +28,39 @@ def test_serialization():
     assert isinstance(result["action_records"], list)
 
 
+def test_serialization_matches_gui_contract():
+    game = Game(
+        players=[
+            SimplePlayer(Color.RED),
+            SimplePlayer(Color.BLUE),
+        ],
+        seed=123,
+    )
+
+    result = json.loads(json.dumps(game, cls=GameEncoder))
+
+    assert {
+        "tiles",
+        "adjacent_tiles",
+        "nodes",
+        "edges",
+        "action_records",
+        "player_state",
+        "colors",
+        "bot_colors",
+        "is_initial_build_phase",
+        "robber_coordinate",
+        "current_color",
+        "current_prompt",
+        "current_discard_count",
+        "current_playable_actions",
+        "longest_roads_by_player",
+        "winning_color",
+        "state_index",
+    } <= set(result)
+    assert "random" not in result
+
+
 def test_action_from_json_maritime_trade():
     data = ["RED", "MARITIME_TRADE", [SHEEP, SHEEP, SHEEP, SHEEP, ORE]]
     action = action_from_json(data)
