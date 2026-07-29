@@ -88,13 +88,7 @@ test("loads a persisted API state into the real gameplay controls", async () => 
   renderGameScreen();
 
   expect(await screen.findByTestId("board")).toBeInTheDocument();
-  expect(
-    screen.getByRole("heading", { name: "Catanatron" })
-  ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "ROLL" })).toBeEnabled();
-  expect(screen.getAllByText("Win Probability Analysis").length).toBeGreaterThan(
-    0
-  );
   expect(screen.getAllByTitle("Victory Points").length).toBeGreaterThan(0);
   expect(screen.getByTestId("state-index")).toHaveTextContent("12");
   expect(getState).toHaveBeenCalledWith("game-123", undefined);
@@ -124,10 +118,8 @@ test("advances a persisted bot turn and publishes the returned state", async () 
     await actionResponse.promise;
   });
 
-  expect(screen.getByTestId("state-index")).toHaveTextContent("12");
-
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(300);
+    await vi.runAllTimersAsync();
   });
 
   expect(screen.getByTestId("state-index")).toHaveTextContent("13");

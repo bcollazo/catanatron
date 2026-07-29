@@ -1,22 +1,19 @@
 import { render, screen } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
+import { expect, test } from "vitest";
 
 import { makeGameState } from "../test/fixtures";
 import Board from "./Board";
 
 test("renders the nested tile, node, and edge shapes emitted by GameEncoder", () => {
-  const onNodeClick = vi.fn();
-  const onEdgeClick = vi.fn();
-  const onTileClick = vi.fn();
   const gameState = makeGameState();
 
   const { container } = render(
     <Board
       width={1200}
       height={900}
-      buildOnNodeClick={() => onNodeClick}
-      buildOnEdgeClick={() => onEdgeClick}
-      handleTileClick={onTileClick}
+      buildOnNodeClick={() => () => undefined}
+      buildOnEdgeClick={() => () => undefined}
+      handleTileClick={() => undefined}
       replayMode={false}
       gameState={gameState}
       isMobile={false}

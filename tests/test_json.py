@@ -7,32 +7,13 @@ from catanatron.models.player import SimplePlayer, Color
 from catanatron.json import GameEncoder, action_from_json
 
 
-def test_serialization():
+def test_serialization_matches_gui_contract():
     game = Game(
         players=[
             SimplePlayer(Color.RED),
             SimplePlayer(Color.BLUE),
             SimplePlayer(Color.WHITE),
             SimplePlayer(Color.ORANGE),
-        ]
-    )
-
-    string = json.dumps(game, cls=GameEncoder)
-    result = json.loads(string)
-
-    # Loosely assert looks like expected
-    assert isinstance(result["robber_coordinate"], list)
-    assert isinstance(result["tiles"], list)
-    assert isinstance(result["edges"], list)
-    assert isinstance(result["nodes"], dict)
-    assert isinstance(result["action_records"], list)
-
-
-def test_serialization_matches_gui_contract():
-    game = Game(
-        players=[
-            SimplePlayer(Color.RED),
-            SimplePlayer(Color.BLUE),
         ],
         seed=123,
     )
@@ -62,6 +43,8 @@ def test_serialization_matches_gui_contract():
     assert isinstance(result["tiles"], list)
     assert isinstance(result["nodes"], dict)
     assert isinstance(result["edges"], list)
+    assert isinstance(result["action_records"], list)
+    assert isinstance(result["robber_coordinate"], list)
     assert result["winning_color"] is None
 
     tile_types = {placed_tile["tile"]["type"] for placed_tile in result["tiles"]}
