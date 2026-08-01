@@ -15,7 +15,10 @@ from catanatron.models.enums import (
     FastResource,
     NodeRef,
 )
-from catanatron.models.spiral import spiral_land_coordinates
+from catanatron.models.spiral import (
+    get_starting_spiral_coordinates,
+    spiral_land_coordinates,
+)
 from catanatron.models.tiles import EdgeId, LandTile, NodeId, Port, Tile, Water
 
 NUM_NODES = 54
@@ -255,7 +258,7 @@ def init_port_nodes_cache(
         if not isinstance(tile, Port):
             continue
 
-        (a_noderef, b_noderef) = PORT_DIRECTION_TO_NODEREFS[tile.direction]
+        a_noderef, b_noderef = PORT_DIRECTION_TO_NODEREFS[tile.direction]
         port_nodes[tile.resource].add(tile.nodes[a_noderef])
         port_nodes[tile.resource].add(tile.nodes[b_noderef])
     return port_nodes
@@ -351,7 +354,7 @@ def initialize_tiles(
 
         # create and save tile
         if isinstance(tile_type, tuple):  # is port
-            (_, direction) = tile_type
+            _, direction = tile_type
             port = Port(
                 port_autoinc, shuffled_port_resources.pop(), direction, nodes, edges
             )
@@ -380,7 +383,7 @@ def initialize_tiles(
             )
 
         # iterate in order of official spiral and assign numbers, skipping desert tile
-        start = (2, -2, 0) if map_template == BASE_MAP_TEMPLATE else (1, -1, 0)
+        start = get_starting_spiral_coordinates(all_tiles)
         i = 0
         for coordinate in spiral_land_coordinates(all_tiles, start):
             tile = all_tiles[coordinate]
