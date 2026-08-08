@@ -654,3 +654,18 @@ def test_cannot_extend_road_past_enemy_settlement_at_endpoint():
         f"Blue should not be able to build a road from enemy-settled node 10, "
         f"but found: {[e for e in blue_edges if 10 in e]}"
     )
+
+
+def test_longest_road_length_is_synced_after_initial_placement():
+    """player_state must match the board once the initial placement is over."""
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    while game.state.is_initial_build_phase:
+        game.play_tick()
+
+    for player in players:
+        key = player_key(game.state, player.color)
+        assert (
+            game.state.player_state[f"{key}_LONGEST_ROAD_LENGTH"]
+            == game.state.board.road_lengths[player.color]
+        )

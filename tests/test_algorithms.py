@@ -204,3 +204,119 @@ def test_cut_but_not_disconnected():
         max(map(lambda path: len(path), board.continuous_roads_by_player(Color.RED)))
         == 6
     )
+
+
+def longest_route(board, color):
+    """Recompute from scratch.
+
+    `board.road_lengths` is a monotone cache: it is not refreshed when an
+    endpoint gets blocked, so asserting on it would make these tests pass on
+    unpatched code for the wrong reason.
+    """
+    return max(len(path) for path in board.continuous_roads_by_player(color))
+
+
+def test_longest_road_counts_road_ending_at_enemy_settlement():
+    """A road leading into an opponent's building still counts.
+
+    The route may not continue past it, but the segment itself is part of it.
+    """
+    board = Board()
+    board.build_settlement(Color.RED, 7, initial_build_phase=True)
+    for edge in [(6, 7), (1, 6), (0, 1), (7, 8), (8, 9), (2, 9)]:
+        board.build_road(Color.RED, edge)
+    assert longest_route(board, Color.RED) == 6
+
+    # BLUE blocks one end of RED's road at node 0.
+    board.build_settlement(Color.BLUE, 16, initial_build_phase=True)
+    board.build_road(Color.BLUE, (5, 16))
+    board.build_road(Color.BLUE, (0, 5))
+    board.build_settlement(Color.BLUE, 0)
+    assert longest_route(board, Color.RED) == 6, "segment (0, 1) still counts"
+
+    # WHITE blocks the other end at node 2.
+    board.build_settlement(Color.WHITE, 12, initial_build_phase=True)
+    board.build_road(Color.WHITE, (3, 12))
+    board.build_road(Color.WHITE, (2, 3))
+    board.build_settlement(Color.WHITE, 2)
+    assert longest_route(board, Color.RED) == 6, "segment (2, 9) still counts"
+
+
+def test_longest_road_returns_to_bank_when_cut_below_five():
+    """Nobody holds the card when no player reaches five roads anymore."""
+    board = Board()
+    board.build_settlement(Color.RED, 0, initial_build_phase=True)
+    for edge in [(0, 1), (1, 6), (6, 7), (7, 8), (8, 9), (2, 9)]:
+        board.build_road(Color.RED, edge)
+    assert board.road_color is Color.RED
+    assert board.road_length == 6
+
+    # BLUE cuts RED's road in half at node 7 (3 roads on each side).
+    board.build_settlement(Color.BLUE, 25, initial_build_phase=True)
+    board.build_road(Color.BLUE, (24, 25))
+    board.build_road(Color.BLUE, (7, 24))
+    board.build_settlement(Color.BLUE, 7)
+
+    assert board.road_lengths[Color.RED] == 3
+    assert board.road_color is None, "card goes back to the bank"
+    assert board.road_length == 0
+
+
+def test_longest_road_stays_in_bank_while_challengers_are_tied():
+    """When the holder is cut and two challengers tie for the lead, the card
+    stays in the bank until a single player leads again."""
+    board = Board()
+    board.build_settlement(Color.RED, 0, initial_build_phase=True)
+    for edge in [(0, 1), (1, 6), (6, 7), (7, 8), (8, 9), (2, 9)]:
+        board.build_road(Color.RED, edge)
+
+    board.build_settlement(Color.BLUE, 4, initial_build_phase=True)
+    for edge in [(4, 15), (15, 17), (17, 18), (18, 16), (16, 21)]:
+        board.build_road(Color.BLUE, edge)
+
+    board.build_settlement(Color.WHITE, 11, initial_build_phase=True)
+    for edge in [(11, 32), (32, 33), (33, 34), (34, 13), (13, 12)]:
+        board.build_road(Color.WHITE, edge)
+
+    # RED leads with 6; BLUE and WHITE are tied behind with 5 each.
+    assert board.road_color is Color.RED
+    assert board.road_lengths == {Color.RED: 6, Color.BLUE: 5, Color.WHITE: 5}
+
+    # ORANGE cuts RED down to 3, leaving BLUE and WHITE tied for the lead.
+    board.build_settlement(Color.ORANGE, 25, initial_build_phase=True)
+    board.build_road(Color.ORANGE, (25, 24))
+    board.build_road(Color.ORANGE, (24, 7))
+    board.build_settlement(Color.ORANGE, 7)
+
+    assert board.road_lengths[Color.RED] == 3
+    assert board.road_color is None, "no single leader, so nobody holds the card"
+
+    # WHITE breaks the tie and takes the card.
+    board.build_road(Color.WHITE, (12, 3))
+    assert board.road_color is Color.WHITE
+    assert board.road_length == 6
+
+
+def test_loop_cut_during_play_does_not_duplicate_component():
+    """Cutting one node of a loop disconnects nothing: still one component.
+
+    Unlike test_cut_but_not_disconnected, the settlement here is built during
+    play rather than in the initial phase, which is what exercises the split.
+    """
+    board = Board()
+    cycle = [0, 5, 4, 3, 2, 1]
+    board.build_settlement(Color.RED, 0, initial_build_phase=True)
+    for i in range(6):
+        board.build_road(Color.RED, (cycle[i], cycle[(i + 1) % 6]))
+    assert len(board.connected_components[Color.RED]) == 1
+    assert board.road_lengths[Color.RED] == 6
+
+    board.build_settlement(Color.BLUE, 11, initial_build_phase=True)
+    board.build_road(Color.BLUE, (11, 12))
+    board.build_road(Color.BLUE, (3, 12))
+    board.build_settlement(Color.BLUE, 3)
+
+    assert len(board.connected_components[Color.RED]) == 1, "no duplicate component"
+    # 6, not 5: the two roads meeting at node 3 are the first and last of the
+    # route, never consecutive, so it never traces *through* the settlement.
+    assert board.road_lengths[Color.RED] == 6

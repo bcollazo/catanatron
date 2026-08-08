@@ -170,8 +170,15 @@ def apply_build_settlement(state: State, action: Action):
 def apply_build_road(state: State, action: Action):
     edge = action.value
     if state.is_initial_build_phase:
-        state.board.build_road(action.color, edge)
+        (
+            previous_road_color,
+            road_color,
+            road_lengths,
+        ) = state.board.build_road(action.color, edge)
         build_road(state, action.color, edge, True)
+        # Keep player_state in sync with the board: without this,
+        # LONGEST_ROAD_LENGTH stays at 0 until the first road of the actual game.
+        maintain_longest_road(state, previous_road_color, road_color, road_lengths)
 
         # state.current_player_index depend on what index are we
         # state.current_prompt too
