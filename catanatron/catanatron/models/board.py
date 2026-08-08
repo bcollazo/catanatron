@@ -387,10 +387,6 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
 
     paths = []
     for start_node in start_nodes:
-        # Starting on an enemy node then coming back to it would mean travelling
-        # through it, which the rules forbid.
-        forbidden = start_node if board.is_enemy_node(start_node, color) else None
-
         # do DFS when reach leaf node, stop and add to paths
         paths_from_this_node = []
         agenda: List[Tuple[int, Any]] = [(start_node, [])]
@@ -408,10 +404,10 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
                 if edge in path_thus_far:
                     continue
 
-                # Can't expand past an enemy node, but the road leading to it counts.
+                # Can't expand past an enemy node — that would be two consecutive
+                # segments meeting on it — but the road leading to it counts.
                 if board.is_enemy_node(neighbor_node, color):
-                    if neighbor_node != forbidden:
-                        paths_from_this_node.append(path_thus_far + [edge])
+                    paths_from_this_node.append(path_thus_far + [edge])
                     continue
 
                 agenda.append((neighbor_node, path_thus_far + [edge]))

@@ -317,4 +317,6 @@ def test_loop_cut_during_play_does_not_duplicate_component():
     board.build_settlement(Color.BLUE, 3)
 
     assert len(board.connected_components[Color.RED]) == 1, "no duplicate component"
-    assert board.road_lengths[Color.RED] == 5, "route may not pass through node 3"
+    # 6, not 5: the two roads meeting at node 3 are the first and last of the
+    # route, never consecutive, so it never traces *through* the settlement.
+    assert board.road_lengths[Color.RED] == 6
