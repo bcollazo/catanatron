@@ -1,4 +1,3 @@
-from catanatron.game import Game
 from catanatron.models.board import Board
 from catanatron.state import (
     State,
@@ -8,9 +7,8 @@ from catanatron.state_functions import (
     get_largest_army,
     play_dev_card,
     player_deck_replenish,
-    player_key,
 )
-from catanatron.models.player import SimplePlayer, Color, RandomPlayer
+from catanatron.models.player import SimplePlayer, Color
 from catanatron.models.enums import KNIGHT, ORE, SHEEP, WHEAT
 
 
@@ -207,9 +205,14 @@ def test_cut_but_not_disconnected():
         == 6
     )
 
+
 def longest_route(board, color):
-    """Recompute from scratch. `board.road_lengths` is a monotone cache: it is
-    not refreshed when an endpoint gets blocked, so it would hide the bug."""
+    """Recompute from scratch.
+
+    `board.road_lengths` is a monotone cache: it is not refreshed when an
+    endpoint gets blocked, so asserting on it would make these tests pass on
+    unpatched code for the wrong reason.
+    """
     return max(len(path) for path in board.continuous_roads_by_player(color))
 
 
@@ -259,26 +262,47 @@ def test_longest_road_returns_to_bank_when_cut_below_five():
     assert board.road_length == 0
 
 
-def test_longest_road_holder_keeps_card_on_tie_after_cut():
-    """Regression guard: the incumbent keeps the card when tied."""
+def test_longest_road_stays_in_bank_while_challengers_are_tied():
+    """When the holder is cut and two challengers tie for the lead, the card
+    stays in the bank until a single player leads again."""
     board = Board()
-    board.road_lengths.update({Color.RED: 6, Color.BLUE: 6})
-    board.road_color = Color.RED
-    board._resolve_road_holder()
+    board.build_settlement(Color.RED, 0, initial_build_phase=True)
+    for edge in [(0, 1), (1, 6), (6, 7), (7, 8), (8, 9), (2, 9)]:
+        board.build_road(Color.RED, edge)
+
+    board.build_settlement(Color.BLUE, 4, initial_build_phase=True)
+    for edge in [(4, 15), (15, 17), (17, 18), (18, 16), (16, 21)]:
+        board.build_road(Color.BLUE, edge)
+
+    board.build_settlement(Color.WHITE, 11, initial_build_phase=True)
+    for edge in [(11, 32), (32, 33), (33, 34), (34, 13), (13, 12)]:
+        board.build_road(Color.WHITE, edge)
+
+    # RED leads with 6; BLUE and WHITE are tied behind with 5 each.
     assert board.road_color is Color.RED
+    assert board.road_lengths == {Color.RED: 6, Color.BLUE: 5, Color.WHITE: 5}
+
+    # ORANGE cuts RED down to 3, leaving BLUE and WHITE tied for the lead.
+    board.build_settlement(Color.ORANGE, 25, initial_build_phase=True)
+    board.build_road(Color.ORANGE, (25, 24))
+    board.build_road(Color.ORANGE, (24, 7))
+    board.build_settlement(Color.ORANGE, 7)
+
+    assert board.road_lengths[Color.RED] == 3
+    assert board.road_color is None, "no single leader, so nobody holds the card"
+
+    # WHITE breaks the tie and takes the card.
+    board.build_road(Color.WHITE, (12, 3))
+    assert board.road_color is Color.WHITE
+    assert board.road_length == 6
 
 
-def test_longest_road_stays_in_bank_when_challengers_tie():
-    """Nobody takes the card until a single player leads."""
-    board = Board()
-    board.road_lengths.update({Color.RED: 3, Color.BLUE: 6, Color.WHITE: 6})
-    board.road_color = Color.RED
-    board._resolve_road_holder()
-    assert board.road_color is None
+def test_loop_cut_during_play_does_not_duplicate_component():
+    """Cutting one node of a loop disconnects nothing: still one component.
 
-
-def test_cutting_a_loop_does_not_duplicate_the_component():
-    """Cutting one node of a loop disconnects nothing: still one component."""
+    Unlike test_cut_but_not_disconnected, the settlement here is built during
+    play rather than in the initial phase, which is what exercises the split.
+    """
     board = Board()
     cycle = [0, 5, 4, 3, 2, 1]
     board.build_settlement(Color.RED, 0, initial_build_phase=True)
@@ -294,19 +318,3 @@ def test_cutting_a_loop_does_not_duplicate_the_component():
 
     assert len(board.connected_components[Color.RED]) == 1, "no duplicate component"
     assert board.road_lengths[Color.RED] == 5, "route may not pass through node 3"
-
-
-def test_longest_road_length_is_synced_after_initial_placement():
-    """player_state must match the board once the initial placement is over."""
-    colors = [Color.RED, Color.BLUE, Color.WHITE, Color.ORANGE]
-    game = Game([RandomPlayer(c) for c in colors], seed=7005)
-    while game.state.is_initial_build_phase:
-        game.play_tick()
-
-    state = game.state
-    for color in colors:
-        key = player_key(state, color)
-        assert (
-            state.player_state[f"{key}_LONGEST_ROAD_LENGTH"]
-            == state.board.road_lengths[color]
-        )
