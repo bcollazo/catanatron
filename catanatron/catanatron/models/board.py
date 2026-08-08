@@ -131,18 +131,17 @@ class Board:
                     b_index = self._get_connected_component_index(node_id, edge_color)
                     del self.connected_components[edge_color][b_index]
                     self.connected_components[edge_color].append(a_nodeset)
-                    self.connected_components[edge_color].append(c_nodeset)
+                    if c_nodeset != a_nodeset:
+                        # On a loop, cutting one node disconnects nothing and both
+                        # walks come back identical: there is no second component.
+                        self.connected_components[edge_color].append(c_nodeset)
 
                     # Update longest road by plowed player. Compare again with all
                     self.road_lengths[edge_color] = max(
-                        *[
-                            len(longest_acyclic_path(self, component, edge_color))
-                            for component in self.connected_components[edge_color]
-                        ]
+                        len(longest_acyclic_path(self, component, edge_color))
+                        for component in self.connected_components[edge_color]
                     )
-                    self.road_color, self.road_length = max(
-                        self.road_lengths.items(), key=lambda e: e[1]
-                    )
+                    self._resolve_road_holder()
                 elif len(edges) == 1:
                     # Endpoint blocked: remove node_id from opponent's component
                     b_index = self._get_connected_component_index(node_id, edge_color)
@@ -156,6 +155,29 @@ class Board:
         self.buildable_edges_cache = {}  # Reset buildable_edges
         self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
+
+    def _resolve_road_holder(self):
+        """Decide who holds the Longest Road card, per the official rules.
+
+        `self.road_color = None` means the card is back in the bank.
+
+        Both places that can change road lengths call this, so the rules live in
+        one spot: build_road used to check the threshold itself while the cut
+        branch of build_settlement just took an argmax, and the two disagreed.
+        """
+        best = max(self.road_lengths.values(), default=0)
+        if best < 5:
+            self.road_color, self.road_length = None, 0
+            return
+
+        leaders = [c for c, length in self.road_lengths.items() if length == best]
+        if self.road_color in leaders:
+            pass  # holder keeps the card when tied
+        elif len(leaders) == 1:
+            self.road_color = leaders[0]  # a single challenger takes it
+        else:
+            self.road_color = None  # tied challengers: card goes back to the bank
+        self.road_length = best if self.road_color is not None else 0
 
     def dfs_walk(self, node_id, color):
         """Generates set of nodes that are "connected" to given node.
@@ -228,9 +250,7 @@ class Board:
         previous_road_color = self.road_color
         candidate_length = len(longest_acyclic_path(self, component, color))
         self.road_lengths[color] = max(self.road_lengths[color], candidate_length)
-        if candidate_length >= 5 and candidate_length > self.road_length:
-            self.road_color = color
-            self.road_length = candidate_length
+        self._resolve_road_holder()
 
         self.buildable_edges_cache = {}  # Reset buildable_edges
         return previous_road_color, self.road_color, self.road_lengths
@@ -353,8 +373,24 @@ class Board:
 
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
+    # A road ending at an enemy building still counts; the route simply stops
+    # there. Two conditions must both be lifted for it to be counted: we must be
+    # able to finish on an enemy node, and to start from one. `node_set` omits
+    # enemy nodes (they are discarded, or never added, by build_road), so they
+    # would otherwise be unreachable as DFS roots. A route has one start and one
+    # end, so two blocked extremities consume one condition each.
+    start_nodes = set(node_set)
+    for node in node_set:
+        for neighbor_node in STATIC_GRAPH.neighbors(node):
+            if board.is_friendly_road(tuple(sorted((node, neighbor_node))), color):
+                start_nodes.add(neighbor_node)
+
     paths = []
-    for start_node in node_set:
+    for start_node in start_nodes:
+        # Starting on an enemy node then coming back to it would mean travelling
+        # through it, which the rules forbid.
+        forbidden = start_node if board.is_enemy_node(start_node, color) else None
+
         # do DFS when reach leaf node, stop and add to paths
         paths_from_this_node = []
         agenda: List[Tuple[int, Any]] = [(start_node, [])]
@@ -369,13 +405,17 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
                 if not board.is_friendly_road(edge, color):
                     continue
 
-                # Can't expand past an enemy node.
-                if board.is_enemy_node(neighbor_node, color):
+                if edge in path_thus_far:
                     continue
 
-                if edge not in path_thus_far:
-                    agenda.append((neighbor_node, path_thus_far + [edge]))
-                    able_to_navigate = True
+                # Can't expand past an enemy node, but the road leading to it counts.
+                if board.is_enemy_node(neighbor_node, color):
+                    if neighbor_node != forbidden:
+                        paths_from_this_node.append(path_thus_far + [edge])
+                    continue
+
+                agenda.append((neighbor_node, path_thus_far + [edge]))
+                able_to_navigate = True
 
             if not able_to_navigate:  # then it is leaf node
                 paths_from_this_node.append(path_thus_far)
