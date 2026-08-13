@@ -57,10 +57,9 @@ CONTENDER_WEIGHTS = {
 def base_fn(params=DEFAULT_WEIGHTS):
     def fn(game, p0_color):
         production_features = build_production_features(True)
-        our_production_sample = production_features(game, p0_color)
-        enemy_production_sample = production_features(game, p0_color)
-        production = value_production(our_production_sample, "P0")
-        enemy_production = value_production(enemy_production_sample, "P1", False)
+        production_sample = production_features(game, p0_color)
+        production = value_production(production_sample, "P0")
+        enemy_production = value_production(production_sample, "P1", False)
 
         key = player_key(game.state, p0_color)
         longest_road_length = get_longest_road_length(game.state, p0_color)
