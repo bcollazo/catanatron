@@ -20,6 +20,9 @@ class Observation:
             respond to.
         current_trade (Tuple): the current trade offer, if any.
         acceptees (Tuple[bool]): current trade acceptees, one per color.
+        public_state (Dict[str, Any]): structured, pure-data snapshot of all
+            public state, keyed absolutely (by node/edge id and Color). Built
+            by the engine adapter; never holds a Game or State reference.
     """
 
     def __init__(
@@ -30,6 +33,7 @@ class Observation:
         current_prompt,
         current_trade,
         acceptees,
+        public_state=None,
     ):
         self.color = color
         self.features = features
@@ -37,3 +41,4 @@ class Observation:
         self.current_prompt = current_prompt
         self.current_trade = current_trade
         self.acceptees = acceptees
+        self.public_state = public_state or {}

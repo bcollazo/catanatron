@@ -15,6 +15,7 @@ from catanatron.models.observation import Observation
 from catanatron.models.observation_agent import ObservationAgent
 from catanatron.models.perspective_player import (
     PerspectivePlayer,
+    _build_public_state,
     _sanitize_history,
     _sanitize_record,
 )
@@ -39,13 +40,13 @@ class RecorderAgent(ObservationAgent):
         self.calls_since_reset = 0
 
 
-HIDDEN_PATTERNS = [
-    re.compile(rf"^P[1-9]_{resource}_IN_HAND$") for resource in RESOURCES
-] + [
-    re.compile(rf"^P[1-9]_{card}_IN_HAND$") for card in DEVELOPMENT_CARDS
-] + [
-    re.compile(r"^P[1-9]_ACTUAL_VICTORY_POINTS$"),
-]
+HIDDEN_PATTERNS = (
+    [re.compile(rf"^P[1-9]_{resource}_IN_HAND$") for resource in RESOURCES]
+    + [re.compile(rf"^P[1-9]_{card}_IN_HAND$") for card in DEVELOPMENT_CARDS]
+    + [
+        re.compile(r"^P[1-9]_ACTUAL_VICTORY_POINTS$"),
+    ]
+)
 
 
 def scan(value, path, violations):
@@ -88,6 +89,7 @@ def test_observation_is_pure_data_snapshot():
     )
     assert obs.color == Color.RED
     assert obs.features["P0_WOOD_IN_HAND"] == 3
+    assert obs.public_state == {}
     assert not hasattr(obs, "_game")
     assert not hasattr(obs, "state")
 
@@ -145,6 +147,114 @@ def test_sanitize_discards_are_public():
 def test_sanitize_passes_through_public_actions():
     record = ActionRecord(Action(Color.BLUE, ActionType.ROLL, None), (3, 4))
     assert _sanitize_record(record, Color.RED) == record
+
+
+# ===== public_state (structured public surface) =====
+def _play_recorded_game(seed=0):
+    """Plays a game through the decide_fn seam, recording for the RED agent
+    each Observation plus a snapshot of the engine state it was built from."""
+    recorder = RecorderAgent(Color.RED)
+    game = _make_game(
+        recorder,
+        RandomPlayer(Color.BLUE),
+        RandomPlayer(Color.ORANGE),
+        seed=seed,
+    )
+    observations = []
+    snapshots = []
+
+    def decide_fn(player, g, actions):
+        if player is not recorder:
+            return player.decide(g, actions)
+        observation = Observation(
+            color=player.color,
+            features=create_sample(g, player.color),
+            public_history=_sanitize_history(g, player.color),
+            current_prompt=g.state.current_prompt,
+            current_trade=g.state.current_trade,
+            acceptees=g.state.acceptees,
+            public_state=_build_public_state(g),
+        )
+        observations.append(observation)
+        snapshots.append(
+            {
+                "colors": tuple(g.state.colors),
+                "buildings": dict(g.state.board.buildings),
+                "roads": dict(g.state.board.roads),
+                "robber_coordinate": g.state.board.robber_coordinate,
+                "road_color": g.state.board.road_color,
+                "road_length": g.state.board.road_length,
+                "player_state": dict(g.state.player_state),
+            }
+        )
+        return player.decide_observation(observation, actions)
+
+    game.play(decide_fn=decide_fn)
+    return observations, snapshots
+
+
+def test_public_state_matches_engine_board():
+    observations, snapshots = _play_recorded_game(seed=2)
+    assert observations
+    for obs, snap in zip(observations, snapshots):
+        public_board = obs.public_state["board"]
+        assert public_board["robber_coordinate"] == snap["robber_coordinate"]
+        assert public_board["longest_road_color"] == snap["road_color"]
+        assert public_board["longest_road_length"] == snap["road_length"]
+        assert public_board["buildings"] == snap["buildings"]
+        expected_roads = {
+            edge: color for edge, color in snap["roads"].items() if edge[0] < edge[1]
+        }
+        assert public_board["roads"] == expected_roads
+
+
+def test_public_state_per_player_public_counts():
+    observations, snapshots = _play_recorded_game(seed=3)
+    for obs, snap in zip(observations, snapshots):
+        players = obs.public_state["players"]
+        assert set(players.keys()) == set(snap["colors"])
+        player_state = snap["player_state"]
+        for color, public in players.items():
+            key = f"P{snap['colors'].index(color)}"
+            assert public["public_vps"] == player_state[f"{key}_VICTORY_POINTS"]
+            assert public["has_army"] == player_state[f"{key}_HAS_ARMY"]
+            assert public["has_road"] == player_state[f"{key}_HAS_ROAD"]
+            assert (
+                public["longest_road_length"]
+                == player_state[f"{key}_LONGEST_ROAD_LENGTH"]
+            )
+            assert public["roads_left"] == player_state[f"{key}_ROADS_AVAILABLE"]
+            assert (
+                public["settlements_left"]
+                == player_state[f"{key}_SETTLEMENTS_AVAILABLE"]
+            )
+            assert public["cities_left"] == player_state[f"{key}_CITIES_AVAILABLE"]
+            assert public["has_rolled"] == player_state[f"{key}_HAS_ROLLED"]
+            assert public["hand_resource_count"] == sum(
+                player_state[f"{key}_{r}_IN_HAND"] for r in RESOURCES
+            )
+            assert public["hand_dev_count"] == sum(
+                player_state[f"{key}_{d}_IN_HAND"] for d in DEVELOPMENT_CARDS
+            )
+
+
+def test_public_state_leaks_no_opponent_private_info():
+    observations, _ = _play_recorded_game(seed=4)
+    for obs in observations:
+        violations = []
+        scan(obs.public_state, "public_state", violations)
+        assert not violations, violations
+        for public in obs.public_state["players"].values():
+            assert "actual_vps" not in public
+            assert not any(key.endswith("_IN_HAND") for key in public)
+
+
+def test_build_public_state_is_standalone():
+    game = _make_game(RandomPlayer(Color.RED), seed=5)
+    state = _build_public_state(game)
+    assert state["board"]["buildings"] == {}
+    assert state["board"]["robber_coordinate"] == game.state.board.robber_coordinate
+    assert set(state["players"].keys()) == set(game.state.colors)
 
 
 # ===== Fairness invariants over full games =====
@@ -233,6 +343,7 @@ def test_decide_fn_seam_drives_bare_agents():
                 current_prompt=g.state.current_prompt,
                 current_trade=g.state.current_trade,
                 acceptees=g.state.acceptees,
+                public_state=_build_public_state(g),
             ),
             actions,
         )
