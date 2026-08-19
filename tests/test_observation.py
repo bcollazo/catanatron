@@ -1,3 +1,4 @@
+import dataclasses
 import re
 
 import pytest
@@ -15,11 +16,14 @@ from catanatron.models.observation import Observation
 from catanatron.models.observation_agent import ObservationAgent
 from catanatron.models.perspective_player import (
     PerspectivePlayer,
+    _build_inventory,
     _build_public_state,
     _sanitize_history,
     _sanitize_record,
 )
+from catanatron.models.inventory import Inventory
 from catanatron.models.player import Color, Player, RandomPlayer
+from catanatron.models.public_state import PublicBoard, PublicPlayer, PublicState
 
 
 class RecorderAgent(ObservationAgent):
@@ -50,6 +54,8 @@ HIDDEN_PATTERNS = (
 
 
 def scan(value, path, violations):
+    if dataclasses.is_dataclass(value):
+        value = dataclasses.asdict(value)
     if isinstance(value, dict):
         for k, v in value.items():
             if any(p.match(str(k)) for p in HIDDEN_PATTERNS):
@@ -89,7 +95,8 @@ def test_observation_is_pure_data_snapshot():
     )
     assert obs.color == Color.RED
     assert obs.features["P0_WOOD_IN_HAND"] == 3
-    assert obs.public_state == {}
+    assert obs.public_state is None
+    assert obs.inventory is None
     assert not hasattr(obs, "_game")
     assert not hasattr(obs, "state")
 
@@ -174,6 +181,7 @@ def _play_recorded_game(seed=0):
             current_trade=g.state.current_trade,
             acceptees=g.state.acceptees,
             public_state=_build_public_state(g),
+            inventory=_build_inventory(g, player.color),
         )
         observations.append(observation)
         snapshots.append(
@@ -197,45 +205,51 @@ def test_public_state_matches_engine_board():
     observations, snapshots = _play_recorded_game(seed=2)
     assert observations
     for obs, snap in zip(observations, snapshots):
-        public_board = obs.public_state["board"]
-        assert public_board["robber_coordinate"] == snap["robber_coordinate"]
-        assert public_board["longest_road_color"] == snap["road_color"]
-        assert public_board["longest_road_length"] == snap["road_length"]
-        assert public_board["buildings"] == snap["buildings"]
+        assert isinstance(obs.public_state, PublicState)
+        public_board = obs.public_state.board
+        assert isinstance(public_board, PublicBoard)
+        assert public_board.robber_coordinate == snap["robber_coordinate"]
+        assert public_board.longest_road_color == snap["road_color"]
+        assert public_board.longest_road_length == snap["road_length"]
+        assert public_board.buildings == snap["buildings"]
         expected_roads = {
             edge: color for edge, color in snap["roads"].items() if edge[0] < edge[1]
         }
-        assert public_board["roads"] == expected_roads
+        assert public_board.roads == expected_roads
 
 
 def test_public_state_per_player_public_counts():
     observations, snapshots = _play_recorded_game(seed=3)
     for obs, snap in zip(observations, snapshots):
-        players = obs.public_state["players"]
+        players = obs.public_state.players
         assert set(players.keys()) == set(snap["colors"])
         player_state = snap["player_state"]
         for color, public in players.items():
+            assert isinstance(public, PublicPlayer)
             key = f"P{snap['colors'].index(color)}"
-            assert public["public_vps"] == player_state[f"{key}_VICTORY_POINTS"]
-            assert public["has_army"] == player_state[f"{key}_HAS_ARMY"]
-            assert public["has_road"] == player_state[f"{key}_HAS_ROAD"]
+            assert public.public_vps == player_state[f"{key}_VICTORY_POINTS"]
+            assert public.has_army == player_state[f"{key}_HAS_ARMY"]
+            assert public.has_road == player_state[f"{key}_HAS_ROAD"]
             assert (
-                public["longest_road_length"]
-                == player_state[f"{key}_LONGEST_ROAD_LENGTH"]
+                public.longest_road_length == player_state[f"{key}_LONGEST_ROAD_LENGTH"]
             )
-            assert public["roads_left"] == player_state[f"{key}_ROADS_AVAILABLE"]
+            assert public.roads_left == player_state[f"{key}_ROADS_AVAILABLE"]
             assert (
-                public["settlements_left"]
-                == player_state[f"{key}_SETTLEMENTS_AVAILABLE"]
+                public.settlements_left == player_state[f"{key}_SETTLEMENTS_AVAILABLE"]
             )
-            assert public["cities_left"] == player_state[f"{key}_CITIES_AVAILABLE"]
-            assert public["has_rolled"] == player_state[f"{key}_HAS_ROLLED"]
-            assert public["hand_resource_count"] == sum(
+            assert public.cities_left == player_state[f"{key}_CITIES_AVAILABLE"]
+            assert public.has_rolled == player_state[f"{key}_HAS_ROLLED"]
+            assert public.hand_resource_count == sum(
                 player_state[f"{key}_{r}_IN_HAND"] for r in RESOURCES
             )
-            assert public["hand_dev_count"] == sum(
+            assert public.hand_dev_count == sum(
                 player_state[f"{key}_{d}_IN_HAND"] for d in DEVELOPMENT_CARDS
             )
+            for card in DEVELOPMENT_CARDS:
+                assert (
+                    getattr(public, f"played_{card.lower()}")
+                    == player_state[f"{key}_PLAYED_{card}"]
+                )
 
 
 def test_public_state_leaks_no_opponent_private_info():
@@ -244,17 +258,93 @@ def test_public_state_leaks_no_opponent_private_info():
         violations = []
         scan(obs.public_state, "public_state", violations)
         assert not violations, violations
-        for public in obs.public_state["players"].values():
-            assert "actual_vps" not in public
-            assert not any(key.endswith("_IN_HAND") for key in public)
+        for public in obs.public_state.players.values():
+            assert not hasattr(public, "actual_vps")
+            assert not any(field.endswith("_IN_HAND") for field in vars(public))
 
 
 def test_build_public_state_is_standalone():
     game = _make_game(RandomPlayer(Color.RED), seed=5)
     state = _build_public_state(game)
-    assert state["board"]["buildings"] == {}
-    assert state["board"]["robber_coordinate"] == game.state.board.robber_coordinate
-    assert set(state["players"].keys()) == set(game.state.colors)
+    assert isinstance(state, PublicState)
+    assert state.board.buildings == {}
+    assert state.board.robber_coordinate == game.state.board.robber_coordinate
+    assert set(state.players.keys()) == set(game.state.colors)
+
+
+# ===== inventory (observer's private hand) =====
+def test_build_inventory_matches_engine_hand():
+    observations, snapshots = _play_recorded_game(seed=6)
+    for obs, snap in zip(observations, snapshots):
+        assert isinstance(obs.inventory, Inventory)
+        key = f"P{snap['colors'].index(obs.color)}"
+        player_state = snap["player_state"]
+        for resource in RESOURCES:
+            assert (
+                getattr(obs.inventory, resource.lower())
+                == player_state[f"{key}_{resource}_IN_HAND"]
+            )
+        for card in DEVELOPMENT_CARDS:
+            assert (
+                getattr(obs.inventory, card.lower())
+                == player_state[f"{key}_{card}_IN_HAND"]
+            )
+        assert (
+            obs.inventory.has_played_development_card
+            == player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
+        )
+
+
+def test_inventory_is_only_for_observer_color():
+    recorder = RecorderAgent(Color.RED)
+    game = _make_game(
+        recorder,
+        RandomPlayer(Color.BLUE),
+        RandomPlayer(Color.ORANGE),
+        seed=8,
+    )
+    observations = []
+    player_states = []
+
+    def decide_fn(player, g, actions):
+        if player is not recorder:
+            return player.decide(g, actions)
+        observations.append(
+            Observation(
+                color=player.color,
+                features=create_sample(g, player.color),
+                public_history=_sanitize_history(g, player.color),
+                current_prompt=g.state.current_prompt,
+                current_trade=g.state.current_trade,
+                acceptees=g.state.acceptees,
+                public_state=_build_public_state(g),
+                inventory=_build_inventory(g, player.color),
+            )
+        )
+        player_states.append(dict(g.state.player_state))
+        return player.decide_observation(observations[-1], actions)
+
+    game.play(decide_fn=decide_fn)
+    assert observations
+    key = f"P{game.state.colors.index(Color.RED)}"
+    for obs, player_state in zip(observations, player_states):
+        assert obs.color == Color.RED
+        assert obs.inventory is not None
+        assert obs.inventory.wood == player_state[f"{key}_WOOD_IN_HAND"]
+
+
+def test_inventory_construction_is_standalone():
+    game = _make_game(RandomPlayer(Color.RED), seed=9)
+    inv = _build_inventory(game, Color.RED)
+    assert isinstance(inv, Inventory)
+    key = f"P{game.state.colors.index(Color.RED)}"
+    player_state = game.state.player_state
+    assert inv.wood == player_state[f"{key}_WOOD_IN_HAND"]
+    assert inv.knight == player_state[f"{key}_KNIGHT_IN_HAND"]
+    assert (
+        inv.has_played_development_card
+        == player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
+    )
 
 
 # ===== Fairness invariants over full games =====

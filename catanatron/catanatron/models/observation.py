@@ -7,6 +7,9 @@ engine mode (projected from a full-truth game) and deployed/site mode
 (built from external events).
 """
 
+from catanatron.models.inventory import Inventory
+from catanatron.models.public_state import PublicState
+
 
 class Observation:
     """Read-only, presentation-free snapshot of what one color perceives.
@@ -20,9 +23,11 @@ class Observation:
             respond to.
         current_trade (Tuple): the current trade offer, if any.
         acceptees (Tuple[bool]): current trade acceptees, one per color.
-        public_state (Dict[str, Any]): structured, pure-data snapshot of all
-            public state, keyed absolutely (by node/edge id and Color). Built
-            by the engine adapter; never holds a Game or State reference.
+        public_state (Optional[PublicState]): structured, pure-data snapshot
+            of all public state, keyed absolutely (by node/edge id and Color).
+            Built by the engine adapter; never holds a Game or State reference.
+        inventory (Optional[Inventory]): the observer's own private hand —
+            exact resources and dev cards. Computed for this color only.
     """
 
     def __init__(
@@ -33,7 +38,8 @@ class Observation:
         current_prompt,
         current_trade,
         acceptees,
-        public_state=None,
+        public_state: PublicState = None,
+        inventory: Inventory = None,
     ):
         self.color = color
         self.features = features
@@ -41,4 +47,5 @@ class Observation:
         self.current_prompt = current_prompt
         self.current_trade = current_trade
         self.acceptees = acceptees
-        self.public_state = public_state or {}
+        self.public_state = public_state
+        self.inventory = inventory

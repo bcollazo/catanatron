@@ -8,9 +8,17 @@ player could observe.
 """
 
 from catanatron.features import create_sample
-from catanatron.models.enums import Action, ActionRecord, ActionType, DEVELOPMENT_CARDS
+from catanatron.models.enums import (
+    Action,
+    ActionRecord,
+    ActionType,
+    DEVELOPMENT_CARDS,
+    RESOURCES,
+)
+from catanatron.models.inventory import Inventory
 from catanatron.models.observation import Observation
 from catanatron.models.player import Player
+from catanatron.models.public_state import PublicBoard, PublicPlayer, PublicState
 from catanatron.state_functions import (
     player_key,
     player_num_dev_cards,
@@ -70,33 +78,54 @@ def _build_public_state(game):
     for color in state.colors:
         key = player_key(state, color)
         player_state = state.player_state
-        players[color] = {
-            "public_vps": player_state[f"{key}_VICTORY_POINTS"],
-            "has_army": player_state[f"{key}_HAS_ARMY"],
-            "has_road": player_state[f"{key}_HAS_ROAD"],
-            "longest_road_length": player_state[f"{key}_LONGEST_ROAD_LENGTH"],
-            "roads_left": player_state[f"{key}_ROADS_AVAILABLE"],
-            "settlements_left": player_state[f"{key}_SETTLEMENTS_AVAILABLE"],
-            "cities_left": player_state[f"{key}_CITIES_AVAILABLE"],
-            "has_rolled": player_state[f"{key}_HAS_ROLLED"],
-            "hand_resource_count": player_num_resource_cards(state, color),
-            "hand_dev_count": player_num_dev_cards(state, color),
+        played = {
+            f"played_{card.lower()}": player_state[f"{key}_PLAYED_{card}"]
+            for card in DEVELOPMENT_CARDS
         }
-        for card in DEVELOPMENT_CARDS:
-            players[color][f"played_{card.lower()}"] = player_state[
-                f"{key}_PLAYED_{card}"
-            ]
+        players[color] = PublicPlayer(
+            public_vps=player_state[f"{key}_VICTORY_POINTS"],
+            has_army=player_state[f"{key}_HAS_ARMY"],
+            has_road=player_state[f"{key}_HAS_ROAD"],
+            longest_road_length=player_state[f"{key}_LONGEST_ROAD_LENGTH"],
+            roads_left=player_state[f"{key}_ROADS_AVAILABLE"],
+            settlements_left=player_state[f"{key}_SETTLEMENTS_AVAILABLE"],
+            cities_left=player_state[f"{key}_CITIES_AVAILABLE"],
+            has_rolled=player_state[f"{key}_HAS_ROLLED"],
+            hand_resource_count=player_num_resource_cards(state, color),
+            hand_dev_count=player_num_dev_cards(state, color),
+            **played,
+        )
 
-    return {
-        "board": {
-            "buildings": dict(board.buildings),
-            "roads": roads,
-            "robber_coordinate": board.robber_coordinate,
-            "longest_road_color": board.road_color,
-            "longest_road_length": board.road_length,
-        },
-        "players": players,
-    }
+    return PublicState(
+        board=PublicBoard(
+            buildings=dict(board.buildings),
+            roads=roads,
+            robber_coordinate=board.robber_coordinate,
+            longest_road_color=board.road_color,
+            longest_road_length=board.road_length,
+        ),
+        players=players,
+    )
+
+
+def _build_inventory(game, color):
+    """Projects the observing color's private hand into a typed Inventory.
+
+    The observer's own exact resource counts and dev-card identities are
+    knowable only to that color, so this is computed for the observer only.
+    """
+    key = player_key(game.state, color)
+    player_state = game.state.player_state
+    hand = {r.lower(): player_state[f"{key}_{r}_IN_HAND"] for r in RESOURCES}
+    hand.update(
+        {c.lower(): player_state[f"{key}_{c}_IN_HAND"] for c in DEVELOPMENT_CARDS}
+    )
+    return Inventory(
+        **hand,
+        has_played_development_card=player_state[
+            f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"
+        ],
+    )
 
 
 class PerspectivePlayer(Player):
@@ -126,6 +155,7 @@ class PerspectivePlayer(Player):
             current_trade=game.state.current_trade,
             acceptees=game.state.acceptees,
             public_state=_build_public_state(game),
+            inventory=_build_inventory(game, color),
         )
         return self.agent.decide_observation(observation, playable_actions)
 
