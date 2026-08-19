@@ -240,7 +240,9 @@ def _play_recorded_game(seed=0):
                 "colors": tuple(g.state.colors),
                 "buildings": dict(g.state.board.buildings),
                 "roads": dict(g.state.board.roads),
-                "robber_coordinate": g.state.board.robber_coordinate,
+                "robber_tile_id": g.state.board.map.tiles[
+                    g.state.board.robber_coordinate
+                ].id,
                 "road_color": g.state.board.road_color,
                 "road_length": g.state.board.road_length,
                 "player_state": dict(g.state.player_state),
@@ -259,7 +261,7 @@ def test_public_state_matches_engine_board():
         assert isinstance(obs.public_state, PublicState)
         public_board = obs.public_state.board
         assert isinstance(public_board, PublicBoard)
-        assert public_board.robber_coordinate == snap["robber_coordinate"]
+        assert public_board.robber_tile_id == snap["robber_tile_id"]
         assert public_board.longest_road_color == snap["road_color"]
         assert public_board.longest_road_length == snap["road_length"]
         assert public_board.buildings == snap["buildings"]
@@ -297,10 +299,29 @@ def test_public_state_map_matches_engine_map():
         node_id: tuple(t.id for t in tiles_list)
         for node_id, tiles_list in engine_map.adjacent_tiles.items()
     }
+    from catanatron.models.tiles import LandTile
+
+    expected_tile_coordinates = {
+        tile.id: coordinate
+        for coordinate, tile in engine_map.tiles.items()
+        if isinstance(tile, LandTile)
+    }
     assert public_map.tiles == expected_tiles
+    assert public_map.tile_coordinates == expected_tile_coordinates
     assert public_map.ports == expected_ports
     assert public_map.adjacent_tiles == expected_adjacency
     assert public_map.land_nodes == frozenset(engine_map.land_nodes)
+
+    for tile_id, coordinate in public_map.tile_coordinates.items():
+        assert tile_id in public_map.tiles
+        assert engine_map.tiles[coordinate].id == tile_id
+
+    coordinate_to_tile = {
+        coord: tile_id for tile_id, coord in public_map.tile_coordinates.items()
+    }
+    robber_coord = game.state.board.robber_coordinate
+    assert public_map.tile_coordinates[state.board.robber_tile_id] == robber_coord
+    assert coordinate_to_tile[robber_coord] == state.board.robber_tile_id
 
     for tile_id, (resource, number) in public_map.tiles.items():
         assert 0 <= tile_id < len(engine_map.tiles_by_id)
@@ -377,7 +398,10 @@ def test_build_public_state_is_standalone():
     state = _build_public_state(game)
     assert isinstance(state, PublicState)
     assert state.board.buildings == {}
-    assert state.board.robber_coordinate == game.state.board.robber_coordinate
+    assert (
+        state.board.robber_tile_id
+        == game.state.board.map.tiles[game.state.board.robber_coordinate].id
+    )
     assert set(state.players.keys()) == set(game.state.colors)
 
 

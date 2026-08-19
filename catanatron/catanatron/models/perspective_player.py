@@ -25,6 +25,7 @@ from catanatron.models.public_state import (
     PublicPlayer,
     PublicState,
 )
+from catanatron.models.tiles import LandTile
 from catanatron.models.trade import PendingTrades, TradeOffer
 from catanatron.state_functions import (
     player_key,
@@ -74,6 +75,11 @@ def _build_public_map(board):
     tiles = {}
     for tile in catan_map.tiles_by_id.values():
         tiles[tile.id] = (tile.resource, tile.number)
+    tile_coordinates = {
+        tile.id: coordinate
+        for coordinate, tile in catan_map.tiles.items()
+        if isinstance(tile, LandTile)
+    }
     ports = {}
     for port in catan_map.ports_by_id.values():
         (a_ref, b_ref) = PORT_DIRECTION_TO_NODEREFS[port.direction]
@@ -84,6 +90,7 @@ def _build_public_map(board):
     }
     return PublicMap(
         tiles=tiles,
+        tile_coordinates=tile_coordinates,
         ports=ports,
         adjacent_tiles=adjacent_tiles,
         land_nodes=frozenset(catan_map.land_nodes),
@@ -135,7 +142,7 @@ def _build_public_state(game):
         board=PublicBoard(
             buildings=dict(board.buildings),
             roads=roads,
-            robber_coordinate=board.robber_coordinate,
+            robber_tile_id=board.map.tiles[board.robber_coordinate].id,
             longest_road_color=board.road_color,
             longest_road_length=board.road_length,
             map=_build_public_map(board),

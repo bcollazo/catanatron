@@ -145,9 +145,17 @@ public_state = {
     "board": {
         "buildings": {node_id: (color, building_type)},  # current buildings
         "roads": {(n1, n2): color},                      # canonical orientation
-        "robber_coordinate": (x, y, z),
+        "robber_tile_id": int,  # tile id of the robber's tile; resolve to/from a
+        #              coordinate via board.map.tile_coordinates
         "longest_road_color": color | None,
         "longest_road_length": int,
+        "map": {
+            "tiles": {tile_id: (resource, roll)},
+            "tile_coordinates": {tile_id: (x, y, z)},  # id <-> coordinate bridge
+            "ports": {port_id: (resource, (node_a, node_b))},
+            "adjacent_tiles": {node_id: (tile_id, ...)},
+            "land_nodes": frozenset(node_id),
+        },
     },
     "players": {  # one entry per color, public facts only
         Color.RED: {
@@ -164,7 +172,7 @@ public_state = {
 }
 ```
 
-Invariants mirror the tiers (§3.1): only **public** facts appear — opponent hand identities and `ACTUAL_VICTORY_POINTS` are never projected. Like `features`, it is eager (once per decision) and pure data (no `Game`/`State` reference, so the fairness contract holds). The static `CatanMap` (tiles/numbers/adjacency/ports) is also snapshotted here as `public_state.board.map` (`PublicMap`: tiles by id with resource+roll, ports by id with resource+node ids, per-node `adjacent_tiles`, and `land_nodes`), giving fair agents structured, absolute-keyed access to the terrain instead of only the flat `TILE*`/`PORT*` feature keys. Derived probabilities are **not** stored — per-node production is inferred from tile rolls plus adjacency — keeping the snapshot raw facts only. It is static, so every decision snapshots identical terrain; the projection exists solely to keep `Observation` free of engine references.
+Invariants mirror the tiers (§3.1): only **public** facts appear — opponent hand identities and `ACTUAL_VICTORY_POINTS` are never projected. Like `features`, it is eager (once per decision) and pure data (no `Game`/`State` reference, so the fairness contract holds). The static `CatanMap` (tiles/numbers/adjacency/ports) is also snapshotted here as `public_state.board.map` (`PublicMap`: tiles by id with resource+roll, `tile_coordinates` bridging tile ids to/from cube coordinates (the format `MOVE_ROBBER` action values use), ports by id with resource+node ids, per-node `adjacent_tiles`, and `land_nodes`), giving fair agents structured, absolute-keyed access to the terrain instead of only the flat `TILE*`/`PORT*` feature keys. Derived probabilities are **not** stored — per-node production is inferred from tile rolls plus adjacency — keeping the snapshot raw facts only. It is static, so every decision snapshots identical terrain; the projection exists solely to keep `Observation` free of engine references.
 
 ### 3.3 `public_history` — sanitized action log
 
@@ -271,7 +279,7 @@ Unit-testable invariants:
 `tests/test_observation.py` coverage:
 - **Structural separation tests:** `ObservationAgent` is not a `Player`; `Observation` is pure data with no `_game`/`state`.
 - **Leak-invariant test** (`scan` over `features` + `public_state` + `public_history` across seeded full games): forbids opponent `*_IN_HAND`, opponent `ACTUAL_VICTORY_POINTS`, opponent `BUY_DEVELOPMENT_CARD` value/result, and (for spectators) `MOVE_ROBBER` stolen-card identities.
-- **`public_state` surface tests:** each decision's snapshot exactly matches the engine board (`buildings`, canonical `roads`, `robber_coordinate`, longest road, static `map` tiles/ports/adjacency) and per-player public counts, verified against the state it was projected from.
+- **`public_state` surface tests:** each decision's snapshot exactly matches the engine board (`buildings`, canonical `roads`, `robber_tile_id` (resolvable to/from coordinate via `map.tile_coordinates`), longest road, static `map` tiles/ports/adjacency) and per-player public counts, verified against the state it was projected from.
 - **Participant test:** the victim of a steal *does* see the stolen card in `public_history`; a spectator does not.
 - **Sanitizer unit tests** per row of the table in §3.3.
 - **Seam tests:** `Game([PerspectivePlayer(bot), RandomPlayer, ...])` plays to completion; bare `ObservationAgent`s driven through the `decide_fn` seam; `reset_state()` delegation.

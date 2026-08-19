@@ -13,6 +13,7 @@ never included.
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, Optional, Tuple
 
+from catanatron.models.coordinate_system import Coordinate
 from catanatron.models.enums import FastBuildingType, FastResource
 from catanatron.models.map import NodeId
 from catanatron.models.player import Color
@@ -51,6 +52,8 @@ class PublicMap:
 
     tiles: Dict[int, Tuple[Optional[FastResource], Optional[int]]]
     """tile_id -> (resource, roll); desert is (None, None)."""
+    tile_coordinates: Dict[int, Coordinate]
+    """tile_id -> its cube coordinate; bridges id-keyed tiles to coordinate-keyed actions."""
     ports: Dict[int, Tuple[Optional[FastResource], Tuple[NodeId, NodeId]]]
     """port_id -> (resource, (node_a, node_b)) trading nodes; resource None means 3:1."""
     adjacent_tiles: Dict[NodeId, Tuple[int, ...]]
@@ -65,7 +68,8 @@ class PublicBoard:
 
     buildings: Dict[NodeId, Tuple[Color, FastBuildingType]]
     roads: Dict[Tuple[NodeId, NodeId], Color]
-    robber_coordinate: Tuple[int, int, int]
+    robber_tile_id: int
+    """Id of the tile the robber sits on, resolvable to/from a coordinate via ``map.tile_coordinates``."""
     longest_road_color: Optional[Color]
     longest_road_length: int
     map: PublicMap
