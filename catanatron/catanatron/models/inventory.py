@@ -25,4 +25,6 @@ class Inventory:
     monopoly: int = 0
     road_building: int = 0
     victory_point: int = 0
+    actual_vps: int = 0
+    """Own hidden VP total, including face-down victory-point cards."""
     has_played_development_card: bool = False

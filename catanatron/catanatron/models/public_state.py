@@ -11,9 +11,9 @@ never included.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, FrozenSet, Optional, Tuple
 
-from catanatron.models.enums import FastBuildingType
+from catanatron.models.enums import FastBuildingType, FastResource
 from catanatron.models.map import NodeId
 from catanatron.models.player import Color
 
@@ -40,6 +40,26 @@ class PublicPlayer:
 
 
 @dataclass(frozen=True)
+class PublicMap:
+    """Pure-data snapshot of the static board layout.
+
+    The CatanMap (tiles, numbers, ports, terrain nodes) is fixed at game start,
+    so it is snapshotted once per decision rather than changing turn to turn.
+    Keyed absolutely by tile/port/node id, so agents can reason about where
+    things are instead of only parsing the flat ``TILE*``/``PORT*`` features.
+    """
+
+    tiles: Dict[int, Tuple[Optional[FastResource], Optional[int]]]
+    """tile_id -> (resource, roll); desert is (None, None)."""
+    ports: Dict[int, Tuple[Optional[FastResource], Tuple[NodeId, NodeId]]]
+    """port_id -> (resource, (node_a, node_b)) trading nodes; resource None means 3:1."""
+    adjacent_tiles: Dict[NodeId, Tuple[int, ...]]
+    """node_id -> tile ids touching it; edge to per-node production."""
+    land_nodes: FrozenSet[NodeId]
+    """All node ids on land (where settlements may legally be built)."""
+
+
+@dataclass(frozen=True)
 class PublicBoard:
     """Publicly knowable facts about the shared board."""
 
@@ -48,6 +68,8 @@ class PublicBoard:
     robber_coordinate: Tuple[int, int, int]
     longest_road_color: Optional[Color]
     longest_road_length: int
+    map: PublicMap
+    """Static terrain; see ``PublicMap``."""
 
 
 @dataclass(frozen=True)

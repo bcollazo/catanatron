@@ -12,18 +12,25 @@ from catanatron.models.enums import (
     ActionRecord,
     ActionType,
 )
+from catanatron.models.inventory import Inventory
 from catanatron.models.observation import Observation
 from catanatron.models.observation_agent import ObservationAgent
 from catanatron.models.perspective_player import (
     PerspectivePlayer,
     _build_inventory,
+    _build_pending_trades,
     _build_public_state,
     _sanitize_history,
     _sanitize_record,
 )
-from catanatron.models.inventory import Inventory
 from catanatron.models.player import Color, Player, RandomPlayer
-from catanatron.models.public_state import PublicBoard, PublicPlayer, PublicState
+from catanatron.models.public_state import (
+    PublicBoard,
+    PublicMap,
+    PublicPlayer,
+    PublicState,
+)
+from catanatron.models.trade import PendingTrades, TradeOffer
 
 
 class RecorderAgent(ObservationAgent):
@@ -88,15 +95,15 @@ def test_observation_is_pure_data_snapshot():
     obs = Observation(
         color=Color.RED,
         features={"P0_WOOD_IN_HAND": 3},
-        public_history=[],
+        public_history=(),
         current_prompt=None,
-        current_trade=None,
-        acceptees=(),
     )
     assert obs.color == Color.RED
     assert obs.features["P0_WOOD_IN_HAND"] == 3
     assert obs.public_state is None
     assert obs.inventory is None
+    assert obs.pending_trades == PendingTrades()
+    assert obs.own is None  # no public_state, so no own entry
     assert not hasattr(obs, "_game")
     assert not hasattr(obs, "state")
 
@@ -156,6 +163,51 @@ def test_sanitize_passes_through_public_actions():
     assert _sanitize_record(record, Color.RED) == record
 
 
+def test_observation_own_returns_observer_public_player():
+    observations, _ = _play_recorded_game(seed=15)
+    obs = observations[0]
+    assert isinstance(obs.own, PublicPlayer)
+    assert obs.own == obs.public_state.players[Color.RED]
+    assert obs.own.public_vps >= 0
+
+
+# ===== pending trades (typed trade objects) =====
+def test_pending_trades_builds_typed_offer():
+    from catanatron.apply_action import apply_action, apply_accept_trade
+
+    game = _make_game(
+        RandomPlayer(Color.RED),
+        RandomPlayer(Color.BLUE),
+        RandomPlayer(Color.ORANGE),
+        seed=13,
+    )
+
+    assert _build_pending_trades(game) == PendingTrades()
+
+    # offer 2 wood, ask 1 wheat (10-tuple: offered x5 + asking x5)
+    offer_value = (2, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+    apply_action(game.state, Action(Color.RED, ActionType.OFFER_TRADE, offer_value))
+
+    offers = _build_pending_trades(game)
+    assert isinstance(offers, PendingTrades)
+    assert len(offers) == 1
+    offer = offers[0]
+    assert isinstance(offer, TradeOffer)
+    assert offers.is_active
+    assert offers.single is offer
+    assert offer.offerer == Color.RED
+    assert offer.offered == {"WOOD": 2, "BRICK": 0, "SHEEP": 0, "WHEAT": 0, "ORE": 0}
+    assert offer.asking == {"WOOD": 0, "BRICK": 0, "SHEEP": 0, "WHEAT": 1, "ORE": 0}
+    assert offer.acceptees == {Color.RED: False, Color.BLUE: False, Color.ORANGE: False}
+
+    apply_action(
+        game.state,
+        Action(Color.BLUE, ActionType.ACCEPT_TRADE, game.state.current_trade),
+    )
+    offer = _build_pending_trades(game).single
+    assert offer.acceptees == {Color.RED: False, Color.BLUE: True, Color.ORANGE: False}
+
+
 # ===== public_state (structured public surface) =====
 def _play_recorded_game(seed=0):
     """Plays a game through the decide_fn seam, recording for the RED agent
@@ -178,8 +230,7 @@ def _play_recorded_game(seed=0):
             features=create_sample(g, player.color),
             public_history=_sanitize_history(g, player.color),
             current_prompt=g.state.current_prompt,
-            current_trade=g.state.current_trade,
-            acceptees=g.state.acceptees,
+            pending_trades=_build_pending_trades(g),
             public_state=_build_public_state(g),
             inventory=_build_inventory(g, player.color),
         )
@@ -216,6 +267,64 @@ def test_public_state_matches_engine_board():
             edge: color for edge, color in snap["roads"].items() if edge[0] < edge[1]
         }
         assert public_board.roads == expected_roads
+
+
+def test_public_state_map_matches_engine_map():
+    game = _make_game(
+        PerspectivePlayer(RecorderAgent(Color.RED)),
+        RandomPlayer(Color.BLUE),
+        RandomPlayer(Color.ORANGE),
+        seed=10,
+    )
+    state = _build_public_state(game)
+    public_map = state.board.map
+    engine_map = game.state.board.map
+    assert isinstance(public_map, PublicMap)
+
+    expected_tiles = {
+        t.id: (t.resource, t.number) for t in engine_map.tiles_by_id.values()
+    }
+    from catanatron.models.map import PORT_DIRECTION_TO_NODEREFS
+
+    def _trading_nodes(port):
+        a_ref, b_ref = PORT_DIRECTION_TO_NODEREFS[port.direction]
+        return (port.nodes[a_ref], port.nodes[b_ref])
+
+    expected_ports = {
+        p.id: (p.resource, _trading_nodes(p)) for p in engine_map.ports_by_id.values()
+    }
+    expected_adjacency = {
+        node_id: tuple(t.id for t in tiles_list)
+        for node_id, tiles_list in engine_map.adjacent_tiles.items()
+    }
+    assert public_map.tiles == expected_tiles
+    assert public_map.ports == expected_ports
+    assert public_map.adjacent_tiles == expected_adjacency
+    assert public_map.land_nodes == frozenset(engine_map.land_nodes)
+
+    for tile_id, (resource, number) in public_map.tiles.items():
+        assert 0 <= tile_id < len(engine_map.tiles_by_id)
+        assert (resource is None) == (number is None)  # only deserts have no roll
+
+    # Probabilities are not stored: they are inferable from tile rolls + adjacency.
+    from catanatron.models.map import number_probability
+
+    inferred = {}
+    for node_id, tile_ids in public_map.adjacent_tiles.items():
+        production = {}
+        for tile_id in tile_ids:
+            resource, number = public_map.tiles[tile_id]
+            if resource is None:
+                continue
+            production[resource] = production.get(resource, 0.0) + number_probability(
+                number
+            )
+        inferred[node_id] = production
+    expected_production = {
+        node_id: dict(counter)
+        for node_id, counter in engine_map.node_production.items()
+    }
+    assert inferred == expected_production
 
 
 def test_public_state_per_player_public_counts():
@@ -293,6 +402,7 @@ def test_build_inventory_matches_engine_hand():
             obs.inventory.has_played_development_card
             == player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
         )
+        assert obs.inventory.actual_vps == player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
 
 
 def test_inventory_is_only_for_observer_color():
@@ -315,8 +425,7 @@ def test_inventory_is_only_for_observer_color():
                 features=create_sample(g, player.color),
                 public_history=_sanitize_history(g, player.color),
                 current_prompt=g.state.current_prompt,
-                current_trade=g.state.current_trade,
-                acceptees=g.state.acceptees,
+                pending_trades=_build_pending_trades(g),
                 public_state=_build_public_state(g),
                 inventory=_build_inventory(g, player.color),
             )
@@ -345,6 +454,7 @@ def test_inventory_construction_is_standalone():
         inv.has_played_development_card
         == player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
     )
+    assert inv.actual_vps == player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
 
 
 # ===== Fairness invariants over full games =====
@@ -367,6 +477,10 @@ def test_no_opponent_private_info_leaks(seed):
 
         violations = []
         scan(obs.features, "features", violations)
+        assert not violations, violations
+
+        violations = []
+        scan(obs.pending_trades, "pending_trades", violations)
         assert not violations, violations
 
         for record in obs.public_history:
@@ -431,8 +545,7 @@ def test_decide_fn_seam_drives_bare_agents():
                 features=create_sample(g, player.color),
                 public_history=_sanitize_history(g, player.color),
                 current_prompt=g.state.current_prompt,
-                current_trade=g.state.current_trade,
-                acceptees=g.state.acceptees,
+                pending_trades=_build_pending_trades(g),
                 public_state=_build_public_state(g),
             ),
             actions,
