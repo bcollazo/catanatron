@@ -15,6 +15,7 @@ pub enum IllegalAction {
     InvalidOutcome,
     UnsupportedOutcome,
     InsufficientResource(Resource),
+    InsufficientBankResource(Resource),
     ExhaustedRoads,
     ExhaustedSettlements,
     ExhaustedCities,
@@ -79,12 +80,16 @@ pub fn validate_boundary(
             | (Phase::SetupRoad { .. }, Action::BuildRoad(_))
             | (Phase::PreRoll { .. }, Action::Roll)
             | (Phase::PreRoll { .. }, Action::PlayKnight)
+            | (Phase::PreRoll { .. }, Action::YearOfPlenty { .. })
+            | (Phase::PreRoll { .. }, Action::Monopoly(_))
             | (Phase::PostRoll { .. }, Action::EndTurn)
             | (Phase::PostRoll { .. }, Action::BuildRoad(_))
             | (Phase::PostRoll { .. }, Action::BuildSettlement(_))
             | (Phase::PostRoll { .. }, Action::BuildCity(_))
             | (Phase::PostRoll { .. }, Action::BuyDevelopmentCard)
             | (Phase::PostRoll { .. }, Action::PlayKnight)
+            | (Phase::PostRoll { .. }, Action::YearOfPlenty { .. })
+            | (Phase::PostRoll { .. }, Action::Monopoly(_))
             | (Phase::Discard { .. }, Action::Discard(_))
             | (Phase::Robber { .. }, Action::MoveRobber { .. })
     );
@@ -176,15 +181,40 @@ pub fn validate_boundary(
         }
     }
     if matches!(action, Action::PlayKnight) {
-        let player = &position.players[usize::from(actor.get())];
-        if player.played_dev
-            || player.dev[crate::DevelopmentCard::Knight.index()] == 0
-            || player.eligible_dev_mask & 1 == 0
-        {
-            return Err(IllegalAction::IneligibleDevelopmentCard);
+        validate_development_card(position, actor, crate::DevelopmentCard::Knight)?;
+    }
+    if let Action::YearOfPlenty { first, second } = action {
+        validate_development_card(position, actor, crate::DevelopmentCard::YearOfPlenty)?;
+        if position.bank[first.index()] == 0 {
+            return Err(IllegalAction::InsufficientBankResource(first));
+        }
+        if let Some(second) = second {
+            let required = if first == second { 2 } else { 1 };
+            if position.bank[second.index()] < required {
+                return Err(IllegalAction::InsufficientBankResource(second));
+            }
         }
     }
+    if matches!(action, Action::Monopoly(_)) {
+        validate_development_card(position, actor, crate::DevelopmentCard::Monopoly)?;
+    }
     Ok(())
+}
+
+fn validate_development_card(
+    position: &Position,
+    actor: PlayerId,
+    card: crate::DevelopmentCard,
+) -> Result<(), IllegalAction> {
+    let player = &position.players[usize::from(actor.get())];
+    if player.played_dev
+        || player.dev[card.index()] == 0
+        || player.eligible_dev_mask & (1 << card.index()) == 0
+    {
+        Err(IllegalAction::IneligibleDevelopmentCard)
+    } else {
+        Ok(())
+    }
 }
 
 fn validate_settlement_placement(

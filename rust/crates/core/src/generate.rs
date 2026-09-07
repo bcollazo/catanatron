@@ -31,7 +31,7 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
         }
         Phase::PreRoll { actor } => {
             out.push(Action::Roll);
-            append_knight(position, actor, out);
+            append_development_actions(position, actor, out);
         }
         Phase::Discard { actor, .. } => {
             for resource in crate::Resource::ALL {
@@ -77,7 +77,7 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
         }
         Phase::PostRoll { actor } => {
             out.push(Action::EndTurn);
-            append_knight(position, actor, out);
+            append_development_actions(position, actor, out);
             let player = &position.players[usize::from(actor.get())];
             if player.pieces[0] > 0 && player.hand[0] > 0 && player.hand[1] > 0 {
                 for raw in 0..BASE_EDGE_COUNT as u8 {
@@ -144,12 +144,49 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
     }
 }
 
-fn append_knight(position: &Position, actor: crate::PlayerId, out: &mut Vec<Action>) {
+fn append_development_actions(position: &Position, actor: crate::PlayerId, out: &mut Vec<Action>) {
     let player = &position.players[usize::from(actor.get())];
-    if !player.played_dev
-        && player.dev[crate::DevelopmentCard::Knight.index()] > 0
-        && player.eligible_dev_mask & 1 != 0
+    if player.played_dev {
+        return;
+    }
+    if player.dev[crate::DevelopmentCard::Knight.index()] > 0
+        && player.eligible_dev_mask & (1 << crate::DevelopmentCard::Knight.index()) != 0
     {
         out.push(Action::PlayKnight);
+    }
+    if player.dev[crate::DevelopmentCard::YearOfPlenty.index()] > 0
+        && player.eligible_dev_mask & (1 << crate::DevelopmentCard::YearOfPlenty.index()) != 0
+    {
+        for first_index in 0..crate::Resource::ALL.len() {
+            for second_index in first_index..crate::Resource::ALL.len() {
+                let first = crate::Resource::ALL[first_index];
+                let second = crate::Resource::ALL[second_index];
+                let available = position.bank[first.index()] >= if first == second { 2 } else { 1 }
+                    && position.bank[second.index()] >= 1;
+                if available {
+                    out.push(Action::YearOfPlenty {
+                        first,
+                        second: Some(second),
+                    });
+                } else {
+                    for resource in [first, second] {
+                        let single = Action::YearOfPlenty {
+                            first: resource,
+                            second: None,
+                        };
+                        if position.bank[resource.index()] > 0 && !out.contains(&single) {
+                            out.push(single);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if player.dev[crate::DevelopmentCard::Monopoly.index()] > 0
+        && player.eligible_dev_mask & (1 << crate::DevelopmentCard::Monopoly.index()) != 0
+    {
+        for resource in crate::Resource::ALL {
+            out.push(Action::Monopoly(resource));
+        }
     }
 }

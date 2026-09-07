@@ -234,6 +234,37 @@ fn eligible_knight_can_play_before_roll_and_returns_to_pre_roll_after_theft() {
 }
 
 #[test]
+fn year_of_plenty_and_monopoly_apply_resources_and_card_limit() {
+    let mut position = Position::new(3).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    position.players[0].dev[DevelopmentCard::YearOfPlenty.index()] = 1;
+    position.players[0].eligible_dev_mask = 1 << DevelopmentCard::YearOfPlenty.index();
+    apply_checked(
+        &mut position,
+        actor,
+        Action::YearOfPlenty {
+            first: Resource::Wood,
+            second: Some(Resource::Wood),
+        },
+    )
+    .unwrap();
+    assert_eq!(position.players[0].hand[Resource::Wood.index()], 2);
+    assert_eq!(position.bank[Resource::Wood.index()], 17);
+    assert!(position.players[0].played_dev);
+
+    position.players[0].played_dev = false;
+    position.players[0].dev[DevelopmentCard::Monopoly.index()] = 1;
+    position.players[0].eligible_dev_mask = 1 << DevelopmentCard::Monopoly.index();
+    position.players[1].hand[Resource::Ore.index()] = 2;
+    position.players[2].hand[Resource::Ore.index()] = 3;
+    apply_checked(&mut position, actor, Action::Monopoly(Resource::Ore)).unwrap();
+    assert_eq!(position.players[0].hand[Resource::Ore.index()], 5);
+    assert_eq!(position.players[1].hand[Resource::Ore.index()], 0);
+    assert_eq!(position.players[2].hand[Resource::Ore.index()], 0);
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();

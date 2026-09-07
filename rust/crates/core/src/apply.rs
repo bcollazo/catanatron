@@ -155,14 +155,34 @@ pub fn apply_checked(
         }
         Action::PlayKnight => {
             let resume_post_roll = matches!(next.phase, Phase::PostRoll { .. });
-            let player = &mut next.players[usize::from(actor.get())];
-            player.dev[crate::DevelopmentCard::Knight.index()] -= 1;
-            player.played_dev = true;
-            player.played_knights += 1;
+            consume_development_card(&mut next, actor, crate::DevelopmentCard::Knight);
+            next.players[usize::from(actor.get())].played_knights += 1;
             next.phase = Phase::Robber {
                 actor,
                 resume_post_roll,
             };
+            Status::Decision
+        }
+        Action::YearOfPlenty { first, second } => {
+            next.bank[first.index()] -= 1;
+            next.players[usize::from(actor.get())].hand[first.index()] += 1;
+            if let Some(second) = second {
+                next.bank[second.index()] -= 1;
+                next.players[usize::from(actor.get())].hand[second.index()] += 1;
+            }
+            consume_development_card(&mut next, actor, crate::DevelopmentCard::YearOfPlenty);
+            Status::Decision
+        }
+        Action::Monopoly(resource) => {
+            let mut stolen = 0_u8;
+            for raw in 0..next.player_count {
+                if raw != actor.get() {
+                    stolen += next.players[usize::from(raw)].hand[resource.index()];
+                    next.players[usize::from(raw)].hand[resource.index()] = 0;
+                }
+            }
+            next.players[usize::from(actor.get())].hand[resource.index()] += stolen;
+            consume_development_card(&mut next, actor, crate::DevelopmentCard::Monopoly);
             Status::Decision
         }
         Action::BuildRoad(edge) => match next.phase {
@@ -223,6 +243,19 @@ fn discard_count(position: &Position, player: crate::PlayerId) -> u8 {
     } else {
         0
     }
+}
+
+fn consume_development_card(
+    position: &mut Position,
+    actor: crate::PlayerId,
+    card: crate::DevelopmentCard,
+) {
+    let player = &mut position.players[usize::from(actor.get())];
+    player.dev[card.index()] -= 1;
+    if player.dev[card.index()] == 0 {
+        player.eligible_dev_mask &= !(1 << card.index());
+    }
+    player.played_dev = true;
 }
 
 fn next_discarder(position: &Position, first: u8) -> Option<crate::PlayerId> {

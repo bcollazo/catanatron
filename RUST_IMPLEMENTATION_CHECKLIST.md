@@ -140,4 +140,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (21 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
 * Next action: implement Year of Plenty, Monopoly, and Road Building before awards/trading.
 
+### 2026-09-07 — E06 Year-of-Plenty/Monopoly checkpoint
+
+* Added pinned Year of Plenty pair/single menu generation and resource transfer, plus Monopoly menus and transfers from every opponent. Both use the shared eligibility/card-consumption/one-card-per-turn rules.
+* `cargo test --manifest-path rust/Cargo.toml` (22 tests), formatting, and Clippy with warnings denied pass.
+* Next action: implement Road Building's free-road phase, including early exhaustion and pre/post-roll resume.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.
