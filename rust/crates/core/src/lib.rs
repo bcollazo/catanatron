@@ -17,12 +17,18 @@ mod topology;
 mod validate;
 
 pub use action::{Action, DevelopmentCard, Resource};
-pub use apply::{apply_checked, apply_checked_with_context, apply_outcome_checked, Transition};
+pub use apply::{
+    apply_checked, apply_checked_with_context, apply_outcome_checked,
+    apply_outcome_checked_with_context, Transition,
+};
 pub use generate::generate_actions;
 pub use ids::{EdgeId, IdError, NodeId, PlayerId, TileId};
 pub use layout::{GameContext, LandTile, Layout, LayoutError};
 pub use phase::{ChanceKind, Outcome, Phase, Status, Truncation};
-pub use position::{building_belongs_to, PlayerState, Position, CITY_OFFSET, MAX_PLAYERS};
+pub use position::{
+    building_belongs_to, building_owner, building_production, PlayerState, Position, CITY_OFFSET,
+    MAX_PLAYERS,
+};
 pub use topology::{
     edge_endpoints, incident, land_tile_nodes, node_neighbors, BASE_EDGE_COUNT,
     BASE_LAND_TILE_COUNT, BASE_NODE_COUNT,

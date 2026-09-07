@@ -201,3 +201,64 @@ pub fn apply_outcome_checked(
     *position = next;
     Ok(Transition { status })
 }
+
+/// Resolves chance using immutable layout assignments where production needs them.
+pub fn apply_outcome_checked_with_context(
+    position: &mut Position,
+    context: &crate::GameContext,
+    outcome: crate::Outcome,
+) -> Result<Transition, IllegalAction> {
+    if !matches!(outcome, crate::Outcome::Dice { .. }) {
+        return apply_outcome_checked(position, outcome);
+    }
+    crate::validate_outcome(position, outcome)?;
+    let crate::Outcome::Dice { first, second } = outcome else {
+        unreachable!("dice outcome was matched above");
+    };
+    if first + second == 7 {
+        return Err(IllegalAction::UnsupportedOutcome);
+    }
+    let Phase::Chance {
+        actor,
+        kind: ChanceKind::Dice,
+    } = position.phase
+    else {
+        return Err(IllegalAction::InvalidOutcome);
+    };
+    let mut next = *position;
+    let mut demand = [[0_u8; 5]; crate::MAX_PLAYERS];
+    for raw in 0..crate::BASE_LAND_TILE_COUNT as u8 {
+        if raw == next.robber {
+            continue;
+        }
+        let tile = crate::TileId::new(raw).expect("generated tile");
+        let assignment = context.layout.tile(tile);
+        if assignment.number != Some(first + second) {
+            continue;
+        }
+        let Some(resource) = assignment.resource else {
+            continue;
+        };
+        for node in crate::land_tile_nodes(tile) {
+            let building = next.buildings[usize::from(node.get())];
+            if let Some(owner) = crate::building_owner(building) {
+                demand[usize::from(owner.get())][resource.index()] +=
+                    crate::building_production(building);
+            }
+        }
+    }
+    for resource in crate::Resource::ALL {
+        let total: u8 = demand.iter().map(|player| player[resource.index()]).sum();
+        if total <= next.bank[resource.index()] {
+            next.bank[resource.index()] -= total;
+            for (index, player) in next.players.iter_mut().enumerate() {
+                player.hand[resource.index()] += demand[index][resource.index()];
+            }
+        }
+    }
+    next.phase = Phase::PostRoll { actor };
+    *position = next;
+    Ok(Transition {
+        status: Status::Decision,
+    })
+}

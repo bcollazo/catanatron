@@ -13,6 +13,7 @@ pub enum IllegalAction {
     WrongPhase,
     Terminal,
     InvalidOutcome,
+    UnsupportedOutcome,
     InsufficientResource(Resource),
     ExhaustedRoads,
     ExhaustedSettlements,

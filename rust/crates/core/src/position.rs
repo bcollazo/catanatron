@@ -6,6 +6,29 @@ pub const CITY_OFFSET: u8 = MAX_PLAYERS as u8;
 pub const fn building_belongs_to(building: u8, player: PlayerId) -> bool {
     building == player.get() + 1 || building == player.get() + 1 + CITY_OFFSET
 }
+
+pub fn building_owner(building: u8) -> Option<PlayerId> {
+    let raw = if building == 0 {
+        return None;
+    } else if building <= MAX_PLAYERS as u8 {
+        building - 1
+    } else if building <= MAX_PLAYERS as u8 + CITY_OFFSET {
+        building - 1 - CITY_OFFSET
+    } else {
+        return None;
+    };
+    PlayerId::new(raw).ok()
+}
+
+pub const fn building_production(building: u8) -> u8 {
+    if building > CITY_OFFSET {
+        2
+    } else if building > 0 {
+        1
+    } else {
+        0
+    }
+}
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PlayerState {
     pub hand: [u8; 5],

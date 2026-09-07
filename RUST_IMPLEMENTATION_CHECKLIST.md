@@ -116,4 +116,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (17 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
 * Next action: route dice outcome resolution through this context, beginning with non-seven aggregate production and the specified per-resource bank-shortage rule.
 
+### 2026-09-07 — E05 non-seven production checkpoint
+
+* Added context-aware non-seven dice resolution. It aggregates settlement/city demand tile-locally, excludes the robber tile, and pays each resource only when the bank can satisfy aggregate demand; insufficient resources pay nobody.
+* `cargo test --manifest-path rust/Cargo.toml` (18 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
+* Next action: implement seven handling: ordered discards, then robber menus and theft chance outcomes.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

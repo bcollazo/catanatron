@@ -1,6 +1,9 @@
 use std::mem::size_of;
 
-use catanatron_core::{apply_checked, apply_checked_with_context, apply_outcome_checked, Status};
+use catanatron_core::{
+    apply_checked, apply_checked_with_context, apply_outcome_checked,
+    apply_outcome_checked_with_context, Status,
+};
 use catanatron_core::{
     edge_endpoints, generate_actions, node_neighbors, BASE_EDGE_COUNT, BASE_NODE_COUNT,
 };
@@ -70,6 +73,57 @@ fn context_aware_second_setup_settlement_collects_adjacent_resources() {
     .unwrap();
     assert_eq!(position.players[0].hand[Resource::Wood.index()], 1);
     assert_eq!(position.bank[Resource::Wood.index()], 18);
+}
+
+#[test]
+fn dice_production_pays_settlements_and_cities_but_skips_short_bank_resources() {
+    let mut tiles = [catanatron_core::LandTile::DESERT; catanatron_core::BASE_LAND_TILE_COUNT];
+    tiles[9] = catanatron_core::LandTile::producing(Resource::Wood, 8);
+    let context = catanatron_core::GameContext::new(catanatron_core::Layout::new(tiles).unwrap());
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::Chance {
+        actor,
+        kind: ChanceKind::Dice,
+    };
+    position.robber = 18;
+    position.buildings[0] = actor.get() + 1;
+    position.buildings[1] = PlayerId::new(1).unwrap().get() + 1 + catanatron_core::CITY_OFFSET;
+    position.bank[Resource::Wood.index()] = 3;
+    apply_outcome_checked_with_context(
+        &mut position,
+        &context,
+        Outcome::Dice {
+            first: 3,
+            second: 5,
+        },
+    )
+    .unwrap();
+    assert_eq!(position.players[0].hand[Resource::Wood.index()], 1);
+    assert_eq!(position.players[1].hand[Resource::Wood.index()], 2);
+    assert_eq!(position.bank[Resource::Wood.index()], 0);
+
+    position.phase = Phase::Chance {
+        actor,
+        kind: ChanceKind::Dice,
+    };
+    position.bank[Resource::Wood.index()] = 2;
+    assert_eq!(
+        apply_outcome_checked_with_context(
+            &mut position,
+            &context,
+            Outcome::Dice {
+                first: 3,
+                second: 5
+            }
+        )
+        .unwrap()
+        .status,
+        Status::Decision
+    );
+    assert_eq!(position.players[0].hand[Resource::Wood.index()], 1);
+    assert_eq!(position.players[1].hand[Resource::Wood.index()], 2);
+    assert_eq!(position.bank[Resource::Wood.index()], 2);
 }
 
 #[test]
