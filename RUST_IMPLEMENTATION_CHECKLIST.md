@@ -98,4 +98,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (15 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
 * Next action: implement setup's second-settlement resource grants and turn-counter behavior, then audit E04's ordinary-turn exit cases before moving to dice/robber work.
 
+### 2026-09-07 — E04 setup-turn checkpoint
+
+* Matched the pinned setup `advance_turn` counter semantics: forward setup-road advances and intermediate reverse advances increment the counter, while the turnaround and final setup road do not. The two-player snake regression asserts the resulting count.
+* `cargo test --manifest-path rust/Cargo.toml` (15 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
+* Next action: add an explicit immutable layout/context layer before second-settlement payouts or dice production; the current generated topology deliberately contains geometry only, not the randomized resource/number assignment required by those rules.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

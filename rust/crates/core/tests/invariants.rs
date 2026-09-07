@@ -68,6 +68,10 @@ fn setup_application_follows_two_player_snake_order() {
     }
     assert_eq!(position.actor.get(), 0);
     assert!(matches!(position.phase, Phase::PreRoll { .. }));
+    assert_eq!(
+        position.turns, 2,
+        "only setup roads that advance a seat count"
+    );
 }
 
 #[test]

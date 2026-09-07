@@ -121,6 +121,9 @@ pub fn apply_checked(
                     let next_actor = crate::PlayerId::new(next_raw).expect("active seat");
                     next.actor = next_actor;
                     next.turn_owner = next_actor;
+                    if settlements != usize::from(next.player_count) {
+                        next.turns = next.turns.saturating_add(1);
+                    }
                     next.phase = Phase::SetupSettlement {
                         actor: next_actor,
                         reverse: settlements >= usize::from(next.player_count),
