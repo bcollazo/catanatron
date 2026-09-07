@@ -4,6 +4,7 @@ mod base;
 use crate::{EdgeId, NodeId};
 pub const BASE_NODE_COUNT: usize = base::BASE_LAND_NODES.len();
 pub const BASE_EDGE_COUNT: usize = base::BASE_EDGES.len();
+pub const BASE_LAND_TILE_COUNT: usize = base::BASE_LAND_TILE_NODES.len();
 pub fn edge_endpoints(edge: EdgeId) -> (NodeId, NodeId) {
     let (a, b) = base::BASE_EDGES[usize::from(edge.get())];
     (
@@ -25,4 +26,10 @@ pub fn node_neighbors(node: NodeId) -> impl Iterator<Item = NodeId> {
             None
         }
     })
+}
+
+/// Returns the six vertices touching a dense BASE land-tile index.
+pub fn land_tile_nodes(tile: crate::TileId) -> [NodeId; 6] {
+    let (a, b, c, d, e, f) = base::BASE_LAND_TILE_NODES[usize::from(tile.get())];
+    [a, b, c, d, e, f].map(|node| NodeId::new(node).expect("generated node"))
 }

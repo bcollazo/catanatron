@@ -24,6 +24,11 @@ fn exported_base_topology_has_expected_dense_bounds() {
     let endpoints = edge_endpoints(EdgeId::new(0).unwrap());
     assert_eq!((endpoints.0.get(), endpoints.1.get()), (0, 1));
     assert_eq!(node_neighbors(NodeId::new(0).unwrap()).count(), 3);
+    assert_eq!(catanatron_core::BASE_LAND_TILE_COUNT, 19);
+    assert_eq!(
+        catanatron_core::land_tile_nodes(TileId::new(0).unwrap()).len(),
+        6
+    );
 }
 
 #[test]

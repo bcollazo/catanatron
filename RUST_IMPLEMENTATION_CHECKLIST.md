@@ -104,4 +104,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (15 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
 * Next action: add an explicit immutable layout/context layer before second-settlement payouts or dice production; the current generated topology deliberately contains geometry only, not the randomized resource/number assignment required by those rules.
 
+### 2026-09-07 — topology incidence checkpoint
+
+* Extended deterministic topology export with dense BASE/MINI land-tile-to-node tables and exposed typed Rust accessors. The exporter now formats its generated Rust with `rustfmt`, so `export_topology.py --check` and workspace formatting agree.
+* `python rust/tools/export_topology.py --check`, `cargo test --manifest-path rust/Cargo.toml` (15 tests), and `cargo fmt --check --manifest-path rust/Cargo.toml` pass.
+* Next action: add the immutable runtime layout/context carrying each land tile's resource and number token, then route setup payouts and dice production through that context.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.
