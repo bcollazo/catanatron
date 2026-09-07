@@ -35,10 +35,10 @@ Status at handoff: **planning complete; production implementation not started**.
 ## Current execution checkpoint
 
 * Current task: E03 (typed state, actions, phases, and checked boundaries).
-* Last implementation check: topology/fixture exporters pass `--check`; the fixture corpus contains all 18 action variants and all 7 reachable Python decision prompts. `pytest tests/test_game.py tests/test_algorithms.py tests/models/test_actions.py tests/test_yield_resources.py` passed (52 tests); Rust formatting/tests pass.
-* Next action: implement private checked IDs, resource/development enums, typed actions/phases/outcomes/status, and a fixed-array `Position` with atomic checked boundary tests.
+* Last implementation check: typed-model invariants pass: `cargo test --manifest-path rust/Cargo.toml` (5 tests) and formatting checks pass. Recorded layout is `Position=210B`, `Action=11B`.
+* Next action: extend checked validation/application with action-specific resource, inventory, geometry, and outcome errors while retaining failure atomicity; then decide E03 completion.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
-* Changed implementation files: `rust/` workspace files, generated topology fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
+* Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
 * Decisions since the plan: use the isolated ignored `.venv/rust-engine` (Python 3.12.14, NetworkX 3.5) because the system pyenv shim is unconfigured. Topology exports only immutable geometry: resource/port assignments are deliberately excluded because Python map initialization randomizes them. Trace action selection is canonicalized because Python set-backed move menus otherwise vary by hash seed.
 
@@ -57,6 +57,11 @@ Status at handoff: **planning complete; production implementation not started**.
 
 * Added exact chance weight fixtures and the named, reproduced `D001-domestic-trade-proposer-revisited` compatibility correction.
 * Audited the generated records: all 18 actions and each of the seven reachable Python decision prompts occur before and after transitions; BASE/TOURNAMENT and 2/3/4-seat coverage are present. Exporters are deterministic under `--check`.
+
+### 2026-09-07 — E03 typed-model checkpoint
+
+* Added private checked dense IDs, typed action/resource/development/phase/outcome/status definitions, fixed-array state, and non-mutating checked boundary validation.
+* Invariant tests cover invalid IDs, wrong actor/phase, pending-chance and terminal rejection, copy independence, and the measured size budget. E03 remains open until the checked mutation API supplies all required action-specific atomic errors.
 
 ### 2026-09-07 — E00 complete
 
