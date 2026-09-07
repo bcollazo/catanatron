@@ -97,6 +97,12 @@ export type PlacedTile = {
   tile: Tile;
 };
 
+/**
+ * The single payload GET /api/games/.../states/... returns: the game's state
+ * document, plus the few things a browser needs that are not state — the
+ * legal actions, which seats are bots, and the board geometry.
+ * Built by catanatron.serialization.web_view.
+ */
 export type GameState = {
   tiles: PlacedTile[];
   adjacent_tiles: Record<string, Tile[]>;
@@ -127,6 +133,16 @@ export type GameState = {
   edgeActions?: GameAction[];
   nodeActions?: GameAction[];
   state_index: number;
+
+  // Also present, from the state document itself.
+  schema_version: number;
+  game: { vps_to_win: number; discard_limit: number; friendly_robber: boolean };
+  num_turns: number;
+  current_player_index: number;
+  current_turn_index: number;
+  resource_freqdeck: number[];
+  development_listdeck: Record<string, number>;
+  longest_roads_by_player: Record<Color, number>;
 };
 const DIRECTIONS = [
   "NORTH",

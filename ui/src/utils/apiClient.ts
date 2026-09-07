@@ -3,21 +3,44 @@ import axios from "axios";
 import { API_URL } from "../configuration";
 import type { Color, GameAction, GameState } from "./api.types";
 
-export type PlayerArchetype =
-  | "HUMAN"
-  | "RANDOM"
-  | "CATANATRON"
-  | "WEIGHTED_RANDOM";
+/** A registry key, e.g. "CATANATRON" or "AB". The server decides what exists. */
+export type PlayerKey = string;
+
+/** One settable parameter, as published by GET /api/players. */
+export type PlayerParam = {
+  name: string;
+  type: "int" | "float" | "str" | "bool";
+  default: number | string | boolean | null;
+  nullable: boolean;
+  choices: Array<string | number>;
+  help: string;
+};
+
+export type PlayerEntry = {
+  key: PlayerKey;
+  name: string;
+  description: string;
+  is_bot: boolean;
+  source: string;
+  params: PlayerParam[];
+};
+
 export type MapTemplate = "BASE" | "MINI" | "TOURNAMENT";
 export type StateIndex = number | `${number}` | "latest";
 
 type CreateGameOptions = {
-  players: PlayerArchetype[];
+  players: PlayerKey[];
   mapTemplate: MapTemplate;
   vpsToWin: number;
   discardLimit: number;
   friendlyRobber: boolean;
 };
+
+/** The players this server can seat. Replaces a hardcoded list in the UI. */
+export async function getPlayers(): Promise<PlayerEntry[]> {
+  const response = await axios.get<PlayerEntry[]>(API_URL + "/api/players");
+  return response.data;
+}
 
 export async function createGame({
   players,
