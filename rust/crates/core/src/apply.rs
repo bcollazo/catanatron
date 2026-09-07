@@ -91,6 +91,33 @@ pub fn apply_checked(
             };
             Status::Chance
         }
+        Action::Discard(resource) => {
+            let remaining = match next.phase {
+                Phase::Discard { remaining, .. } => remaining,
+                _ => return Err(IllegalAction::WrongPhase),
+            };
+            next.players[usize::from(actor.get())].hand[resource.index()] -= 1;
+            next.bank[resource.index()] += 1;
+            if remaining > 1 {
+                next.phase = Phase::Discard {
+                    actor,
+                    remaining: remaining - 1,
+                };
+            } else if let Some(next_actor) = next_discarder(&next, actor.get() + 1) {
+                next.actor = next_actor;
+                next.phase = Phase::Discard {
+                    actor: next_actor,
+                    remaining: discard_count(&next, next_actor),
+                };
+            } else {
+                next.actor = next.turn_owner;
+                next.phase = Phase::Robber {
+                    actor: next.turn_owner,
+                    resume_post_roll: true,
+                };
+            }
+            Status::Decision
+        }
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
                 next.roads[usize::from(edge.get())] = actor.get() + 1;
@@ -137,6 +164,25 @@ pub fn apply_checked(
     };
     *position = next;
     Ok(Transition { status })
+}
+
+fn discard_count(position: &Position, player: crate::PlayerId) -> u8 {
+    let total: u8 = position.players[usize::from(player.get())]
+        .hand
+        .iter()
+        .sum();
+    if total > 7 {
+        total / 2
+    } else {
+        0
+    }
+}
+
+fn next_discarder(position: &Position, first: u8) -> Option<crate::PlayerId> {
+    (first..position.player_count).find_map(|raw| {
+        let player = crate::PlayerId::new(raw).expect("active player");
+        (discard_count(position, player) > 0).then_some(player)
+    })
 }
 
 /// Applies an intent using immutable board assignments when a rule needs them.
@@ -215,9 +261,6 @@ pub fn apply_outcome_checked_with_context(
     let crate::Outcome::Dice { first, second } = outcome else {
         unreachable!("dice outcome was matched above");
     };
-    if first + second == 7 {
-        return Err(IllegalAction::UnsupportedOutcome);
-    }
     let Phase::Chance {
         actor,
         kind: ChanceKind::Dice,
@@ -225,6 +268,26 @@ pub fn apply_outcome_checked_with_context(
     else {
         return Err(IllegalAction::InvalidOutcome);
     };
+    if first + second == 7 {
+        let mut next = *position;
+        if let Some(discarder) = next_discarder(&next, 0) {
+            next.actor = discarder;
+            next.phase = Phase::Discard {
+                actor: discarder,
+                remaining: discard_count(&next, discarder),
+            };
+        } else {
+            next.actor = next.turn_owner;
+            next.phase = Phase::Robber {
+                actor: next.turn_owner,
+                resume_post_roll: true,
+            };
+        }
+        *position = next;
+        return Ok(Transition {
+            status: Status::Decision,
+        });
+    }
     let mut next = *position;
     let mut demand = [[0_u8; 5]; crate::MAX_PLAYERS];
     for raw in 0..crate::BASE_LAND_TILE_COUNT as u8 {

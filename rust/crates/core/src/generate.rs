@@ -30,6 +30,13 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
             }
         }
         Phase::PreRoll { .. } => out.push(Action::Roll),
+        Phase::Discard { actor, .. } => {
+            for resource in crate::Resource::ALL {
+                if position.players[usize::from(actor.get())].hand[resource.index()] > 0 {
+                    out.push(Action::Discard(resource));
+                }
+            }
+        }
         Phase::PostRoll { actor } => {
             out.push(Action::EndTurn);
             let player = &position.players[usize::from(actor.get())];

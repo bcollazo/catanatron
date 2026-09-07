@@ -127,6 +127,51 @@ fn dice_production_pays_settlements_and_cities_but_skips_short_bank_resources() 
 }
 
 #[test]
+fn seven_runs_discards_in_seat_order_then_enters_robber_phase() {
+    let context = catanatron_core::GameContext::new(
+        catanatron_core::Layout::new(
+            [catanatron_core::LandTile::DESERT; catanatron_core::BASE_LAND_TILE_COUNT],
+        )
+        .unwrap(),
+    );
+    let mut position = Position::new(3).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::Chance {
+        actor,
+        kind: ChanceKind::Dice,
+    };
+    position.players[0].hand[Resource::Wood.index()] = 8;
+    position.players[1].hand[Resource::Brick.index()] = 10;
+    apply_outcome_checked_with_context(
+        &mut position,
+        &context,
+        Outcome::Dice {
+            first: 3,
+            second: 4,
+        },
+    )
+    .unwrap();
+    assert!(
+        matches!(position.phase, Phase::Discard { actor: current, remaining: 4 } if current == actor)
+    );
+    for _ in 0..4 {
+        apply_checked(&mut position, actor, Action::Discard(Resource::Wood)).unwrap();
+    }
+    let second = PlayerId::new(1).unwrap();
+    assert!(
+        matches!(position.phase, Phase::Discard { actor: current, remaining: 5 } if current == second)
+    );
+    for _ in 0..5 {
+        apply_checked(&mut position, second, Action::Discard(Resource::Brick)).unwrap();
+    }
+    assert!(
+        matches!(position.phase, Phase::Robber { actor: current, resume_post_roll: true } if current == actor)
+    );
+    assert_eq!(position.bank[Resource::Wood.index()], 23);
+    assert_eq!(position.bank[Resource::Brick.index()], 24);
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();

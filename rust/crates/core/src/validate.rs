@@ -81,6 +81,7 @@ pub fn validate_boundary(
             | (Phase::PostRoll { .. }, Action::BuildSettlement(_))
             | (Phase::PostRoll { .. }, Action::BuildCity(_))
             | (Phase::PostRoll { .. }, Action::BuyDevelopmentCard)
+            | (Phase::Discard { .. }, Action::Discard(_))
     );
     if !allowed {
         return Err(IllegalAction::WrongPhase);
@@ -131,6 +132,11 @@ pub fn validate_boundary(
             if position.players[usize::from(actor.get())].hand[resource.index()] == 0 {
                 return Err(IllegalAction::InsufficientResource(resource));
             }
+        }
+    }
+    if let Action::Discard(resource) = action {
+        if position.players[usize::from(actor.get())].hand[resource.index()] == 0 {
+            return Err(IllegalAction::InsufficientResource(resource));
         }
     }
     Ok(())
