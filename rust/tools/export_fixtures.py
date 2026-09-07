@@ -13,8 +13,10 @@ from typing import Any
 
 from catanatron.game import Game
 from catanatron.models.enums import DEVELOPMENT_CARDS, RESOURCES, Action
+from catanatron.models.enums import ActionPrompt, ActionType, CITY, SETTLEMENT
 from catanatron.models.map import build_map
-from catanatron.models.player import Color, RandomPlayer
+from catanatron.models.player import Color, RandomPlayer, SimplePlayer
+from catanatron.state_functions import build_settlement, player_deck_replenish
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "tests" / "fixtures"
@@ -137,6 +139,98 @@ def trace(case_id: str, players: int, map_name: str, seed: int, limit: int) -> l
     return rows
 
 
+def record_transition(game: Game, map_name: str, case_id: str, action: Action) -> dict[str, Any]:
+    before = snapshot(game, map_name)
+    legal_before = menu(game.playable_actions)
+    record = game.execute(action)
+    return {
+        "fixture_version": 1,
+        "case_id": case_id,
+        "source_revision": REVISION,
+        "rules_profile": PROFILE,
+        "before": before,
+        "actor": action.color.value,
+        "action": action_value(action, intent=True),
+        "outcome": normalize(record.result) if record.result is not None else None,
+        "after": snapshot(game, map_name),
+        "legal_before": legal_before,
+        "legal_after": menu(game.playable_actions),
+        "status_after": "won" if game.winning_color() else "decision",
+    }
+
+
+def prepared_post_roll(players: int, seed: int) -> Game:
+    """Make a small legal post-roll state without relying on trace ordering."""
+    random.seed(seed)
+    colors = list(Color)[:players]
+    game = Game([SimplePlayer(color) for color in colors], seed=seed)
+    state = game.state
+    state.is_initial_build_phase = False
+    state.current_prompt = ActionPrompt.PLAY_TURN
+    state.current_player_index = 0
+    state.current_turn_index = 0
+    state.player_state["P0_HAS_ROLLED"] = True
+    game.playable_actions = []
+    return game
+
+
+def crafted_city() -> list[dict[str, Any]]:
+    game = prepared_post_roll(2, 101)
+    state, color = game.state, game.state.colors[0]
+    state.board.build_settlement(color, 0, initial_build_phase=True)
+    build_settlement(state, color, 0, True)
+    player_deck_replenish(state, color, "WHEAT", 2)
+    player_deck_replenish(state, color, "ORE", 3)
+    from catanatron.models.actions import generate_playable_actions
+
+    game.playable_actions = generate_playable_actions(state)
+    action = Action(color, ActionType.BUILD_CITY, 0)
+    return [record_transition(game, "BASE", "crafted-city", action)]
+
+
+def crafted_trades() -> list[dict[str, Any]]:
+    from catanatron.models.actions import generate_playable_actions
+
+    rows: list[dict[str, Any]] = []
+    offer = (1, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+
+    # Accept then confirm: every trade message is represented as its own intent.
+    game = prepared_post_roll(3, 102)
+    state, proposer, accepter = game.state, game.state.colors[0], game.state.colors[1]
+    player_deck_replenish(state, proposer, "WOOD")
+    player_deck_replenish(state, accepter, "BRICK")
+    game.playable_actions = generate_playable_actions(state)
+    rows.append(record_transition(game, "BASE", "crafted-trade-offer", Action(proposer, ActionType.OFFER_TRADE, offer)))
+    accept = next(action for action in game.playable_actions if action.action_type == ActionType.ACCEPT_TRADE)
+    rows.append(record_transition(game, "BASE", "crafted-trade-accept", accept))
+    responder = game.state.current_color()
+    reject = next(action for action in game.playable_actions if action.action_type == ActionType.REJECT_TRADE)
+    rows.append(record_transition(game, "BASE", "crafted-trade-reject-after-accept", reject))
+    confirm = next(action for action in game.playable_actions if action.action_type == ActionType.CONFIRM_TRADE)
+    rows.append(record_transition(game, "BASE", "crafted-trade-confirm", confirm))
+
+    # A separate offer/reject sequence exercises the no-accepter return path.
+    game = prepared_post_roll(2, 103)
+    state, proposer, responder = game.state, game.state.colors[0], game.state.colors[1]
+    player_deck_replenish(state, proposer, "WOOD")
+    game.playable_actions = generate_playable_actions(state)
+    rows.append(record_transition(game, "BASE", "crafted-trade-offer-reject", Action(proposer, ActionType.OFFER_TRADE, offer)))
+    reject = next(action for action in game.playable_actions if action.action_type == ActionType.REJECT_TRADE)
+    rows.append(record_transition(game, "BASE", "crafted-trade-reject", reject))
+
+    # A single accepted offer can be cancelled by its proposer.
+    game = prepared_post_roll(2, 104)
+    state, proposer, accepter = game.state, game.state.colors[0], game.state.colors[1]
+    player_deck_replenish(state, proposer, "WOOD")
+    player_deck_replenish(state, accepter, "BRICK")
+    game.playable_actions = generate_playable_actions(state)
+    rows.append(record_transition(game, "BASE", "crafted-trade-offer-cancel", Action(proposer, ActionType.OFFER_TRADE, offer)))
+    accept = next(action for action in game.playable_actions if action.action_type == ActionType.ACCEPT_TRADE)
+    rows.append(record_transition(game, "BASE", "crafted-trade-accept-cancel", accept))
+    rows.append(record_transition(game, "BASE", "crafted-trade-cancel", Action(proposer, ActionType.CANCEL_TRADE, None)))
+    return rows
+
+
 def write_or_check(path: Path, data: str, check: bool) -> bool:
     if check:
         return path.exists() and path.read_text(encoding="utf-8") == data
@@ -157,6 +251,10 @@ def main() -> None:
         for row in rows:
             coverage[row["action"]["type"]] += 1
         files[OUT / "transitions" / f"sample-{map_name.lower()}-{players}p.jsonl"] = "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in rows)
+    crafted = crafted_city() + crafted_trades()
+    for row in crafted:
+        coverage[row["action"]["type"]] += 1
+    files[OUT / "transitions" / "crafted-builds-and-trades.jsonl"] = "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in crafted)
     manifest = {
         "fixture_version": 1,
         "source_revision": REVISION,

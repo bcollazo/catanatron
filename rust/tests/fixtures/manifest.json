@@ -1,16 +1,22 @@
 {
   "coverage": {
+    "ACCEPT_TRADE": 2,
+    "BUILD_CITY": 1,
     "BUILD_ROAD": 42,
     "BUILD_SETTLEMENT": 26,
     "BUY_DEVELOPMENT_CARD": 6,
+    "CANCEL_TRADE": 1,
+    "CONFIRM_TRADE": 1,
     "DISCARD_RESOURCE": 21,
     "END_TURN": 121,
     "MARITIME_TRADE": 18,
     "MOVE_ROBBER": 21,
+    "OFFER_TRADE": 3,
     "PLAY_KNIGHT_CARD": 2,
     "PLAY_MONOPOLY": 1,
     "PLAY_ROAD_BUILDING": 2,
     "PLAY_YEAR_OF_PLENTY": 1,
+    "REJECT_TRADE": 2,
     "ROLL": 123
   },
   "development_order": [
@@ -21,6 +27,7 @@
     "VICTORY_POINT"
   ],
   "files": {
+    "transitions\\crafted-builds-and-trades.jsonl": "e99072e59483ad1244cd51b610ef21dee36b61c5d76b5181334497815ee161ab",
     "transitions\\sample-base-2p.jsonl": "932b3b47e720315c219e2aaefc8bd07a21f61b70de5eb2e8e78fffe8f8130cd8",
     "transitions\\sample-base-3p.jsonl": "7bcd411c3bea82219e8f89d82abb451e99c0ff28cb4883df43891d2c72f5116c",
     "transitions\\sample-base-4p.jsonl": "a45972deddfe4f2c54cca78f19b9b02b9dc27e0c8592a7b3b03b8b31f08b8d32",
