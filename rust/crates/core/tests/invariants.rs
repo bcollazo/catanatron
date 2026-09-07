@@ -1,5 +1,6 @@
 use std::mem::size_of;
 
+use catanatron_core::{apply_checked, Status};
 use catanatron_core::{
     validate_boundary, validate_outcome, Action, ChanceKind, DevelopmentCard, EdgeId,
     IllegalAction, NodeId, Outcome, Phase, PlayerId, Position, Resource, TileId,
@@ -89,6 +90,60 @@ fn chance_outcomes_must_match_pending_phase_and_available_cards() {
         validate_outcome(&position, Outcome::DevelopmentCard(DevelopmentCard::Knight)),
         Err(IllegalAction::InvalidOutcome)
     );
+}
+
+#[test]
+fn checked_transitions_are_atomic_and_record_pending_chance() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    let original = position;
+    assert_eq!(
+        apply_checked(&mut position, actor, Action::EndTurn),
+        Err(IllegalAction::WrongPhase)
+    );
+    assert_eq!(position, original);
+    position.phase = Phase::PreRoll {
+        actor: position.actor,
+    };
+    assert_eq!(
+        apply_checked(&mut position, actor, Action::Roll)
+            .unwrap()
+            .status,
+        Status::Chance
+    );
+    assert!(matches!(
+        position.phase,
+        Phase::Chance {
+            kind: ChanceKind::Dice,
+            ..
+        }
+    ));
+    let after_roll = position;
+    assert_eq!(
+        apply_checked(&mut position, actor, Action::Roll),
+        Err(IllegalAction::WrongPhase)
+    );
+    assert_eq!(position, after_roll);
+}
+
+#[test]
+fn ending_turn_advances_active_actor_and_clears_dev_flag() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll {
+        actor: position.actor,
+    };
+    position.players[0].played_dev = true;
+    assert_eq!(
+        apply_checked(&mut position, actor, Action::EndTurn)
+            .unwrap()
+            .status,
+        Status::Decision
+    );
+    assert_eq!(position.actor, PlayerId::new(1).unwrap());
+    assert_eq!(position.turns, 1);
+    assert!(!position.players[0].played_dev);
+    assert!(matches!(position.phase, Phase::PreRoll { actor } if actor == position.actor));
 }
 
 #[test]
