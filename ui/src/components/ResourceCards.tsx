@@ -7,6 +7,19 @@ import "./PlayerStateBox.scss";
 
 export default function ResourceCards({ playerState, playerKey }: { playerState: PlayerState; playerKey: string }) {
   const amount = (card: Card) => playerState[`${playerKey}_${card}_IN_HAND`];
+
+  // Seen from another seat, this hand arrives as two counts instead of cards.
+  if (amount("WOOD") === undefined) {
+    return (
+      <FaceDownCards
+        resources={playerState[`${playerKey}_NUM_RESOURCES_IN_HAND`] ?? 0}
+        developments={
+          playerState[`${playerKey}_NUM_DEVELOPMENT_CARDS_IN_HAND`] ?? 0
+        }
+      />
+    );
+  }
+
   return (
     <div className="resource-cards" title="Resource Cards">
       {amount("WOOD") !== 0 && (
@@ -87,6 +100,38 @@ export default function ResourceCards({ playerState, playerKey }: { playerState:
           <Paper>
             <span>{amount("ROAD_BUILDING")}</span>
             <span>RB</span>
+          </Paper>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FaceDownCards({
+  resources,
+  developments,
+}: {
+  resources: number;
+  developments: number;
+}) {
+  return (
+    <div className="resource-cards" title="Resource Cards">
+      {resources !== 0 && (
+        <div
+          className="hidden-cards center-text card"
+          title={resources + " Resource Card(s), face down"}
+        >
+          <Paper>{resources}</Paper>
+        </div>
+      )}
+      {developments !== 0 && (
+        <div
+          className="dev-cards center-text card"
+          title={developments + " Development Card(s), face down"}
+        >
+          <Paper>
+            <span>{developments}</span>
+            <span>DEV</span>
           </Paper>
         </div>
       )}

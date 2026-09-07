@@ -78,7 +78,7 @@ def get_game_endpoint(game_id, state_index):
     if game is None:
         abort(404, description="Resource not found")
 
-    payload = json.dumps(web_view(game))
+    payload = json.dumps(web_view(game, _perspective(game)))
     return Response(
         response=payload,
         status=200,
@@ -94,7 +94,7 @@ def post_action_endpoint(game_id):
 
     if game.winning_color() is not None:
         return Response(
-            response=json.dumps(web_view(game)),
+            response=json.dumps(web_view(game, _perspective(game))),
             status=200,
             mimetype="application/json",
         )
@@ -110,7 +110,7 @@ def post_action_endpoint(game_id):
         upsert_game_state(game)
 
     return Response(
-        response=json.dumps(web_view(game)),
+        response=json.dumps(web_view(game, _perspective(game))),
         status=200,
         mimetype="application/json",
     )
@@ -176,6 +176,21 @@ def mcts_analysis_endpoint(game_id, state_index):
             status=500,
             mimetype="application/json",
         )
+
+
+def _perspective(game):
+    """The seat whose eyes to see the table through, from ``?as=RED``.
+
+    Without it the browser gets the spectator's view, which is every hand
+    face up. This is a display mode, not a secret: the client picks it.
+    """
+    color = request.args.get("as")
+    if color is None:
+        return None
+    seated = [c.value for c in game.state.colors]
+    if color.upper() not in seated:
+        abort(400, description=f"'as' must be one of {', '.join(seated)}")
+    return color.upper()
 
 
 def _parse_state_index(state_index_str: str):

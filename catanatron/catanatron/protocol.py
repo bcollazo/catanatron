@@ -40,12 +40,12 @@ def before_message(game, color):
         "protocol_version": PROTOCOL_VERSION,
         "game_id": game.id,
         "color": color.value,
-        "state": client_view(state_to_json(game)),
+        "state": client_view(state_to_json(game), color),
     }
 
 
 def decide_message(game, color):
-    view = client_view(state_to_json(game))
+    view = client_view(state_to_json(game), color)
     return {
         "type": "decide",
         "game_id": game.id,

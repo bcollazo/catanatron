@@ -258,6 +258,46 @@ def test_post_game_rejects_unknown_param_with_400(client):
     assert response.status_code == 400
 
 
+# ===== spectator and seat views =====
+def _play_a_while(client, game_id, ticks=30):
+    for _ in range(ticks):
+        client.post(f"/api/games/{game_id}/actions", json={})
+    return json.loads(client.get(f"/api/games/{game_id}/states/latest").data)
+
+
+def test_the_browser_sees_every_hand_by_default(client):
+    """The spectator's view: this is a local app, and watching bots play is
+    the point."""
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    data = _play_a_while(client, game_id)
+    assert "P0_WOOD_IN_HAND" in data["player_state"]
+    assert "P1_WOOD_IN_HAND" in data["player_state"]
+
+
+def test_asking_for_a_seat_hides_the_other_hands(client):
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    _play_a_while(client, game_id)
+    data = json.loads(client.get(f"/api/games/{game_id}/states/latest?as=RED").data)
+
+    mine = data["colors"].index("RED")
+    theirs = (mine + 1) % len(data["colors"])
+    assert f"P{mine}_WOOD_IN_HAND" in data["player_state"]
+    assert f"P{theirs}_WOOD_IN_HAND" not in data["player_state"]
+    assert f"P{theirs}_NUM_RESOURCES_IN_HAND" in data["player_state"]
+
+
+def test_asking_for_a_seat_that_is_not_playing_is_a_400(client):
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    response = client.get(f"/api/games/{game_id}/states/latest?as=ORANGE")
+    assert response.status_code == 400
+
+
 # ===== persistence without pickle =====
 def test_game_state_row_is_json_only(client):
     """The stored game must be plain JSON, with players kept as specs."""

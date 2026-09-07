@@ -106,6 +106,14 @@ Answer `decide` with one of the `playable_actions` you were given, verbatim.
 `before` carries the whole board; `decide` leaves out `map`, which cannot
 change during a game. Set the deadline with `--players=R,MYBOT:timeout_ms=500`.
 
+`state` is what a person in your seat would see, never more. Your own hand is
+itemized; an opponent's arrives as `P1_NUM_RESOURCES_IN_HAND` and
+`P1_NUM_DEVELOPMENT_CARDS_IN_HAND`, because across the table you can count
+someone's cards but not read them. The card an opponent drew and the resource
+their robber stole are missing from the history for the same reason, and the
+development deck is a composition rather than an order. There is no flag for
+this: a bot on the wire only ever gets this view.
+
 A bot that answers too slowly, names an illegal action, writes something that
 is not JSON, or dies forfeits that turn, and is dropped after three failures
 in a row. A failed handshake or a program that cannot be run stops the run.

@@ -6,7 +6,11 @@ import ResourceCards from "./ResourceCards";
 
 export default function PlayerStateBox({ playerState, playerKey, color }: {
   playerState: PlayerState; playerKey: string; color: Color }) {
-  const actualVps = playerState[`${playerKey}_ACTUAL_VICTORY_POINTS`];
+  // Seen from another seat, the score with hidden victory-point cards in it
+  // is not published; fall back to the public one.
+  const actualVps =
+    playerState[`${playerKey}_ACTUAL_VICTORY_POINTS`] ??
+    playerState[`${playerKey}_VICTORY_POINTS`];
   return (
     <div className={cn("player-state-box foreground", color)}>
       <ResourceCards playerState={playerState} playerKey={playerKey} />

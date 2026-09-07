@@ -239,6 +239,131 @@ def test_client_view_does_not_mutate_the_document():
     assert json.dumps(doc) == before
 
 
+# ===== the honest view: what one seat is entitled to see =====
+RESOURCES = ("WOOD", "BRICK", "SHEEP", "WHEAT", "ORE")
+DEVCARDS = ("KNIGHT", "YEAR_OF_PLENTY", "MONOPOLY", "ROAD_BUILDING", "VICTORY_POINT")
+
+
+def seats(game, color=Color.RED):
+    """(doc, honest view, my prefix, an opponent's prefix).
+
+    Seating order is shuffled, so P0 is not necessarily RED.
+    """
+    doc = state_to_json(game)
+    mine = doc["colors"].index(color.value)
+    theirs = (mine + 1) % len(doc["colors"])
+    return doc, client_view(doc, color), f"P{mine}_", f"P{theirs}_"
+
+
+def test_my_own_hand_stays_itemized():
+    game, _ = played_game()
+    _, view, mine, _ = seats(game)
+    for resource in RESOURCES:
+        assert mine + resource + "_IN_HAND" in view["player_state"]
+    assert mine + "ACTUAL_VICTORY_POINTS" in view["player_state"]
+
+
+def test_an_opponents_hand_becomes_a_count():
+    """Across the table you can count someone's cards, not read them."""
+    game, _ = played_game()
+    doc, view, _, theirs = seats(game)
+    state, truth = view["player_state"], doc["player_state"]
+
+    assert not [
+        key
+        for key in state
+        if key.startswith(theirs)
+        and key.endswith("_IN_HAND")
+        and not key.startswith(theirs + "NUM_")
+    ]
+    assert state[theirs + "NUM_RESOURCES_IN_HAND"] == sum(
+        truth[f"{theirs}{resource}_IN_HAND"] for resource in RESOURCES
+    )
+    assert state[theirs + "NUM_DEVELOPMENT_CARDS_IN_HAND"] == sum(
+        truth[f"{theirs}{card}_IN_HAND"] for card in DEVCARDS
+    )
+
+
+def test_an_opponents_hidden_victory_points_are_not_published():
+    game, _ = played_game()
+    _, view, _, theirs = seats(game)
+    state = view["player_state"]
+    assert theirs + "ACTUAL_VICTORY_POINTS" not in state
+    assert theirs + "VICTORY_POINTS" in state, "public victory points stay public"
+    assert theirs + "KNIGHT_OWNED_AT_START" not in state
+    assert theirs + "PLAYED_KNIGHT" in state, "what was played is public"
+
+
+def test_the_card_an_opponent_drew_is_not_in_the_history():
+    game, _ = played_game(ticks=400)
+    _, view, _, _ = seats(game)
+    bought = [
+        (action, result)
+        for action, result in view["action_records"]
+        if action[1] == "BUY_DEVELOPMENT_CARD"
+    ]
+    assert bought, "the fixture should have bought development cards"
+    for action, result in bought:
+        if action[0] == Color.RED.value:
+            assert action[2] is not None, "I know what I drew"
+        else:
+            assert (action[2], result) == (None, None)
+
+
+def test_what_the_robber_stole_is_hidden_but_where_it_went_is_not():
+    game, _ = played_game(ticks=400)
+    _, view, _, _ = seats(game)
+    moves = [
+        (action, result)
+        for action, result in view["action_records"]
+        if action[1] == "MOVE_ROBBER" and action[0] != Color.RED.value
+    ]
+    assert moves, "the fixture should have moved the robber"
+    for action, result in moves:
+        coordinate, victim = action[2]
+        assert isinstance(coordinate, list), "the tile is public"
+        assert victim is None or isinstance(victim, str), "who was robbed is public"
+        assert result is None, "which resource is not"
+
+
+def test_a_spectator_still_sees_everything():
+    game, _ = played_game()
+    view = client_view(state_to_json(game))
+    assert "P1_WOOD_IN_HAND" in view["player_state"]
+    assert "P1_NUM_RESOURCES_IN_HAND" not in view["player_state"]
+
+
+def test_perspective_accepts_a_color_or_its_name():
+    game, _ = played_game()
+    doc = state_to_json(game)
+    assert client_view(doc, Color.RED) == client_view(doc, "RED")
+
+
+def test_a_perspective_that_is_not_seated_is_rejected():
+    game, _ = played_game(players=[RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)])
+    with pytest.raises(ValueError, match="not seated in this game"):
+        client_view(state_to_json(game), Color.WHITE)
+
+
+def test_the_honest_view_does_not_mutate_the_document():
+    game, _ = played_game()
+    doc = state_to_json(game)
+    before = json.dumps(doc)
+    client_view(doc, Color.RED)
+    assert json.dumps(doc) == before
+
+
+def test_a_redacted_view_cannot_rebuild_a_game():
+    """Hydrating from what the browser was sent would silently lose the deck."""
+    game, players = played_game(ticks=10)
+    for view in (
+        client_view(state_to_json(game)),
+        client_view(state_to_json(game), Color.RED),
+    ):
+        with pytest.raises(ValueError, match="not the authoritative document"):
+            state_from_json(view, players)
+
+
 def test_mismatched_players_are_rejected():
     game, _ = played_game(ticks=10)
     doc = state_to_json(game)

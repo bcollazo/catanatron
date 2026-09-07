@@ -203,6 +203,21 @@ def test_decide_message_hides_the_deck_order():
     assert "seed" not in message["state"]["game"]
 
 
+def test_decide_message_hides_the_other_hands():
+    """A bot on the wire gets the honest view, always. There is no flag."""
+    random.seed(2)
+    game = Game([RandomPlayer(color) for color in Color])
+    for _ in range(40):
+        game.play_tick()
+    state = decide_message(game, Color.RED)["state"]
+
+    mine = state["colors"].index(Color.RED.value)
+    theirs = (mine + 1) % len(state["colors"])
+    assert f"P{mine}_WOOD_IN_HAND" in state["player_state"]
+    assert f"P{theirs}_WOOD_IN_HAND" not in state["player_state"]
+    assert f"P{theirs}_NUM_RESOURCES_IN_HAND" in state["player_state"]
+
+
 def test_reply_must_name_a_playable_action():
     random.seed(2)
     game = Game([RandomPlayer(color) for color in Color])
