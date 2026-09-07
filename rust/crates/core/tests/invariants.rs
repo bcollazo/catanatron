@@ -260,6 +260,42 @@ fn post_roll_road_rejects_unaffordable_or_disconnected_placements_without_mutati
 }
 
 #[test]
+fn generated_post_roll_settlements_validate_apply_and_pay_atomically() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    position.roads[0] = actor.get() + 1;
+    for resource in [
+        Resource::Wood,
+        Resource::Brick,
+        Resource::Sheep,
+        Resource::Wheat,
+    ] {
+        position.players[0].hand[resource.index()] = 1;
+        position.bank[resource.index()] -= 1;
+    }
+    let mut actions = Vec::new();
+    generate_actions(&position, &mut actions);
+    let settlement = actions
+        .iter()
+        .copied()
+        .find(|action| matches!(action, Action::BuildSettlement(_)))
+        .expect("a settlement endpoint on the owned road");
+    assert!(validate_boundary(&position, actor, settlement).is_ok());
+    apply_checked(&mut position, actor, settlement).unwrap();
+    for resource in [
+        Resource::Wood,
+        Resource::Brick,
+        Resource::Sheep,
+        Resource::Wheat,
+    ] {
+        assert_eq!(position.players[0].hand[resource.index()], 0);
+        assert_eq!(position.bank[resource.index()], 19);
+    }
+    assert_eq!(position.players[0].pieces[1], 4);
+}
+
+#[test]
 fn copy_is_independent_and_uses_no_heap_owned_fields() {
     let root = Position::new(4).unwrap();
     let mut child = root;

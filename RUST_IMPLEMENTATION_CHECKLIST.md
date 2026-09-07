@@ -80,4 +80,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (12 tests) and `cargo fmt --check --manifest-path rust/Cargo.toml` pass.
 * Next action: implement checked settlement construction and its post-roll legal-menu predicate; then expand E04 construction coverage.
 
+### 2026-09-07 — E04 post-roll settlement checkpoint
+
+* Added post-roll paid-settlement generation and atomic application. The checked path enforces empty/distance-legal vertices, an incident owned road, inventory, and wood/brick/sheep/wheat payment.
+* `cargo test --manifest-path rust/Cargo.toml` (13 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
+* Next action: represent city building kind in canonical state, then implement checked paid city construction and generation.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

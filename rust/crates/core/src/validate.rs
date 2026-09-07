@@ -15,7 +15,9 @@ pub enum IllegalAction {
     InvalidOutcome,
     InsufficientResource(Resource),
     ExhaustedRoads,
+    ExhaustedSettlements,
     InvalidRoadPlacement,
+    InvalidSettlementPlacement,
 }
 
 /// Checks a supplied chance result before an application path can mutate state.
@@ -72,6 +74,7 @@ pub fn validate_boundary(
             | (Phase::PreRoll { .. }, Action::Roll)
             | (Phase::PostRoll { .. }, Action::EndTurn)
             | (Phase::PostRoll { .. }, Action::BuildRoad(_))
+            | (Phase::PostRoll { .. }, Action::BuildSettlement(_))
     );
     if !allowed {
         return Err(IllegalAction::WrongPhase);
@@ -85,6 +88,45 @@ pub fn validate_boundary(
                 }
             }
         }
+    }
+    if let Action::BuildSettlement(node) = action {
+        validate_settlement_placement(position, actor, node)?;
+        if matches!(position.phase, Phase::PostRoll { .. }) {
+            for resource in [
+                Resource::Wood,
+                Resource::Brick,
+                Resource::Sheep,
+                Resource::Wheat,
+            ] {
+                if position.players[usize::from(actor.get())].hand[resource.index()] == 0 {
+                    return Err(IllegalAction::InsufficientResource(resource));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_settlement_placement(
+    position: &Position,
+    actor: PlayerId,
+    node: crate::NodeId,
+) -> Result<(), IllegalAction> {
+    if position.players[usize::from(actor.get())].pieces[1] == 0 {
+        return Err(IllegalAction::ExhaustedSettlements);
+    }
+    if position.buildings[usize::from(node.get())] != 0
+        || crate::node_neighbors(node).any(|near| position.buildings[usize::from(near.get())] != 0)
+    {
+        return Err(IllegalAction::InvalidSettlementPlacement);
+    }
+    if matches!(position.phase, Phase::PostRoll { .. })
+        && !(0..BASE_EDGE_COUNT as u8).any(|raw| {
+            position.roads[usize::from(raw)] == actor.get() + 1
+                && incident(crate::EdgeId::new(raw).expect("base edge"), node)
+        })
+    {
+        return Err(IllegalAction::InvalidSettlementPlacement);
     }
     Ok(())
 }

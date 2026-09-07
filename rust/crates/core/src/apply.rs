@@ -32,27 +32,34 @@ pub fn apply_checked(
             next.phase = Phase::PreRoll { actor: next_actor };
             Status::Decision
         }
-        Action::BuildSettlement(node) => {
-            if next.buildings[usize::from(node.get())] != 0 {
-                return Err(IllegalAction::WrongPhase);
+        Action::BuildSettlement(node) => match next.phase {
+            Phase::SetupSettlement { reverse, .. } => {
+                next.buildings[usize::from(node.get())] = actor.get() + 1;
+                next.players[usize::from(actor.get())].pieces[1] -= 1;
+                next.phase = Phase::SetupRoad {
+                    actor,
+                    settlement: node,
+                    reverse,
+                };
+                Status::Decision
             }
-            let reverse = match next.phase {
-                Phase::SetupSettlement { reverse, .. } => reverse,
-                _ => return Err(IllegalAction::WrongPhase),
-            };
-            if crate::node_neighbors(node).any(|near| next.buildings[usize::from(near.get())] != 0)
-            {
-                return Err(IllegalAction::WrongPhase);
+            Phase::PostRoll { .. } => {
+                next.buildings[usize::from(node.get())] = actor.get() + 1;
+                let player = &mut next.players[usize::from(actor.get())];
+                player.pieces[1] -= 1;
+                for resource in [
+                    crate::Resource::Wood,
+                    crate::Resource::Brick,
+                    crate::Resource::Sheep,
+                    crate::Resource::Wheat,
+                ] {
+                    player.hand[resource.index()] -= 1;
+                    next.bank[resource.index()] += 1;
+                }
+                Status::Decision
             }
-            next.buildings[usize::from(node.get())] = actor.get() + 1;
-            next.players[usize::from(actor.get())].pieces[1] -= 1;
-            next.phase = Phase::SetupRoad {
-                actor,
-                settlement: node,
-                reverse,
-            };
-            Status::Decision
-        }
+            _ => return Err(IllegalAction::WrongPhase),
+        },
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
                 next.roads[usize::from(edge.get())] = actor.get() + 1;
