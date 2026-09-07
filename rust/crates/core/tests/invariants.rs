@@ -1,7 +1,9 @@
 use std::mem::size_of;
 
 use catanatron_core::{apply_checked, Status};
-use catanatron_core::{edge_endpoints, node_neighbors, BASE_EDGE_COUNT, BASE_NODE_COUNT};
+use catanatron_core::{
+    edge_endpoints, generate_actions, node_neighbors, BASE_EDGE_COUNT, BASE_NODE_COUNT,
+};
 use catanatron_core::{
     validate_boundary, validate_outcome, Action, ChanceKind, DevelopmentCard, EdgeId,
     IllegalAction, NodeId, Outcome, Phase, PlayerId, Position, Resource, TileId,
@@ -22,6 +24,24 @@ fn exported_base_topology_has_expected_dense_bounds() {
     let endpoints = edge_endpoints(EdgeId::new(0).unwrap());
     assert_eq!((endpoints.0.get(), endpoints.1.get()), (0, 1));
     assert_eq!(node_neighbors(NodeId::new(0).unwrap()).count(), 3);
+}
+
+#[test]
+fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
+    let mut position = Position::new(2).unwrap();
+    let mut actions = Vec::new();
+    generate_actions(&position, &mut actions);
+    assert_eq!(actions.len(), 54);
+    let settlement = NodeId::new(0).unwrap();
+    position.buildings[0] = 1;
+    position.phase = Phase::SetupRoad {
+        actor: position.actor,
+        settlement,
+        reverse: false,
+    };
+    generate_actions(&position, &mut actions);
+    assert_eq!(actions.len(), 3);
+    assert!(actions.iter().all(|action| matches!(action, Action::BuildRoad(edge) if catanatron_core::incident(*edge, settlement))));
 }
 
 #[test]

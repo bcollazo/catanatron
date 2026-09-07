@@ -8,6 +8,7 @@
 
 mod action;
 mod apply;
+mod generate;
 mod ids;
 mod phase;
 mod position;
@@ -16,6 +17,7 @@ mod validate;
 
 pub use action::{Action, DevelopmentCard, Resource};
 pub use apply::{apply_checked, Transition};
+pub use generate::generate_actions;
 pub use ids::{EdgeId, IdError, NodeId, PlayerId, TileId};
 pub use phase::{ChanceKind, Outcome, Phase, Status, Truncation};
 pub use position::{PlayerState, Position, MAX_PLAYERS};
