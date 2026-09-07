@@ -40,6 +40,10 @@ pub fn apply_checked(
                 Phase::SetupSettlement { reverse, .. } => reverse,
                 _ => return Err(IllegalAction::WrongPhase),
             };
+            if crate::node_neighbors(node).any(|near| next.buildings[usize::from(near.get())] != 0)
+            {
+                return Err(IllegalAction::WrongPhase);
+            }
             next.buildings[usize::from(node.get())] = actor.get() + 1;
             next.players[usize::from(actor.get())].pieces[1] -= 1;
             next.phase = Phase::SetupRoad {
@@ -54,7 +58,11 @@ pub fn apply_checked(
                 return Err(IllegalAction::WrongPhase);
             }
             let reverse = match next.phase {
-                Phase::SetupRoad { reverse, .. } => reverse,
+                Phase::SetupRoad {
+                    settlement,
+                    reverse,
+                    ..
+                } if crate::incident(edge, settlement) => reverse,
                 _ => return Err(IllegalAction::WrongPhase),
             };
             next.roads[usize::from(edge.get())] = actor.get() + 1;
