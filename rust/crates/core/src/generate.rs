@@ -75,30 +75,13 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
                 }
             }
         }
+        Phase::FreeRoad { actor, .. } => append_road_placements(position, actor, out),
         Phase::PostRoll { actor } => {
             out.push(Action::EndTurn);
             append_development_actions(position, actor, out);
             let player = &position.players[usize::from(actor.get())];
             if player.pieces[0] > 0 && player.hand[0] > 0 && player.hand[1] > 0 {
-                for raw in 0..BASE_EDGE_COUNT as u8 {
-                    if position.roads[usize::from(raw)] != 0 {
-                        continue;
-                    }
-                    let edge = EdgeId::new(raw).expect("generated edge");
-                    let (a, b) = crate::edge_endpoints(edge);
-                    let reachable = [a, b].into_iter().any(|node| {
-                        let building = position.buildings[usize::from(node.get())];
-                        crate::building_belongs_to(building, actor)
-                            || (building == 0
-                                && (0..BASE_EDGE_COUNT as u8).any(|other| {
-                                    position.roads[usize::from(other)] == actor.get() + 1
-                                        && crate::incident(EdgeId::new(other).expect("edge"), node)
-                                }))
-                    });
-                    if reachable {
-                        out.push(Action::BuildRoad(edge));
-                    }
-                }
+                append_road_placements(position, actor, out);
             }
             if player.pieces[1] > 0
                 && [0, 1, 2, 3]
@@ -187,6 +170,36 @@ fn append_development_actions(position: &Position, actor: crate::PlayerId, out: 
     {
         for resource in crate::Resource::ALL {
             out.push(Action::Monopoly(resource));
+        }
+    }
+    if player.dev[crate::DevelopmentCard::RoadBuilding.index()] > 0
+        && player.eligible_dev_mask & (1 << crate::DevelopmentCard::RoadBuilding.index()) != 0
+        && player.pieces[0] > 0
+    {
+        let mut probe = *position;
+        probe.phase = Phase::FreeRoad {
+            actor,
+            remaining: 2,
+            resume_post_roll: matches!(position.phase, Phase::PostRoll { .. }),
+        };
+        if (0..BASE_EDGE_COUNT as u8).any(|raw| {
+            crate::validate::validate_road_placement(
+                &probe,
+                actor,
+                EdgeId::new(raw).expect("base edge"),
+            )
+            .is_ok()
+        }) {
+            out.push(Action::RoadBuilding);
+        }
+    }
+}
+
+fn append_road_placements(position: &Position, actor: crate::PlayerId, out: &mut Vec<Action>) {
+    for raw in 0..BASE_EDGE_COUNT as u8 {
+        let edge = EdgeId::new(raw).expect("generated edge");
+        if crate::validate::validate_road_placement(position, actor, edge).is_ok() {
+            out.push(Action::BuildRoad(edge));
         }
     }
 }

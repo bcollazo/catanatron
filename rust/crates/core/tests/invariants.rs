@@ -265,6 +265,36 @@ fn year_of_plenty_and_monopoly_apply_resources_and_card_limit() {
 }
 
 #[test]
+fn road_building_places_free_roads_and_resumes_the_original_turn_phase() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PreRoll { actor };
+    position.buildings[0] = actor.get() + 1;
+    position.players[0].dev[DevelopmentCard::RoadBuilding.index()] = 1;
+    position.players[0].eligible_dev_mask = 1 << DevelopmentCard::RoadBuilding.index();
+    apply_checked(&mut position, actor, Action::RoadBuilding).unwrap();
+    assert!(matches!(
+        position.phase,
+        Phase::FreeRoad { remaining: 2, .. }
+    ));
+    for expected_remaining in [1, 0] {
+        let mut actions = Vec::new();
+        generate_actions(&position, &mut actions);
+        let road = actions[0];
+        apply_checked(&mut position, actor, road).unwrap();
+        if expected_remaining == 1 {
+            assert!(matches!(
+                position.phase,
+                Phase::FreeRoad { remaining: 1, .. }
+            ));
+        }
+    }
+    assert!(matches!(position.phase, Phase::PreRoll { .. }));
+    assert_eq!(position.players[0].pieces[0], 13);
+    assert_eq!(position.players[0].hand, [0; 5]);
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();

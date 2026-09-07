@@ -146,4 +146,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (22 tests), formatting, and Clippy with warnings denied pass.
 * Next action: implement Road Building's free-road phase, including early exhaustion and pre/post-roll resume.
 
+### 2026-09-07 — E06 Road Building checkpoint
+
+* Added Road Building eligibility/menu generation and a typed free-road phase. It places up to two geometry-legal roads without payment, stops if pieces or placements are exhausted, and resumes pre-roll/post-roll correctly.
+* `cargo test --manifest-path rust/Cargo.toml` (23 tests), formatting, and Clippy with warnings denied pass.
+* Next action: add maritime trading and then domestic trade state/response flows.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

@@ -185,6 +185,16 @@ pub fn apply_checked(
             consume_development_card(&mut next, actor, crate::DevelopmentCard::Monopoly);
             Status::Decision
         }
+        Action::RoadBuilding => {
+            let resume_post_roll = matches!(next.phase, Phase::PostRoll { .. });
+            consume_development_card(&mut next, actor, crate::DevelopmentCard::RoadBuilding);
+            next.phase = Phase::FreeRoad {
+                actor,
+                remaining: 2,
+                resume_post_roll,
+            };
+            Status::Decision
+        }
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
                 next.roads[usize::from(edge.get())] = actor.get() + 1;
@@ -193,6 +203,37 @@ pub fn apply_checked(
                 for resource in [crate::Resource::Wood, crate::Resource::Brick] {
                     player.hand[resource.index()] -= 1;
                     next.bank[resource.index()] += 1;
+                }
+                Status::Decision
+            }
+            Phase::FreeRoad {
+                remaining,
+                resume_post_roll,
+                ..
+            } => {
+                next.roads[usize::from(edge.get())] = actor.get() + 1;
+                next.players[usize::from(actor.get())].pieces[0] -= 1;
+                let remaining = remaining - 1;
+                next.phase = Phase::FreeRoad {
+                    actor,
+                    remaining,
+                    resume_post_roll,
+                };
+                let can_continue = remaining > 0
+                    && (0..crate::BASE_EDGE_COUNT as u8).any(|raw| {
+                        crate::validate::validate_road_placement(
+                            &next,
+                            actor,
+                            crate::EdgeId::new(raw).expect("base edge"),
+                        )
+                        .is_ok()
+                    });
+                if !can_continue {
+                    next.phase = if resume_post_roll {
+                        Phase::PostRoll { actor }
+                    } else {
+                        Phase::PreRoll { actor }
+                    };
                 }
                 Status::Decision
             }

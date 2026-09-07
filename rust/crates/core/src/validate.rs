@@ -82,6 +82,7 @@ pub fn validate_boundary(
             | (Phase::PreRoll { .. }, Action::PlayKnight)
             | (Phase::PreRoll { .. }, Action::YearOfPlenty { .. })
             | (Phase::PreRoll { .. }, Action::Monopoly(_))
+            | (Phase::PreRoll { .. }, Action::RoadBuilding)
             | (Phase::PostRoll { .. }, Action::EndTurn)
             | (Phase::PostRoll { .. }, Action::BuildRoad(_))
             | (Phase::PostRoll { .. }, Action::BuildSettlement(_))
@@ -90,8 +91,10 @@ pub fn validate_boundary(
             | (Phase::PostRoll { .. }, Action::PlayKnight)
             | (Phase::PostRoll { .. }, Action::YearOfPlenty { .. })
             | (Phase::PostRoll { .. }, Action::Monopoly(_))
+            | (Phase::PostRoll { .. }, Action::RoadBuilding)
             | (Phase::Discard { .. }, Action::Discard(_))
             | (Phase::Robber { .. }, Action::MoveRobber { .. })
+            | (Phase::FreeRoad { .. }, Action::BuildRoad(_))
     );
     if !allowed {
         return Err(IllegalAction::WrongPhase);
@@ -198,6 +201,21 @@ pub fn validate_boundary(
     if matches!(action, Action::Monopoly(_)) {
         validate_development_card(position, actor, crate::DevelopmentCard::Monopoly)?;
     }
+    if matches!(action, Action::RoadBuilding) {
+        validate_development_card(position, actor, crate::DevelopmentCard::RoadBuilding)?;
+        let mut probe = *position;
+        probe.phase = Phase::FreeRoad {
+            actor,
+            remaining: 2,
+            resume_post_roll: matches!(position.phase, Phase::PostRoll { .. }),
+        };
+        if !(0..crate::BASE_EDGE_COUNT as u8).any(|raw| {
+            validate_road_placement(&probe, actor, crate::EdgeId::new(raw).expect("base edge"))
+                .is_ok()
+        }) {
+            return Err(IllegalAction::InvalidRoadPlacement);
+        }
+    }
     Ok(())
 }
 
@@ -241,7 +259,7 @@ fn validate_settlement_placement(
     Ok(())
 }
 
-fn validate_road_placement(
+pub(crate) fn validate_road_placement(
     position: &Position,
     actor: PlayerId,
     edge: crate::EdgeId,
@@ -254,7 +272,7 @@ fn validate_road_placement(
     }
     let connected = match position.phase {
         Phase::SetupRoad { settlement, .. } => incident(edge, settlement),
-        Phase::PostRoll { .. } => {
+        Phase::PostRoll { .. } | Phase::FreeRoad { .. } => {
             let (first, second) = edge_endpoints(edge);
             [first, second].into_iter().any(|node| {
                 let building = position.buildings[usize::from(node.get())];
