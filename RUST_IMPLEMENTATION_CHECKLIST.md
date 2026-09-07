@@ -74,4 +74,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * Created the dependency-free `catanatron-core` workspace member with safe-Rust policy, release settings, committed lockfile, and a runnable workspace README.
 * `cargo check`, formatting, and unit tests passed. No production crate depends on Python, JSON, or search code; the planning probe remains outside the workspace.
 
+### 2026-09-07 — E04 post-roll road checkpoint
+
+* Added post-roll paid-road generation, checked geometry/resource/inventory validation, and atomic application. A generated road now pays wood and brick to the bank, consumes a road piece, and leaves the actor in post-roll.
+* `cargo test --manifest-path rust/Cargo.toml` (12 tests) and `cargo fmt --check --manifest-path rust/Cargo.toml` pass.
+* Next action: implement checked settlement construction and its post-roll legal-menu predicate; then expand E04 construction coverage.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

@@ -203,6 +203,63 @@ fn ending_turn_advances_active_actor_and_clears_dev_flag() {
 }
 
 #[test]
+fn generated_post_roll_roads_validate_apply_and_pay_atomically() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    position.buildings[0] = actor.get() + 1;
+    position.players[0].hand[Resource::Wood.index()] = 1;
+    position.players[0].hand[Resource::Brick.index()] = 1;
+    position.bank[Resource::Wood.index()] -= 1;
+    position.bank[Resource::Brick.index()] -= 1;
+    let mut actions = Vec::new();
+    generate_actions(&position, &mut actions);
+    let road = actions
+        .iter()
+        .copied()
+        .find(|action| matches!(action, Action::BuildRoad(_)))
+        .expect("a road incident to the owned building");
+    assert!(validate_boundary(&position, actor, road).is_ok());
+    apply_checked(&mut position, actor, road).unwrap();
+    assert_eq!(position.players[0].hand[Resource::Wood.index()], 0);
+    assert_eq!(position.players[0].hand[Resource::Brick.index()], 0);
+    assert_eq!(position.bank[Resource::Wood.index()], 19);
+    assert_eq!(position.bank[Resource::Brick.index()], 19);
+    assert_eq!(position.players[0].pieces[0], 14);
+    assert!(matches!(position.phase, Phase::PostRoll { .. }));
+}
+
+#[test]
+fn post_roll_road_rejects_unaffordable_or_disconnected_placements_without_mutation() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    position.buildings[0] = actor.get() + 1;
+    let original = position;
+    assert_eq!(
+        apply_checked(
+            &mut position,
+            actor,
+            Action::BuildRoad(EdgeId::new(0).unwrap())
+        ),
+        Err(IllegalAction::InsufficientResource(Resource::Wood))
+    );
+    assert_eq!(position, original);
+    position.players[0].hand[Resource::Wood.index()] = 1;
+    position.players[0].hand[Resource::Brick.index()] = 1;
+    position.buildings[0] = 0;
+    assert_eq!(
+        apply_checked(
+            &mut position,
+            actor,
+            Action::BuildRoad(EdgeId::new(0).unwrap())
+        ),
+        Err(IllegalAction::InvalidRoadPlacement)
+    );
+    assert_eq!(position.roads, original.roads);
+}
+
+#[test]
 fn copy_is_independent_and_uses_no_heap_owned_fields() {
     let root = Position::new(4).unwrap();
     let mut child = root;
