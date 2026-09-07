@@ -1,0 +1,116 @@
+[
+  {
+    "history": 0,
+    "bytes": 6603,
+    "construction": {
+      "name": "pr386_decide_construct_json",
+      "unit": "ns/op",
+      "iterations": 50,
+      "samples": [
+        42760.0,
+        42498.0,
+        45716.0,
+        42698.0,
+        42432.0,
+        42698.0,
+        42530.0
+      ],
+      "median": 42698.0,
+      "min": 42432.0,
+      "max": 45716.0
+    },
+    "persistent_echo": {
+      "name": "prebuilt_json_echo_roundtrip",
+      "unit": "ns/op",
+      "iterations": 50,
+      "samples": [
+        76138.0,
+        78644.0,
+        59764.0,
+        73048.0,
+        73824.0,
+        70784.0,
+        95458.0
+      ],
+      "median": 73824.0,
+      "min": 59764.0,
+      "max": 95458.0
+    }
+  },
+  {
+    "history": 512,
+    "bytes": 28732,
+    "construction": {
+      "name": "pr386_decide_construct_json",
+      "unit": "ns/op",
+      "iterations": 50,
+      "samples": [
+        690100.0,
+        659832.0,
+        563170.0,
+        629874.0,
+        624432.0,
+        555342.0,
+        648176.0
+      ],
+      "median": 629874.0,
+      "min": 555342.0,
+      "max": 690100.0
+    },
+    "persistent_echo": {
+      "name": "prebuilt_json_echo_roundtrip",
+      "unit": "ns/op",
+      "iterations": 50,
+      "samples": [
+        291974.0,
+        271942.0,
+        302402.0,
+        284376.0,
+        289624.0,
+        303322.0,
+        293662.0
+      ],
+      "median": 291974.0,
+      "min": 271942.0,
+      "max": 303322.0
+    }
+  },
+  {
+    "history": 1229,
+    "bytes": 63231,
+    "construction": {
+      "name": "pr386_decide_construct_json",
+      "unit": "ns/op",
+      "iterations": 50,
+      "samples": [
+        1474276.0,
+        1458368.0,
+        1453832.0,
+        1408318.0,
+        1451584.0,
+        1364452.0,
+        1468014.0
+      ],
+      "median": 1453832.0,
+      "min": 1364452.0,
+      "max": 1474276.0
+    },
+    "persistent_echo": {
+      "name": "prebuilt_json_echo_roundtrip",
+      "unit": "ns/op",
+      "iterations": 50,
+      "samples": [
+        630142.0,
+        591166.0,
+        594578.0,
+        653150.0,
+        634616.0,
+        622030.0,
+        664676.0
+      ],
+      "median": 630142.0,
+      "min": 591166.0,
+      "max": 664676.0
+    }
+  }
+]
