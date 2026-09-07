@@ -45,7 +45,10 @@ pub enum Phase {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChanceKind {
     Dice,
-    Theft { victim: PlayerId },
+    Theft {
+        victim: PlayerId,
+        resume_post_roll: bool,
+    },
     DevelopmentCard,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

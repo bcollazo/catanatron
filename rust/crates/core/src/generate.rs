@@ -29,7 +29,10 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
                 }
             }
         }
-        Phase::PreRoll { .. } => out.push(Action::Roll),
+        Phase::PreRoll { actor } => {
+            out.push(Action::Roll);
+            append_knight(position, actor, out);
+        }
         Phase::Discard { actor, .. } => {
             for resource in crate::Resource::ALL {
                 if position.players[usize::from(actor.get())].hand[resource.index()] > 0 {
@@ -74,6 +77,7 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
         }
         Phase::PostRoll { actor } => {
             out.push(Action::EndTurn);
+            append_knight(position, actor, out);
             let player = &position.players[usize::from(actor.get())];
             if player.pieces[0] > 0 && player.hand[0] > 0 && player.hand[1] > 0 {
                 for raw in 0..BASE_EDGE_COUNT as u8 {
@@ -137,5 +141,15 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
             }
         }
         _ => {}
+    }
+}
+
+fn append_knight(position: &Position, actor: crate::PlayerId, out: &mut Vec<Action>) {
+    let player = &position.players[usize::from(actor.get())];
+    if !player.played_dev
+        && player.dev[crate::DevelopmentCard::Knight.index()] > 0
+        && player.eligible_dev_mask & 1 != 0
+    {
+        out.push(Action::PlayKnight);
     }
 }

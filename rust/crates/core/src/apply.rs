@@ -26,6 +26,15 @@ pub fn apply_checked(
             let next_actor = crate::PlayerId::new((actor.get() + 1) % next.player_count)
                 .expect("active player count bounds next actor");
             next.players[usize::from(actor.get())].played_dev = false;
+            next.players[usize::from(actor.get())].eligible_dev_mask = next.players
+                [usize::from(actor.get())]
+            .dev
+            .iter()
+            .take(4)
+            .enumerate()
+            .fold(0, |mask, (index, &count)| {
+                mask | ((count > 0) as u8) << index
+            });
             next.actor = next_actor;
             next.turn_owner = next_actor;
             next.turns = next.turns.saturating_add(1);
@@ -119,17 +128,42 @@ pub fn apply_checked(
             Status::Decision
         }
         Action::MoveRobber { tile, victim } => {
+            let resume_post_roll = match next.phase {
+                Phase::Robber {
+                    resume_post_roll, ..
+                } => resume_post_roll,
+                _ => return Err(IllegalAction::WrongPhase),
+            };
             next.robber = tile.get();
             if let Some(victim) = victim {
                 next.phase = Phase::Chance {
                     actor,
-                    kind: ChanceKind::Theft { victim },
+                    kind: ChanceKind::Theft {
+                        victim,
+                        resume_post_roll,
+                    },
                 };
                 Status::Chance
             } else {
-                next.phase = Phase::PostRoll { actor };
+                next.phase = if resume_post_roll {
+                    Phase::PostRoll { actor }
+                } else {
+                    Phase::PreRoll { actor }
+                };
                 Status::Decision
             }
+        }
+        Action::PlayKnight => {
+            let resume_post_roll = matches!(next.phase, Phase::PostRoll { .. });
+            let player = &mut next.players[usize::from(actor.get())];
+            player.dev[crate::DevelopmentCard::Knight.index()] -= 1;
+            player.played_dev = true;
+            player.played_knights += 1;
+            next.phase = Phase::Robber {
+                actor,
+                resume_post_roll,
+            };
+            Status::Decision
         }
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
@@ -258,13 +292,21 @@ pub fn apply_outcome_checked(
         (
             Phase::Chance {
                 actor,
-                kind: ChanceKind::Theft { victim },
+                kind:
+                    ChanceKind::Theft {
+                        victim,
+                        resume_post_roll,
+                    },
             },
             crate::Outcome::StolenResource(resource),
         ) => {
             next.players[usize::from(victim.get())].hand[resource.index()] -= 1;
             next.players[usize::from(actor.get())].hand[resource.index()] += 1;
-            next.phase = Phase::PostRoll { actor };
+            next.phase = if resume_post_roll {
+                Phase::PostRoll { actor }
+            } else {
+                Phase::PreRoll { actor }
+            };
             Status::Decision
         }
         _ => return Err(IllegalAction::InvalidOutcome),

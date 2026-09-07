@@ -201,6 +201,39 @@ fn robber_moves_to_a_victim_and_resolves_a_checked_theft() {
 }
 
 #[test]
+fn eligible_knight_can_play_before_roll_and_returns_to_pre_roll_after_theft() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    let victim = PlayerId::new(1).unwrap();
+    position.phase = Phase::PreRoll { actor };
+    position.players[0].dev[DevelopmentCard::Knight.index()] = 1;
+    position.players[0].eligible_dev_mask = 1;
+    position.buildings[0] = victim.get() + 1;
+    position.players[1].hand[Resource::Ore.index()] = 1;
+    apply_checked(&mut position, actor, Action::PlayKnight).unwrap();
+    assert!(matches!(
+        position.phase,
+        Phase::Robber {
+            resume_post_roll: false,
+            ..
+        }
+    ));
+    apply_checked(
+        &mut position,
+        actor,
+        Action::MoveRobber {
+            tile: TileId::new(9).unwrap(),
+            victim: Some(victim),
+        },
+    )
+    .unwrap();
+    apply_outcome_checked(&mut position, Outcome::StolenResource(Resource::Ore)).unwrap();
+    assert!(matches!(position.phase, Phase::PreRoll { .. }));
+    assert!(position.players[0].played_dev);
+    assert_eq!(position.players[0].played_knights, 1);
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();
@@ -311,6 +344,7 @@ fn chance_outcomes_must_match_pending_phase_and_available_cards() {
         actor: position.actor,
         kind: ChanceKind::Theft {
             victim: PlayerId::new(1).unwrap(),
+            resume_post_roll: true,
         },
     };
     position.players[1].hand[Resource::Ore.index()] = 1;

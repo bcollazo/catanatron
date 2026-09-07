@@ -134,4 +134,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (20 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
 * Next action: add friendly-robber configuration/fallback coverage and audit E05 resume semantics before marking E05 complete.
 
+### 2026-09-07 — E06 Knight/resume checkpoint
+
+* Theft chance now preserves whether robber resolution must resume pre-roll or post-roll. Added end-turn development eligibility refresh plus checked Knight generation/application, card consumption, played-card limit, and played-knight count.
+* `cargo test --manifest-path rust/Cargo.toml` (21 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
+* Next action: implement Year of Plenty, Monopoly, and Road Building before awards/trading.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

@@ -23,6 +23,7 @@ pub enum IllegalAction {
     InvalidSettlementPlacement,
     InvalidCityPlacement,
     InvalidRobberMove,
+    IneligibleDevelopmentCard,
 }
 
 /// Checks a supplied chance result before an application path can mutate state.
@@ -37,7 +38,7 @@ pub fn validate_outcome(position: &Position, outcome: Outcome) -> Result<(), Ill
         ) if (1..=6).contains(&first) && (1..=6).contains(&second) => Ok(()),
         (
             Phase::Chance {
-                kind: ChanceKind::Theft { victim },
+                kind: ChanceKind::Theft { victim, .. },
                 ..
             },
             Outcome::StolenResource(resource),
@@ -77,11 +78,13 @@ pub fn validate_boundary(
         (Phase::SetupSettlement { .. }, Action::BuildSettlement(_))
             | (Phase::SetupRoad { .. }, Action::BuildRoad(_))
             | (Phase::PreRoll { .. }, Action::Roll)
+            | (Phase::PreRoll { .. }, Action::PlayKnight)
             | (Phase::PostRoll { .. }, Action::EndTurn)
             | (Phase::PostRoll { .. }, Action::BuildRoad(_))
             | (Phase::PostRoll { .. }, Action::BuildSettlement(_))
             | (Phase::PostRoll { .. }, Action::BuildCity(_))
             | (Phase::PostRoll { .. }, Action::BuyDevelopmentCard)
+            | (Phase::PostRoll { .. }, Action::PlayKnight)
             | (Phase::Discard { .. }, Action::Discard(_))
             | (Phase::Robber { .. }, Action::MoveRobber { .. })
     );
@@ -170,6 +173,15 @@ pub fn validate_boundary(
             )
         }) {
             return Err(IllegalAction::InvalidRobberMove);
+        }
+    }
+    if matches!(action, Action::PlayKnight) {
+        let player = &position.players[usize::from(actor.get())];
+        if player.played_dev
+            || player.dev[crate::DevelopmentCard::Knight.index()] == 0
+            || player.eligible_dev_mask & 1 == 0
+        {
+            return Err(IllegalAction::IneligibleDevelopmentCard);
         }
     }
     Ok(())
