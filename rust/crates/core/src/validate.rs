@@ -1,5 +1,5 @@
 //! Non-mutating checked boundary validation shared by later rule transitions.
-use crate::{Action, Phase, PlayerId, Position};
+use crate::{Action, ChanceKind, Outcome, Phase, PlayerId, Position};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IllegalAction {
     InvalidPlayerCount(u8),
@@ -9,6 +9,35 @@ pub enum IllegalAction {
     },
     WrongPhase,
     Terminal,
+    InvalidOutcome,
+}
+
+/// Checks a supplied chance result before an application path can mutate state.
+pub fn validate_outcome(position: &Position, outcome: Outcome) -> Result<(), IllegalAction> {
+    match (position.phase, outcome) {
+        (
+            Phase::Chance {
+                kind: ChanceKind::Dice,
+                ..
+            },
+            Outcome::Dice { first, second },
+        ) if (1..=6).contains(&first) && (1..=6).contains(&second) => Ok(()),
+        (
+            Phase::Chance {
+                kind: ChanceKind::Theft { victim },
+                ..
+            },
+            Outcome::StolenResource(resource),
+        ) if position.players[usize::from(victim.get())].hand[resource.index()] > 0 => Ok(()),
+        (
+            Phase::Chance {
+                kind: ChanceKind::DevelopmentCard,
+                ..
+            },
+            Outcome::DevelopmentCard(card),
+        ) if position.dev_bank[card.index()] > 0 => Ok(()),
+        _ => Err(IllegalAction::InvalidOutcome),
+    }
 }
 pub fn validate_boundary(
     position: &Position,

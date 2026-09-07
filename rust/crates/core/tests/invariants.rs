@@ -1,8 +1,8 @@
 use std::mem::size_of;
 
 use catanatron_core::{
-    validate_boundary, Action, ChanceKind, EdgeId, IllegalAction, NodeId, Phase, PlayerId,
-    Position, TileId,
+    validate_boundary, validate_outcome, Action, ChanceKind, DevelopmentCard, EdgeId,
+    IllegalAction, NodeId, Outcome, Phase, PlayerId, Position, Resource, TileId,
 };
 
 #[test]
@@ -44,6 +44,50 @@ fn boundary_rejects_wrong_actor_phase_chance_and_terminal() {
     assert_eq!(
         validate_boundary(&position, position.actor, Action::Roll),
         Err(IllegalAction::Terminal)
+    );
+}
+
+#[test]
+fn chance_outcomes_must_match_pending_phase_and_available_cards() {
+    let mut position = Position::new(2).unwrap();
+    position.phase = Phase::Chance {
+        actor: position.actor,
+        kind: ChanceKind::Dice,
+    };
+    assert!(validate_outcome(
+        &position,
+        Outcome::Dice {
+            first: 6,
+            second: 1
+        }
+    )
+    .is_ok());
+    assert_eq!(
+        validate_outcome(
+            &position,
+            Outcome::Dice {
+                first: 0,
+                second: 7
+            }
+        ),
+        Err(IllegalAction::InvalidOutcome)
+    );
+    position.phase = Phase::Chance {
+        actor: position.actor,
+        kind: ChanceKind::Theft {
+            victim: PlayerId::new(1).unwrap(),
+        },
+    };
+    position.players[1].hand[Resource::Ore.index()] = 1;
+    assert!(validate_outcome(&position, Outcome::StolenResource(Resource::Ore)).is_ok());
+    position.phase = Phase::Chance {
+        actor: position.actor,
+        kind: ChanceKind::DevelopmentCard,
+    };
+    position.dev_bank[DevelopmentCard::Knight.index()] = 0;
+    assert_eq!(
+        validate_outcome(&position, Outcome::DevelopmentCard(DevelopmentCard::Knight)),
+        Err(IllegalAction::InvalidOutcome)
     );
 }
 
