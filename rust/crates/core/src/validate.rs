@@ -61,7 +61,10 @@ pub fn validate_boundary(
     }
     let allowed = matches!(
         (position.phase, action),
-        (Phase::PreRoll { .. }, Action::Roll) | (Phase::PostRoll { .. }, Action::EndTurn)
+        (Phase::SetupSettlement { .. }, Action::BuildSettlement(_))
+            | (Phase::SetupRoad { .. }, Action::BuildRoad(_))
+            | (Phase::PreRoll { .. }, Action::Roll)
+            | (Phase::PostRoll { .. }, Action::EndTurn)
     );
     if allowed {
         Ok(())

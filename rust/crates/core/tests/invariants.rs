@@ -45,6 +45,32 @@ fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
 }
 
 #[test]
+fn setup_application_follows_two_player_snake_order() {
+    let mut position = Position::new(2).unwrap();
+    let steps = [(0, 0), (1, 24), (1, 26), (0, 40)];
+    for (expected_actor, node) in steps {
+        assert_eq!(position.actor.get(), expected_actor);
+        let actor = position.actor;
+        apply_checked(
+            &mut position,
+            actor,
+            Action::BuildSettlement(NodeId::new(node).unwrap()),
+        )
+        .unwrap();
+        let road = (0..BASE_EDGE_COUNT as u8)
+            .map(|raw| EdgeId::new(raw).unwrap())
+            .find(|edge| {
+                catanatron_core::incident(*edge, NodeId::new(node).unwrap())
+                    && position.roads[usize::from(edge.get())] == 0
+            })
+            .unwrap();
+        apply_checked(&mut position, actor, Action::BuildRoad(road)).unwrap();
+    }
+    assert_eq!(position.actor.get(), 0);
+    assert!(matches!(position.phase, Phase::PreRoll { .. }));
+}
+
+#[test]
 fn boundary_rejects_wrong_actor_phase_chance_and_terminal() {
     let mut position = Position::new(2).unwrap();
     let player_one = PlayerId::new(1).unwrap();

@@ -32,6 +32,56 @@ pub fn apply_checked(
             next.phase = Phase::PreRoll { actor: next_actor };
             Status::Decision
         }
+        Action::BuildSettlement(node) => {
+            if next.buildings[usize::from(node.get())] != 0 {
+                return Err(IllegalAction::WrongPhase);
+            }
+            let reverse = match next.phase {
+                Phase::SetupSettlement { reverse, .. } => reverse,
+                _ => return Err(IllegalAction::WrongPhase),
+            };
+            next.buildings[usize::from(node.get())] = actor.get() + 1;
+            next.players[usize::from(actor.get())].pieces[1] -= 1;
+            next.phase = Phase::SetupRoad {
+                actor,
+                settlement: node,
+                reverse,
+            };
+            Status::Decision
+        }
+        Action::BuildRoad(edge) => {
+            if next.roads[usize::from(edge.get())] != 0 {
+                return Err(IllegalAction::WrongPhase);
+            }
+            let reverse = match next.phase {
+                Phase::SetupRoad { reverse, .. } => reverse,
+                _ => return Err(IllegalAction::WrongPhase),
+            };
+            next.roads[usize::from(edge.get())] = actor.get() + 1;
+            next.players[usize::from(actor.get())].pieces[0] -= 1;
+            let settlements = next.buildings.iter().filter(|&&owner| owner != 0).count();
+            if settlements == usize::from(next.player_count) * 2 {
+                next.actor = crate::PlayerId::new(0).expect("seat zero");
+                next.turn_owner = next.actor;
+                next.phase = Phase::PreRoll { actor: next.actor };
+            } else {
+                let next_raw = if settlements == usize::from(next.player_count) {
+                    actor.get()
+                } else if reverse {
+                    (actor.get() + next.player_count - 1) % next.player_count
+                } else {
+                    (actor.get() + 1) % next.player_count
+                };
+                let next_actor = crate::PlayerId::new(next_raw).expect("active seat");
+                next.actor = next_actor;
+                next.turn_owner = next_actor;
+                next.phase = Phase::SetupSettlement {
+                    actor: next_actor,
+                    reverse: settlements >= usize::from(next.player_count),
+                };
+            }
+            Status::Decision
+        }
         _ => return Err(IllegalAction::WrongPhase),
     };
     *position = next;
