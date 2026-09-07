@@ -151,6 +151,8 @@ class ValueFunctionPlayer(Player):
     For now, the base value function only considers 1 enemy player.
     """
 
+    LABEL = "Value Function"
+
     class Params(BaseParams):
         value_fn: Literal["base", "contender"] = "base"
         epsilon: Optional[float] = None

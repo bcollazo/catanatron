@@ -27,6 +27,7 @@ class WebHumanPlayer(ValueFunctionPlayer):
     """
 
     IS_BOT = False
+    LABEL = "Human"
 
 
 def register_web_players(registry=REGISTRY):
@@ -37,6 +38,6 @@ def register_web_players(registry=REGISTRY):
     other builtins are already registered under their own keys, so aliasing
     them here would just show duplicates in the UI's dropdown.
     """
-    registry.register("CATANATRON", Catanatron, name="Catanatron", replace=True)
-    registry.register("HUMAN", WebHumanPlayer, name="Human", replace=True)
+    registry.register("CATANATRON", Catanatron, replace=True)
+    registry.register("HUMAN", WebHumanPlayer, replace=True)
     return registry

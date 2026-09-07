@@ -45,6 +45,8 @@ class Player(GameObserver):
     Params: Any = NoParams
     #: False for players whose decisions come from a human.
     IS_BOT = True
+    #: Display name, when the class name is not the one to show a user.
+    LABEL = ""
 
     def __init__(self, color: Color, params: Optional[Any] = None):
         """Initialize the player
@@ -72,7 +74,7 @@ class Player(GameObserver):
         raise NotImplementedError
 
     def __repr__(self):
-        fields = self.params.model_dump() if isinstance(self.params, BaseParams) else {}
+        fields = vars(self.params) if isinstance(self.params, BaseParams) else {}
         scalars = {
             k: v for k, v in fields.items() if isinstance(v, (int, float, str, bool))
         }
@@ -92,6 +94,7 @@ class SimplePlayer(Player):
 class HumanPlayer(Player):
     """Human player that selects which action to take using standard input"""
 
+    LABEL = "Human (terminal)"
     IS_BOT = False
 
     class Params(BaseParams):
@@ -115,6 +118,8 @@ class HumanPlayer(Player):
 
 class RandomPlayer(Player):
     """Random AI player that selects an action randomly from the list of playable_actions"""
+
+    LABEL = "Random"
 
     def decide(self, game, playable_actions):
         return random.choice(playable_actions)

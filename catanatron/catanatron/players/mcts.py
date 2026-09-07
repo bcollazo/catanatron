@@ -15,6 +15,8 @@ EXP_C = 2**0.5
 
 
 class MCTSPlayer(Player):
+    LABEL = "MCTS"
+
     class Params(BaseParams):
         num_simulations: int = SIMULATIONS
         prunning: bool = False

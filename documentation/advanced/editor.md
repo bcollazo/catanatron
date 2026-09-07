@@ -38,7 +38,7 @@ catanatron-play --bot RUSH=~/bots/mine.py#CityRusher --players=R,RUSH
 
 ## Parameters
 
-Declare what your bot can tune as a nested `Params` model:
+Declare what your bot can tune as a nested `Params` dataclass:
 
 ```python
 from catanatron import BaseParams

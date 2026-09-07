@@ -1,105 +1,133 @@
 """A player's tunable configuration.
 
-Each player class declares what it can tune as a nested ``Params`` model.
-That declaration is the only source of truth: the CLI coerces command-line
-strings into the declared types, ``--help-players`` lists them, and
-``GET /api/players`` publishes them so a UI can render a form.
-
-Validation is pydantic's, so a wrong type or an unknown name fails at
-construction with a clear message rather than somewhere deep in a game.
+Each player class declares what it can tune as a nested ``Params``, a frozen
+dataclass. That declaration is the only source of truth: the CLI coerces
+command-line strings into the declared types, ``--help-players`` lists them,
+and ``GET /api/players`` publishes them so a UI can render a form.
 """
 
-from typing import Any, Dict, List, Literal, Sequence, get_args, get_origin
-
-from pydantic import BaseModel, ConfigDict, ValidationError
+import copy
+import dataclasses
+from typing import Literal, get_args, get_origin, get_type_hints
 
 
 class ParamsError(ValueError):
     """Params that cannot be built from what the user asked for."""
 
 
-class BaseParams(BaseModel):
-    """Base for a player's configuration. Immutable, and closed to extras.
-
-    Named ``BaseParams`` rather than ``Params`` so that the nested class can
-    be called ``Params`` without shadowing its own base:
+class BaseParams:
+    """Base for a player's configuration. A frozen dataclass, so it is
+    immutable, comparable, and rejects params it does not declare::
 
         class MyBot(Player):
             class Params(BaseParams):
                 aggression: int = 1
     """
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for name in getattr(cls, "__annotations__", {}):
+            default = getattr(cls, name, None)
+            # A mutable default would otherwise be shared by every instance.
+            if isinstance(default, (dict, list, set)):
+                factory = lambda value=default: copy.deepcopy(value)  # noqa: E731
+                setattr(cls, name, dataclasses.field(default_factory=factory))
+        dataclasses.dataclass(frozen=True)(cls)
 
 
 class NoParams(BaseParams):
     """For players with nothing to tune."""
 
 
-#: Types a param can have and still be settable from a CLI string or an API
-#: request. Anything else is for programmatic use only.
-SETTABLE = {int: "int", float: "float", str: "str", bool: "bool"}
+def _to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if str(value).strip().lower() in ("1", "true", "yes", "on"):
+        return True
+    if str(value).strip().lower() in ("0", "false", "no", "off"):
+        return False
+    raise ValueError(value)
 
 
-def _type_name(annotation):
-    """A JSON-friendly name for a field's type, or None if it is not settable."""
-    if annotation in SETTABLE:
-        return SETTABLE[annotation]
-    if get_origin(annotation) is Literal:
-        # Literal["base", "contender"] is how a param declares its choices.
-        kinds = {type(a) for a in get_args(annotation)}
-        if len(kinds) == 1 and kinds.pop() in SETTABLE:
-            return SETTABLE[type(get_args(annotation)[0])]
-        return None
-    # Optional[T] is Union[T, None]; take T if it is settable.
-    args = [a for a in get_args(annotation) if a is not type(None)]
-    if len(args) == 1 and args[0] in SETTABLE:
-        return SETTABLE[args[0]]
-    return None
+#: The only types settable from a CLI string or an API request. A param of any
+#: other type stays available to code, but is not published or parsed.
+TYPES = {int: "int", float: "float", str: "str", bool: "bool"}
+COERCE = {"int": int, "float": float, "str": str, "bool": _to_bool}
 
 
-def schema_of(player_class) -> List[Dict[str, Any]]:
-    """What ``GET /api/players`` publishes, and what ``--help-players`` lists."""
+def schema_of(player_class):
+    """The settable params, in declaration order.
+
+    This is both what ``--help-players`` lists and what ``GET /api/players``
+    publishes, and it is the only description ``build_params`` works from.
+    """
+    hints = get_type_hints(player_class.Params)
     schema = []
-    for name, field in player_class.Params.model_fields.items():
-        type_name = _type_name(field.annotation)
-        if type_name is None:
+    for field in dataclasses.fields(player_class.Params):
+        annotation, choices = hints[field.name], None
+        if get_origin(annotation) is Literal:
+            # Literal["base", "contender"] is how a param declares its choices.
+            choices = list(get_args(annotation))
+            annotation = type(choices[0])
+        elif get_args(annotation):
+            # Optional[T] is Union[T, None]; take T.
+            rest = [a for a in get_args(annotation) if a is not type(None)]
+            annotation = rest[0] if len(rest) == 1 else None
+        if annotation not in TYPES:
             continue
         entry = {
-            "name": name,
-            "type": type_name,
-            "default": field.default,
-            "help": field.description or "",
+            "name": field.name,
+            "type": TYPES[annotation],
+            "default": (
+                field.default if field.default is not dataclasses.MISSING else None
+            ),
+            "help": "",
         }
-        if get_origin(field.annotation) is Literal:
-            entry["choices"] = list(get_args(field.annotation))
+        if choices:
+            entry["choices"] = choices
         schema.append(entry)
     return schema
 
 
-def build_params(player_class, args: Sequence = (), named: Dict[str, Any] = None):
+def build_params(player_class, args=(), named=None):
     """Build ``player_class.Params`` from positional and named values.
 
-    Positional values bind to fields in declaration order, so ``AB:2:contender``
+    Positional values bind to params in declaration order, so ``AB:2:contender``
     means depth then value_fn.
     """
-    model = player_class.Params
-    settable = [entry["name"] for entry in schema_of(player_class)]
-    if len(args) > len(settable):
+    name_of = player_class.__name__
+    schema = {entry["name"]: entry for entry in schema_of(player_class)}
+    if len(args) > len(schema):
         raise ParamsError(
-            f"{player_class.__name__} takes at most {len(settable)} positional "
-            f"param(s) ({', '.join(settable) or 'none'}), got {len(args)}"
+            f"{name_of} takes at most {len(schema)} positional param(s) "
+            f"({', '.join(schema) or 'none'}), got {len(args)}"
         )
 
-    values = dict(zip(settable, args))
+    values = dict(zip(schema, args))
     for name, value in (named or {}).items():
         if name in values:
-            raise ParamsError(f"{player_class.__name__}.{name} given twice")
+            raise ParamsError(f"{name_of}.{name} given twice")
         values[name] = value
 
-    try:
-        return model(**values)
-    except ValidationError as error:
-        first = error.errors()[0]
-        where = ".".join(str(part) for part in first["loc"]) or "params"
-        raise ParamsError(f"{player_class.__name__}.{where}: {first['msg']}")
+    for name in list(values):
+        entry, value = schema.get(name), values[name]
+        if entry is None:
+            raise ParamsError(
+                f"{name_of} has no param {name!r}; "
+                f"try one of: {', '.join(schema) or 'none'}"
+            )
+        if value is None and entry["default"] is None:
+            continue  # an optional param, explicitly left unset
+        try:
+            values[name] = COERCE[entry["type"]](value)
+        except (TypeError, ValueError):
+            raise ParamsError(
+                f"{name_of}.{name}: {value!r} is not a valid {entry['type']}"
+            )
+        if choices := entry.get("choices"):
+            if values[name] not in choices:
+                raise ParamsError(
+                    f"{name_of}.{name}: {value!r} is not one of "
+                    f"{', '.join(map(str, choices))}"
+                )
+    return player_class.Params(**values)

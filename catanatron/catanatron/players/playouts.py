@@ -22,6 +22,8 @@ PLAYOUTS_BUDGET = 100
 class GreedyPlayoutsPlayer(Player):
     """For each playable action, play N random playouts."""
 
+    LABEL = "Greedy Playouts"
+
     class Params(BaseParams):
         num_playouts: int = DEFAULT_NUM_PLAYOUTS
 

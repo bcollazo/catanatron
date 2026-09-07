@@ -27,6 +27,8 @@ class AlphaBetaPlayer(Player):
     interesting to see this with prunning.
     """
 
+    LABEL = "AlphaBeta"
+
     class Params(BaseParams):
         # Field order is the CLI's positional order: AB:2:contender
         depth: int = ALPHABETA_DEFAULT_DEPTH
@@ -221,6 +223,8 @@ class SameTurnAlphaBetaPlayer(AlphaBetaPlayer):
     """
     Same like AlphaBeta but only within turn
     """
+
+    LABEL = "Same-Turn AlphaBeta"
 
     def alphabeta(self, game, depth, alpha, beta, deadline, node):
         """AlphaBeta MiniMax Algorithm.

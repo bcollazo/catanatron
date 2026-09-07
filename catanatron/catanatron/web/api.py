@@ -10,7 +10,7 @@ from catanatron.models.player import Color
 from catanatron.game import Game
 from catanatron.models.map import build_map
 from catanatron.players.minimax import AlphaBetaPlayer
-from catanatron.registry import REGISTRY, SpecError
+from catanatron.registry import REGISTRY, describe, SpecError
 from catanatron.web.players import register_web_players
 from catanatron.web.mcts_analysis import GameAnalyzer
 
@@ -23,7 +23,7 @@ register_web_players()
 @bp.route("/players", methods=("GET",))
 def get_players_endpoint():
     """List the players this server can seat, and the params each accepts."""
-    return jsonify([entry.to_json() for entry in REGISTRY.entries()])
+    return jsonify([describe(key, REGISTRY[key]) for key in sorted(REGISTRY)])
 
 
 @bp.route("/games", methods=("POST",))

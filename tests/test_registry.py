@@ -8,7 +8,13 @@ import pytest
 import catanatron.players  # noqa: F401  (registers the builtins)
 from catanatron.models.player import Color, Player
 from catanatron.params import BaseParams
-from catanatron.registry import REGISTRY, PlayerRegistry, SpecError, parse_spec
+from catanatron.registry import (
+    REGISTRY,
+    PlayerRegistry,
+    SpecError,
+    describe,
+    parse_spec,
+)
 
 
 class ExampleBot(Player):
@@ -94,7 +100,7 @@ def test_unknown_key_is_not_silently_dropped(registry):
 
 
 def test_bad_params_surface_as_a_spec_error(registry):
-    with pytest.raises(SpecError, match="valid integer"):
+    with pytest.raises(SpecError, match="'lots' is not a valid int"):
         registry.build("EX:lots", Color.RED)
 
 
@@ -117,12 +123,27 @@ def test_duplicate_registration_requires_replace(registry):
 
 
 def test_entry_to_json_shape(registry):
-    payload = registry.get("EX").to_json()
+    payload = describe("EX", registry["EX"])
     assert payload["key"] == "EX"
     assert payload["name"] == "ExampleBot"
     assert payload["description"] == "An example bot."
     assert payload["is_bot"] is True
     assert [p["name"] for p in payload["params"]] == ["aggression"]
+
+
+def test_label_is_not_inherited_by_a_subclass():
+    """Catanatron subclasses AlphaBetaPlayer; it is its own player, not a
+    second entry named 'AlphaBeta'."""
+
+    class Sharper(ExampleBot):
+        pass
+
+    ExampleBot.LABEL = "Example"
+    try:
+        assert describe("EX", ExampleBot)["name"] == "Example"
+        assert describe("SHARP", Sharper)["name"] == "Sharper"
+    finally:
+        del ExampleBot.LABEL
 
 
 def test_is_bot_comes_from_the_class():
@@ -193,24 +214,24 @@ def bot_file(tmp_path):
 
 
 def test_loads_a_file_outside_the_working_directory(bot_file, registry):
-    entry = registry.register_source(str(bot_file))
-    assert entry.key == "SOLOBOT"
+    assert registry.register_source(str(bot_file)) == "SOLOBOT"
     assert registry.build("SoloBot:3", Color.RED).params.aggression == 3
 
 
 def test_explicit_name_overrides_the_class_name(bot_file, registry):
-    assert registry.register_source(str(bot_file), name="RUSH").key == "RUSH"
+    assert registry.register_source(str(bot_file), name="RUSH") == "RUSH"
 
 
 def test_relative_paths_resolve_against_base_dir(bot_file, registry):
-    entry = registry.register_source("mybot.py", base_dir=str(bot_file.parent))
-    assert entry.name == "SoloBot"
+    key = registry.register_source("mybot.py", base_dir=str(bot_file.parent))
+    assert registry[key].__name__ == "SoloBot"
 
 
 def test_hash_selects_a_class_when_several_are_defined(tmp_path, registry):
     path = tmp_path / "two.py"
     path.write_text(textwrap.dedent(TWO_BOTS_FILE))
-    assert registry.register_source(f"{path}#BetaBot").name == "BetaBot"
+    key = registry.register_source(f"{path}#BetaBot")
+    assert registry[key].__name__ == "BetaBot"
 
 
 def test_ambiguous_file_lists_the_candidates(tmp_path, registry):
@@ -226,10 +247,10 @@ def test_missing_file_is_rejected(tmp_path, registry):
 
 
 def test_importable_module_form(registry):
-    entry = registry.register_source(
+    key = registry.register_source(
         "catanatron.players.weighted_random#WeightedRandomPlayer"
     )
-    assert entry.name == "WeightedRandomPlayer"
+    assert registry[key].__name__ == "WeightedRandomPlayer"
 
 
 def test_colliding_name_is_rejected(bot_file, registry):
@@ -240,7 +261,7 @@ def test_colliding_name_is_rejected(bot_file, registry):
 def test_redeclaring_the_same_bot_is_allowed(bot_file, registry):
     """Re-importing a file yields a fresh class object, not a collision."""
     first = registry.register_source(str(bot_file))
-    assert registry.register_source(str(bot_file), name=first.key).key == first.key
+    assert registry.register_source(str(bot_file), name=first) == first
 
 
 @pytest.mark.parametrize("source", ["http://host/decide", "https://host:8080/x"])

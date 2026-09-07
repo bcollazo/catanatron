@@ -20,7 +20,7 @@ from catanatron.protocol import (
     parse_hello_reply,
 )
 from catanatron.players.stdio import build_stdio_player_class
-from catanatron.registry import PlayerRegistry, SpecError
+from catanatron.registry import PlayerRegistry, SpecError, describe
 from catanatron.serialization import action_to_json
 
 HEADER = (
@@ -235,9 +235,9 @@ def test_exec_source_registers_a_bot(tmp_path):
     registry = PlayerRegistry()
     path = tmp_path / "good.py"
     path.write_text(textwrap.dedent(BOTS["good"]))
-    entry = registry.register_source(f"exec:{sys.executable} {path}", name="RUSTY")
-    assert entry.key == "RUSTY"
-    assert [p["name"] for p in entry.params_schema] == ["timeout_ms"]
+    key = registry.register_source(f"exec:{sys.executable} {path}", name="RUSTY")
+    assert key == "RUSTY"
+    assert [p["name"] for p in describe(key, registry[key])["params"]] == ["timeout_ms"]
 
 
 def test_exec_source_needs_a_name():
@@ -251,9 +251,9 @@ def test_the_command_is_not_a_settable_param(tmp_path):
     registry = PlayerRegistry()
     path = tmp_path / "good.py"
     path.write_text(textwrap.dedent(BOTS["good"]))
-    entry = registry.register_source(f"exec:{sys.executable} {path}", name="RUSTY")
-    assert "COMMAND" not in [p["name"] for p in entry.params_schema]
-    assert "command" not in [p["name"] for p in entry.params_schema]
+    key = registry.register_source(f"exec:{sys.executable} {path}", name="RUSTY")
+    names = [p["name"] for p in describe(key, registry[key])["params"]]
+    assert "COMMAND" not in names and "command" not in names
 
 
 def test_http_sources_say_they_are_not_built_yet():

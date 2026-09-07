@@ -17,6 +17,8 @@ class WeightedRandomPlayer(Player):
     to actions that are likely better (cities > settlements > dev cards).
     """
 
+    LABEL = "Weighted Random"
+
     def decide(self, game, playable_actions):
         bloated_actions = []
         for action in playable_actions:

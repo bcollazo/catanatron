@@ -1,10 +1,11 @@
 """A player's Params model is the single source of truth for what it tunes."""
 
+import dataclasses
 from typing import Literal, Optional
 
 import pytest
 
-from catanatron.models.player import Player
+from catanatron.models.player import Color, Player
 from catanatron.params import BaseParams, ParamsError, build_params, schema_of
 from catanatron.players.minimax import AlphaBetaPlayer
 
@@ -52,7 +53,7 @@ def test_literal_fields_publish_their_choices():
 def test_non_scalar_fields_are_not_settable():
     """A dict of weights stays available to code but not to the CLI or API."""
     assert "weights" not in [p["name"] for p in schema_of(ExampleBot)]
-    assert "weights" in ExampleBot.Params.model_fields
+    assert "weights" in [f.name for f in dataclasses.fields(ExampleBot.Params)]
 
 
 def test_players_without_params_have_an_empty_schema():
@@ -83,8 +84,25 @@ def test_defaults_when_nothing_is_given():
 
 def test_params_are_frozen():
     params = build_params(ExampleBot)
-    with pytest.raises(Exception):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         params.aggression = 5
+
+
+def test_a_mutable_default_is_not_shared_between_instances():
+    """Two bots tuning their own weights must not tune each other's."""
+    first, second = build_params(ExampleBot), build_params(ExampleBot)
+    assert first.weights == second.weights
+    first.weights["public_vps"] = 1
+    assert second.weights == {}
+
+
+def test_repr_renders_the_scalar_params():
+    """The CLI's game summary prints players this way."""
+    player = ExampleBot(Color.RED, build_params(ExampleBot, ["3"]))
+    assert (
+        repr(player)
+        == "ExampleBot:RED(aggression=3,chatty=False,nickname=bot,mood=calm)"
+    )
 
 
 @pytest.mark.parametrize(
@@ -100,23 +118,23 @@ def test_optional_scalar_accepts_none():
 
 # ===== failing fast =====
 def test_wrong_type_is_rejected():
-    with pytest.raises(ParamsError, match="valid integer"):
+    with pytest.raises(ParamsError, match="'lots' is not a valid int"):
         build_params(ExampleBot, [], {"aggression": "lots"})
 
 
 def test_a_word_that_is_not_a_boolean_is_rejected():
     """main's 'AB:2:C' silently meant prunning=True."""
-    with pytest.raises(ParamsError, match="valid boolean"):
+    with pytest.raises(ParamsError, match="'C' is not a valid bool"):
         build_params(ExampleBot, [], {"chatty": "C"})
 
 
 def test_unknown_param_is_rejected():
-    with pytest.raises(ParamsError, match="Extra inputs are not permitted"):
+    with pytest.raises(ParamsError, match="has no param 'agression'"):
         build_params(ExampleBot, [], {"agression": 2})
 
 
 def test_value_outside_the_choices_is_rejected():
-    with pytest.raises(ParamsError, match="'calm' or 'wild'"):
+    with pytest.raises(ParamsError, match="not one of calm, wild"):
         build_params(ExampleBot, [], {"mood": "grumpy"})
 
 

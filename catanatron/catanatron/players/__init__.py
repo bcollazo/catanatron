@@ -29,19 +29,19 @@ __all__ = [
 
 def register_builtins(registry=REGISTRY):
     """Register the builtin players. Idempotent."""
-    builtins = [
-        ("H", HumanPlayer, "Human (terminal)"),
-        ("R", RandomPlayer, "Random"),
-        ("W", WeightedRandomPlayer, "Weighted Random"),
-        ("VP", VictoryPointPlayer, "Victory Point"),
-        ("F", ValueFunctionPlayer, "Value Function"),
-        ("G", GreedyPlayoutsPlayer, "Greedy Playouts"),
-        ("M", MCTSPlayer, "MCTS"),
-        ("AB", AlphaBetaPlayer, "AlphaBeta"),
-        ("SAB", SameTurnAlphaBetaPlayer, "Same-Turn AlphaBeta"),
-    ]
-    for key, player_class, name in builtins:
-        registry.register(key, player_class, name=name, replace=True)
+    builtins = {
+        "H": HumanPlayer,
+        "R": RandomPlayer,
+        "W": WeightedRandomPlayer,
+        "VP": VictoryPointPlayer,
+        "F": ValueFunctionPlayer,
+        "G": GreedyPlayoutsPlayer,
+        "M": MCTSPlayer,
+        "AB": AlphaBetaPlayer,
+        "SAB": SameTurnAlphaBetaPlayer,
+    }
+    for key, player_class in builtins.items():
+        registry.register(key, player_class, replace=True)
     return registry
 
 

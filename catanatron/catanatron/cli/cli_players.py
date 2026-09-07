@@ -7,17 +7,14 @@ server can share it; this module only holds what is specific to the terminal.
 from rich.table import Table
 
 import catanatron.players  # noqa: F401  (registers the builtin players)
-from catanatron.registry import REGISTRY
+from catanatron.registry import REGISTRY, describe
 
 
-def _format_params(entry):
-    parts = []
-    for param in entry.params_schema:
-        default = param["default"]
-        parts.append(
-            f"{param['name']}={default!r}" if default is not None else param["name"]
-        )
-    return ", ".join(parts)
+def _format_params(params):
+    return ", ".join(
+        f"{p['name']}={p['default']!r}" if p["default"] is not None else p["name"]
+        for p in params
+    )
 
 
 def player_help_table():
@@ -26,7 +23,12 @@ def player_help_table():
     table.add_column("PLAYER")
     table.add_column("PARAMS", style="green")
     table.add_column("DESCRIPTION")
-    for entry in REGISTRY.entries():
-        description = " ".join((entry.description or "").split())
-        table.add_row(entry.key, entry.name, _format_params(entry), description)
+    for key in sorted(REGISTRY):
+        entry = describe(key, REGISTRY[key])
+        table.add_row(
+            entry["key"],
+            entry["name"],
+            _format_params(entry["params"]),
+            entry["description"],
+        )
     return table
