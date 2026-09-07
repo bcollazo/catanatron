@@ -27,6 +27,8 @@
     "VICTORY_POINT"
   ],
   "files": {
+    "divergences\\D001-domestic-trade-proposer-revisited.json": "d2e16ea34354a79fe64056abcb88fade84386e2708728abdf1a3951801ca12af",
+    "transitions\\chance-outcomes.json": "086c1f4a77d4179a318a5776814d3fbf4a6f95563b66852902eb617bbabd909e",
     "transitions\\crafted-builds-and-trades.jsonl": "e99072e59483ad1244cd51b610ef21dee36b61c5d76b5181334497815ee161ab",
     "transitions\\sample-base-2p.jsonl": "932b3b47e720315c219e2aaefc8bd07a21f61b70de5eb2e8e78fffe8f8130cd8",
     "transitions\\sample-base-3p.jsonl": "7bcd411c3bea82219e8f89d82abb451e99c0ff28cb4883df43891d2c72f5116c",

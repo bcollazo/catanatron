@@ -19,7 +19,9 @@ start-of-turn non-VP eligibility masks; winner scan over active seats after a
 completed intent/chance transition; Python turn counting; and optional
 friendly-robber filtering with fallback. Longest-road and domestic-trade
 corrections are documented as named divergence fixtures before they are
-implemented; none have yet been accepted.
+implemented. `D001-domestic-trade-proposer-revisited` corrects the pinned
+Python response-advance behavior: each other seat responds exactly once, and
+the proposer never responds to its own offer.
 
 This profile is not a claim of universal official-rule conformance. The
 canonical fixture format and each accepted divergence will be added before the

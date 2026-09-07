@@ -231,6 +231,42 @@ def crafted_trades() -> list[dict[str, Any]]:
     return rows
 
 
+def named_divergences() -> dict[Path, str]:
+    """Capture deliberately corrected `rust-v1` behavior with Python evidence."""
+    # Python's response-advance implementation revisits a proposer seated at
+    # index 1 after seat 0 rejects. `rust-v1` instead visits each *other* seat
+    # exactly once in ascending seat order.
+    game = prepared_post_roll(3, 105)
+    state = game.state
+    proposer = state.colors[1]
+    state.current_player_index = state.current_turn_index = 1
+    state.player_state["P1_HAS_ROLLED"] = True
+    player_deck_replenish(state, proposer, "WOOD")
+    offer = (1, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+    from catanatron.models.actions import generate_playable_actions
+
+    game.playable_actions = generate_playable_actions(state)
+    game.execute(Action(proposer, ActionType.OFFER_TRADE, offer))
+    first_responder = state.current_color()
+    first_reject = next(action for action in game.playable_actions if action.action_type == ActionType.REJECT_TRADE)
+    game.execute(first_reject)
+    if state.current_color() != proposer:
+        raise AssertionError("expected pinned Python trade advance to revisit proposer")
+    trade = {
+        "divergence_id": "D001-domestic-trade-proposer-revisited",
+        "source_revision": REVISION,
+        "rules_profile": PROFILE,
+        "input": {"seat_order": [color.value for color in state.colors], "proposer_index": 1, "first_responder": first_responder.value},
+        "python_observed": {"next_actor": proposer.value, "prompt": state.current_prompt.value},
+        "rust_expected": {"next_actor": state.colors[2].value, "prompt": "DECIDE_TRADE"},
+        "rationale": "Each other seat responds once; the proposer is never asked to answer its own offer.",
+    }
+
+    return {
+        OUT / "divergences" / "D001-domestic-trade-proposer-revisited.json": json.dumps(trade, indent=2, sort_keys=True) + "\n",
+    }
+
+
 def write_or_check(path: Path, data: str, check: bool) -> bool:
     if check:
         return path.exists() and path.read_text(encoding="utf-8") == data
@@ -255,6 +291,17 @@ def main() -> None:
     for row in crafted:
         coverage[row["action"]["type"]] += 1
     files[OUT / "transitions" / "crafted-builds-and-trades.jsonl"] = "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in crafted)
+    files.update(named_divergences())
+    chance = {
+        "fixture_version": 1,
+        "source_revision": REVISION,
+        "rules_profile": PROFILE,
+        "dice": [{"pair": [first, second], "sum": first + second, "weight": 1} for first in range(1, 7) for second in range(1, 7)],
+        "dice_sum_weights": {str(total): 6 - abs(7 - total) for total in range(2, 13)},
+        "theft": {"hand": [2, 0, 1, 0, 3], "outcomes": [{"resource": resource, "weight": count} for resource, count in zip(RESOURCES, [2, 0, 1, 0, 3]) if count]},
+        "development_draw": {"counts": {"KNIGHT": 14, "YEAR_OF_PLENTY": 2, "MONOPOLY": 2, "ROAD_BUILDING": 2, "VICTORY_POINT": 5}, "denominator": 25},
+    }
+    files[OUT / "transitions" / "chance-outcomes.json"] = json.dumps(chance, indent=2, sort_keys=True) + "\n"
     manifest = {
         "fixture_version": 1,
         "source_revision": REVISION,

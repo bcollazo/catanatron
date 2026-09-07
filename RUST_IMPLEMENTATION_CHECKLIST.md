@@ -8,7 +8,7 @@ Status at handoff: **planning complete; production implementation not started**.
 
 - [x] E00 — Checkout/toolchain/baseline provenance verified for the implementation session.
 - [x] E01 — Production Cargo workspace builds; dependency direction enforced.
-- [ ] E02 — Rules profile, full fixtures, topology export and named divergences frozen.
+- [x] E02 — Rules profile, full fixtures, topology export and named divergences frozen.
 - [ ] E03 — Typed state/action/phase/outcomes and atomic checked boundaries implemented.
 - [ ] E04 — Setup, construction, ordinary turns and independent move generation pass.
 - [ ] E05 — Dice, production, discards, robber and chance outcomes pass.
@@ -34,12 +34,12 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E02 (freeze rules, topology, and fixtures; in progress).
-* Last implementation check: topology and fixture export both pass their `--check` mode on 2026-09-07; `pytest tests/test_game.py tests/models/test_actions.py tests/test_yield_resources.py` passed (45 tests), and Rust formatting/tests pass.
-* Next action: add minimized named longest-road and domestic-trade divergence fixtures with explicit Python and Rust expected results; verify forced chance coverage and all decision phases against the manifest before marking E02 complete.
+* Current task: E03 (typed state, actions, phases, and checked boundaries).
+* Last implementation check: topology/fixture exporters pass `--check`; the fixture corpus contains all 18 action variants and all 7 reachable Python decision prompts. `pytest tests/test_game.py tests/test_algorithms.py tests/models/test_actions.py tests/test_yield_resources.py` passed (52 tests); Rust formatting/tests pass.
+* Next action: implement private checked IDs, resource/development enums, typed actions/phases/outcomes/status, and a fixed-array `Position` with atomic checked boundary tests.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
 * Changed implementation files: `rust/` workspace files, generated topology fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
-* Known failing fixture/test IDs: no failing tests. All 18 action variants now appear in fixtures. E02 remains incomplete pending named divergence fixtures and an explicit audit of chance/phase coverage.
+* Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
 * Decisions since the plan: use the isolated ignored `.venv/rust-engine` (Python 3.12.14, NetworkX 3.5) because the system pyenv shim is unconfigured. Topology exports only immutable geometry: resource/port assignments are deliberately excluded because Python map initialization randomizes them. Trace action selection is canonicalized because Python set-backed move menus otherwise vary by hash seed.
 
 ### 2026-09-07 — E02 checkpoint
@@ -52,6 +52,11 @@ Status at handoff: **planning complete; production implementation not started**.
 
 * Added crafted city and domestic-trade transitions. The deterministic manifest now covers every `ActionType`, including offer/accept/reject/confirm/cancel trade paths.
 * `export_fixtures.py --check` and the focused Python game/action/yield suite (45 tests) pass. Do not treat action-type coverage as full E02 completion: divergence and explicit chance/phase coverage remain outstanding.
+
+### 2026-09-07 — E02 complete
+
+* Added exact chance weight fixtures and the named, reproduced `D001-domestic-trade-proposer-revisited` compatibility correction.
+* Audited the generated records: all 18 actions and each of the seven reachable Python decision prompts occur before and after transitions; BASE/TOURNAMENT and 2/3/4-seat coverage are present. Exporters are deterministic under `--check`.
 
 ### 2026-09-07 — E00 complete
 
