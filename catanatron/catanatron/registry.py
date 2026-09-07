@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Union
 
 from catanatron.models.player import Color, Player
 from catanatron.params import ParamsError, build_params, schema_of
-from catanatron.sources import SourceError, identity, load_class
+from catanatron.sources import EXEC_PREFIX, SourceError, identity, load_class
 
 
 class SpecError(ValueError):
@@ -108,7 +108,18 @@ class PlayerRegistry:
     def register_source(self, source: str, name=None, base_dir=None) -> PlayerEntry:
         """Register one ``--bot`` declaration."""
         try:
-            player_class = load_class(source, Player, base_dir)
+            if source.startswith(EXEC_PREFIX):
+                from catanatron.players.stdio import build_stdio_player_class
+
+                if name is None:
+                    raise SpecError(
+                        f"{source!r}: an exec bot needs a name, e.g. RUSTY={source}"
+                    )
+                player_class = build_stdio_player_class(
+                    name, source[len(EXEC_PREFIX) :]
+                )
+            else:
+                player_class = load_class(source, Player, base_dir)
         except SourceError as error:
             raise SpecError(str(error))
 

@@ -19,6 +19,7 @@ from catanatron.state_functions import get_actual_victory_points
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from catanatron.utils import ensure_dir, format_secs
 from catanatron.cli.cli_players import player_help_table
+from catanatron.protocol import ProtocolError
 from catanatron.registry import REGISTRY, SpecError
 from catanatron.sources import SourceError, load_class
 from catanatron.cli.accumulators import (
@@ -229,14 +230,17 @@ def simulate(
         config_number_placement,
         config_friendly_robber,
     )
-    play_batch(
-        num,
-        players,
-        output_options,
-        game_config,
-        quiet,
-        custom_accumulators,
-    )
+    try:
+        play_batch(
+            num,
+            players,
+            output_options,
+            game_config,
+            quiet,
+            custom_accumulators,
+        )
+    except ProtocolError as error:
+        raise click.UsageError(str(error))
 
 
 @dataclass(frozen=True)

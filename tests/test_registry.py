@@ -254,3 +254,7 @@ def test_windows_style_path_keeps_its_drive_letter(registry):
     with pytest.raises(SpecError, match="no such file"):
         registry.register_source(r"C:\bots\mybot.py#MyBot")
 
+
+def test_exec_source_needs_a_name(registry):
+    with pytest.raises(SpecError, match="needs a name"):
+        registry.register_source("exec:./bot")
