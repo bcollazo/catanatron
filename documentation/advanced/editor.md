@@ -41,13 +41,18 @@ catanatron-play --bot RUSH=~/bots/mine.py#CityRusher --players=R,RUSH
 Declare what your bot can tune as a nested `Params` dataclass:
 
 ```python
-from catanatron import BaseParams
+from dataclasses import dataclass
 
 
 class MyBot(Player):
-    class Params(BaseParams):
+    @dataclass(frozen=True)
+    class Params:
         aggression: int = 1
 ```
+
+Frozen so a bot cannot rewrite its own configuration mid-game. A mutable
+default needs a factory, as dataclasses require:
+`weights: dict = field(default_factory=dict)`.
 
 Set them on the command line, positionally or by name, in declaration order:
 

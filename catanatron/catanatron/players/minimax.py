@@ -1,9 +1,7 @@
 import time
 import random
-from typing import Literal, Optional
-
-from catanatron.params import BaseParams
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Literal, Optional
 
 from catanatron.game import Game
 from catanatron.models.player import Player
@@ -29,14 +27,16 @@ class AlphaBetaPlayer(Player):
 
     LABEL = "AlphaBeta"
 
-    class Params(BaseParams):
+    @dataclass(frozen=True)
+    class Params:
         # Field order is the CLI's positional order: AB:2:contender
         depth: int = ALPHABETA_DEFAULT_DEPTH
         value_fn: Literal["base", "contender"] = "base"
         prunning: bool = False
         epsilon: Optional[float] = None
         #: Non-scalar: programmatic use only, not settable from CLI/web.
-        weights: dict = DEFAULT_WEIGHTS
+        #: A factory, so the module-level default is never mutated in place.
+        weights: dict = field(default_factory=lambda: dict(DEFAULT_WEIGHTS))
 
     #: Set by subclasses/experiments that override value_function().
     use_value_function = None

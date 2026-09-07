@@ -1,5 +1,6 @@
 """The registry maps keys to players, for both the CLI and the web."""
 
+import dataclasses
 import sys
 import textwrap
 
@@ -7,7 +8,6 @@ import pytest
 
 import catanatron.players  # noqa: F401  (registers the builtins)
 from catanatron.models.player import Color, Player
-from catanatron.params import BaseParams
 from catanatron.registry import (
     REGISTRY,
     PlayerRegistry,
@@ -20,7 +20,8 @@ from catanatron.registry import (
 class ExampleBot(Player):
     """An example bot."""
 
-    class Params(BaseParams):
+    @dataclasses.dataclass(frozen=True)
+    class Params:
         aggression: int = 1
 
     def decide(self, game, playable_actions):
@@ -178,13 +179,16 @@ def test_spec_of_unregistered_player_is_rejected(registry):
 
 # ===== --bot sources =====
 BOT_FILE = '''
-from catanatron import Player, BaseParams
+from dataclasses import dataclass
+
+from catanatron import Player
 
 
 class SoloBot(Player):
     """The only player here."""
 
-    class Params(BaseParams):
+    @dataclass(frozen=True)
+    class Params:
         aggression: int = 1
 
     def decide(self, game, playable_actions):

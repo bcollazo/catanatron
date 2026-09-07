@@ -1,12 +1,20 @@
 """A player's tunable configuration.
 
-Each player class declares what it can tune as a nested ``Params``, a frozen
-dataclass. That declaration is the only source of truth: the CLI coerces
-command-line strings into the declared types, ``--help-players`` lists them,
-and ``GET /api/players`` publishes them so a UI can render a form.
+Each player class declares what it can tune as a nested ``Params``, an
+ordinary frozen dataclass::
+
+    class MyBot(Player):
+        @dataclass(frozen=True)
+        class Params:
+            aggression: int = 1
+
+That declaration is the only source of truth: the CLI coerces command-line
+strings into the declared types, ``--help-players`` lists them, and
+``GET /api/players`` publishes them so a UI can render a form. Frozen so that
+a player cannot rewrite its own configuration mid-game, which would desync
+the spec a saved game is rebuilt from.
 """
 
-import copy
 import dataclasses
 from typing import Literal, get_args, get_origin, get_type_hints
 
@@ -15,27 +23,8 @@ class ParamsError(ValueError):
     """Params that cannot be built from what the user asked for."""
 
 
-class BaseParams:
-    """Base for a player's configuration. A frozen dataclass, so it is
-    immutable, comparable, and rejects params it does not declare::
-
-        class MyBot(Player):
-            class Params(BaseParams):
-                aggression: int = 1
-    """
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        for name in getattr(cls, "__annotations__", {}):
-            default = getattr(cls, name, None)
-            # A mutable default would otherwise be shared by every instance.
-            if isinstance(default, (dict, list, set)):
-                factory = lambda value=default: copy.deepcopy(value)  # noqa: E731
-                setattr(cls, name, dataclasses.field(default_factory=factory))
-        dataclasses.dataclass(frozen=True)(cls)
-
-
-class NoParams(BaseParams):
+@dataclasses.dataclass(frozen=True)
+class NoParams:
     """For players with nothing to tune."""
 
 
@@ -61,6 +50,11 @@ def schema_of(player_class):
     This is both what ``--help-players`` lists and what ``GET /api/players``
     publishes, and it is the only description ``build_params`` works from.
     """
+    if not dataclasses.is_dataclass(player_class.Params):
+        raise ParamsError(
+            f"{player_class.__name__}.Params must be a dataclass; "
+            f"add @dataclass(frozen=True) above it"
+        )
     hints = get_type_hints(player_class.Params)
     schema = []
     for field in dataclasses.fields(player_class.Params):

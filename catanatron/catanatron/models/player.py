@@ -1,11 +1,12 @@
-import random
 import builtins
+import dataclasses
+import random
 
 from enum import Enum
 from typing import Any, Callable, Optional
 
 from catanatron.observer import GameObserver
-from catanatron.params import BaseParams, NoParams
+from catanatron.params import NoParams
 
 
 class Color(Enum):
@@ -74,7 +75,7 @@ class Player(GameObserver):
         raise NotImplementedError
 
     def __repr__(self):
-        fields = vars(self.params) if isinstance(self.params, BaseParams) else {}
+        fields = vars(self.params) if dataclasses.is_dataclass(self.params) else {}
         scalars = {
             k: v for k, v in fields.items() if isinstance(v, (int, float, str, bool))
         }
@@ -97,7 +98,8 @@ class HumanPlayer(Player):
     LABEL = "Human (terminal)"
     IS_BOT = False
 
-    class Params(BaseParams):
+    @dataclasses.dataclass(frozen=True)
+    class Params:
         #: Not externally settable (non-scalar); exists as a testing seam.
         input_fn: Callable = builtins.input
 

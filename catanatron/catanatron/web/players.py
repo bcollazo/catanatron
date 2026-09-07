@@ -6,6 +6,8 @@ players are registered: the server never imports player code named in a
 request.
 """
 
+from dataclasses import dataclass
+
 from catanatron.players.minimax import AlphaBetaPlayer
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.registry import REGISTRY
@@ -14,6 +16,7 @@ from catanatron.registry import REGISTRY
 class Catanatron(AlphaBetaPlayer):
     """Catanatron, the strongest builtin bot."""
 
+    @dataclass(frozen=True)
     class Params(AlphaBetaPlayer.Params):
         depth: int = 2
         prunning: bool = True

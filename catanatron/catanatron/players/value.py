@@ -1,7 +1,7 @@
+from dataclasses import dataclass
 import random
 from typing import Literal, Optional
 
-from catanatron.params import BaseParams
 
 from catanatron.state_functions import (
     get_longest_road_length,
@@ -153,7 +153,8 @@ class ValueFunctionPlayer(Player):
 
     LABEL = "Value Function"
 
-    class Params(BaseParams):
+    @dataclass(frozen=True)
+    class Params:
         value_fn: Literal["base", "contender"] = "base"
         epsilon: Optional[float] = None
         #: Non-scalar: programmatic use only, not settable from CLI/web.

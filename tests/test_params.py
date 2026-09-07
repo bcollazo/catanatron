@@ -6,21 +6,23 @@ from typing import Literal, Optional
 import pytest
 
 from catanatron.models.player import Color, Player
-from catanatron.params import BaseParams, ParamsError, build_params, schema_of
+from catanatron.params import ParamsError, build_params, schema_of
 from catanatron.players.minimax import AlphaBetaPlayer
 
 
 class ExampleBot(Player):
     """An example bot."""
 
-    class Params(BaseParams):
+    @dataclasses.dataclass(frozen=True)
+    class Params:
         aggression: int = 1
         chatty: bool = False
         nickname: str = "bot"
         mood: Literal["calm", "wild"] = "calm"
         patience: Optional[float] = None
-        #: Not a settable type: programmatic use only.
-        weights: dict = {}
+        #: Not a settable type: programmatic use only. A mutable default has
+        #: to be a factory -- dataclasses reject the plain value.
+        weights: dict = dataclasses.field(default_factory=dict)
 
     def decide(self, game, playable_actions):
         return playable_actions[0]
@@ -94,6 +96,27 @@ def test_a_mutable_default_is_not_shared_between_instances():
     assert first.weights == second.weights
     first.weights["public_vps"] = 1
     assert second.weights == {}
+
+
+def test_a_plain_mutable_default_is_rejected_at_declaration():
+    """The stdlib says so, before any game runs, and names the fix."""
+    with pytest.raises(ValueError, match="use default_factory"):
+
+        @dataclasses.dataclass(frozen=True)
+        class Params:
+            weights: dict = {}
+
+
+def test_params_that_are_not_a_dataclass_are_rejected():
+    class Undecorated(Player):
+        class Params:
+            aggression: int = 1
+
+        def decide(self, game, playable_actions):
+            return playable_actions[0]
+
+    with pytest.raises(ParamsError, match="must be a dataclass"):
+        schema_of(Undecorated)
 
 
 def test_repr_renders_the_scalar_params():

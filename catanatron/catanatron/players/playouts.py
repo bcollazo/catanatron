@@ -1,6 +1,6 @@
+from dataclasses import dataclass
 import time
 import random
-from catanatron.params import BaseParams
 import multiprocessing
 from collections import Counter
 
@@ -24,7 +24,8 @@ class GreedyPlayoutsPlayer(Player):
 
     LABEL = "Greedy Playouts"
 
-    class Params(BaseParams):
+    @dataclass(frozen=True)
+    class Params:
         num_playouts: int = DEFAULT_NUM_PLAYOUTS
 
     def decide(self, game: Game, playable_actions):

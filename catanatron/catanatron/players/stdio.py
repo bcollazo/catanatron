@@ -10,6 +10,7 @@ or a bad reply costs that one decision: catanatron plays a random legal action
 and carries on, having said so once.
 """
 
+from dataclasses import dataclass
 import json
 import logging
 import queue
@@ -19,7 +20,6 @@ import subprocess
 import threading
 from typing import Optional
 
-from catanatron.params import BaseParams
 
 from catanatron.models.player import Player
 from catanatron.protocol import (
@@ -50,7 +50,8 @@ class StdioPlayer(Player):
     #: game out by timeout_ms per turn.
     MAX_CONSECUTIVE_FAILURES = 3
 
-    class Params(BaseParams):
+    @dataclass(frozen=True)
+    class Params:
         #: How long one decision may take before it is forfeited.
         timeout_ms: int = 1000
 

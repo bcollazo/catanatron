@@ -1,8 +1,8 @@
+from dataclasses import dataclass
 import math
 import time
 from collections import defaultdict
 import random
-from catanatron.params import BaseParams
 
 from catanatron.game import Game
 from catanatron.models.player import Player
@@ -17,7 +17,8 @@ EXP_C = 2**0.5
 class MCTSPlayer(Player):
     LABEL = "MCTS"
 
-    class Params(BaseParams):
+    @dataclass(frozen=True)
+    class Params:
         num_simulations: int = SIMULATIONS
         prunning: bool = False
 
