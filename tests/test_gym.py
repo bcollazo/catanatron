@@ -6,7 +6,7 @@ from gymnasium.utils.env_checker import check_env
 import numpy as np
 
 from catanatron.features import get_feature_ordering
-from catanatron.json import GameEncoder
+from catanatron.serialization import web_view
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.models.enums import Action, ActionType, WHEAT, SHEEP, ORE
 from catanatron.players.value import ValueFunctionPlayer
@@ -278,7 +278,7 @@ def test_gym_reproducibility():
         observation, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
     game = env.unwrapped.game
-    game_json = json.loads(json.dumps(game, cls=GameEncoder))
+    game_json = json.loads(json.dumps(web_view(game)))
     env.close()
 
     assert game_json["state_index"] == 125

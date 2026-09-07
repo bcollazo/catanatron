@@ -257,3 +257,73 @@ def test_post_game_rejects_unknown_param_with_400(client):
     response = client.post("/api/games", json={"players": ["R", "AB:dpeth=3"]})
     assert response.status_code == 400
 
+
+# ===== persistence without pickle =====
+def test_game_state_row_is_json_only(client):
+    """The stored game must be plain JSON, with players kept as specs."""
+    response = client.post("/api/games", json={"players": ["R", "CATANATRON"]})
+    game_id = json.loads(response.data)["game_id"]
+
+    with client.application.app_context():
+        row = db.session.query(GameState).filter_by(uuid=game_id).first()
+        assert not hasattr(row, "pickle_data")
+        document = json.loads(row.state)
+        assert document["schema_version"] == 1
+
+        # Seating order is shuffled by State.__init__, so compare by key.
+        specs = json.loads(row.player_specs)
+        by_key = {spec["key"]: spec["params"] for spec in specs}
+        assert set(by_key) == {"R", "CATANATRON"}
+        assert by_key["R"] == {}
+        assert by_key["CATANATRON"] == {
+            "depth": 2,
+            "prunning": True,
+            "value_fn": "base",
+            "epsilon": None,
+        }
+
+
+def test_player_specs_stay_aligned_with_seating_order(client):
+    """Specs are stored in seating order, which State.__init__ shuffles."""
+    response = client.post("/api/games", json={"players": ["R", "CATANATRON"]})
+    game_id = json.loads(response.data)["game_id"]
+
+    with client.application.app_context():
+        row = db.session.query(GameState).filter_by(uuid=game_id).first()
+        specs = json.loads(row.player_specs)
+        colors = json.loads(row.state)["colors"]
+
+        game = get_game_state(game_id)
+        expected = {
+            "R": "RandomPlayer",
+            "CATANATRON": "Catanatron",
+        }
+        for spec, color, player in zip(specs, colors, game.state.players):
+            assert player.color.value == color
+            assert type(player).__name__ == expected[spec["key"]]
+
+
+def test_game_survives_a_full_database_round_trip(client):
+    """Play some ticks, reload from the database, keep playing."""
+    response = client.post("/api/games", json={"players": ["R", "R"]})
+    game_id = json.loads(response.data)["game_id"]
+
+    for _ in range(12):
+        assert client.post(f"/api/games/{game_id}/actions").status_code == 200
+
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        assert len(game.state.action_records) == 12
+        assert game.playable_actions
+
+    assert client.post(f"/api/games/{game_id}/actions").status_code == 200
+    with client.application.app_context():
+        assert len(get_game_state(game_id).state.action_records) == 13
+
+
+def test_human_seat_is_not_a_bot_after_reload(client):
+    response = client.post("/api/games", json={"players": ["HUMAN", "CATANATRON"]})
+    game_id = json.loads(response.data)["game_id"]
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        assert [p.is_bot for p in game.state.players].count(False) == 1

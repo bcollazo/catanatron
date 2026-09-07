@@ -5,7 +5,7 @@ import traceback
 from flask import Response, Blueprint, jsonify, abort, request
 
 from catanatron.web.models import upsert_game_state, get_game_state
-from catanatron.json import GameEncoder, action_from_json
+from catanatron.serialization import action_from_json, web_view
 from catanatron.models.player import Color
 from catanatron.game import Game
 from catanatron.models.map import build_map
@@ -78,7 +78,7 @@ def get_game_endpoint(game_id, state_index):
     if game is None:
         abort(404, description="Resource not found")
 
-    payload = json.dumps(game, cls=GameEncoder)
+    payload = json.dumps(web_view(game))
     return Response(
         response=payload,
         status=200,
@@ -94,7 +94,7 @@ def post_action_endpoint(game_id):
 
     if game.winning_color() is not None:
         return Response(
-            response=json.dumps(game, cls=GameEncoder),
+            response=json.dumps(web_view(game)),
             status=200,
             mimetype="application/json",
         )
@@ -110,7 +110,7 @@ def post_action_endpoint(game_id):
         upsert_game_state(game)
 
     return Response(
-        response=json.dumps(game, cls=GameEncoder),
+        response=json.dumps(web_view(game)),
         status=200,
         mimetype="application/json",
     )
@@ -123,7 +123,7 @@ def stress_test_endpoint():
     game = Game(players=players)
     game.play_tick()
     return Response(
-        response=json.dumps(game, cls=GameEncoder),
+        response=json.dumps(web_view(game)),
         status=200,
         mimetype="application/json",
     )

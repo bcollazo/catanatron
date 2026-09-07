@@ -1,16 +1,18 @@
 import os
 import json
-import pickle
 from contextlib import contextmanager
-from catanatron.json import GameEncoder
 
 from catanatron.game import Game
+from catanatron.registry import REGISTRY
+from catanatron.serialization import SCHEMA_VERSION, state_from_json, state_to_json
 from catanatron.state_functions import get_state_index
-from sqlalchemy import MetaData, Column, Integer, String, LargeBinary, create_engine
+from sqlalchemy import MetaData, Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
 from flask_sqlalchemy import SQLAlchemy
 from flask import abort
+
+from catanatron.models.player import Color
 
 # Using approach from: https://stackoverflow.com/questions/41004540/using-sqlalchemy-models-in-and-out-of-flask/41014157
 metadata = MetaData()
@@ -18,25 +20,40 @@ Base = declarative_base(metadata=metadata)
 
 
 class GameState(Base):
+    """One persisted game state.
+
+    The game is stored as JSON that completely defines it (see
+    :mod:`catanatron.serialization`); the players are stored separately as
+    specs, so that a saved game never depends on pickled bot code.
+    """
+
     __tablename__ = "game_states"
 
     id = Column(Integer, primary_key=True)
     uuid = Column(String(64), nullable=False)
     state_index = Column(Integer, nullable=False)
+    schema_version = Column(Integer, nullable=False)
     state = Column(String, nullable=False)
-    pickle_data = Column(LargeBinary, nullable=False)
+    player_specs = Column(String, nullable=False)
 
     # TODO: unique uuid and state_index
     @staticmethod
     def from_game(game: Game):
-        state = json.dumps(game, cls=GameEncoder)
-        pickle_data = pickle.dumps(game, pickle.HIGHEST_PROTOCOL)
+        specs = [REGISTRY.spec_of(player) for player in game.state.players]
         return GameState(
             uuid=game.id,
             state_index=get_state_index(game.state),
-            state=state,
-            pickle_data=pickle_data,
+            schema_version=SCHEMA_VERSION,
+            state=json.dumps(state_to_json(game)),
+            player_specs=json.dumps(specs),
         )
+
+    def to_game(self) -> Game:
+        doc = json.loads(self.state)
+        specs = json.loads(self.player_specs)
+        colors = [Color[c] for c in doc["colors"]]
+        players = [REGISTRY.build(spec, color) for spec, color in zip(specs, colors)]
+        return state_from_json(doc, players)
 
 
 db = SQLAlchemy(metadata=metadata)
@@ -91,4 +108,4 @@ def get_game_state(game_id, state_index=None) -> Game | None:
         if result is None:
             abort(404)
     db.session.commit()
-    return pickle.loads(result.pickle_data)  # type: ignore
+    return result.to_game()

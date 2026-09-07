@@ -4,7 +4,7 @@ import json
 from catanatron.game import Game
 from catanatron.models.enums import ActionType, WOOD, BRICK, SHEEP, ORE
 from catanatron.models.player import SimplePlayer, Color
-from catanatron.json import GameEncoder, action_from_json
+from catanatron.serialization import action_from_json, web_view
 
 
 def test_serialization():
@@ -17,7 +17,7 @@ def test_serialization():
         ]
     )
 
-    string = json.dumps(game, cls=GameEncoder)
+    string = json.dumps(web_view(game))
     result = json.loads(string)
 
     # Loosely assert looks like expected
