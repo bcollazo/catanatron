@@ -15,8 +15,13 @@ def objective(config):
     players = [
         # AlphaBetaPlayer(Color.RED, 2, True),
         # AlphaBetaPlayer(Color.BLUE, 2, True, "C", weights),
-        ValueFunctionPlayer(Color.RED, "C", params=DEFAULT_WEIGHTS),
-        ValueFunctionPlayer(Color.BLUE, "C", params=config),
+        ValueFunctionPlayer(
+            Color.RED,
+            ValueFunctionPlayer.Params(value_fn="contender", weights=DEFAULT_WEIGHTS),
+        ),
+        ValueFunctionPlayer(
+            Color.BLUE, ValueFunctionPlayer.Params(value_fn="contender", weights=config)
+        ),
     ]
     wins, results_by_player = play_batch(100, players)
     vps = results_by_player[players[1].color]

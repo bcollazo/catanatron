@@ -1,4 +1,7 @@
 import random
+from typing import Literal, Optional
+
+from catanatron.params import BaseParams
 
 from catanatron.state_functions import (
     get_longest_road_length,
@@ -148,21 +151,21 @@ class ValueFunctionPlayer(Player):
     For now, the base value function only considers 1 enemy player.
     """
 
-    def __init__(
-        self, color, value_fn_builder_name=None, params=None, is_bot=True, epsilon=None
-    ):
-        super().__init__(color, is_bot)
-        self.value_fn_builder_name = (
-            "contender_fn" if value_fn_builder_name == "C" else "base_fn"
-        )
-        self.params = params
-        self.epsilon = epsilon
+    class Params(BaseParams):
+        value_fn: Literal["base", "contender"] = "base"
+        epsilon: Optional[float] = None
+        #: Non-scalar: programmatic use only, not settable from CLI/web.
+        weights: Optional[dict] = None
+
+    @property
+    def value_fn_builder_name(self):
+        return "contender_fn" if self.params.value_fn == "contender" else "base_fn"
 
     def decide(self, game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]
 
-        if self.epsilon is not None and random.random() < self.epsilon:
+        if self.params.epsilon is not None and random.random() < self.params.epsilon:
             return random.choice(playable_actions)
 
         best_value = float("-inf")
@@ -171,16 +174,13 @@ class ValueFunctionPlayer(Player):
             game_copy = game.copy()
             game_copy.execute(action)
 
-            value_fn = get_value_fn(self.value_fn_builder_name, self.params)
+            value_fn = get_value_fn(self.value_fn_builder_name, self.params.weights)
             value = value_fn(game_copy, self.color)
             if value > best_value:
                 best_value = value
                 best_action = action
 
         return best_action
-
-    def __str__(self):
-        return super().__str__() + f"(value_fn={self.value_fn_builder_name})"
 
 
 def get_value_fn(name, params, value_function=None):

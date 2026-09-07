@@ -6,6 +6,7 @@ from catanatron import Game, Player, Color, Accumulator
 
 from catanatron.game import Game, GameAccumulator
 from catanatron.models.player import Player, Color, RandomPlayer
+from catanatron.params import BaseParams
 from catanatron.models.enums import (
     Action,
     ActionType,

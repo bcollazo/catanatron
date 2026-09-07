@@ -24,7 +24,7 @@ def test_human_player_asks_for_input():
     def mock_input_function(prompt):
         return "1"
 
-    player = HumanPlayer(Color.BLUE, input_fn=mock_input_function)
+    player = HumanPlayer(Color.BLUE, HumanPlayer.Params(input_fn=mock_input_function))
 
     # Create mock actions
     playable_actions = [

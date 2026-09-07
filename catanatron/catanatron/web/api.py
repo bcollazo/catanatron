@@ -6,29 +6,24 @@ from flask import Response, Blueprint, jsonify, abort, request
 
 from catanatron.web.models import upsert_game_state, get_game_state
 from catanatron.json import GameEncoder, action_from_json
-from catanatron.models.player import Color, RandomPlayer
+from catanatron.models.player import Color
 from catanatron.game import Game
 from catanatron.models.map import build_map
-from catanatron.players.value import ValueFunctionPlayer
 from catanatron.players.minimax import AlphaBetaPlayer
-from catanatron.players.weighted_random import WeightedRandomPlayer
+from catanatron.registry import REGISTRY, SpecError
+from catanatron.web.players import register_web_players
 from catanatron.web.mcts_analysis import GameAnalyzer
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 VALID_MAP_TEMPLATES = {"BASE", "MINI", "TOURNAMENT"}
 
+register_web_players()
 
-def player_factory(player_key):
-    if player_key[0] == "CATANATRON":
-        return AlphaBetaPlayer(player_key[1], 2, True)
-    elif player_key[0] == "WEIGHTED_RANDOM":
-        return WeightedRandomPlayer(player_key[1])
-    elif player_key[0] == "RANDOM":
-        return RandomPlayer(player_key[1])
-    elif player_key[0] == "HUMAN":
-        return ValueFunctionPlayer(player_key[1], is_bot=False)
-    else:
-        raise ValueError("Invalid player key")
+
+@bp.route("/players", methods=("GET",))
+def get_players_endpoint():
+    """List the players this server can seat, and the params each accepts."""
+    return jsonify([entry.to_json() for entry in REGISTRY.entries()])
 
 
 @bp.route("/games", methods=("POST",))
@@ -59,7 +54,10 @@ def post_game_endpoint():
     if not isinstance(friendly_robber, bool):
         abort(400, description="'friendly_robber' must be a boolean")
 
-    players = list(map(player_factory, zip(player_keys, Color)))
+    try:
+        players = REGISTRY.build_all(player_keys)
+    except SpecError as error:
+        abort(400, description=str(error))
     catan_map = build_map(map_template)
 
     game = Game(
@@ -120,12 +118,8 @@ def post_action_endpoint(game_id):
 
 @bp.route("/stress-test", methods=["GET"])
 def stress_test_endpoint():
-    players = [
-        AlphaBetaPlayer(Color.RED, 2, True),
-        AlphaBetaPlayer(Color.BLUE, 2, True),
-        AlphaBetaPlayer(Color.ORANGE, 2, True),
-        AlphaBetaPlayer(Color.WHITE, 2, True),
-    ]
+    params = AlphaBetaPlayer.Params(depth=2, prunning=True)
+    players = [AlphaBetaPlayer(color, params) for color in Color]
     game = Game(players=players)
     game.play_tick()
     return Response(

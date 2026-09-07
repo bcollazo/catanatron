@@ -63,8 +63,14 @@ def match(theta_plus, theta_minus):
         k: v + theta_minus[i] for i, (k, v) in enumerate(DEFAULT_WEIGHTS.items())
     }
     players = [
-        ValueFunctionPlayer(Color.RED, "C", params=weights_plus),
-        ValueFunctionPlayer(Color.BLUE, "C", params=weights_minus),
+        ValueFunctionPlayer(
+            Color.RED,
+            ValueFunctionPlayer.Params(value_fn="contender", weights=weights_plus),
+        ),
+        ValueFunctionPlayer(
+            Color.BLUE,
+            ValueFunctionPlayer.Params(value_fn="contender", weights=weights_minus),
+        ),
     ]
     wins, _ = play_batch(games_played, players)
 

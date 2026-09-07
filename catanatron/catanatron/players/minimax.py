@@ -1,5 +1,8 @@
 import time
 import random
+from typing import Literal, Optional
+
+from catanatron.params import BaseParams
 from typing import Any
 
 from catanatron.game import Game
@@ -9,7 +12,6 @@ from catanatron.players.value import (
     DEFAULT_WEIGHTS,
     get_value_fn,
 )
-
 
 ALPHABETA_DEFAULT_DEPTH = 2
 MAX_SEARCH_TIME_SECS = 20
@@ -25,30 +27,27 @@ class AlphaBetaPlayer(Player):
     interesting to see this with prunning.
     """
 
-    def __init__(
-        self,
-        color,
-        depth=ALPHABETA_DEFAULT_DEPTH,
-        prunning=False,
-        value_fn_builder_name=None,
-        params=DEFAULT_WEIGHTS,
-        epsilon=None,
-    ):
-        super().__init__(color)
-        self.depth = int(depth)
-        self.prunning = str(prunning).lower() != "false"
-        self.value_fn_builder_name = (
-            "contender_fn" if value_fn_builder_name == "C" else "base_fn"
-        )
-        self.params = params
-        self.use_value_function = None
-        self.epsilon = epsilon
+    class Params(BaseParams):
+        # Field order is the CLI's positional order: AB:2:contender
+        depth: int = ALPHABETA_DEFAULT_DEPTH
+        value_fn: Literal["base", "contender"] = "base"
+        prunning: bool = False
+        epsilon: Optional[float] = None
+        #: Non-scalar: programmatic use only, not settable from CLI/web.
+        weights: dict = DEFAULT_WEIGHTS
+
+    #: Set by subclasses/experiments that override value_function().
+    use_value_function = None
+
+    @property
+    def value_fn_builder_name(self):
+        return "contender_fn" if self.params.value_fn == "contender" else "base_fn"
 
     def value_function(self, game, p0_color):
         raise NotImplementedError
 
     def get_actions(self, game):
-        if self.prunning:
+        if self.params.prunning:
             return list_prunned_actions(game)
         return game.playable_actions
 
@@ -57,7 +56,7 @@ class AlphaBetaPlayer(Player):
         if len(actions) == 1:
             return actions[0]
 
-        if self.epsilon is not None and random.random() < self.epsilon:
+        if self.params.epsilon is not None and random.random() < self.params.epsilon:
             return random.choice(playable_actions)
 
         start = time.time()
@@ -65,21 +64,15 @@ class AlphaBetaPlayer(Player):
         node = DebugStateNode(state_id, self.color)  # i think it comes from outside
         deadline = start + MAX_SEARCH_TIME_SECS
         result = self.alphabeta(
-            game.copy(), self.depth, float("-inf"), float("inf"), deadline, node
+            game.copy(), self.params.depth, float("-inf"), float("inf"), deadline, node
         )
-        # print("Decision Results:", self.depth, len(actions), time.time() - start)
+        # print("Decision Results:", self.params.depth, len(actions), time.time() - start)
         # if game.state.num_turns > 10:
         #     render_debug_tree(node)
         #     breakpoint()
         if result[0] is None:
             return playable_actions[0]
         return result[0]
-
-    def __repr__(self) -> str:
-        return (
-            super().__repr__()
-            + f"(depth={self.depth},value_fn={self.value_fn_builder_name},prunning={self.prunning})"
-        )
 
     def alphabeta(self, game, depth, alpha, beta, deadline, node):
         """AlphaBeta MiniMax Algorithm.
@@ -93,7 +86,7 @@ class AlphaBetaPlayer(Player):
         if depth == 0 or game.winning_color() is not None or time.time() >= deadline:
             value_fn = get_value_fn(
                 self.value_fn_builder_name,
-                self.params,
+                self.params.weights,
                 self.value_function if self.use_value_function else None,
             )
             value = value_fn(game, self.color)
@@ -246,7 +239,7 @@ class SameTurnAlphaBetaPlayer(AlphaBetaPlayer):
         ):
             value_fn = get_value_fn(
                 self.value_fn_builder_name,
-                self.params,
+                self.params.weights,
                 self.value_function if self.use_value_function else None,
             )
             value = value_fn(game, self.color)
