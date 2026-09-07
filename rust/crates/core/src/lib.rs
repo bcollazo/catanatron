@@ -6,6 +6,18 @@
 
 #![forbid(unsafe_code)]
 
+mod action;
+mod ids;
+mod phase;
+mod position;
+mod validate;
+
+pub use action::{Action, DevelopmentCard, Resource};
+pub use ids::{EdgeId, IdError, NodeId, PlayerId, TileId};
+pub use phase::{ChanceKind, Outcome, Phase, Status, Truncation};
+pub use position::{PlayerState, Position, MAX_PLAYERS};
+pub use validate::{validate_boundary, IllegalAction};
+
 /// Identifies the engine profile implemented by this workspace.
 ///
 /// The detailed compatibility contract is frozen in
