@@ -17,6 +17,7 @@ pub enum IllegalAction {
     ExhaustedRoads,
     ExhaustedSettlements,
     ExhaustedCities,
+    ExhaustedDevelopmentCards,
     InvalidRoadPlacement,
     InvalidSettlementPlacement,
     InvalidCityPlacement,
@@ -78,6 +79,7 @@ pub fn validate_boundary(
             | (Phase::PostRoll { .. }, Action::BuildRoad(_))
             | (Phase::PostRoll { .. }, Action::BuildSettlement(_))
             | (Phase::PostRoll { .. }, Action::BuildCity(_))
+            | (Phase::PostRoll { .. }, Action::BuyDevelopmentCard)
     );
     if !allowed {
         return Err(IllegalAction::WrongPhase);
@@ -116,6 +118,16 @@ pub fn validate_boundary(
         }
         for (resource, required) in [(Resource::Wheat, 2), (Resource::Ore, 3)] {
             if position.players[usize::from(actor.get())].hand[resource.index()] < required {
+                return Err(IllegalAction::InsufficientResource(resource));
+            }
+        }
+    }
+    if matches!(action, Action::BuyDevelopmentCard) {
+        if position.dev_bank.iter().all(|&count| count == 0) {
+            return Err(IllegalAction::ExhaustedDevelopmentCards);
+        }
+        for resource in [Resource::Sheep, Resource::Wheat, Resource::Ore] {
+            if position.players[usize::from(actor.get())].hand[resource.index()] == 0 {
                 return Err(IllegalAction::InsufficientResource(resource));
             }
         }

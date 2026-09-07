@@ -92,4 +92,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (14 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
 * Next action: implement paid development-card purchase and chance resolution; E04 construction actions will then have road, settlement, city, and development coverage.
 
+### 2026-09-07 — E04 development-purchase checkpoint
+
+* Added legal generation and atomic checked application for development-card purchases, including sheep/wheat/ore payment and an explicit pending draw. Added checked chance resolution for development draws, which updates the deck and player's typed card count before returning to post-roll.
+* `cargo test --manifest-path rust/Cargo.toml` (15 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
+* Next action: implement setup's second-settlement resource grants and turn-counter behavior, then audit E04's ordinary-turn exit cases before moving to dice/robber work.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

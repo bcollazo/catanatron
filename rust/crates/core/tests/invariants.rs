@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use catanatron_core::{apply_checked, Status};
+use catanatron_core::{apply_checked, apply_outcome_checked, Status};
 use catanatron_core::{
     edge_endpoints, generate_actions, node_neighbors, BASE_EDGE_COUNT, BASE_NODE_COUNT,
 };
@@ -317,6 +317,42 @@ fn generated_post_roll_city_upgrades_a_settlement_and_pays_cost() {
     assert_eq!(position.players[0].pieces, [15, 6, 3]);
     assert_eq!(position.bank[Resource::Wheat.index()], 19);
     assert_eq!(position.bank[Resource::Ore.index()], 19);
+}
+
+#[test]
+fn buying_a_development_card_pays_then_resolves_its_draw() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    for resource in [Resource::Sheep, Resource::Wheat, Resource::Ore] {
+        position.players[0].hand[resource.index()] = 1;
+        position.bank[resource.index()] -= 1;
+    }
+    let mut actions = Vec::new();
+    generate_actions(&position, &mut actions);
+    assert!(actions.contains(&Action::BuyDevelopmentCard));
+    assert_eq!(
+        apply_checked(&mut position, actor, Action::BuyDevelopmentCard)
+            .unwrap()
+            .status,
+        Status::Chance
+    );
+    for resource in [Resource::Sheep, Resource::Wheat, Resource::Ore] {
+        assert_eq!(position.players[0].hand[resource.index()], 0);
+        assert_eq!(position.bank[resource.index()], 19);
+    }
+    assert_eq!(
+        apply_outcome_checked(
+            &mut position,
+            Outcome::DevelopmentCard(DevelopmentCard::Knight)
+        )
+        .unwrap()
+        .status,
+        Status::Decision
+    );
+    assert_eq!(position.players[0].dev[DevelopmentCard::Knight.index()], 1);
+    assert_eq!(position.dev_bank[DevelopmentCard::Knight.index()], 13);
+    assert!(matches!(position.phase, Phase::PostRoll { actor: current } if current == actor));
 }
 
 #[test]

@@ -86,6 +86,13 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
                     }
                 }
             }
+            if position.dev_bank.iter().any(|&count| count > 0)
+                && player.hand[crate::Resource::Sheep.index()] > 0
+                && player.hand[crate::Resource::Wheat.index()] > 0
+                && player.hand[crate::Resource::Ore.index()] > 0
+            {
+                out.push(Action::BuyDevelopmentCard);
+            }
         }
         _ => {}
     }

@@ -75,6 +75,22 @@ pub fn apply_checked(
             }
             Status::Decision
         }
+        Action::BuyDevelopmentCard => {
+            let player = &mut next.players[usize::from(actor.get())];
+            for resource in [
+                crate::Resource::Sheep,
+                crate::Resource::Wheat,
+                crate::Resource::Ore,
+            ] {
+                player.hand[resource.index()] -= 1;
+                next.bank[resource.index()] += 1;
+            }
+            next.phase = Phase::Chance {
+                actor,
+                kind: ChanceKind::DevelopmentCard,
+            };
+            Status::Chance
+        }
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
                 next.roads[usize::from(edge.get())] = actor.get() + 1;
@@ -115,6 +131,32 @@ pub fn apply_checked(
             _ => return Err(IllegalAction::WrongPhase),
         },
         _ => return Err(IllegalAction::WrongPhase),
+    };
+    *position = next;
+    Ok(Transition { status })
+}
+
+/// Resolves a checked chance result atomically.
+pub fn apply_outcome_checked(
+    position: &mut Position,
+    outcome: crate::Outcome,
+) -> Result<Transition, IllegalAction> {
+    crate::validate_outcome(position, outcome)?;
+    let mut next = *position;
+    let status = match (next.phase, outcome) {
+        (
+            Phase::Chance {
+                actor,
+                kind: ChanceKind::DevelopmentCard,
+            },
+            crate::Outcome::DevelopmentCard(card),
+        ) => {
+            next.dev_bank[card.index()] -= 1;
+            next.players[usize::from(actor.get())].dev[card.index()] += 1;
+            next.phase = Phase::PostRoll { actor };
+            Status::Decision
+        }
+        _ => return Err(IllegalAction::InvalidOutcome),
     };
     *position = next;
     Ok(Transition { status })
