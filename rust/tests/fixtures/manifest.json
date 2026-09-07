@@ -1,0 +1,40 @@
+{
+  "coverage": {
+    "BUILD_ROAD": 42,
+    "BUILD_SETTLEMENT": 26,
+    "BUY_DEVELOPMENT_CARD": 6,
+    "DISCARD_RESOURCE": 21,
+    "END_TURN": 121,
+    "MARITIME_TRADE": 18,
+    "MOVE_ROBBER": 21,
+    "PLAY_KNIGHT_CARD": 2,
+    "PLAY_MONOPOLY": 1,
+    "PLAY_ROAD_BUILDING": 2,
+    "PLAY_YEAR_OF_PLENTY": 1,
+    "ROLL": 123
+  },
+  "development_order": [
+    "KNIGHT",
+    "YEAR_OF_PLENTY",
+    "MONOPOLY",
+    "ROAD_BUILDING",
+    "VICTORY_POINT"
+  ],
+  "files": {
+    "transitions\\sample-base-2p.jsonl": "932b3b47e720315c219e2aaefc8bd07a21f61b70de5eb2e8e78fffe8f8130cd8",
+    "transitions\\sample-base-3p.jsonl": "7bcd411c3bea82219e8f89d82abb451e99c0ff28cb4883df43891d2c72f5116c",
+    "transitions\\sample-base-4p.jsonl": "a45972deddfe4f2c54cca78f19b9b02b9dc27e0c8592a7b3b03b8b31f08b8d32",
+    "transitions\\sample-tournament-4p.jsonl": "088528249248639377c897d0ce77a631faf970246a8dc076b42a7d31f7bc18b3"
+  },
+  "fixture_version": 1,
+  "known_incomplete_coverage": "sample traces only; crafted action/phase/divergence fixtures are still required for E02",
+  "resource_order": [
+    "WOOD",
+    "BRICK",
+    "SHEEP",
+    "WHEAT",
+    "ORE"
+  ],
+  "rules_profile": "rust-v1",
+  "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816"
+}

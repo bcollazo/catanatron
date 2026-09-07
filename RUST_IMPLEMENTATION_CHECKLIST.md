@@ -35,12 +35,18 @@ Status at handoff: **planning complete; production implementation not started**.
 ## Current execution checkpoint
 
 * Current task: E02 (freeze rules, topology, and fixtures; in progress).
-* Last implementation check: topology export passed `rust/tools/export_topology.py --check` on 2026-09-07; workspace formatting and core tests still pass.
-* Next action: implement canonical state/action fixture export, including forced chance outcomes and manifest coverage, then verify all 18 action variants and required configurations before marking E02 complete.
+* Last implementation check: topology and fixture export both pass their `--check` mode on 2026-09-07; targeted Python rule tests pass (24 tests), and `cargo check` still passes.
+* Next action: add crafted city and domestic-trade transition fixtures (offer/accept/reject/confirm/cancel), then add forced chance fixtures and remaining phase/divergence coverage before marking E02 complete.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
 * Changed implementation files: `rust/` workspace files, generated topology fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
-* Known failing fixture/test IDs: no fixture corpus generated yet; E02 remains incomplete.
-* Decisions since the plan: use the isolated ignored `.venv/rust-engine` (Python 3.12.14, NetworkX 3.5) because the system pyenv shim is unconfigured. Topology exports only immutable geometry: resource/port assignments are deliberately excluded because Python map initialization randomizes them.
+* Known failing fixture/test IDs: no failing tests. E02's manifest deliberately reports incomplete coverage: `BUILD_CITY`, `OFFER_TRADE`, `ACCEPT_TRADE`, `REJECT_TRADE`, `CONFIRM_TRADE`, and `CANCEL_TRADE` are not yet represented by sampled traces.
+* Decisions since the plan: use the isolated ignored `.venv/rust-engine` (Python 3.12.14, NetworkX 3.5) because the system pyenv shim is unconfigured. Topology exports only immutable geometry: resource/port assignments are deliberately excluded because Python map initialization randomizes them. Trace action selection is canonicalized because Python set-backed move menus otherwise vary by hash seed.
+
+### 2026-09-07 — E02 checkpoint
+
+* Added the `rust-v1` profile and v1 fixture-format specification.
+* Added deterministic topology and fixture exporters. `export_topology.py --check` and `export_fixtures.py --check` pass. The fixture manifest records hashes and actual sampled coverage instead of pretending the sample corpus is complete.
+* Sample traces cover BASE for 2/3/4 players and TOURNAMENT for 4 players, but not yet all actions/phases; E02 remains open.
 
 ### 2026-09-07 — E00 complete
 
