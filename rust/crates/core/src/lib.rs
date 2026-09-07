@@ -10,15 +10,17 @@ mod action;
 mod apply;
 mod generate;
 mod ids;
+mod layout;
 mod phase;
 mod position;
 mod topology;
 mod validate;
 
 pub use action::{Action, DevelopmentCard, Resource};
-pub use apply::{apply_checked, apply_outcome_checked, Transition};
+pub use apply::{apply_checked, apply_checked_with_context, apply_outcome_checked, Transition};
 pub use generate::generate_actions;
 pub use ids::{EdgeId, IdError, NodeId, PlayerId, TileId};
+pub use layout::{GameContext, LandTile, Layout, LayoutError};
 pub use phase::{ChanceKind, Outcome, Phase, Status, Truncation};
 pub use position::{building_belongs_to, PlayerState, Position, CITY_OFFSET, MAX_PLAYERS};
 pub use topology::{

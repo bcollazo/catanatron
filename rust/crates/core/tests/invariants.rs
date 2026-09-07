@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use catanatron_core::{apply_checked, apply_outcome_checked, Status};
+use catanatron_core::{apply_checked, apply_checked_with_context, apply_outcome_checked, Status};
 use catanatron_core::{
     edge_endpoints, generate_actions, node_neighbors, BASE_EDGE_COUNT, BASE_NODE_COUNT,
 };
@@ -29,6 +29,47 @@ fn exported_base_topology_has_expected_dense_bounds() {
         catanatron_core::land_tile_nodes(TileId::new(0).unwrap()).len(),
         6
     );
+}
+
+#[test]
+fn layout_is_immutable_context_data_and_rejects_invalid_tile_assignments() {
+    let mut tiles = [catanatron_core::LandTile::DESERT; catanatron_core::BASE_LAND_TILE_COUNT];
+    tiles[0] = catanatron_core::LandTile::producing(Resource::Wood, 8);
+    let layout = catanatron_core::Layout::new(tiles).unwrap();
+    let context = catanatron_core::GameContext::new(layout);
+    assert_eq!(
+        context.layout.tile(TileId::new(0).unwrap()),
+        catanatron_core::LandTile::producing(Resource::Wood, 8)
+    );
+    tiles[1] = catanatron_core::LandTile::producing(Resource::Brick, 7);
+    assert_eq!(
+        catanatron_core::Layout::new(tiles),
+        Err(catanatron_core::LayoutError::InvalidTile(1))
+    );
+}
+
+#[test]
+fn context_aware_second_setup_settlement_collects_adjacent_resources() {
+    let mut tiles = [catanatron_core::LandTile::DESERT; catanatron_core::BASE_LAND_TILE_COUNT];
+    tiles[9] = catanatron_core::LandTile::producing(Resource::Wood, 8);
+    let context = catanatron_core::GameContext::new(catanatron_core::Layout::new(tiles).unwrap());
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.buildings[40] = actor.get() + 1;
+    position.players[0].pieces[1] -= 1;
+    position.phase = Phase::SetupSettlement {
+        actor,
+        reverse: true,
+    };
+    apply_checked_with_context(
+        &mut position,
+        &context,
+        actor,
+        Action::BuildSettlement(NodeId::new(0).unwrap()),
+    )
+    .unwrap();
+    assert_eq!(position.players[0].hand[Resource::Wood.index()], 1);
+    assert_eq!(position.bank[Resource::Wood.index()], 18);
 }
 
 #[test]

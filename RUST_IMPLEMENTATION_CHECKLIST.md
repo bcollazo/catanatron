@@ -110,4 +110,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `python rust/tools/export_topology.py --check`, `cargo test --manifest-path rust/Cargo.toml` (15 tests), and `cargo fmt --check --manifest-path rust/Cargo.toml` pass.
 * Next action: add the immutable runtime layout/context carrying each land tile's resource and number token, then route setup payouts and dice production through that context.
 
+### 2026-09-07 — layout and setup-payout checkpoint
+
+* Added immutable validated land-tile layout data and `GameContext`, keeping randomized assignments outside copied `Position` values. Added a context-aware checked transition that grants each adjacent non-desert resource only to a player's second setup settlement.
+* `cargo test --manifest-path rust/Cargo.toml` (17 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
+* Next action: route dice outcome resolution through this context, beginning with non-seven aggregate production and the specified per-resource bank-shortage rule.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

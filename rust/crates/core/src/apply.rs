@@ -139,6 +139,43 @@ pub fn apply_checked(
     Ok(Transition { status })
 }
 
+/// Applies an intent using immutable board assignments when a rule needs them.
+///
+/// The context-free entry point remains useful for geometry-only callers. New
+/// game transitions should use this entry point so setup and production rules
+/// observe the concrete randomized layout.
+pub fn apply_checked_with_context(
+    position: &mut Position,
+    context: &crate::GameContext,
+    actor: crate::PlayerId,
+    action: Action,
+) -> Result<Transition, IllegalAction> {
+    let mut next = *position;
+    let transition = apply_checked(&mut next, actor, action)?;
+    if let Action::BuildSettlement(node) = action {
+        if matches!(position.phase, Phase::SetupSettlement { .. })
+            && next
+                .buildings
+                .iter()
+                .filter(|&&building| crate::building_belongs_to(building, actor))
+                .count()
+                == 2
+        {
+            for raw in 0..crate::BASE_LAND_TILE_COUNT as u8 {
+                let tile = crate::TileId::new(raw).expect("generated tile");
+                if crate::land_tile_nodes(tile).contains(&node) {
+                    if let Some(resource) = context.layout.tile(tile).resource {
+                        next.bank[resource.index()] -= 1;
+                        next.players[usize::from(actor.get())].hand[resource.index()] += 1;
+                    }
+                }
+            }
+        }
+    }
+    *position = next;
+    Ok(transition)
+}
+
 /// Resolves a checked chance result atomically.
 pub fn apply_outcome_checked(
     position: &mut Position,
