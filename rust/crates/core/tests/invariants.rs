@@ -172,6 +172,35 @@ fn seven_runs_discards_in_seat_order_then_enters_robber_phase() {
 }
 
 #[test]
+fn robber_moves_to_a_victim_and_resolves_a_checked_theft() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    let victim = PlayerId::new(1).unwrap();
+    position.phase = Phase::Robber {
+        actor,
+        resume_post_roll: true,
+    };
+    position.robber = 18;
+    position.buildings[0] = victim.get() + 1;
+    position.players[1].hand[Resource::Ore.index()] = 1;
+    let action = Action::MoveRobber {
+        tile: TileId::new(9).unwrap(),
+        victim: Some(victim),
+    };
+    let mut actions = Vec::new();
+    generate_actions(&position, &mut actions);
+    assert!(actions.contains(&action));
+    assert_eq!(
+        apply_checked(&mut position, actor, action).unwrap().status,
+        Status::Chance
+    );
+    apply_outcome_checked(&mut position, Outcome::StolenResource(Resource::Ore)).unwrap();
+    assert_eq!(position.players[0].hand[Resource::Ore.index()], 1);
+    assert_eq!(position.players[1].hand[Resource::Ore.index()], 0);
+    assert!(matches!(position.phase, Phase::PostRoll { actor: current } if current == actor));
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();

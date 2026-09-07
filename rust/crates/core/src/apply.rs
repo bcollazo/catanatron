@@ -118,6 +118,19 @@ pub fn apply_checked(
             }
             Status::Decision
         }
+        Action::MoveRobber { tile, victim } => {
+            next.robber = tile.get();
+            if let Some(victim) = victim {
+                next.phase = Phase::Chance {
+                    actor,
+                    kind: ChanceKind::Theft { victim },
+                };
+                Status::Chance
+            } else {
+                next.phase = Phase::PostRoll { actor };
+                Status::Decision
+            }
+        }
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
                 next.roads[usize::from(edge.get())] = actor.get() + 1;
@@ -239,6 +252,18 @@ pub fn apply_outcome_checked(
         ) => {
             next.dev_bank[card.index()] -= 1;
             next.players[usize::from(actor.get())].dev[card.index()] += 1;
+            next.phase = Phase::PostRoll { actor };
+            Status::Decision
+        }
+        (
+            Phase::Chance {
+                actor,
+                kind: ChanceKind::Theft { victim },
+            },
+            crate::Outcome::StolenResource(resource),
+        ) => {
+            next.players[usize::from(victim.get())].hand[resource.index()] -= 1;
+            next.players[usize::from(actor.get())].hand[resource.index()] += 1;
             next.phase = Phase::PostRoll { actor };
             Status::Decision
         }

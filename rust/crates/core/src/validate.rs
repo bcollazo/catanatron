@@ -22,6 +22,7 @@ pub enum IllegalAction {
     InvalidRoadPlacement,
     InvalidSettlementPlacement,
     InvalidCityPlacement,
+    InvalidRobberMove,
 }
 
 /// Checks a supplied chance result before an application path can mutate state.
@@ -82,6 +83,7 @@ pub fn validate_boundary(
             | (Phase::PostRoll { .. }, Action::BuildCity(_))
             | (Phase::PostRoll { .. }, Action::BuyDevelopmentCard)
             | (Phase::Discard { .. }, Action::Discard(_))
+            | (Phase::Robber { .. }, Action::MoveRobber { .. })
     );
     if !allowed {
         return Err(IllegalAction::WrongPhase);
@@ -137,6 +139,37 @@ pub fn validate_boundary(
     if let Action::Discard(resource) = action {
         if position.players[usize::from(actor.get())].hand[resource.index()] == 0 {
             return Err(IllegalAction::InsufficientResource(resource));
+        }
+    }
+    if let Action::MoveRobber { tile, victim } = action {
+        if tile.get() == position.robber {
+            return Err(IllegalAction::InvalidRobberMove);
+        }
+        if let Some(victim) = victim {
+            if victim == actor
+                || victim.get() >= position.player_count
+                || position.players[usize::from(victim.get())]
+                    .hand
+                    .iter()
+                    .all(|&count| count == 0)
+                || !crate::land_tile_nodes(tile).into_iter().any(|node| {
+                    crate::building_belongs_to(position.buildings[usize::from(node.get())], victim)
+                })
+            {
+                return Err(IllegalAction::InvalidRobberMove);
+            }
+        } else if crate::land_tile_nodes(tile).into_iter().any(|node| {
+            crate::building_owner(position.buildings[usize::from(node.get())]).is_some_and(
+                |owner| {
+                    owner != actor
+                        && position.players[usize::from(owner.get())]
+                            .hand
+                            .iter()
+                            .any(|&count| count > 0)
+                },
+            )
+        }) {
+            return Err(IllegalAction::InvalidRobberMove);
         }
     }
     Ok(())
