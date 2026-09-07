@@ -6,8 +6,8 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Ordered tasks
 
-- [ ] E00 — Checkout/toolchain/baseline provenance verified for the implementation session.
-- [ ] E01 — Production Cargo workspace builds; dependency direction enforced.
+- [x] E00 — Checkout/toolchain/baseline provenance verified for the implementation session.
+- [x] E01 — Production Cargo workspace builds; dependency direction enforced.
 - [ ] E02 — Rules profile, full fixtures, topology export and named divergences frozen.
 - [ ] E03 — Typed state/action/phase/outcomes and atomic checked boundaries implemented.
 - [ ] E04 — Setup, construction, ordinary turns and independent move generation pass.
@@ -34,12 +34,23 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E00 (not started).
-* Last implementation check: none; only the committed planning experiments were run.
-* Next action: inspect checkout/tools, record provenance, run the existing offline Rust probe.
-* Blocking condition: none known for beginning core implementation; real stdio certification needs the pinned/merged PR host.
-* Changed implementation files: none.
-* Known failing fixture/test IDs: none generated yet.
-* Decisions since the plan: none.
+* Current task: E02 (freeze rules, topology, and fixtures; in progress).
+* Last implementation check: topology export passed `rust/tools/export_topology.py --check` on 2026-09-07; workspace formatting and core tests still pass.
+* Next action: implement canonical state/action fixture export, including forced chance outcomes and manifest coverage, then verify all 18 action variants and required configurations before marking E02 complete.
+* Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
+* Changed implementation files: `rust/` workspace files, generated topology fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
+* Known failing fixture/test IDs: no fixture corpus generated yet; E02 remains incomplete.
+* Decisions since the plan: use the isolated ignored `.venv/rust-engine` (Python 3.12.14, NetworkX 3.5) because the system pyenv shim is unconfigured. Topology exports only immutable geometry: resource/port assignments are deliberately excluded because Python map initialization randomizes them.
+
+### 2026-09-07 — E00 complete
+
+* Commit at start: `5cc406a4032b3a7f6971b4fc0735663d2e0ca7e5` on `plan/rust-rollout-engine`.
+* Recorded checkout, pinned rules/protocol revisions, available tool versions, Python environment, and commands in `rust/docs/provenance.md`.
+* The offline Rust design probe and the Python baseline both passed. CPU WMI inspection was denied and is recorded as unavailable rather than assumed.
+
+### 2026-09-07 — E01 complete
+
+* Created the dependency-free `catanatron-core` workspace member with safe-Rust policy, release settings, committed lockfile, and a runnable workspace README.
+* `cargo check`, formatting, and unit tests passed. No production crate depends on Python, JSON, or search code; the planning probe remains outside the workspace.
 
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.
