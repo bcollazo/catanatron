@@ -1,6 +1,7 @@
 use std::mem::size_of;
 
 use catanatron_core::{apply_checked, Status};
+use catanatron_core::{edge_endpoints, node_neighbors, BASE_EDGE_COUNT, BASE_NODE_COUNT};
 use catanatron_core::{
     validate_boundary, validate_outcome, Action, ChanceKind, DevelopmentCard, EdgeId,
     IllegalAction, NodeId, Outcome, Phase, PlayerId, Position, Resource, TileId,
@@ -12,6 +13,15 @@ fn ids_reject_out_of_range_values() {
     assert!(NodeId::new(54).is_err());
     assert!(EdgeId::new(72).is_err());
     assert!(TileId::new(19).is_err());
+}
+
+#[test]
+fn exported_base_topology_has_expected_dense_bounds() {
+    assert_eq!(BASE_NODE_COUNT, 54);
+    assert_eq!(BASE_EDGE_COUNT, 72);
+    let endpoints = edge_endpoints(EdgeId::new(0).unwrap());
+    assert_eq!((endpoints.0.get(), endpoints.1.get()), (0, 1));
+    assert_eq!(node_neighbors(NodeId::new(0).unwrap()).count(), 3);
 }
 
 #[test]
