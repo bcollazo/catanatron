@@ -86,4 +86,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (13 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
 * Next action: represent city building kind in canonical state, then implement checked paid city construction and generation.
 
+### 2026-09-07 — E04 post-roll city checkpoint
+
+* Added a compact city ownership encoding and post-roll city generation/application. A city requires an owned settlement, an available city piece, two wheat and three ore; it returns the upgraded settlement piece and pays resources to the bank.
+* `cargo test --manifest-path rust/Cargo.toml` (14 tests), `cargo fmt --check --manifest-path rust/Cargo.toml`, and `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` pass.
+* Next action: implement paid development-card purchase and chance resolution; E04 construction actions will then have road, settlement, city, and development coverage.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

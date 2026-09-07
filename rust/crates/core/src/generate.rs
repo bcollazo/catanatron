@@ -42,7 +42,7 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
                     let (a, b) = crate::edge_endpoints(edge);
                     let reachable = [a, b].into_iter().any(|node| {
                         let building = position.buildings[usize::from(node.get())];
-                        building == actor.get() + 1
+                        crate::building_belongs_to(building, actor)
                             || (building == 0
                                 && (0..BASE_EDGE_COUNT as u8).any(|other| {
                                     position.roads[usize::from(other)] == actor.get() + 1
@@ -71,6 +71,18 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
                             .all(|near| position.buildings[usize::from(near.get())] == 0)
                     {
                         out.push(Action::BuildSettlement(node));
+                    }
+                }
+            }
+            if player.pieces[2] > 0
+                && player.hand[crate::Resource::Wheat.index()] >= 2
+                && player.hand[crate::Resource::Ore.index()] >= 3
+            {
+                for raw in 0..BASE_NODE_COUNT as u8 {
+                    if position.buildings[usize::from(raw)] == actor.get() + 1 {
+                        out.push(Action::BuildCity(
+                            crate::NodeId::new(raw).expect("generated node"),
+                        ));
                     }
                 }
             }

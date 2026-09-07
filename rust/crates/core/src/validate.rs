@@ -16,8 +16,10 @@ pub enum IllegalAction {
     InsufficientResource(Resource),
     ExhaustedRoads,
     ExhaustedSettlements,
+    ExhaustedCities,
     InvalidRoadPlacement,
     InvalidSettlementPlacement,
+    InvalidCityPlacement,
 }
 
 /// Checks a supplied chance result before an application path can mutate state.
@@ -75,6 +77,7 @@ pub fn validate_boundary(
             | (Phase::PostRoll { .. }, Action::EndTurn)
             | (Phase::PostRoll { .. }, Action::BuildRoad(_))
             | (Phase::PostRoll { .. }, Action::BuildSettlement(_))
+            | (Phase::PostRoll { .. }, Action::BuildCity(_))
     );
     if !allowed {
         return Err(IllegalAction::WrongPhase);
@@ -101,6 +104,19 @@ pub fn validate_boundary(
                 if position.players[usize::from(actor.get())].hand[resource.index()] == 0 {
                     return Err(IllegalAction::InsufficientResource(resource));
                 }
+            }
+        }
+    }
+    if let Action::BuildCity(node) = action {
+        if position.players[usize::from(actor.get())].pieces[2] == 0 {
+            return Err(IllegalAction::ExhaustedCities);
+        }
+        if position.buildings[usize::from(node.get())] != actor.get() + 1 {
+            return Err(IllegalAction::InvalidCityPlacement);
+        }
+        for (resource, required) in [(Resource::Wheat, 2), (Resource::Ore, 3)] {
+            if position.players[usize::from(actor.get())].hand[resource.index()] < required {
+                return Err(IllegalAction::InsufficientResource(resource));
             }
         }
     }
@@ -148,7 +164,7 @@ fn validate_road_placement(
             let (first, second) = edge_endpoints(edge);
             [first, second].into_iter().any(|node| {
                 let building = position.buildings[usize::from(node.get())];
-                building == actor.get() + 1
+                crate::building_belongs_to(building, actor)
                     || (building == 0
                         && (0..BASE_EDGE_COUNT as u8).any(|raw| {
                             position.roads[usize::from(raw)] == actor.get() + 1

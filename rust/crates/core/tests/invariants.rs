@@ -296,6 +296,30 @@ fn generated_post_roll_settlements_validate_apply_and_pay_atomically() {
 }
 
 #[test]
+fn generated_post_roll_city_upgrades_a_settlement_and_pays_cost() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    position.buildings[0] = actor.get() + 1;
+    position.players[0].hand[Resource::Wheat.index()] = 2;
+    position.players[0].hand[Resource::Ore.index()] = 3;
+    position.bank[Resource::Wheat.index()] -= 2;
+    position.bank[Resource::Ore.index()] -= 3;
+    let mut actions = Vec::new();
+    generate_actions(&position, &mut actions);
+    let city = Action::BuildCity(NodeId::new(0).unwrap());
+    assert!(actions.contains(&city));
+    apply_checked(&mut position, actor, city).unwrap();
+    assert_eq!(
+        position.buildings[0],
+        actor.get() + 1 + catanatron_core::CITY_OFFSET
+    );
+    assert_eq!(position.players[0].pieces, [15, 6, 3]);
+    assert_eq!(position.bank[Resource::Wheat.index()], 19);
+    assert_eq!(position.bank[Resource::Ore.index()], 19);
+}
+
+#[test]
 fn copy_is_independent_and_uses_no_heap_owned_fields() {
     let root = Position::new(4).unwrap();
     let mut child = root;

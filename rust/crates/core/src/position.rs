@@ -1,6 +1,11 @@
 //! Copyable canonical mutable state; immutable topology stays outside this type.
 use crate::{Phase, PlayerId};
 pub const MAX_PLAYERS: usize = 4;
+pub const CITY_OFFSET: u8 = MAX_PLAYERS as u8;
+
+pub const fn building_belongs_to(building: u8, player: PlayerId) -> bool {
+    building == player.get() + 1 || building == player.get() + 1 + CITY_OFFSET
+}
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PlayerState {
     pub hand: [u8; 5],

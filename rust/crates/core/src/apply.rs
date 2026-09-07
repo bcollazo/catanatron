@@ -60,6 +60,21 @@ pub fn apply_checked(
             }
             _ => return Err(IllegalAction::WrongPhase),
         },
+        Action::BuildCity(node) => {
+            next.buildings[usize::from(node.get())] = actor.get() + 1 + crate::CITY_OFFSET;
+            let player = &mut next.players[usize::from(actor.get())];
+            player.pieces[1] += 1;
+            player.pieces[2] -= 1;
+            for _ in 0..2 {
+                player.hand[crate::Resource::Wheat.index()] -= 1;
+                next.bank[crate::Resource::Wheat.index()] += 1;
+            }
+            for _ in 0..3 {
+                player.hand[crate::Resource::Ore.index()] -= 1;
+                next.bank[crate::Resource::Ore.index()] += 1;
+            }
+            Status::Decision
+        }
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
                 next.roads[usize::from(edge.get())] = actor.get() + 1;

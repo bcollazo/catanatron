@@ -20,7 +20,7 @@ pub use apply::{apply_checked, Transition};
 pub use generate::generate_actions;
 pub use ids::{EdgeId, IdError, NodeId, PlayerId, TileId};
 pub use phase::{ChanceKind, Outcome, Phase, Status, Truncation};
-pub use position::{PlayerState, Position, MAX_PLAYERS};
+pub use position::{building_belongs_to, PlayerState, Position, CITY_OFFSET, MAX_PLAYERS};
 pub use topology::{edge_endpoints, incident, node_neighbors, BASE_EDGE_COUNT, BASE_NODE_COUNT};
 pub use validate::{validate_boundary, validate_outcome, IllegalAction};
 
