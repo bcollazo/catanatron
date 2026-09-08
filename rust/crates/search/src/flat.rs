@@ -3,7 +3,7 @@ use catanatron_core::{
     PlayerId, Position, Status,
 };
 
-use crate::{rollout, sample_outcome, Policy, RolloutLimits, RolloutScratch, SearchRng};
+use crate::{rollout_until, sample_outcome, Policy, RolloutLimits, RolloutScratch, SearchRng};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FlatResult {
@@ -35,7 +35,6 @@ pub fn flat_monte_carlo_until(
     if actions.is_empty() {
         return None;
     }
-    let root_player = root.actor;
     let mut sums = vec![0.0; actions.len()];
     let mut counts = vec![0_u32; actions.len()];
     let mut scratch = RolloutScratch::default();
@@ -48,10 +47,10 @@ pub fn flat_monte_carlo_until(
             context,
             root,
             actions[index],
-            root_player,
             seed.wrapping_add(u64::from(sample)),
             limits,
             &mut scratch,
+            &mut should_stop,
         );
         counts[index] += 1;
     }
@@ -73,11 +72,12 @@ fn evaluate(
     context: &GameContext,
     root: &Position,
     action: Action,
-    root_player: PlayerId,
     seed: u64,
     limits: RolloutLimits,
     scratch: &mut RolloutScratch,
+    should_stop: &mut impl FnMut() -> bool,
 ) -> f64 {
+    let root_player = root.actor;
     let mut position = *root;
     let transition = apply_checked_with_context(&mut position, context, root_player, action)
         .expect("root action came from generated menu");
@@ -97,7 +97,15 @@ fn evaluate(
             return reward;
         }
     }
-    let result = rollout(context, &position, Policy::Weighted, seed, limits, scratch);
+    let result = rollout_until(
+        context,
+        &position,
+        Policy::Weighted,
+        seed,
+        limits,
+        scratch,
+        should_stop,
+    );
     result
         .winner
         .map_or(0.5, |winner| if winner == root_player { 1.0 } else { 0.0 })

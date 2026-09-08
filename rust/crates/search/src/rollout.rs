@@ -50,12 +50,32 @@ pub fn rollout(
     limits: RolloutLimits,
     scratch: &mut RolloutScratch,
 ) -> RolloutResult {
+    rollout_until(context, root, policy, seed, limits, scratch, || false)
+}
+
+pub fn rollout_until(
+    context: &GameContext,
+    root: &Position,
+    policy: Policy,
+    seed: u64,
+    limits: RolloutLimits,
+    scratch: &mut RolloutScratch,
+    mut should_stop: impl FnMut() -> bool,
+) -> RolloutResult {
     let mut position = *root;
     let mut chance_rng = SearchRng::from_seed(derive_seed(seed, 0, 0, StreamKind::Chance));
     let mut policy_rng = SearchRng::from_seed(derive_seed(seed, 0, 0, StreamKind::Policy));
     let mut player_actions = 0;
     loop {
         debug_assert_conservation(&position);
+        if should_stop() {
+            return result(
+                &position,
+                player_actions,
+                None,
+                Some(Truncation::ActionLimit),
+            );
+        }
         if position.turns >= limits.turn_limit {
             return result(&position, player_actions, None, Some(Truncation::TurnLimit));
         }
@@ -186,5 +206,25 @@ mod tests {
         assert_eq!(first, second);
         assert_eq!(root, original);
         assert!(first.player_actions > 0);
+    }
+
+    #[test]
+    fn deadline_hook_interrupts_inside_a_rollout() {
+        let (context, root) = initialize_base(2, NumberPlacement::OfficialSpiral, 9, 0).unwrap();
+        let mut checks = 0;
+        let result = rollout_until(
+            &context,
+            &root,
+            Policy::Weighted,
+            9,
+            RolloutLimits::default(),
+            &mut RolloutScratch::default(),
+            || {
+                checks += 1;
+                checks > 2
+            },
+        );
+        assert_eq!(result.truncation, Some(Truncation::ActionLimit));
+        assert!(result.player_actions <= 2);
     }
 }
