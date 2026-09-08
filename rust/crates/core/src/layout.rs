@@ -52,10 +52,55 @@ impl Layout {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GameContext {
     pub layout: Layout,
+    pub ports: [Option<Port>; 9],
 }
 
 impl GameContext {
     pub const fn new(layout: Layout) -> Self {
-        Self { layout }
+        Self {
+            layout,
+            ports: [None; 9],
+        }
     }
+
+    pub const fn with_ports(mut self, ports: [Option<Port>; 9]) -> Self {
+        self.ports = ports;
+        self
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Port {
+    pub resource: Option<Resource>,
+    pub nodes: [crate::NodeId; 2],
+}
+
+impl Port {
+    pub const fn new(resource: Option<Resource>, nodes: [crate::NodeId; 2]) -> Self {
+        Self { resource, nodes }
+    }
+}
+
+pub fn maritime_rate(
+    position: &crate::Position,
+    context: &GameContext,
+    actor: crate::PlayerId,
+    give: Resource,
+) -> u8 {
+    let mut rate = 4;
+    for port in context.ports.iter().flatten() {
+        if port.nodes.iter().any(|node| {
+            crate::building_belongs_to(position.buildings[usize::from(node.get())], actor)
+        }) {
+            let port_rate = if port.resource == Some(give) {
+                2
+            } else if port.resource.is_none() {
+                3
+            } else {
+                4
+            };
+            rate = rate.min(port_rate);
+        }
+    }
+    rate
 }

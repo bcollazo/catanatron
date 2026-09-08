@@ -381,6 +381,33 @@ pub fn apply_checked_with_context(
     actor: crate::PlayerId,
     action: Action,
 ) -> Result<Transition, IllegalAction> {
+    if let Action::MaritimeTrade {
+        give,
+        receive,
+        rate,
+    } = action
+    {
+        if actor != position.actor || !matches!(position.phase, Phase::PostRoll { .. }) {
+            return Err(IllegalAction::WrongPhase);
+        }
+        let expected_rate = crate::maritime_rate(position, context, actor, give);
+        if give == receive
+            || rate != expected_rate
+            || position.players[usize::from(actor.get())].hand[give.index()] < rate
+            || position.bank[receive.index()] == 0
+        {
+            return Err(IllegalAction::InvalidTrade);
+        }
+        let mut next = *position;
+        next.players[usize::from(actor.get())].hand[give.index()] -= rate;
+        next.bank[give.index()] += rate;
+        next.bank[receive.index()] -= 1;
+        next.players[usize::from(actor.get())].hand[receive.index()] += 1;
+        *position = next;
+        return Ok(Transition {
+            status: Status::Decision,
+        });
+    }
     let mut next = *position;
     let transition = apply_checked(&mut next, actor, action)?;
     if let Action::BuildSettlement(node) = action {

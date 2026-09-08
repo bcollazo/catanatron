@@ -146,6 +146,32 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
     }
 }
 
+pub fn generate_actions_with_context(
+    position: &Position,
+    context: &crate::GameContext,
+    out: &mut Vec<Action>,
+) {
+    generate_actions(position, out);
+    let Phase::PostRoll { actor } = position.phase else {
+        return;
+    };
+    for give in crate::Resource::ALL {
+        let rate = crate::maritime_rate(position, context, actor, give);
+        if position.players[usize::from(actor.get())].hand[give.index()] < rate {
+            continue;
+        }
+        for receive in crate::Resource::ALL {
+            if receive != give && position.bank[receive.index()] > 0 {
+                out.push(Action::MaritimeTrade {
+                    give,
+                    receive,
+                    rate,
+                });
+            }
+        }
+    }
+}
+
 fn append_development_actions(position: &Position, actor: crate::PlayerId, out: &mut Vec<Action>) {
     let player = &position.players[usize::from(actor.get())];
     if player.played_dev {

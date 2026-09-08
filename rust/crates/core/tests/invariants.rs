@@ -328,6 +328,39 @@ fn domestic_trade_asks_each_other_seat_and_confirms_atomically() {
 }
 
 #[test]
+fn maritime_trade_uses_the_best_owned_port_rate() {
+    let layout = catanatron_core::Layout::new(
+        [catanatron_core::LandTile::DESERT; catanatron_core::BASE_LAND_TILE_COUNT],
+    )
+    .unwrap();
+    let mut ports = [None; 9];
+    ports[0] = Some(catanatron_core::Port::new(
+        Some(Resource::Wood),
+        [NodeId::new(0).unwrap(), NodeId::new(1).unwrap()],
+    ));
+    let context = catanatron_core::GameContext::new(layout).with_ports(ports);
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    position.buildings[0] = actor.get() + 1;
+    position.players[0].hand[Resource::Wood.index()] = 2;
+    position.bank[Resource::Wood.index()] -= 2;
+    let mut actions = Vec::new();
+    catanatron_core::generate_actions_with_context(&position, &context, &mut actions);
+    let trade = Action::MaritimeTrade {
+        give: Resource::Wood,
+        receive: Resource::Ore,
+        rate: 2,
+    };
+    assert!(actions.contains(&trade));
+    apply_checked_with_context(&mut position, &context, actor, trade).unwrap();
+    assert_eq!(position.players[0].hand[Resource::Wood.index()], 0);
+    assert_eq!(position.players[0].hand[Resource::Ore.index()], 1);
+    assert_eq!(position.bank[Resource::Wood.index()], 19);
+    assert_eq!(position.bank[Resource::Ore.index()], 18);
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();
