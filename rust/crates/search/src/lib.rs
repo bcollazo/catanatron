@@ -1,11 +1,13 @@
 #![forbid(unsafe_code)]
 
+mod agents;
 mod alphabeta;
 mod initialize;
 mod policy;
 mod rng;
 mod rollout;
 
+pub use agents::{play_agents, select_agent_action, AgentConfig, AgentKind};
 pub use alphabeta::{
     heuristic, iterative_alpha_beta, AlphaBetaMode, AlphaBetaResult, AlphaBetaStats,
 };
