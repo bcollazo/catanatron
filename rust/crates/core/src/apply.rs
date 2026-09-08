@@ -484,6 +484,7 @@ pub fn apply_outcome_checked(
         }
         _ => return Err(IllegalAction::InvalidOutcome),
     };
+    let status = finalize_transition(&mut next, status);
     *position = next;
     Ok(Transition { status })
 }

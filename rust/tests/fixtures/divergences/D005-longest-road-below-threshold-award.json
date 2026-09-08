@@ -1,0 +1,28 @@
+{
+  "divergence_id": "D005-longest-road-below-threshold-award",
+  "input": {
+    "lengths_after": [
+      2,
+      2,
+      3,
+      4
+    ],
+    "lengths_before": [
+      2,
+      4,
+      3,
+      4
+    ],
+    "trigger": "BLUE settlement splits RED road"
+  },
+  "python_observed": {
+    "holder": "BLUE",
+    "holder_length": 4
+  },
+  "rationale": "rust-v1 enforces the E06 minimum length of five. The pinned Python maintenance path can award the new maximum after a split without rechecking that threshold.",
+  "rules_profile": "rust-v1",
+  "rust_expected": {
+    "holder": null
+  },
+  "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816"
+}

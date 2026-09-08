@@ -935,6 +935,35 @@ fn buying_a_development_card_pays_then_resolves_its_draw() {
 }
 
 #[test]
+fn victory_point_draw_finalizes_victory_after_chance_resolution() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    position.players[0].dev[DevelopmentCard::VictoryPoint.index()] = 9;
+    position.dev_bank = [0, 0, 0, 0, 1];
+    for resource in [Resource::Sheep, Resource::Wheat, Resource::Ore] {
+        position.players[0].hand[resource.index()] = 1;
+        position.bank[resource.index()] -= 1;
+    }
+    assert_eq!(
+        apply_checked(&mut position, actor, Action::BuyDevelopmentCard)
+            .unwrap()
+            .status,
+        Status::Chance
+    );
+    assert_eq!(
+        apply_outcome_checked(
+            &mut position,
+            Outcome::DevelopmentCard(DevelopmentCard::VictoryPoint)
+        )
+        .unwrap()
+        .status,
+        Status::Won(actor)
+    );
+    assert_eq!(position.phase, Phase::Terminal);
+}
+
+#[test]
 fn copy_is_independent_and_uses_no_heap_owned_fields() {
     let root = Position::new(4).unwrap();
     let mut child = root;

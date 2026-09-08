@@ -108,6 +108,9 @@ pub enum FixturePhase {
     ChooseAccepter {
         actor: String,
     },
+    Terminal {
+        winner: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -153,6 +156,7 @@ pub fn check_record(record: &FixtureRecord) -> Result<(), ConformanceError> {
         &record.before,
         &record.legal_before,
     )?;
+    let before_position = actual;
     let intent = wire_action(&record.before, &record.action)
         .map_err(|error| mismatch(record, "action", "valid", format!("{error:?}")))?;
     let actor = actual.actor;
@@ -174,15 +178,26 @@ pub fn check_record(record: &FixtureRecord) -> Result<(), ConformanceError> {
     let (_, expected) = import_state(&record.after)
         .map_err(|error| mismatch(record, "after", "importable", format!("{error:?}")))?;
     if actual != expected {
+        let field = longest_road_divergence(&expected, &actual)
+            .or_else(|| incumbent_tie_divergence(&before_position, &expected, &actual))
+            .or_else(|| below_threshold_award_divergence(&expected, &actual))
+            .unwrap_or_else(|| first_position_difference(&expected, &actual));
         return Err(mismatch(
             record,
-            first_position_difference(&expected, &actual),
+            field,
             format!("{expected:?}"),
             format!("{actual:?}"),
         ));
     }
     let expected_status = match record.status_after.as_str() {
         "decision" => Status::Decision,
+        "won" => match &record.after.phase {
+            FixturePhase::Terminal { winner } => Status::Won(
+                seat(&record.after, winner)
+                    .map_err(|error| mismatch(record, "winner", "valid", format!("{error:?}")))?,
+            ),
+            _ => return Err(mismatch(record, "after.phase", "terminal", "non-terminal")),
+        },
         other => {
             return Err(mismatch(
                 record,
@@ -208,6 +223,83 @@ pub fn check_record(record: &FixtureRecord) -> Result<(), ConformanceError> {
         &record.after,
         &record.legal_after,
     )
+}
+
+fn below_threshold_award_divergence(
+    expected: &Position,
+    actual: &Position,
+) -> Option<&'static str> {
+    let python_holder = expected.longest_road_holder?;
+    if actual.longest_road_holder.is_some()
+        || expected.longest_road_lengths != actual.longest_road_lengths
+        || expected.longest_road_lengths[usize::from(python_holder.get())] >= 5
+    {
+        return None;
+    }
+    let mut normalized = *expected;
+    normalized.longest_road_holder = None;
+    normalize_terminal_consequence(&mut normalized, actual);
+    (normalized == *actual).then_some("divergence:D005-longest-road-below-threshold-award")
+}
+
+fn incumbent_tie_divergence(
+    before: &Position,
+    expected: &Position,
+    actual: &Position,
+) -> Option<&'static str> {
+    let incumbent = before.longest_road_holder?;
+    if actual.longest_road_holder != Some(incumbent)
+        || expected.longest_road_holder == actual.longest_road_holder
+        || expected.longest_road_lengths != actual.longest_road_lengths
+    {
+        return None;
+    }
+    let expected_holder = expected.longest_road_holder?;
+    let maximum = actual.longest_road_lengths[usize::from(incumbent.get())];
+    if maximum < 5 || actual.longest_road_lengths[usize::from(expected_holder.get())] != maximum {
+        return None;
+    }
+    let mut normalized = *expected;
+    normalized.longest_road_holder = actual.longest_road_holder;
+    normalize_terminal_consequence(&mut normalized, actual);
+    (normalized == *actual).then_some("divergence:D004-longest-road-incumbent-tie-retention")
+}
+
+fn longest_road_divergence(expected: &Position, actual: &Position) -> Option<&'static str> {
+    let mut normalized = *expected;
+    normalized.longest_road_lengths = actual.longest_road_lengths;
+    normalized.longest_road_holder = actual.longest_road_holder;
+    normalize_terminal_consequence(&mut normalized, actual);
+    if normalized != *actual {
+        return None;
+    }
+    let affected = (0..expected.player_count).find(|raw| {
+        actual.longest_road_lengths[usize::from(*raw)]
+            > expected.longest_road_lengths[usize::from(*raw)]
+    })?;
+    let player = PlayerId::new(affected).expect("active seat");
+    let enters_opponent = expected.roads.iter().enumerate().any(|(index, owner)| {
+        if *owner != affected + 1 {
+            return false;
+        }
+        let edge = EdgeId::new(index as u8).expect("base edge");
+        let (a, b) = edge_endpoints(edge);
+        [a, b].iter().any(|node| {
+            catanatron_core::building_owner(expected.buildings[usize::from(node.get())])
+                .is_some_and(|building_owner| building_owner != player)
+        })
+    });
+    Some(if enters_opponent {
+        "divergence:D002-longest-road-entering-opponent-building"
+    } else {
+        "divergence:D003-longest-road-branch-undercount"
+    })
+}
+
+fn normalize_terminal_consequence(expected: &mut Position, actual: &Position) {
+    if matches!(expected.phase, Phase::Terminal) && !matches!(actual.phase, Phase::Terminal) {
+        expected.phase = actual.phase;
+    }
 }
 
 fn mismatch(
@@ -487,6 +579,7 @@ fn import_phase(state: &FixtureState, actor: PlayerId) -> Result<Phase, ImportEr
                 actor: seat(state, actor)?,
             },
         ),
+        FixturePhase::Terminal { .. } => (&state.actor, Phase::Terminal),
     };
     if seat(state, wire_actor)? != actor {
         return Err(ImportError::InconsistentActor);

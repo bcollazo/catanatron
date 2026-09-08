@@ -29,6 +29,10 @@
   ],
   "files": {
     "divergences\\D001-domestic-trade-proposer-revisited.json": "d2e16ea34354a79fe64056abcb88fade84386e2708728abdf1a3951801ca12af",
+    "divergences\\D002-longest-road-entering-opponent-building.json": "7a41ae6b288a519a574acf1a110e0cb89c79e861ebf5ff9f7a0decaab40e95b0",
+    "divergences\\D003-longest-road-branch-undercount.json": "eb8c7766c9a7ae496bcbfa25ff7fea14a1bfb00e24a5ce545396d2e612147da8",
+    "divergences\\D004-longest-road-incumbent-tie-retention.json": "b604b3b1dcc649b9bc970d219a7b4c76eb81e0df8f704a676b4c3aead1c285f8",
+    "divergences\\D005-longest-road-below-threshold-award.json": "d3208e5bc5610fa22a2578d25e54c0e27ed24e29248c4381019ea4809bcf4d61",
     "transitions\\chance-outcomes.json": "d8507503cf62797780f0ca4d8cbcb2505b97b5438f56e1819a2fdabe8f4cbb6f",
     "transitions\\crafted-builds-and-trades.jsonl": "ba0739c4f81775b287d6e51d03e34e010835aca04cba5f6a1cea4e49bf08fd6b",
     "transitions\\sample-base-2p.jsonl": "24b6974b90f34565a382379ce8503ff4b9e2f54b0b12e19a4661cb09a3d018c8",

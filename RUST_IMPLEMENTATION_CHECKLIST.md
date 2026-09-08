@@ -36,7 +36,7 @@ Status at handoff: **planning complete; production implementation not started**.
 
 * Current task: E08 (differential harness, benchmarks, and allocation report).
 * Last implementation check: release core/search suite passes, including 33 core invariants, RNG/policy/initialization/rollout tests, and 400 complete seeded games with winners for every 2/4-player × random/weighted combination.
-* Next action: implement the live Python/Rust differential driver and generate at least 100 controlled-outcome trajectories for each 2/3/4-player configuration.
+* Next action: implement `catanatron-bench` games/rollouts/kernels/allocation subcommands, publish raw timing samples, and verify the zero-allocation warmed rollout path.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -94,6 +94,14 @@ Status at handoff: **planning complete; production implementation not started**.
 * All 394 committed Python transition records are equal under `rust-v1`; the release runner reports `{"cases":394,"status":"equal"}`.
 * Differential work found and corrected two exporter ambiguities (stale Python longest-road and robber flags) and aligned Rust's eligibility mask with Python's turn-start snapshot semantics. The full workspace suite (38 tests), formatting, and Clippy with warnings denied pass.
 * This is golden-corpus parity, not the E08 exit: live controlled full-game trajectories, divergence accounting, benchmark reports, and allocation measurement remain open.
+
+### 2026-09-08 — E08 live differential checkpoint
+
+* Added the live Python/Rust differential driver with canonical action selection, forced Python outcomes, terminal-menu normalization, first-unexpected capture, and exact known-divergence accounting.
+* Fixed a Rust correctness bug found by the live run: development-card/theft chance completion now executes award/victory finalization; a victory-point draw that reaches 10 immediately returns `Won` and enters `Terminal`.
+* The required 100 games for each 2/3/4-player BASE configuration completed 300/300 with 275,514 checked transitions, zero truncations, and zero unexplained failures. 176 games were fully equal; 124 encountered one of the narrowly registered Python longest-road corrections and were counted as divergent rather than equal.
+* Registered D002–D005 for pinned Python longest-road undercounts, incumbent-tie transfer, and below-threshold award behavior. Each allowance requires every non-award field to match; terminal differences are accepted only when fully caused by that award delta.
+* Report: `rust/bench-results/2026-09-08/differential-100x-2p-3p-4p.json`. E08 remains open for performance and allocation gates.
 
 ### 2026-09-07 — E04 post-roll road checkpoint
 

@@ -107,7 +107,7 @@ def snapshot(game: Game, map_name: str) -> dict[str, Any]:
         "actor": state.current_color().value,
         "turn_owner": state.colors[state.current_turn_index].value,
         "prompt": state.current_prompt.value,
-        "phase": phase_value(state),
+        "phase": phase_value(game),
         "initial_build": state.is_initial_build_phase,
         "discard_counts": list(state.discard_counts),
         "road_building": state.free_roads_available,
@@ -132,9 +132,13 @@ def trade_responded(state) -> list[bool]:
     return responded
 
 
-def phase_value(state) -> dict[str, Any]:
+def phase_value(game: Game) -> dict[str, Any]:
     """Export the semantic phase; Python's deprecated prompt is not sufficient."""
+    state = game.state
     actor = state.current_color().value
+    winner = game.winning_color()
+    if winner is not None:
+        return {"kind": "TERMINAL", "winner": winner.value}
     turn_prefix = f"P{state.current_turn_index}_"
     resume_post_roll = state.player_state[turn_prefix + "HAS_ROLLED"]
     if state.is_initial_build_phase:
@@ -340,9 +344,67 @@ def named_divergences() -> dict[Path, str]:
         "rust_expected": {"next_actor": state.colors[2].value, "prompt": "DECIDE_TRADE"},
         "rationale": "Each other seat responds once; the proposer is never asked to answer its own offer.",
     }
+    longest_road = {
+        "divergence_id": "D002-longest-road-entering-opponent-building",
+        "source_revision": REVISION,
+        "rules_profile": PROFILE,
+        "input": {
+            "actor": "ORANGE",
+            "owned_roads_before": [[35, 36], [36, 37]],
+            "built_road": [37, 38],
+            "opponent_building_node": 38,
+        },
+        "python_observed": {"longest_road_length": 2},
+        "rust_expected": {"longest_road_length": 3},
+        "rationale": "An edge-simple trail may enter, but not continue through, an opponent building. The pinned Python connected-component cache drops the incoming edge; rust-v1 follows the explicit E02 correction.",
+    }
+    longest_road_tie = {
+        "divergence_id": "D004-longest-road-incumbent-tie-retention",
+        "source_revision": REVISION,
+        "rules_profile": PROFILE,
+        "input": {
+            "lengths_before": [5, 4, 4, 7],
+            "holder_before": "ORANGE",
+            "lengths_after": [5, 4, 4, 5],
+            "trigger": "RED settlement splits ORANGE road",
+        },
+        "python_observed": {"holder": "RED"},
+        "rust_expected": {"holder": "ORANGE"},
+        "rationale": "rust-v1 follows E06: an incumbent tied for the maximum at or above five retains Longest Road. The pinned Python cache transfers to the first maximum after a road split.",
+    }
+    longest_road_branch = {
+        "divergence_id": "D003-longest-road-branch-undercount",
+        "source_revision": REVISION,
+        "rules_profile": PROFILE,
+        "input": {
+            "actor": "RED",
+            "owned_roads_after": [[0, 20], [19, 20], [19, 21], [20, 22], [22, 23], [23, 52]],
+            "edge_simple_trail": [[19, 21], [19, 20], [20, 22], [22, 23], [23, 52]],
+        },
+        "python_observed": {"longest_road_length": 4, "holder": None},
+        "rust_expected": {"longest_road_length": 5, "holder": "RED"},
+        "rationale": "The pinned Python traversal undercounts this branching graph. rust-v1 uses the E02 edge-simple-trail definition and retains all five edges in the valid trail.",
+    }
+    longest_road_threshold = {
+        "divergence_id": "D005-longest-road-below-threshold-award",
+        "source_revision": REVISION,
+        "rules_profile": PROFILE,
+        "input": {
+            "lengths_before": [2, 4, 3, 4],
+            "lengths_after": [2, 2, 3, 4],
+            "trigger": "BLUE settlement splits RED road",
+        },
+        "python_observed": {"holder": "BLUE", "holder_length": 4},
+        "rust_expected": {"holder": None},
+        "rationale": "rust-v1 enforces the E06 minimum length of five. The pinned Python maintenance path can award the new maximum after a split without rechecking that threshold.",
+    }
 
     return {
         OUT / "divergences" / "D001-domestic-trade-proposer-revisited.json": json.dumps(trade, indent=2, sort_keys=True) + "\n",
+        OUT / "divergences" / "D002-longest-road-entering-opponent-building.json": json.dumps(longest_road, indent=2, sort_keys=True) + "\n",
+        OUT / "divergences" / "D004-longest-road-incumbent-tie-retention.json": json.dumps(longest_road_tie, indent=2, sort_keys=True) + "\n",
+        OUT / "divergences" / "D003-longest-road-branch-undercount.json": json.dumps(longest_road_branch, indent=2, sort_keys=True) + "\n",
+        OUT / "divergences" / "D005-longest-road-below-threshold-award.json": json.dumps(longest_road_threshold, indent=2, sort_keys=True) + "\n",
     }
 
 
