@@ -14,7 +14,7 @@ from typing import Any
 from catanatron.game import Game
 from catanatron.models.enums import DEVELOPMENT_CARDS, RESOURCES, Action
 from catanatron.models.enums import ActionPrompt, ActionType, CITY, SETTLEMENT
-from catanatron.models.map import build_map
+from catanatron.models.map import PORT_DIRECTION_TO_NODEREFS, build_map
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
 from catanatron.state_functions import build_settlement, player_deck_replenish
 
@@ -63,6 +63,10 @@ def snapshot(game: Game, map_name: str) -> dict[str, Any]:
                 "played_dev": state.player_state[prefix + "HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"],
                 "pieces": [state.player_state[prefix + "ROADS_AVAILABLE"], state.player_state[prefix + "SETTLEMENTS_AVAILABLE"], state.player_state[prefix + "CITIES_AVAILABLE"]],
                 "played_knights": state.player_state[prefix + "PLAYED_KNIGHT"],
+                "longest_road_length": state.player_state[prefix + "LONGEST_ROAD_LENGTH"],
+                "has_longest_road": state.player_state[prefix + "HAS_ROAD"],
+                "has_largest_army": state.player_state[prefix + "HAS_ARMY"],
+                "has_rolled": state.player_state[prefix + "HAS_ROLLED"],
             }
         )
     buildings = [None] * 54
@@ -72,6 +76,16 @@ def snapshot(game: Game, map_name: str) -> dict[str, Any]:
         [list(edge), color.value]
         for edge, color in sorted(board.roads.items())
         if edge[0] < edge[1]
+    ]
+    ports = [
+        {
+            "resource": port.resource,
+            "nodes": sorted(
+                port.nodes[node_ref]
+                for node_ref in PORT_DIRECTION_TO_NODEREFS[port.direction]
+            ),
+        }
+        for _, port in sorted(board.map.ports_by_id.items())
     ]
     layout = [
         {"coordinate": list(coord), "resource": tile.resource, "number": tile.number}
@@ -86,17 +100,75 @@ def snapshot(game: Game, map_name: str) -> dict[str, Any]:
         "players": players,
         "buildings": buildings,
         "roads": roads,
+        "ports": ports,
         "robber": list(board.robber_coordinate),
         "actor": state.current_color().value,
         "turn_owner": state.colors[state.current_turn_index].value,
         "prompt": state.current_prompt.value,
+        "phase": phase_value(state),
         "initial_build": state.is_initial_build_phase,
         "discard_counts": list(state.discard_counts),
         "road_building": state.free_roads_available,
         "trade": normalize(state.current_trade),
         "acceptees": list(state.acceptees),
+        "responded": trade_responded(state),
         "turns": state.num_turns,
+        "friendly_robber": state.friendly_robber,
     }
+
+
+def trade_responded(state) -> list[bool]:
+    responded = [False] * len(state.colors)
+    if not state.is_resolving_trade:
+        return responded
+    proposer = state.current_trade[10]
+    if state.current_prompt == ActionPrompt.DECIDE_ACCEPTEES:
+        return [color != proposer for color in state.colors]
+    if state.current_prompt == ActionPrompt.DECIDE_TRADE:
+        for index in range(state.current_player_index):
+            responded[index] = state.colors[index] != proposer
+    return responded
+
+
+def phase_value(state) -> dict[str, Any]:
+    """Export the semantic phase; Python's deprecated prompt is not sufficient."""
+    actor = state.current_color().value
+    turn_prefix = f"P{state.current_turn_index}_"
+    resume_post_roll = state.player_state[turn_prefix + "HAS_ROLLED"]
+    if state.is_initial_build_phase:
+        kind = (
+            "SETUP_SETTLEMENT"
+            if state.current_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT
+            else "SETUP_ROAD"
+        )
+        phase = {
+            "kind": kind,
+            "actor": actor,
+            "reverse": sum(1 for building in state.board.buildings.values()) >= len(state.colors),
+        }
+        if kind == "SETUP_ROAD":
+            phase["settlement"] = state.action_records[-1].action.value
+        return phase
+    if state.is_discarding:
+        return {
+            "kind": "DISCARD",
+            "actor": actor,
+            "remaining": state.discard_counts[state.current_player_index],
+        }
+    if state.is_moving_knight:
+        return {"kind": "ROBBER", "actor": actor, "resume_post_roll": resume_post_roll}
+    if state.is_road_building and state.free_roads_available:
+        return {
+            "kind": "FREE_ROAD",
+            "actor": actor,
+            "remaining": state.free_roads_available,
+            "resume_post_roll": resume_post_roll,
+        }
+    if state.current_prompt == ActionPrompt.DECIDE_TRADE:
+        return {"kind": "TRADE_RESPONSE", "actor": actor}
+    if state.current_prompt == ActionPrompt.DECIDE_ACCEPTEES:
+        return {"kind": "CHOOSE_ACCEPTER", "actor": actor}
+    return {"kind": "POST_ROLL" if resume_post_roll else "PRE_ROLL", "actor": actor}
 
 
 def trace(case_id: str, players: int, map_name: str, seed: int, limit: int) -> list[dict[str, Any]]:
@@ -122,7 +194,7 @@ def trace(case_id: str, players: int, map_name: str, seed: int, limit: int) -> l
         outcome = normalize(record.result) if record.result is not None else None
         rows.append(
             {
-                "fixture_version": 1,
+                "fixture_version": 2,
                 "case_id": f"{case_id}-{step:04d}",
                 "source_revision": REVISION,
                 "rules_profile": PROFILE,
@@ -144,7 +216,7 @@ def record_transition(game: Game, map_name: str, case_id: str, action: Action) -
     legal_before = menu(game.playable_actions)
     record = game.execute(action)
     return {
-        "fixture_version": 1,
+        "fixture_version": 2,
         "case_id": case_id,
         "source_revision": REVISION,
         "rules_profile": PROFILE,
@@ -293,7 +365,7 @@ def main() -> None:
     files[OUT / "transitions" / "crafted-builds-and-trades.jsonl"] = "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in crafted)
     files.update(named_divergences())
     chance = {
-        "fixture_version": 1,
+        "fixture_version": 2,
         "source_revision": REVISION,
         "rules_profile": PROFILE,
         "dice": [{"pair": [first, second], "sum": first + second, "weight": 1} for first in range(1, 7) for second in range(1, 7)],
@@ -303,13 +375,13 @@ def main() -> None:
     }
     files[OUT / "transitions" / "chance-outcomes.json"] = json.dumps(chance, indent=2, sort_keys=True) + "\n"
     manifest = {
-        "fixture_version": 1,
+        "fixture_version": 2,
         "source_revision": REVISION,
         "rules_profile": PROFILE,
         "resource_order": RESOURCES,
         "development_order": DEVELOPMENT_CARDS,
         "coverage": dict(sorted(coverage.items())),
-        "known_incomplete_coverage": "sample traces only; crafted action/phase/divergence fixtures are still required for E02",
+        "canonical_state": "typed phase, owned roads, ports, awards, and resume state",
         "files": {str(path.relative_to(OUT)): hashlib.sha256(contents.encode()).hexdigest() for path, contents in sorted(files.items())},
     }
     files[OUT / "manifest.json"] = json.dumps(manifest, indent=2, sort_keys=True) + "\n"

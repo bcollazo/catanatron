@@ -312,7 +312,7 @@
     "8": 5,
     "9": 4
   },
-  "fixture_version": 1,
+  "fixture_version": 2,
   "rules_profile": "rust-v1",
   "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816",
   "theft": {

@@ -36,7 +36,7 @@ Status at handoff: **planning complete; production implementation not started**.
 
 * Current task: E08 (differential harness, benchmarks, and allocation report).
 * Last implementation check: release core/search suite passes, including 33 core invariants, RNG/policy/initialization/rollout tests, and 400 complete seeded games with winners for every 2/4-player × random/weighted combination.
-* Next action: create the `catanatron-bench`/conformance package and canonical fixture DTO boundary, then drive committed transition fixtures through Rust.
+* Next action: convert fixture actions/outcomes, apply every golden transition in Rust, and compare canonical after-state/status/menu field by field.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -80,6 +80,13 @@ Status at handoff: **planning complete; production implementation not started**.
 * The release game matrix completed 400/400 games with winners and zero turn-limit/action-limit truncations: 100 seeds for each 2/4-player × random/weighted combination.
 * Passed: workspace formatting; Clippy with warnings denied; release core/search tests; deterministic topology export; deterministic fixture export covering all 18 action variants.
 * Current task is E08. Protocol certification, differential equality, allocation targets, and speed targets remain open and are not implied by functional E03–E07 completion.
+
+### 2026-09-07 — E08 canonical-import checkpoint
+
+* Added the `catanatron-bench` workspace package and a serde-only fixture boundary; core remains independent of JSON and Python.
+* Upgraded canonical fixtures to version 2 so snapshots explicitly carry typed phase/resume payloads, owned roads, ports, award state, and domestic-trade response progress instead of asking Rust to infer missing facts.
+* Every before/after boundary in all five committed transition corpora deserializes and imports into typed Rust context/state. Deterministic fixture regeneration, focused tests, formatting, and Clippy with warnings denied pass.
+* This checkpoint proves lossless import coverage only. Transition/menu parity is the next gate and is not yet claimed.
 
 ### 2026-09-07 — E04 post-roll road checkpoint
 
