@@ -316,7 +316,11 @@ pub fn apply_checked(
         },
         _ => return Err(IllegalAction::WrongPhase),
     };
-    let status = finalize_transition(&mut next, status);
+    let refresh_awards = matches!(
+        action,
+        Action::BuildRoad(_) | Action::BuildSettlement(_) | Action::PlayKnight
+    );
+    let status = finalize_transition(&mut next, status, refresh_awards);
     *position = next;
     Ok(Transition { status })
 }
@@ -411,7 +415,7 @@ pub fn apply_checked_with_context(
         next.bank[give.index()] += rate;
         next.bank[receive.index()] -= 1;
         next.players[usize::from(actor.get())].hand[receive.index()] += 1;
-        let status = finalize_transition(&mut next, Status::Decision);
+        let status = finalize_transition(&mut next, Status::Decision, false);
         *position = next;
         return Ok(Transition { status });
     }
@@ -437,9 +441,8 @@ pub fn apply_checked_with_context(
             }
         }
     }
-    let status = finalize_transition(&mut next, transition.status);
     *position = next;
-    Ok(Transition { status })
+    Ok(transition)
 }
 
 /// Resolves a checked chance result atomically.
@@ -484,7 +487,7 @@ pub fn apply_outcome_checked(
         }
         _ => return Err(IllegalAction::InvalidOutcome),
     };
-    let status = finalize_transition(&mut next, status);
+    let status = finalize_transition(&mut next, status, false);
     *position = next;
     Ok(Transition { status })
 }
@@ -524,7 +527,7 @@ pub fn apply_outcome_checked_with_context(
                 resume_post_roll: true,
             };
         }
-        let status = finalize_transition(&mut next, Status::Decision);
+        let status = finalize_transition(&mut next, Status::Decision, false);
         *position = next;
         return Ok(Transition { status });
     }
@@ -560,16 +563,22 @@ pub fn apply_outcome_checked_with_context(
         }
     }
     next.phase = Phase::PostRoll { actor };
-    let status = finalize_transition(&mut next, Status::Decision);
+    let status = finalize_transition(&mut next, Status::Decision, false);
     *position = next;
     Ok(Transition { status })
 }
 
-fn finalize_transition(position: &mut Position, provisional: Status) -> Status {
+fn finalize_transition(
+    position: &mut Position,
+    provisional: Status,
+    refresh_awards: bool,
+) -> Status {
     if provisional == Status::Chance {
         return provisional;
     }
-    crate::awards::refresh_awards(position);
+    if refresh_awards {
+        crate::awards::refresh_awards(position);
+    }
     let mut winner = None;
     for raw in 0..position.player_count {
         let player = crate::PlayerId::new(raw).expect("active player");

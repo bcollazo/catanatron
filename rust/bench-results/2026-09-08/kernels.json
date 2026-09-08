@@ -1,0 +1,23 @@
+{
+  "build": "release-required-for-scoreboard",
+  "detail": {
+    "iterations": 500000,
+    "iterations_per_second": 446325.3985306433,
+    "menu_capacity": 256
+  },
+  "map": "BASE",
+  "players": 4,
+  "policy": "weighted",
+  "revision": "plan/rust-rollout-engine",
+  "rules_profile": "rust-v1",
+  "sample_seconds": [
+    0.2233028,
+    0.2268803,
+    0.2220995,
+    0.2213297,
+    0.2266466
+  ],
+  "seed": 8600,
+  "threads": 1,
+  "workload": "kernels"
+}

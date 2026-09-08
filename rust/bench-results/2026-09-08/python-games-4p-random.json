@@ -1,0 +1,20 @@
+{
+  "completed": 40,
+  "engine": "python",
+  "games": 40,
+  "intents_per_second": 68732.0809109971,
+  "map": "BASE",
+  "player_intents": 45731,
+  "players": 4,
+  "policy": "random",
+  "rules_profile": "pinned-python",
+  "sample_seconds": [
+    0.10782599996309727,
+    0.16745489998720586,
+    0.11737360002007335,
+    0.12941199995111674,
+    0.14328509999904782
+  ],
+  "seed": 8600,
+  "truncated": 0
+}

@@ -594,14 +594,19 @@ fn largest_army_retains_incumbent_ties_and_transfers_to_a_strict_leader() {
     let zero = position.actor;
     let one = PlayerId::new(1).unwrap();
     position.players[0].played_knights = 3;
-    position.players[1].played_knights = 3;
+    position.players[1].played_knights = 2;
     position.largest_army_holder = Some(zero);
-    position.phase = Phase::PostRoll { actor: zero };
-    apply_checked(&mut position, zero, Action::EndTurn).unwrap();
+    position.actor = one;
+    position.turn_owner = one;
+    position.phase = Phase::PreRoll { actor: one };
+    position.players[1].dev[DevelopmentCard::Knight.index()] = 1;
+    position.players[1].eligible_dev_mask = 1 << DevelopmentCard::Knight.index();
+    apply_checked(&mut position, one, Action::PlayKnight).unwrap();
     assert_eq!(position.largest_army_holder, Some(zero));
-    position.players[1].played_knights = 4;
-    position.phase = Phase::PostRoll { actor: one };
-    apply_checked(&mut position, one, Action::EndTurn).unwrap();
+    position.phase = Phase::PreRoll { actor: one };
+    position.players[1].played_dev = false;
+    position.players[1].dev[DevelopmentCard::Knight.index()] = 1;
+    apply_checked(&mut position, one, Action::PlayKnight).unwrap();
     assert_eq!(position.largest_army_holder, Some(one));
 }
 

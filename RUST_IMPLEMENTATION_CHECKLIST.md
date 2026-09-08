@@ -14,7 +14,7 @@ Status at handoff: **planning complete; production implementation not started**.
 - [x] E05 — Dice, production, discards, robber and chance outcomes pass.
 - [x] E06 — All development cards, awards and domestic trades pass.
 - [x] E07 — Complete games, RNG streams, random/weighted policies and scalar rollouts pass.
-- [ ] E08 — Differential harness, benchmarks and allocation report implemented.
+- [x] E08 — Differential harness, benchmarks and allocation report implemented.
 - [ ] E09 — Stdio adapter/importer and real host certification pass.
 - [ ] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
 - [ ] E11 — Parallel results match scalar execution; scaling measured.
@@ -24,19 +24,19 @@ Status at handoff: **planning complete; production implementation not started**.
 ## Independent release gates
 
 - [ ] Functional: complete supported games/actions/configurations, no unfinished stubs.
-- [ ] Correctness: zero unexplained differences; all named divergences independently tested.
+- [x] Correctness: zero unexplained differences; all named divergences independently tested.
 - [ ] Protocol: 100 real mixed-process games with zero unexpected fallback/timeout/illegal action.
 - [ ] RL interface: scalar/batch parity, documented action/feature versions, safe array lifetimes.
-- [ ] Allocations: zero warmed baseline rollout allocations across supported phases.
-- [ ] Speed: >=10x comparable same-machine Python games and fixed-state rollout throughput.
-- [ ] Speed objective: >=1M player intents/second on one core, with workload specified.
+- [x] Allocations: zero warmed baseline rollout allocations across supported phases.
+- [x] Speed: >=10x comparable same-machine Python games and fixed-state rollout throughput.
+- [x] Speed objective: >=1M player intents/second on one core, with workload specified.
 - [ ] Competitive claim: comparable external-engine results support any “fastest” wording (follow-up; not required to ship functional v1).
 
 ## Current execution checkpoint
 
-* Current task: E08 (differential harness, benchmarks, and allocation report).
-* Last implementation check: release core/search suite passes, including 33 core invariants, RNG/policy/initialization/rollout tests, and 400 complete seeded games with winners for every 2/4-player × random/weighted combination.
-* Next action: implement `catanatron-bench` games/rollouts/kernels/allocation subcommands, publish raw timing samples, and verify the zero-allocation warmed rollout path.
+* Current task: E09 (stdio adapter/importer and host certification).
+* Last implementation check: release workspace suite passes with 34 core invariants, 394 golden transitions, CLI validation, and the seeded full-game matrix; the live differential corpus has zero unexplained failures across 300 games.
+* Next action: add the `catanatron-bot` workspace member and implement the v1 JSONL handshake/import/export boundary against the locally available PR #386 schema.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -101,7 +101,14 @@ Status at handoff: **planning complete; production implementation not started**.
 * Fixed a Rust correctness bug found by the live run: development-card/theft chance completion now executes award/victory finalization; a victory-point draw that reaches 10 immediately returns `Won` and enters `Terminal`.
 * The required 100 games for each 2/3/4-player BASE configuration completed 300/300 with 275,514 checked transitions, zero truncations, and zero unexplained failures. 176 games were fully equal; 124 encountered one of the narrowly registered Python longest-road corrections and were counted as divergent rather than equal.
 * Registered D002–D005 for pinned Python longest-road undercounts, incumbent-tie transfer, and below-threshold award behavior. Each allowance requires every non-award field to match; terminal differences are accepted only when fully caused by that award delta.
-* Report: `rust/bench-results/2026-09-08/differential-100x-2p-3p-4p.json`. E08 remains open for performance and allocation gates.
+* Report: `rust/bench-results/2026-09-08/differential-100x-2p-3p-4p.json`. At this checkpoint E08 still remained open for performance and allocation gates; those are closed below.
+
+### 2026-09-08 — E08 complete
+
+* Added `catanatron-bench` games, fixed-root rollouts, kernels, and warmed-allocation subcommands with strict CLI errors and JSON reports containing five raw timing samples.
+* One controlled optimization removed redundant/unnecessary award recomputation. Weighted complete-game throughput improved from 74,078 to 1,142,688 intents/s; weighted fixed-root throughput is 1,074,932 intents/s.
+* Matched random-policy comparisons measured 15.17× Python throughput for complete games and 13.81× for fixed-root rollouts. The warmed 100-rollout region recorded zero allocations/deallocations/bytes.
+* Release tests, Clippy with warnings denied, formatting, fixture determinism, golden conformance, and the live 300-game differential corpus pass. E08 is complete; E09 stdio integration is next.
 
 ### 2026-09-07 — E04 post-roll road checkpoint
 

@@ -21,6 +21,19 @@ The workspace intentionally has no default dependency on Python, JSON,
 networking, or search code. That keeps rule transitions independently usable
 and testable.
 
+## Conformance and benchmarks
+
+```powershell
+cargo run --release --manifest-path rust/Cargo.toml -p catanatron-bench --bin catanatron-conformance -- rust/tests/fixtures/transitions/sample-base-2p.jsonl
+.\.venv\rust-engine\Scripts\python.exe rust\tools\differential.py --games 100 --players 2 3 4
+cargo run --release --manifest-path rust/Cargo.toml -p catanatron-bench -- games --games 100 --players 4 --policy random
+cargo run --release --manifest-path rust/Cargo.toml -p catanatron-bench -- rollouts --fixtures 1 --rollouts 1000 --players 4 --policy weighted
+cargo run --release --manifest-path rust/Cargo.toml -p catanatron-bench -- allocations --fixtures 1 --rollouts 100 --players 4 --policy weighted
+```
+
+See [`docs/performance.md`](docs/performance.md) for measured results and
+comparison constraints.
+
 ## Design probes are separate
 
 `experiments/rust-rollout/` is a committed, standalone planning probe. It is
