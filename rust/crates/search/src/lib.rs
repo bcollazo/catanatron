@@ -10,4 +10,6 @@ pub use initialize::{initialize_base, NumberPlacement};
 pub use policy::{choose_action, sample_outcome, Policy};
 pub use rng::{derive_seed, SearchRng, StreamKind};
 pub use rollout::{rollout, rollout_until, RolloutLimits, RolloutResult, RolloutScratch};
+mod batch;
 mod flat;
+pub use batch::{rollout_many, Batch, BatchError};
