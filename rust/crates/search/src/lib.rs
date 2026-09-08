@@ -1,10 +1,14 @@
 #![forbid(unsafe_code)]
 
+mod alphabeta;
 mod initialize;
 mod policy;
 mod rng;
 mod rollout;
 
+pub use alphabeta::{
+    heuristic, iterative_alpha_beta, AlphaBetaMode, AlphaBetaResult, AlphaBetaStats,
+};
 pub use flat::{flat_monte_carlo, flat_monte_carlo_until, FlatResult};
 pub use initialize::{initialize_base, initialize_mini, initialize_tournament, NumberPlacement};
 pub use policy::{choose_action, sample_outcome, Policy};
