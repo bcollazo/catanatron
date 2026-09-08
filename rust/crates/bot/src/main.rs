@@ -3,6 +3,8 @@ use std::io::{self, BufRead, BufWriter, Write};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+mod import;
+
 const PROTOCOL_VERSION: u64 = 1;
 
 #[derive(Debug, Deserialize)]
@@ -17,12 +19,16 @@ struct Envelope {
     color: Option<String>,
     #[serde(default)]
     playable_actions: Option<Vec<Value>>,
+    #[serde(default)]
+    state: Option<Value>,
 }
 
 #[derive(Default)]
 struct Bot {
     game_id: Option<String>,
     color: Option<String>,
+    static_state: Option<Value>,
+    rng: u64,
 }
 
 impl Bot {
@@ -46,6 +52,7 @@ impl Bot {
                 let color = required(message.color, "before.color")?;
                 self.game_id = Some(game_id);
                 self.color = Some(color);
+                self.static_state = Some(required(message.state, "before.state")?);
                 Ok(None)
             }
             "decide" => {
@@ -60,11 +67,37 @@ impl Bot {
                     return Err(format!("decide.color {color:?} does not match bot color"));
                 }
                 let actions = required(message.playable_actions, "decide.playable_actions")?;
-                let action = actions
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| "decide.playable_actions is empty".to_owned())?;
-                validate_wire_action(&action)?;
+                for action in &actions {
+                    validate_action_shape(action)?;
+                }
+                let dynamic = required(message.state, "decide.state")?;
+                let mut state = dynamic
+                    .as_object()
+                    .cloned()
+                    .ok_or("decide.state must be an object")?;
+                let static_state = self
+                    .static_state
+                    .as_ref()
+                    .and_then(Value::as_object)
+                    .ok_or("before.state must be an object")?;
+                state.insert(
+                    "map".to_owned(),
+                    static_state
+                        .get("map")
+                        .ok_or("before.state.map is missing")?
+                        .clone(),
+                );
+                let imported = import::import(Value::Object(state), &game_id, &color, actions)?;
+                let _root = (&imported.context, &imported.position);
+                let mut choices = imported.offered;
+                if choices.is_empty() {
+                    return Err("decide.playable_actions is empty".to_owned());
+                }
+                self.rng = self
+                    .rng
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1);
+                let action = choices.swap_remove((self.rng as usize) % choices.len());
                 Ok(Some(json!({"action": action})))
             }
             "after" => {
@@ -77,6 +110,7 @@ impl Bot {
                 }
                 self.game_id = None;
                 self.color = None;
+                self.static_state = None;
                 Ok(None)
             }
             // Observation is disabled, but tolerate optional or future notifications.
@@ -89,11 +123,11 @@ fn required<T>(value: Option<T>, field: &str) -> Result<T, String> {
     value.ok_or_else(|| format!("missing {field}"))
 }
 
-fn validate_wire_action(action: &Value) -> Result<(), String> {
+fn validate_action_shape(action: &Value) -> Result<(), String> {
     let values = action
         .as_array()
         .filter(|values| values.len() == 3)
-        .ok_or_else(|| "offered action must be [color, action_type, value]".to_owned())?;
+        .ok_or("offered action must be [color, action_type, value]")?;
     if !values[0].is_string() || !values[1].is_string() {
         return Err("offered action color and action_type must be strings".to_owned());
     }
@@ -136,25 +170,21 @@ mod tests {
     }
 
     #[test]
-    fn replies_exactly_to_hello_and_decisions_across_games() {
+    fn replies_only_to_hello_without_a_decision() {
         let input = concat!(
             "{\"type\":\"hello\",\"protocol_version\":1}\n",
-            "{\"type\":\"before\",\"game_id\":\"a\",\"color\":\"BLUE\"}\n",
+            "{\"type\":\"before\",\"game_id\":\"a\",\"color\":\"BLUE\",\"state\":{}}\n",
             "{\"type\":\"future-notification\"}\n",
-            "{\"type\":\"decide\",\"game_id\":\"a\",\"color\":\"BLUE\",\"playable_actions\":[[\"BLUE\",\"ROLL\",null]]}\n",
             "{\"type\":\"after\",\"game_id\":\"a\"}\n",
-            "{\"type\":\"before\",\"game_id\":\"b\",\"color\":\"RED\"}\n",
-            "{\"type\":\"decide\",\"game_id\":\"b\",\"color\":\"RED\",\"playable_actions\":[[\"RED\",\"BUILD_ROAD\",[3,7]],[\"RED\",\"END_TURN\",null]]}\n"
+            "{\"type\":\"before\",\"game_id\":\"b\",\"color\":\"RED\",\"state\":{}}\n"
         );
         let lines: Vec<Value> = transcript(input)
             .unwrap()
             .lines()
             .map(|line| serde_json::from_str(line).unwrap())
             .collect();
-        assert_eq!(lines.len(), 3);
+        assert_eq!(lines.len(), 1);
         assert_eq!(lines[0]["observe"], false);
-        assert_eq!(lines[1]["action"], json!(["BLUE", "ROLL", null]));
-        assert_eq!(lines[2]["action"], json!(["RED", "BUILD_ROAD", [3, 7]]));
     }
 
     #[test]
@@ -166,13 +196,13 @@ mod tests {
     #[test]
     fn rejects_wrong_ids_and_malformed_offers() {
         let wrong_id = concat!(
-            "{\"type\":\"before\",\"game_id\":\"a\",\"color\":\"RED\"}\n",
+            "{\"type\":\"before\",\"game_id\":\"a\",\"color\":\"RED\",\"state\":{}}\n",
             "{\"type\":\"decide\",\"game_id\":\"b\",\"color\":\"RED\",\"playable_actions\":[[\"RED\",\"ROLL\",null]]}\n"
         );
         assert!(transcript(wrong_id).unwrap_err().contains("does not match"));
 
         let malformed = concat!(
-            "{\"type\":\"before\",\"game_id\":\"a\",\"color\":\"RED\"}\n",
+            "{\"type\":\"before\",\"game_id\":\"a\",\"color\":\"RED\",\"state\":{}}\n",
             "{\"type\":\"decide\",\"game_id\":\"a\",\"color\":\"RED\",\"playable_actions\":[[\"RED\",\"ROLL\"]]}\n"
         );
         assert!(transcript(malformed)

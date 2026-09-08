@@ -17,6 +17,7 @@ dependencies = [
 name = "catanatron-bot"
 version = "0.1.0"
 dependencies = [
+ "catanatron-core",
  "serde",
  "serde_json",
 ]
