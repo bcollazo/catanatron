@@ -55,3 +55,18 @@ efficiency. The estimated caller-owned root/result payload is 7,808 bytes for
 stack reservation were not measured by the portable harness and are therefore
 not represented as memory measurements. Raw reports are the
 `parallel-<batch>-t<workers>.json` files in the dated results directory.
+
+## E12 Python batch crossing
+
+The optional CPython 3.12 abi3 wheel was built in release mode and timed with 256 BASE
+environments on the same 32-logical-processor Windows host. The committed timing script includes
+NumPy result creation and the Python/Rust boundary:
+
+| Operation | Throughput |
+|---|---:|
+| Eight-worker complete rollouts | 10,504 rollouts/s |
+| `observe_many` plus menus | 90,877 environments/s |
+| `reset_many` plus observations/menus | 117,113 environments/s |
+
+These are single-run engineering measurements, not cross-machine claims. Observation and reset
+figures amortize one Python call over 256 environments.

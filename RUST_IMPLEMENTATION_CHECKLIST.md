@@ -18,7 +18,7 @@ Status at handoff: **planning complete; production implementation not started**.
 - [x] E09 — Stdio adapter/importer and real host certification pass.
 - [x] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
 - [x] E11 — Parallel results match scalar execution; scaling measured.
-- [ ] E12 — MINI and batched Python extension pass parity/lifetime/error tests.
+- [x] E12 — MINI and batched Python extension pass parity/lifetime/error tests.
 - [ ] E13 — Final checks, docs, examples and handoff complete.
 
 ## Independent release gates
@@ -34,9 +34,9 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E12 (MINI and batched Python extension).
-* Last implementation check: E11 deterministic batch tests pass for scalar/1/2/4-thread equality and disjoint immutable roots; scaling was measured at 1/2/4/8/16/32 workers for 32- and 2,048-rollout batches.
-* Next action: export and implement MINI topology/layout initialization, rerun parity, then scaffold the optional PyO3/NumPy batch extension.
+* Current task: E13 (final validation, documentation, and handoff).
+* Last implementation check: E12 MINI Python differential traces pass for 2/3/4 seats; the abi3 PyO3/NumPy wheel passes six API/parity/lifetime/atomicity tests, including 1/16/256 environment batches across 1/2/4 workers and exact Gym catalogue sizes/legal setup values for all maps and seat counts.
+* Next action: run the E13 release command matrix, finish operator/API documentation, and produce the final evidence index.
 * Blocking condition: none. Protocol v1/schema v1 were certified against PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` in the isolated `C:\dev\catanatron-pr386` worktree.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -62,6 +62,14 @@ Status at handoff: **planning complete; production implementation not started**.
 * Scalar and 1/2/4-thread results match exactly for fixed seeds; mixed/disjoint roots remain unchanged and cannot corrupt each other.
 * On the 32-logical-processor host, the 2,048-root batch measured 0.98M, 1.94M, 3.80M, 7.08M, 10.08M and 14.92M intents/s at 1/2/4/8/16/32 requested workers. The 32-root batch measured 0.95M through 7.05M over the same range. Physical-core and SMT topology are unavailable, so these are not labeled physical-core measurements.
 * Estimated root/result payload memory was 7,808 bytes for 32 roots and 499,712 bytes for 2,048. Peak RSS and stack reservations were not measured and remain explicitly unavailable. Raw reports are committed under `rust/bench-results/2026-09-08/parallel-*.json`.
+
+### 2026-09-08 — E12 complete
+
+* Added map-aware BASE/MINI geometry with generated active node/edge/tile masks, MINI initialization and 2/3/4-player scalar games. Three new Python trace corpora pass exact state, action-menu and transition differential checks.
+* Added the fixed Python TOURNAMENT tile, number, desert and port assignment on BASE topology.
+* Added the optional `catanatron-rust` abi3 wheel with owned NumPy observations, explicit batch reset/step/observe/rollout calls, interpreter detachment, atomic validation, independent chance streams, stable rewards/truncation, and immutable rollout roots.
+* Added versioned perfect-information features and generation-stamped dynamic action IDs. Exported all nine Python Gym catalogues; setup legality and catalogue sizes agree exactly for BASE/MINI/TOURNAMENT with 2/3/4 seats.
+* Six wheel-level tests cover stale views/IDs, atomic failures, reset semantics, Gym mapping, and fixed-seed equality for batches 1/16/256 across 1/2/4 workers. The 256-environment timing measured 10,504 complete rollouts/s, 90,877 observations/s, and 117,113 resets/s including Python/NumPy crossing costs.
 
 ### 2026-09-07 — E02 checkpoint
 

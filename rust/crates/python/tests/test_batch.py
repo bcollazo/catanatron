@@ -44,8 +44,29 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(result["truncated"].shape, (2,))
         np.testing.assert_array_equal(batch.observe_many([0, 1])["features"], before)
 
+    def test_rollout_batches_match_across_worker_counts(self):
+        for size in (1, 16, 256):
+            batch = Batch(size, players=2, map="MINI", seed=19)
+            indices = list(range(size))
+            seeds = [1000 + index for index in indices]
+            expected = batch.rollout_many(indices, seeds, turn_limit=25, threads=1)
+            for threads in (2, 4):
+                actual = batch.rollout_many(indices, seeds, turn_limit=25, threads=threads)
+                for field in ("winners", "rewards", "truncated"):
+                    np.testing.assert_array_equal(actual[field], expected[field])
+
+    def test_reset_is_explicit_and_validates_config(self):
+        batch = Batch(2, players=2, map="MINI", seed=1)
+        before = batch.observe_many([0, 1])["features"].copy()
+        batch.reset_many([1], [99], config="MINI")
+        after = batch.observe_many([0, 1])["features"]
+        np.testing.assert_array_equal(after[0], before[0])
+        with self.assertRaisesRegex(ValueError, "must match"):
+            batch.reset_many([0], [3], config="BASE")
+
     def test_gym_catalogues_match_python_and_stable_ids_step(self):
         from catanatron.gym.envs.action_space import get_action_array
+        from catanatron.models.enums import ActionType
         from catanatron.models.player import Color
 
         colors = (Color.RED, Color.BLUE, Color.ORANGE, Color.WHITE)
@@ -53,13 +74,22 @@ class BatchTests(unittest.TestCase):
             for players in (2, 3, 4):
                 batch = Batch(1, players=players, map=map_name)
                 observed = batch.observe_many([0])
+                catalogue = get_action_array(colors[:players], map_name)
                 self.assertEqual(
                     observed["gym_catalogue_size"],
-                    len(get_action_array(colors[:players], map_name)),
+                    len(catalogue),
                 )
                 self.assertEqual(
                     observed["gym_legal_mask"].shape,
                     (1, observed["gym_catalogue_size"]),
+                )
+                expected = [
+                    index
+                    for index, (action_type, _) in enumerate(catalogue)
+                    if action_type == ActionType.BUILD_SETTLEMENT
+                ]
+                np.testing.assert_array_equal(
+                    np.flatnonzero(observed["gym_legal_mask"][0]), expected
                 )
 
         batch = Batch(1, players=2, map="MINI")

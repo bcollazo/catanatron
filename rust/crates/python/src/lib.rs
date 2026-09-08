@@ -75,17 +75,26 @@ impl Batch {
         })
     }
 
+    #[pyo3(signature = (indices, seeds, config=None))]
     fn reset_many<'py>(
         &mut self,
         py: Python<'py>,
         indices: Vec<usize>,
         seeds: Vec<u64>,
+        config: Option<&str>,
     ) -> PyResult<Bound<'py, PyDict>> {
         validate_indices(&indices, self.positions.len())?;
         if indices.len() != seeds.len() {
             return Err(PyValueError::new_err(
                 "indices and seeds must have equal length",
             ));
+        }
+        if let Some(config) = config {
+            if BoardConfig::parse(config)? != self.board {
+                return Err(PyValueError::new_err(
+                    "reset config must match the Batch map; create a separate Batch to change maps",
+                ));
+            }
         }
         let replacements = py.detach(|| {
             indices
@@ -405,6 +414,7 @@ fn observations<'py>(
     let dict = PyDict::new(py);
     dict.set_item("observation_schema_version", OBSERVATION_SCHEMA_VERSION)?;
     dict.set_item("action_schema_version", ACTION_SCHEMA_VERSION)?;
+    dict.set_item("observation_kind", "perfect_information")?;
     dict.set_item(
         "features",
         Array2::from_shape_vec((indices.len(), FEATURE_COUNT), features)
