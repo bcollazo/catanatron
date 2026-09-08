@@ -89,11 +89,20 @@ pub fn rollout_many(
 mod tests {
     use super::*;
     use crate::{initialize_base, NumberPlacement};
+    use catanatron_core::{apply_checked_with_context, generate_actions_with_context};
 
     #[test]
     fn one_two_and_four_threads_match_scalar_results_exactly() {
         let (context, root) = initialize_base(4, NumberPlacement::OfficialSpiral, 19, 0).unwrap();
-        let roots = vec![root; 12];
+        let mut advanced = root;
+        let mut menu = Vec::new();
+        generate_actions_with_context(&advanced, &context, &mut menu);
+        let actor = advanced.actor;
+        apply_checked_with_context(&mut advanced, &context, actor, menu[0]).unwrap();
+        let roots: Vec<Position> = (0..12)
+            .map(|index| if index % 2 == 0 { root } else { advanced })
+            .collect();
+        let original = roots.clone();
         let seeds: Vec<u64> = (100..112).collect();
         let limits = RolloutLimits {
             turn_limit: 100,
@@ -106,7 +115,7 @@ mod tests {
                 expected
             );
         }
-        assert!(roots.iter().all(|candidate| *candidate == root));
+        assert_eq!(roots, original);
     }
 
     #[test]

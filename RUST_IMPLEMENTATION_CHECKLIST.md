@@ -17,7 +17,7 @@ Status at handoff: **planning complete; production implementation not started**.
 - [x] E08 — Differential harness, benchmarks and allocation report implemented.
 - [x] E09 — Stdio adapter/importer and real host certification pass.
 - [x] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
-- [ ] E11 — Parallel results match scalar execution; scaling measured.
+- [x] E11 — Parallel results match scalar execution; scaling measured.
 - [ ] E12 — MINI and batched Python extension pass parity/lifetime/error tests.
 - [ ] E13 — Final checks, docs, examples and handoff complete.
 
@@ -34,9 +34,9 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E11 (reproducible parallel batch execution).
-* Last implementation check: E10 release search/bot tests pass; a 20-game, 5,569-decision seat-rotated evaluation completed without protocol failures at a 20 ms budget.
-* Next action: implement deterministic-index `Batch`/`rollout_many` with fixed worker chunks and scalar-equality tests for 1/2/4 threads.
+* Current task: E12 (MINI and batched Python extension).
+* Last implementation check: E11 deterministic batch tests pass for scalar/1/2/4-thread equality and disjoint immutable roots; scaling was measured at 1/2/4/8/16/32 workers for 32- and 2,048-rollout batches.
+* Next action: export and implement MINI topology/layout initialization, rerun parity, then scaffold the optional PyO3/NumPy batch extension.
 * Blocking condition: none. Protocol v1/schema v1 were certified against PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` in the isolated `C:\dev\catanatron-pr386` worktree.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -55,6 +55,13 @@ Status at handoff: **planning complete; production implementation not started**.
 * Added `--policy random|rollout`, `--simulations`, `--budget-ms`, `--seed`, and `--threads`. Default deadline is 100 ms with 5 ms reserved for response serialization; deadline checks occur between simulations and inside rollouts at every action/chance boundary. E10 rejects thread counts above one until E11.
 * Forced-win, cutoff-over-loss reward, legal-selection, deterministic fixed-seed, deadline interruption, and parent-root immutability regressions pass.
 * The fixed evaluation at 20 ms covered 20 seat-rotated games and 5,569 decisions. Of 2,542 searched decisions, rollouts averaged 204.96 (median 129.5, range 18–10,000). Latency was p50 0.0014 ms, p95 16.75 ms, p99 17.33 ms, max 24.66 ms. Observed records were 9/10 versus Random and 10/10 versus WeightedRandom; the report explicitly does not claim superiority from this small sample. Raw report: `rust/bench-results/e10-search.json`.
+
+### 2026-09-08 — E11 complete
+
+* Added `Batch` and `rollout_many` with fixed worker chunks, worker-local position/scratch/RNG state, deterministic input-index aggregation, and whole-batch validation before work starts.
+* Scalar and 1/2/4-thread results match exactly for fixed seeds; mixed/disjoint roots remain unchanged and cannot corrupt each other.
+* On the 32-logical-processor host, the 2,048-root batch measured 0.98M, 1.94M, 3.80M, 7.08M, 10.08M and 14.92M intents/s at 1/2/4/8/16/32 requested workers. The 32-root batch measured 0.95M through 7.05M over the same range. Physical-core and SMT topology are unavailable, so these are not labeled physical-core measurements.
+* Estimated root/result payload memory was 7,808 bytes for 32 roots and 499,712 bytes for 2,048. Peak RSS and stack reservations were not measured and remain explicitly unavailable. Raw reports are committed under `rust/bench-results/2026-09-08/parallel-*.json`.
 
 ### 2026-09-07 — E02 checkpoint
 
