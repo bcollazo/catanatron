@@ -26,3 +26,6 @@ the proposer never responds to its own offer.
 This profile is not a claim of universal official-rule conformance. The
 canonical fixture format and each accepted divergence will be added before the
 engine consumes production fixtures.
+
+See [`python-divergences.md`](python-divergences.md) for the five named Python
+reproductions and compact ASCII diagrams.
