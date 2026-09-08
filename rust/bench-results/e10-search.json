@@ -1,0 +1,39 @@
+{
+  "budget_ms": 20,
+  "decisions": 5277,
+  "head_to_head": {
+    "random": {
+      "approx_95pct_interval": [
+        1.0,
+        1
+      ],
+      "draws": 0,
+      "games": 10,
+      "losses": 0,
+      "win_rate": 1.0,
+      "wins": 10
+    },
+    "weighted": {
+      "approx_95pct_interval": [
+        0.7140580735820994,
+        1
+      ],
+      "draws": 0,
+      "games": 10,
+      "losses": 1,
+      "win_rate": 0.9,
+      "wins": 9
+    }
+  },
+  "latency_ms": {
+    "max": 26.750899967737496,
+    "p50": 0.0013998942449688911,
+    "p95": 16.704699955880642,
+    "p99": 17.48879998922348
+  },
+  "note": "Intervals are approximate; this sample reports observations, not strength superiority.",
+  "policy": "rollout",
+  "seed_schedule_start": 1701,
+  "simulation_cap": 10000,
+  "threads": 1
+}
