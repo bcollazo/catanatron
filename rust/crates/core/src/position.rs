@@ -66,6 +66,9 @@ pub struct Position {
     pub trade_proposer: PlayerId,
     pub trade_responded_mask: u8,
     pub trade_accepted_mask: u8,
+    pub longest_road_lengths: [u8; MAX_PLAYERS],
+    pub longest_road_holder: Option<PlayerId>,
+    pub largest_army_holder: Option<PlayerId>,
 }
 impl Position {
     pub fn new(player_count: u8) -> Result<Self, crate::IllegalAction> {
@@ -93,6 +96,9 @@ impl Position {
             trade_proposer: zero,
             trade_responded_mask: 0,
             trade_accepted_mask: 0,
+            longest_road_lengths: [0; MAX_PLAYERS],
+            longest_road_holder: None,
+            largest_army_holder: None,
         })
     }
 }

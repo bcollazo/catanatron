@@ -8,6 +8,7 @@
 
 mod action;
 mod apply;
+mod awards;
 mod generate;
 mod ids;
 mod layout;
@@ -21,6 +22,7 @@ pub use apply::{
     apply_checked, apply_checked_with_context, apply_outcome_checked,
     apply_outcome_checked_with_context, Transition,
 };
+pub use awards::{actual_victory_points, longest_road_length};
 pub use generate::{generate_actions, generate_actions_with_context};
 pub use ids::{EdgeId, IdError, NodeId, PlayerId, TileId};
 pub use layout::{maritime_rate, GameContext, LandTile, Layout, LayoutError, Port};

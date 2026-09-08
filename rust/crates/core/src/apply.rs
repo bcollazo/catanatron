@@ -316,6 +316,7 @@ pub fn apply_checked(
         },
         _ => return Err(IllegalAction::WrongPhase),
     };
+    let status = finalize_transition(&mut next, status);
     *position = next;
     Ok(Transition { status })
 }
@@ -403,10 +404,9 @@ pub fn apply_checked_with_context(
         next.bank[give.index()] += rate;
         next.bank[receive.index()] -= 1;
         next.players[usize::from(actor.get())].hand[receive.index()] += 1;
+        let status = finalize_transition(&mut next, Status::Decision);
         *position = next;
-        return Ok(Transition {
-            status: Status::Decision,
-        });
+        return Ok(Transition { status });
     }
     let mut next = *position;
     let transition = apply_checked(&mut next, actor, action)?;
@@ -430,8 +430,9 @@ pub fn apply_checked_with_context(
             }
         }
     }
+    let status = finalize_transition(&mut next, transition.status);
     *position = next;
-    Ok(transition)
+    Ok(Transition { status })
 }
 
 /// Resolves a checked chance result atomically.
@@ -515,10 +516,9 @@ pub fn apply_outcome_checked_with_context(
                 resume_post_roll: true,
             };
         }
+        let status = finalize_transition(&mut next, Status::Decision);
         *position = next;
-        return Ok(Transition {
-            status: Status::Decision,
-        });
+        return Ok(Transition { status });
     }
     let mut next = *position;
     let mut demand = [[0_u8; 5]; crate::MAX_PLAYERS];
@@ -552,8 +552,30 @@ pub fn apply_outcome_checked_with_context(
         }
     }
     next.phase = Phase::PostRoll { actor };
+    let status = finalize_transition(&mut next, Status::Decision);
     *position = next;
-    Ok(Transition {
-        status: Status::Decision,
-    })
+    Ok(Transition { status })
+}
+
+fn finalize_transition(position: &mut Position, provisional: Status) -> Status {
+    if provisional == Status::Chance {
+        return provisional;
+    }
+    crate::awards::refresh_awards(position);
+    let mut winner = None;
+    for raw in 0..position.player_count {
+        let player = crate::PlayerId::new(raw).expect("active player");
+        if crate::actual_victory_points(position, player) >= 10 {
+            winner = Some(player);
+        }
+    }
+    if let Some(winner) = winner {
+        position.phase = Phase::Terminal;
+        Status::Won(winner)
+    } else if position.turns >= 1_000 {
+        position.phase = Phase::Terminal;
+        Status::Truncated(crate::Truncation::TurnLimit)
+    } else {
+        provisional
+    }
 }

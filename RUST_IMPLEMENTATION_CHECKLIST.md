@@ -164,4 +164,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (25 tests), formatting, and Clippy with warnings denied pass.
 * Next action: implement exact longest-road/largest-army maintenance and victory status.
 
+### 2026-09-07 — E06 awards/victory checkpoint
+
+* Added exact edge-simple longest-road DFS with opponent-building stops, incumbent tie retention/removal, Largest Army selection, derived actual VP, last-qualifying-seat winner scans, and winner-before-turn-limit terminal precedence.
+* `cargo test --manifest-path rust/Cargo.toml` (26 tests), formatting, and Clippy with warnings denied pass.
+* Next action: broaden E05/E06 matrix coverage (chance weights, award ties/blocks, proposer seats, failed confirmation) and remove the remaining unsupported action paths before task completion.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

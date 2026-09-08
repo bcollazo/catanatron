@@ -361,6 +361,31 @@ fn maritime_trade_uses_the_best_owned_port_rate() {
 }
 
 #[test]
+fn awards_use_exact_trails_and_victory_prefers_the_last_qualifying_seat() {
+    let mut position = Position::new(2).unwrap();
+    for raw in [0, 3, 5, 7, 9] {
+        position.roads[raw] = 1;
+    }
+    assert_eq!(
+        catanatron_core::longest_road_length(&position, PlayerId::new(0).unwrap()),
+        5
+    );
+    position.phase = Phase::PostRoll {
+        actor: position.actor,
+    };
+    position.players[0].dev[DevelopmentCard::VictoryPoint.index()] = 8;
+    position.players[1].dev[DevelopmentCard::VictoryPoint.index()] = 10;
+    let actor = position.actor;
+    assert_eq!(
+        apply_checked(&mut position, actor, Action::EndTurn)
+            .unwrap()
+            .status,
+        Status::Won(PlayerId::new(1).unwrap())
+    );
+    assert!(matches!(position.phase, Phase::Terminal));
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();
