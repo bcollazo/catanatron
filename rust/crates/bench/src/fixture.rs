@@ -1,8 +1,8 @@
 use catanatron_core::{
     apply_checked_with_context, apply_outcome_checked_with_context, edge_endpoints,
-    generate_actions_with_context, Action, DevelopmentCard, EdgeId, GameContext, LandTile, Layout,
-    NodeId, Outcome, Phase, PlayerId, Port, Position, Resource, Status, TileId, BASE_EDGE_COUNT,
-    BASE_LAND_TILE_COUNT, BASE_NODE_COUNT,
+    edge_endpoints_on, generate_actions_with_context, Action, DevelopmentCard, EdgeId, GameContext,
+    LandTile, Layout, MapKind, NodeId, Outcome, Phase, PlayerId, Port, Position, Resource, Status,
+    TileId, BASE_LAND_TILE_COUNT, BASE_NODE_COUNT,
 };
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +28,7 @@ pub struct WireAction {
 
 #[derive(Debug, Deserialize)]
 pub struct FixtureState {
+    pub map: String,
     pub colors: Vec<String>,
     pub players: Vec<FixturePlayer>,
     pub bank: [u8; 5],
@@ -382,8 +383,13 @@ pub fn import_state(state: &FixtureState) -> Result<(GameContext, Position), Imp
     if state.colors.len() != state.players.len() || !(2..=4).contains(&state.colors.len()) {
         return Err(ImportError::InvalidPlayerCount);
     }
-    let mut position =
-        Position::new(state.colors.len() as u8).map_err(|_| ImportError::InvalidPlayerCount)?;
+    let map = match state.map.as_str() {
+        "BASE" | "TOURNAMENT" => MapKind::Base,
+        "MINI" => MapKind::Mini,
+        _ => return Err(ImportError::InvalidLayout),
+    };
+    let mut position = Position::new_on_map(state.colors.len() as u8, map)
+        .map_err(|_| ImportError::InvalidPlayerCount)?;
     position.bank = state.bank;
     position.dev_bank = [0; 5];
     for card in &state.development_deck {
@@ -425,10 +431,10 @@ pub fn import_state(state: &FixtureState) -> Result<(GameContext, Position), Imp
         }
     }
     for (road, color) in &state.roads {
-        let edge = (0..BASE_EDGE_COUNT as u8)
-            .map(|raw| EdgeId::new(raw).expect("base edge"))
+        let edge = (0..map.edge_count() as u8)
+            .map(|raw| EdgeId::new(raw).expect("active edge"))
             .find(|edge| {
-                let (a, b) = edge_endpoints(*edge);
+                let (a, b) = edge_endpoints_on(map, *edge).expect("active edge");
                 [a.get(), b.get()] == *road || [b.get(), a.get()] == *road
             })
             .ok_or(ImportError::InvalidRoad(*road))?;
@@ -456,7 +462,7 @@ pub fn import_state(state: &FixtureState) -> Result<(GameContext, Position), Imp
     position.trade_accepted_mask = bool_mask(&state.acceptees);
     position.phase = import_phase(state, actor)?;
 
-    if state.layout.len() != BASE_LAND_TILE_COUNT {
+    if state.layout.len() != map.land_tile_count() {
         return Err(ImportError::InvalidLayout);
     }
     let mut tiles = [LandTile::DESERT; BASE_LAND_TILE_COUNT];
@@ -626,7 +632,7 @@ fn wire_action(state: &FixtureState, wire: &WireAction) -> Result<Action, Import
     Ok(match wire.kind.as_str() {
         "ROLL" => Action::Roll,
         "END_TURN" => Action::EndTurn,
-        "BUILD_ROAD" => Action::BuildRoad(edge_from_value(&wire.value)?),
+        "BUILD_ROAD" => Action::BuildRoad(edge_from_value(state, &wire.value)?),
         "BUILD_SETTLEMENT" => Action::BuildSettlement(
             NodeId::new(json_u8(&wire.value, invalid())?).map_err(|_| invalid())?,
         ),
@@ -730,13 +736,18 @@ fn json_u8(value: &serde_json::Value, error: ImportError) -> Result<u8, ImportEr
         .ok_or(error)
 }
 
-fn edge_from_value(value: &serde_json::Value) -> Result<EdgeId, ImportError> {
+fn edge_from_value(state: &FixtureState, value: &serde_json::Value) -> Result<EdgeId, ImportError> {
     let nodes: [u8; 2] = serde_json::from_value(value.clone())
         .map_err(|_| ImportError::InvalidAction("BUILD_ROAD".to_owned()))?;
-    (0..BASE_EDGE_COUNT as u8)
-        .map(|raw| EdgeId::new(raw).expect("base edge"))
+    let map = if state.map == "MINI" {
+        MapKind::Mini
+    } else {
+        MapKind::Base
+    };
+    (0..map.edge_count() as u8)
+        .map(|raw| EdgeId::new(raw).expect("active edge"))
         .find(|edge| {
-            let (a, b) = edge_endpoints(*edge);
+            let (a, b) = edge_endpoints_on(map, *edge).expect("active edge");
             [a.get(), b.get()] == nodes || [b.get(), a.get()] == nodes
         })
         .ok_or(ImportError::InvalidRoad(nodes))
@@ -806,6 +817,9 @@ mod tests {
             include_str!("../../../tests/fixtures/transitions/sample-base-3p.jsonl"),
             include_str!("../../../tests/fixtures/transitions/sample-base-4p.jsonl"),
             include_str!("../../../tests/fixtures/transitions/sample-tournament-4p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-mini-2p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-mini-3p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-mini-4p.jsonl"),
             include_str!("../../../tests/fixtures/transitions/crafted-builds-and-trades.jsonl"),
         ];
         for corpus in corpora {
@@ -826,6 +840,9 @@ mod tests {
             include_str!("../../../tests/fixtures/transitions/sample-base-3p.jsonl"),
             include_str!("../../../tests/fixtures/transitions/sample-base-4p.jsonl"),
             include_str!("../../../tests/fixtures/transitions/sample-tournament-4p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-mini-2p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-mini-3p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-mini-4p.jsonl"),
             include_str!("../../../tests/fixtures/transitions/crafted-builds-and-trades.jsonl"),
         ];
         for corpus in corpora {

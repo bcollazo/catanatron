@@ -423,7 +423,15 @@ def main() -> None:
     args = parser.parse_args()
     files: dict[Path, str] = {}
     coverage: Counter[str] = Counter()
-    for players, map_name, seed in ((2, "BASE", 11), (3, "BASE", 17), (4, "BASE", 23), (4, "TOURNAMENT", 29)):
+    for players, map_name, seed in (
+        (2, "BASE", 11),
+        (3, "BASE", 17),
+        (4, "BASE", 23),
+        (4, "TOURNAMENT", 29),
+        (2, "MINI", 31),
+        (3, "MINI", 37),
+        (4, "MINI", 41),
+    ):
         rows = trace(f"sample-{map_name.lower()}-{players}p", players, map_name, seed, args.limit)
         for row in rows:
             coverage[row["action"]["type"]] += 1
