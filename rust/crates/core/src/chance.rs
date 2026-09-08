@@ -1,6 +1,23 @@
 //! Exact integer-weight chance enumeration; sampling belongs to search.
 use crate::{ChanceKind, DevelopmentCard, Outcome, Phase, Position, Resource};
 
+pub trait RandomSource {
+    fn next_u64(&mut self) -> u64;
+}
+
+pub fn draw_bounded(random: &mut impl RandomSource, bound: u64) -> Option<u64> {
+    if bound == 0 {
+        return None;
+    }
+    let threshold = bound.wrapping_neg() % bound;
+    loop {
+        let value = random.next_u64();
+        if value >= threshold {
+            return Some(value % bound);
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct WeightedOutcome {
     pub outcome: Outcome,

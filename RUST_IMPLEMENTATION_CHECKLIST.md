@@ -176,4 +176,11 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (28 tests), formatting, and Clippy with warnings denied pass.
 * Next action: consume the exact chance table from E07's deterministic sampler and complete the remaining E05/E06 matrix tests while exercising full games.
 
+### 2026-09-07 — E07 RNG/initialization/policy checkpoint
+
+* Added `catanatron-search` with pinned ChaCha8Rng, rejection-sampled bounded draws, stable separated child seeds with known-answer vectors, exact chance sampling, and random/weighted cumulative action policies.
+* Added reproducible BASE initialization with shuffled standard resources and ports plus `official_spiral` and `random` number placement. The desert establishes the initial robber tile.
+* Workspace tests (31 total), formatting, and Clippy with warnings denied pass.
+* Next action: implement scalar rollout with separate chance/policy streams and explicit action/turn caps, then run deterministic 2/4-player game suites and conservation checks.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.
