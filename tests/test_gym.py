@@ -6,7 +6,7 @@ from gymnasium.utils.env_checker import check_env
 import numpy as np
 
 from catanatron.features import get_feature_ordering
-from catanatron.json import GameEncoder
+from catanatron.serialization import web_view
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.models.enums import Action, ActionType, WHEAT, SHEEP, ORE
 from catanatron.players.value import ValueFunctionPlayer
@@ -277,7 +277,9 @@ def _play_seeded_gym_game(seed):
         observation, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
     game = env.unwrapped.game
-    game_json = json.loads(json.dumps(game, cls=GameEncoder))
+    game_json = json.loads(json.dumps(web_view(game)))
+    # Every game gets a fresh uuid; everything else must match.
+    game_json["game"].pop("id")
     env.close()
     return game_json
 

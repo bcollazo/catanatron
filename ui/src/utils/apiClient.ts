@@ -3,21 +3,44 @@ import axios from "axios";
 import { API_URL } from "../configuration";
 import type { Color, GameAction, GameState } from "./api.types";
 
-export type PlayerArchetype =
-  | "HUMAN"
-  | "RANDOM"
-  | "CATANATRON"
-  | "WEIGHTED_RANDOM";
+/** A registry key, e.g. "CATANATRON" or "AB". The server decides what exists. */
+export type PlayerKey = string;
+
+/** One settable parameter, as published by GET /api/players. */
+export type PlayerParam = {
+  name: string;
+  type: "int" | "float" | "str" | "bool";
+  default: number | string | boolean | null;
+  /** Only present when the param declares a fixed set of values. */
+  choices?: Array<string | number>;
+  help: string;
+};
+
+export type PlayerEntry = {
+  key: PlayerKey;
+  name: string;
+  description: string;
+  is_bot: boolean;
+  source: string;
+  params: PlayerParam[];
+};
+
 export type MapTemplate = "BASE" | "MINI" | "TOURNAMENT";
 export type StateIndex = number | `${number}` | "latest";
 
 type CreateGameOptions = {
-  players: PlayerArchetype[];
+  players: PlayerKey[];
   mapTemplate: MapTemplate;
   vpsToWin: number;
   discardLimit: number;
   friendlyRobber: boolean;
 };
+
+/** The players this server can seat. Replaces a hardcoded list in the UI. */
+export async function getPlayers(): Promise<PlayerEntry[]> {
+  const response = await axios.get<PlayerEntry[]>(API_URL + "/api/players");
+  return response.data;
+}
 
 export async function createGame({
   players,
@@ -36,12 +59,30 @@ export async function createGame({
   return response.data.game_id;
 }
 
+/**
+ * Whose eyes the server renders state through. A seat sees the other hands as
+ * counts rather than cards; null watches as a spectator, every hand face up.
+ *
+ * It lives here rather than as an argument because every request carries it,
+ * and a call site that forgot would silently show the whole table again.
+ */
+let perspective: Color | null = null;
+
+export function setPerspective(color: Color | null) {
+  perspective = color;
+}
+
+function viewParams() {
+  return perspective ? { as: perspective } : {};
+}
+
 export async function getState(
   gameId: string,
   stateIndex: StateIndex = "latest"
 ): Promise<GameState> {
   const response = await axios.get(
-    `${API_URL}/api/games/${gameId}/states/${stateIndex}`
+    `${API_URL}/api/games/${gameId}/states/${stateIndex}`,
+    { params: viewParams() }
   );
   return response.data;
 }
@@ -50,7 +91,8 @@ export async function getState(
 export async function postAction(gameId: string, action?: GameAction) {
   const response = await axios.post<GameState>(
     `${API_URL}/api/games/${gameId}/actions`,
-    action
+    action,
+    { params: viewParams() }
   );
   return response.data;
 }

@@ -12,6 +12,8 @@ class VictoryPointPlayer(Player):
     in this turn, selects from them at random.
     """
 
+    LABEL = "Victory Point"
+
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
             return playable_actions[0]

@@ -235,9 +235,7 @@ def test_friendly_robber_filters_tiles_in_game_playable_actions(fake_roll_dice):
     regular_game = Game(players, seed=1, friendly_robber=False)
     build_initial_placements(regular_game)
     regular_game.execute(Action(Color.RED, ActionType.ROLL, None))
-    regular_coordinates = {
-        action.value[0] for action in regular_game.playable_actions
-    }
+    regular_coordinates = {action.value[0] for action in regular_game.playable_actions}
 
     friendly_game = Game(players, seed=1, friendly_robber=True)
     build_initial_placements(friendly_game)
@@ -630,6 +628,7 @@ def test_trading_sequence(fake_roll_dice):
     expected[index_of_a_resource_owned] -= 1
     expected[missing_resource_index] += 1
     assert get_player_freqdeck(game.state, p0.color) == expected
+
 
 def test_cannot_extend_road_past_enemy_settlement_at_endpoint():
     # Blue has a road whose far endpoint is node 10.

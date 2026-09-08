@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import math
 import time
 from collections import defaultdict
@@ -13,28 +14,29 @@ EXP_C = 2**0.5
 
 
 class MCTSPlayer(Player):
-    def __init__(self, color, num_simulations=SIMULATIONS, prunning=False):
-        super().__init__(color)
-        self.num_simulations = int(num_simulations)
-        self.prunning = bool(prunning)
+    LABEL = "MCTS"
+
+    @dataclass(frozen=True)
+    class Params:
+        num_simulations: int = SIMULATIONS
+        prunning: bool = False
 
     def decide(self, game: Game, playable_actions):
-        actions = list_prunned_actions(game) if self.prunning else playable_actions
+        actions = (
+            list_prunned_actions(game) if self.params.prunning else playable_actions
+        )
         if len(actions) == 1:
             return actions[0]
 
         start = time.time()
-        root = StateNode(self.color, game.copy(), None, self.prunning)
-        for _ in range(self.num_simulations):
+        root = StateNode(self.color, game.copy(), None, self.params.prunning)
+        for _ in range(self.params.num_simulations):
             root.run_simulation()
 
         # print(
         #     f"{str(self)} took {time.time() - start} secs to decide {len(playable_actions)}"
         # )
         return root.choose_best_action()
-
-    def __repr__(self):
-        return super().__repr__() + f"({self.num_simulations}:{self.prunning})"
 
 
 class StateNode:

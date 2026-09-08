@@ -23,7 +23,8 @@ function makePlayerState(playerIndex: number): PlayerState {
 }
 
 /**
- * Representative of the JSON emitted by Python's GameEncoder.
+ * Representative of the JSON emitted by catanatron.serialization.web_view:
+ * the state document, plus what a browser needs on top of it.
  *
  * In particular, nodes are serialized as an object, a generic port has a
  * null resource, water tiles are present, and winning_color is null until
@@ -106,6 +107,20 @@ export function makeGameState(
       BLUE: 0,
     },
     state_index: 12,
+
+    // The state document half of the payload.
+    schema_version: 2,
+    game: {
+      id: "game-123",
+      vps_to_win: 10,
+      discard_limit: 7,
+      friendly_robber: false,
+    },
+    num_turns: 6,
+    current_player_index: 1,
+    current_turn_index: 1,
+    resource_freqdeck: [19, 19, 19, 19, 19],
+    development_listdeck: { KNIGHT: 14, VICTORY_POINT: 5 },
     ...overrides,
   };
 }

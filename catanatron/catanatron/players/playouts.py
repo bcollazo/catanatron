@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import multiprocessing
 import random
 import time
@@ -21,9 +22,11 @@ PLAYOUTS_BUDGET = 100
 class GreedyPlayoutsPlayer(Player):
     """For each playable action, play N random playouts."""
 
-    def __init__(self, color, num_playouts=DEFAULT_NUM_PLAYOUTS):
-        super().__init__(color)
-        self.num_playouts = int(num_playouts)
+    LABEL = "Greedy Playouts"
+
+    @dataclass(frozen=True)
+    class Params:
+        num_playouts: int = DEFAULT_NUM_PLAYOUTS
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
@@ -31,7 +34,7 @@ class GreedyPlayoutsPlayer(Player):
 
         start = time.time()
         # num_playouts = PLAYOUTS_BUDGET // len(playable_actions)
-        num_playouts = self.num_playouts
+        num_playouts = self.params.num_playouts
 
         best_action = None
         max_wins = None

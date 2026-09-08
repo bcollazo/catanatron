@@ -59,10 +59,10 @@ jobs:
           catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Test Custom Bot
         run: |
-          catanatron-play --code=examples/custom_player.py --players=F,FOO --num=1
+          catanatron-play --bot examples/custom_player.py --players=F,FooPlayer --num=1
       - name: Test Custom Accumulator
         run: |
-          catanatron-play --code=examples/custom_accumulator.py --players=F,R --num=1
+          catanatron-play --accumulator examples/custom_accumulator.py --players=F,R --num=1
       - name: Test Library Example
         run: |
           python -W error examples/library_example.py

@@ -4,7 +4,7 @@ import json
 from collections import defaultdict
 
 from catanatron.game import GameAccumulator, Game
-from catanatron.json import GameEncoder
+from catanatron.serialization import state_to_json
 from catanatron.state_functions import (
     get_actual_victory_points,
     get_dev_cards_in_hand,
@@ -127,4 +127,4 @@ class JsonDataAccumulator(GameAccumulator):
     def after(self, game):
         filepath = os.path.join(self.output, f"{game.id}.json")
         with open(filepath, "w") as f:
-            f.write(json.dumps(game, cls=GameEncoder))
+            f.write(json.dumps(state_to_json(game)))

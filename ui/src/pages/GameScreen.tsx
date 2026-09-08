@@ -12,7 +12,12 @@ import LeftDrawer from "../components/LeftDrawer";
 import RightDrawer from "../components/RightDrawer";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { type StateIndex, getState, postAction } from "../utils/apiClient";
+import {
+  type StateIndex,
+  getState,
+  postAction,
+  setPerspective,
+} from "../utils/apiClient";
 import { dispatchSnackbar } from "../components/Snackbar";
 import { getHumanColor } from "../utils/stateUtils";
 import AnalysisBox from "../components/AnalysisBox";
@@ -32,11 +37,14 @@ function GameScreen({ replayMode }: { replayMode: boolean }) {
       return;
     }
 
+    // Every request carries the perspective, so set it before fetching and
+    // refetch whenever it changes.
+    setPerspective(state.perspective);
     (async () => {
       const gameState = await getState(gameId, stateIndex as StateIndex);
       dispatch({ type: ACTIONS.SET_GAME_STATE, data: gameState });
     })();
-  }, [gameId, stateIndex, dispatch]);
+  }, [gameId, stateIndex, state.perspective, dispatch]);
 
   // Maybe kick off next query?
   useEffect(() => {

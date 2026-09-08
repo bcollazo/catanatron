@@ -1,8 +1,10 @@
 from catanatron import ActionType
-from catanatron.cli import SimulationAccumulator, register_cli_accumulator
+from catanatron.cli import SimulationAccumulator
 
 
 class PortTradeCounter(SimulationAccumulator):
+    """Counts how many times anyone traded with the bank."""
+
     def before_all(self):
         self.num_trades = 0
 
@@ -12,6 +14,3 @@ class PortTradeCounter(SimulationAccumulator):
 
     def after_all(self):
         print(f"There were {self.num_trades} port trades!")
-
-
-register_cli_accumulator(PortTradeCounter)

@@ -4,7 +4,7 @@ import json
 from catanatron.game import Game
 from catanatron.models.enums import ActionType, WOOD, BRICK, SHEEP, ORE
 from catanatron.models.player import SimplePlayer, Color
-from catanatron.json import GameEncoder, action_from_json
+from catanatron.serialization import action_from_json, web_view
 
 
 def test_serialization_matches_gui_contract():
@@ -18,7 +18,7 @@ def test_serialization_matches_gui_contract():
         seed=123,
     )
 
-    result = json.loads(json.dumps(game, cls=GameEncoder))
+    result = json.loads(json.dumps(web_view(game)))
 
     assert {
         "tiles",
@@ -39,7 +39,7 @@ def test_serialization_matches_gui_contract():
         "winning_color",
         "state_index",
     } <= set(result)
-    assert "random" not in result
+    assert "random" not in result, "the game's rng is not the browser's business"
     assert isinstance(result["tiles"], list)
     assert isinstance(result["nodes"], dict)
     assert isinstance(result["edges"], list)

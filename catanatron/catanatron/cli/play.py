@@ -1,5 +1,4 @@
 import os
-import importlib.util
 from dataclasses import dataclass
 from typing import Literal, Union
 
@@ -19,11 +18,10 @@ from catanatron.state_functions import get_actual_victory_points
 # try to suppress TF output before any potentially tf-importing modules
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from catanatron.utils import ensure_dir, format_secs
-from catanatron.cli.cli_players import (
-    CUSTOM_ACCUMULATORS,
-    parse_cli_string,
-    player_help_table,
-)
+from catanatron.cli.cli_players import player_help_table
+from catanatron.protocol import ProtocolError
+from catanatron.registry import REGISTRY, SpecError
+from catanatron.sources import SourceError, load_class
 from catanatron.cli.accumulators import (
     JsonDataAccumulator,
     StatisticsAccumulator,
@@ -60,15 +58,32 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
     "--players",
     default="R,R,R,R",
     help="""
-    Comma-separated players to use. Use ':' to set player-specific params.
-    (e.g. --players=R,G:25,AB:2:C,W).\n
+    Comma-separated players to use. Append ':' params, positionally or by
+    name (e.g. --players=R,G:25,AB:2:contender,W or AB:depth=2).\n
     See player legend with '--help-players'.
     """,
 )
 @click.option(
-    "--code",
-    default=None,
-    help="Path to file with custom Players and Accumulators to import and use.",
+    "--bot",
+    "bots",
+    multiple=True,
+    help="""
+    Add a bot, as NAME=SOURCE (repeatable). SOURCE is a Python file or an
+    importable module, optionally naming a class after a '#'.
+    NAME defaults to the class's own name.\n
+    e.g. --bot ./mybot.py  --bot RUSH=./bots/mine.py#CityRusher
+    """,
+)
+@click.option(
+    "--accumulator",
+    "accumulators_",
+    multiple=True,
+    help="""
+    Add a SimulationAccumulator to hook into the games (repeatable). SOURCE is
+    a Python file or an importable module, optionally naming a class after
+    a '#'.\n
+    e.g. --accumulator ./mycounter.py
+    """,
 )
 @click.option(
     "-o",
@@ -153,7 +168,8 @@ class CustomTimeRemainingColumn(TimeRemainingColumn):
 def simulate(
     num,
     players,
-    code,
+    bots,
+    accumulators_,
     output,
     output_format,
     include_board_tensor,
@@ -176,21 +192,34 @@ def simulate(
         catanatron-play --players R,R,R,R --num 1000\n
         catanatron-play --players W,W,R,R --num 50000 --output data/ --output-format csv\n
         catanatron-play --players VP,F --num 10 --output data/ --ouput-format json\n
-        catanatron-play --players W,F,AB:3 --num 1 --ouput-format csv --db --quiet
+        catanatron-play --players W,F,AB:3 --num 1 --ouput-format csv --db --quiet\n
+        catanatron-play --bot ./mybot.py --players R,R,R,MyBot --num 10
     """
-    if code:
-        abspath = os.path.abspath(code)
-        spec = importlib.util.spec_from_file_location("module.name", abspath)
-        if spec is not None and spec.loader is not None:
-            user_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(user_module)
+    for declaration in bots:
+        name, separator, source = declaration.partition("=")
+        if not separator or not name.isidentifier():
+            name, source = None, declaration
+        try:
+            REGISTRY.register_source(source, name=name)
+        except SpecError as error:
+            raise click.UsageError(str(error))
+
+    custom_accumulators = []
+    for source in accumulators_:
+        try:
+            custom_accumulators.append(load_class(source, SimulationAccumulator))
+        except SourceError as error:
+            raise click.UsageError(str(error))
 
     if help_players:
         return Console().print(player_help_table())
     if output and not output_format:
         return print("--output requires --output-format")
 
-    players = parse_cli_string(players)
+    try:
+        players = REGISTRY.build_all(players)
+    except SpecError as error:
+        raise click.UsageError(str(error))
     output_options = OutputOptions(
         output, output_format, include_board_tensor, db, step_db
     )
@@ -201,13 +230,17 @@ def simulate(
         config_number_placement,
         config_friendly_robber,
     )
-    play_batch(
-        num,
-        players,
-        output_options,
-        game_config,
-        quiet,
-    )
+    try:
+        play_batch(
+            num,
+            players,
+            output_options,
+            game_config,
+            quiet,
+            custom_accumulators,
+        )
+    except ProtocolError as error:
+        raise click.UsageError(str(error))
 
 
 @dataclass(frozen=True)
@@ -262,8 +295,6 @@ def play_batch_core(num_games, players, game_config, accumulators=[]):
             accumulator.before_all()
 
     for _ in range(num_games):
-        for player in players:
-            player.reset_state()
         catan_map = build_map(game_config.map_type, game_config.number_placement)
         game = Game(
             players,
@@ -286,6 +317,7 @@ def play_batch(
     output_options=None,
     game_config=None,
     quiet=False,
+    custom_accumulators=(),
 ):
     output_options = output_options or OutputOptions()
     game_config = game_config or GameConfigOptions()
@@ -332,7 +364,7 @@ def play_batch(
         from catanatron.web.database_accumulator import StepDatabaseAccumulator
 
         accumulators.append(StepDatabaseAccumulator())
-    for accumulator_class in CUSTOM_ACCUMULATORS:
+    for accumulator_class in custom_accumulators:
         accumulators.append(accumulator_class(players=players, game_config=game_config))
 
     if quiet:

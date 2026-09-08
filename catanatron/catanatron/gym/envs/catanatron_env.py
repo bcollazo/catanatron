@@ -171,8 +171,6 @@ class CatanatronEnv(gym.Env):
             # Ensure map generation uses the same seed as the game.
             random.seed(seed)
         catan_map = build_map(self.map_type)
-        for player in self.players:
-            player.reset_state()
         self.game = Game(
             players=self.players,
             seed=seed,

@@ -14,6 +14,7 @@ from catanatron.apply_action import apply_action
 from catanatron.state_functions import player_key, player_has_rolled
 from catanatron.models.map import CatanMap, NumberPlacement
 from catanatron.models.player import Color, Player
+from catanatron.observer import GameObserver
 
 # To timeout RandomRobots from getting stuck...
 TURNS_LIMIT = 1000
@@ -48,37 +49,12 @@ def is_valid_trade(action_value):
     return True
 
 
-class GameAccumulator:
-    """Interface to hook into different game lifecycle events.
+class GameAccumulator(GameObserver):
+    """A :class:`~catanatron.observer.GameObserver` that only watches.
 
-    Useful to compute aggregate statistics, log information, etc...
+    Kept as a distinct name because accumulators are passed to ``play()``
+    explicitly, while players are observed by virtue of being seated.
     """
-
-    def __init__(*args, **kwargs):
-        pass
-
-    def before(self, game):
-        """
-        Called when the game is created, no actions have
-        been taken by players yet, but the board is decided.
-        """
-        pass
-
-    def step(self, game_before_action, action):
-        """
-        Called after each action taken by a player.
-        Game should be right before action is taken.
-        """
-        pass
-
-    def after(self, game):
-        """
-        Called when the game is finished.
-
-        Check game.winning_color() to see if the game
-        actually finished or exceeded turn limit (is None).
-        """
-        pass
 
 
 class Game:
@@ -113,6 +89,12 @@ class Game:
             catan_map (CatanMap, optional): Map to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
         """
+        #: Everything watching this game: the seated players, plus any
+        #: accumulators handed to play(). One list, so each hook is one loop.
+        self.observers = []
+        #: The subset that overrides step(), so the per-action loop skips
+        #: players that only decide. Purely an optimization.
+        self._steppers = []
         if initialize:
             self.seed = seed if seed is not None else random.randrange(sys.maxsize)
             self.random = random.Random(self.seed)
@@ -130,26 +112,18 @@ class Game:
             )
             self.playable_actions = generate_playable_actions(self.state)
 
-    def __setstate__(self, attributes):
-        """Restore pickled games and normalize their per-game RNG.
+            # Seat the players as observers here rather than in play(), so
+            # before() fires exactly once per game no matter who drives the
+            # loop (play, play_tick, or the web server).
+            for player in self.state.players:
+                self.watch(player)
 
-        Legacy database rows have neither ``Game.random`` nor
-        ``State.random``. Their module-global RNG state was never persisted,
-        so the original stream cannot be resumed exactly. Seed a new per-game
-        stream from the stored game seed so legacy games remain playable;
-        subsequent saves preserve that stream.
-        """
-        self.__dict__.update(attributes)
-
-        state_rng = getattr(self.state, "random", None)
-        game_rng = getattr(self, "random", None)
-        rng = state_rng if state_rng is not None else game_rng
-        if rng is None:
-            rng = random.Random(self.seed)
-
-        # Game and State intentionally share one stream by reference.
-        self.random = rng
-        self.state.random = rng
+    def watch(self, observer):
+        """Have ``observer`` follow this game from here on."""
+        observer.before(self)
+        self.observers.append(observer)
+        if type(observer).step is not GameObserver.step:
+            self._steppers.append(observer)
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
@@ -165,14 +139,14 @@ class Game:
             Color: winning color or None if game exceeded TURNS_LIMIT
         """
         for accumulator in accumulators:
-            accumulator.before(self)
+            self.watch(accumulator)
         while self.winning_color() is None and self.state.num_turns < TURNS_LIMIT:
-            self.play_tick(decide_fn=decide_fn, accumulators=accumulators)
-        for accumulator in accumulators:
-            accumulator.after(self)
+            self.play_tick(decide_fn=decide_fn)
+        for observer in self.observers:
+            observer.after(self)
         return self.winning_color()
 
-    def play_tick(self, decide_fn=None, accumulators=[]):
+    def play_tick(self, decide_fn=None):
         """Advances game by one ply (player decision).
 
         Args:
@@ -190,10 +164,9 @@ class Game:
             else player.decide(self, self.playable_actions)
         )
 
-        # Call accumulator.step here, because we want game_before_action, action
-        if len(accumulators) > 0:
-            for accumulator in accumulators:
-                accumulator.step(self, action)
+        # Call step here, because we want game_before_action, action
+        for observer in self._steppers:
+            observer.step(self, action)
 
         # Apply Action, and do Move Generation
         return self.execute(action)

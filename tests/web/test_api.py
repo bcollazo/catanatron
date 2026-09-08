@@ -3,11 +3,12 @@ import os
 import pytest
 import json
 from catanatron import Color, Game, RandomPlayer
-from catanatron.json import GameEncoder
+from catanatron.serialization import SCHEMA_VERSION
 from catanatron.web import create_app
 from catanatron.web.models import (
     db,
-    GameState,
+    StoredAction,
+    StoredGame,
     get_game_state,
     upsert_game_state,
 )
@@ -46,23 +47,20 @@ def client(app):
 
 def test_post_game_endpoint(client):
     """Test creating a new game."""
-    response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    response = client.post("/api/games", json={"players": ["R", "R"]})
     assert response.status_code == 200
     data = json.loads(response.data)
     assert "game_id" in data
     # Further check: Ensure the game was actually created in the db
     with client.application.app_context():
-        assert (
-            db.session.query(GameState).filter_by(uuid=data["game_id"]).first()
-            is not None
-        )
+        assert db.session.get(StoredGame, data["game_id"]) is not None
 
 
 def test_post_game_endpoint_accepts_custom_config(client):
     response = client.post(
         "/api/games",
         json={
-            "players": ["WEIGHTED_RANDOM", "CATANATRON"],
+            "players": ["W", "CATANATRON"],
             "map_template": "MINI",
             "vps_to_win": 15,
             "discard_limit": 12,
@@ -89,7 +87,7 @@ def test_post_game_endpoint_rejects_invalid_config(client):
     response = client.post(
         "/api/games",
         json={
-            "players": ["RANDOM"],
+            "players": ["R"],
             "map_template": "INVALID",
             "vps_to_win": 25,
             "discard_limit": 2,
@@ -101,7 +99,7 @@ def test_post_game_endpoint_rejects_invalid_config(client):
 def test_get_game_endpoint(client):
     """Test retrieving a specific game state."""
     # First, create a game to retrieve
-    post_response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    post_response = client.post("/api/games", json={"players": ["R", "R"]})
     game_id = json.loads(post_response.data)["game_id"]
 
     # Retrieve the initial state (state_index 0)
@@ -113,18 +111,10 @@ def test_get_game_endpoint(client):
     assert data["is_initial_build_phase"] is True
     assert data["winning_color"] is None
 
-    # The API reserializes the pickled game; it must match the JSON snapshot
-    # stored alongside that pickle for GUI and replay consumers.
-    with client.application.app_context():
-        stored_state = (
-            db.session.query(GameState).filter_by(uuid=game_id, state_index=0).one()
-        )
-        assert data == json.loads(stored_state.state)
-
 
 def test_get_latest_game_endpoint(client):
     """Test retrieving the latest game state."""
-    post_response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    post_response = client.post("/api/games", json={"players": ["R", "R"]})
     game_id = json.loads(post_response.data)["game_id"]
 
     response = client.get(f"/api/games/{game_id}/states/latest")
@@ -145,7 +135,7 @@ def test_get_game_not_found(client):
 def test_post_action_bot_turn(client):
     """Test posting an action when it's a bot's turn."""
     # Create a game with at least one bot (RANDOM is a bot)
-    post_response = client.post("/api/games", json={"players": ["RANDOM", "HUMAN"]})
+    post_response = client.post("/api/games", json={"players": ["R", "HUMAN"]})
     assert post_response.status_code == 200
     game_id = json.loads(post_response.data)["game_id"]
 
@@ -162,7 +152,7 @@ def test_post_action_bot_turn(client):
 
 def test_repeated_bot_actions_advance_latest_state(client):
     """Latest state should keep advancing across persisted bot turns."""
-    post_response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    post_response = client.post("/api/games", json={"players": ["R", "R"]})
     assert post_response.status_code == 200
     game_id = json.loads(post_response.data)["game_id"]
 
@@ -179,7 +169,12 @@ def test_repeated_bot_actions_advance_latest_state(client):
 
 
 def test_database_roundtrips_preserve_rng_state_and_continuation(client):
-    """Persisted games must resume the same random stream after every load."""
+    """Persisted games must resume the same random stream after every load.
+
+    The stream used to survive because the Game was pickled. It now survives
+    because it is in the document, so this reloads from the database on every
+    tick and checks the game never diverges from one that was never saved.
+    """
 
     def make_players():
         return [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)]
@@ -203,37 +198,14 @@ def test_database_roundtrips_preserve_rng_state_and_continuation(client):
             uninterrupted_game.play_tick()
             upsert_game_state(restored_game)
 
-        restored_json = json.loads(json.dumps(restored_game, cls=GameEncoder))
-        uninterrupted_json = json.loads(json.dumps(uninterrupted_game, cls=GameEncoder))
-
-    assert restored_json == uninterrupted_json
-
-
-def test_legacy_database_game_without_rng_can_continue(client):
-    """Games persisted before per-game RNGs existed must remain playable."""
-    game = Game(
-        [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)],
-        seed=123,
-    )
-    del game.random
-    del game.state.random
-
-    with client.application.app_context():
-        upsert_game_state(game)
-        restored_game = get_game_state(game.id)
-
-        assert restored_game.random is restored_game.state.random
-        restored_game.play_tick()
-        upsert_game_state(restored_game)
-
-        latest_game = get_game_state(game.id)
-
-    assert len(latest_game.state.action_records) == 1
+    assert [str(r.action) for r in restored_game.state.action_records] == [
+        str(r.action) for r in uninterrupted_game.state.action_records
+    ]
 
 
 def test_mcts_analysis_endpoint(client):
     """Test the MCTS analysis endpoint."""
-    post_response = client.post("/api/games", json={"players": ["RANDOM", "RANDOM"]})
+    post_response = client.post("/api/games", json={"players": ["R", "R"]})
     game_id = json.loads(post_response.data)["game_id"]
 
     # Request MCTS analysis for the latest state
@@ -258,3 +230,288 @@ def test_stress_test_endpoint(client):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data["winning_color"] is None
+
+
+# ===== registry-backed players =====
+def test_get_players_endpoint_lists_seatable_players(client):
+    response = client.get("/api/players")
+    assert response.status_code == 200
+    payload = json.loads(response.data)
+
+    by_key = {entry["key"]: entry for entry in payload}
+    assert {"CATANATRON", "HUMAN", "R", "W", "AB"} <= set(by_key)
+    assert by_key["HUMAN"]["is_bot"] is False
+    assert by_key["CATANATRON"]["is_bot"] is True
+    # friendly labels, not internal class names
+    assert by_key["HUMAN"]["name"] == "Human"
+    assert by_key["R"]["name"] == "Random"
+
+
+def test_get_players_endpoint_has_no_duplicate_aliases(client):
+    """Two keys for the same class would show twice in the UI dropdown."""
+    payload = json.loads(client.get("/api/players").data)
+    names = [entry["name"] for entry in payload]
+    assert len(names) == len(set(names))
+
+
+def test_get_players_endpoint_publishes_param_schema(client):
+    payload = json.loads(client.get("/api/players").data)
+    alphabeta = next(entry for entry in payload if entry["key"] == "AB")
+    depth = next(param for param in alphabeta["params"] if param["name"] == "depth")
+    assert depth["type"] == "int"
+    assert depth["default"] == 2
+
+
+def test_post_game_accepts_params_in_a_player_spec(client):
+    response = client.post(
+        "/api/games", json={"players": ["R", "AB:depth=1:prunning=true"]}
+    )
+    assert response.status_code == 200
+    game_id = json.loads(response.data)["game_id"]
+
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        bot = next(
+            p for p in game.state.players if type(p).__name__ == "AlphaBetaPlayer"
+        )
+        assert bot.params.depth == 1
+        assert bot.params.prunning is True
+
+
+def test_post_game_accepts_structured_player_specs(client):
+    response = client.post(
+        "/api/games",
+        json={"players": ["R", {"key": "AB", "params": {"depth": 1}}]},
+    )
+    assert response.status_code == 200
+    game_id = json.loads(response.data)["game_id"]
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        bot = next(
+            p for p in game.state.players if type(p).__name__ == "AlphaBetaPlayer"
+        )
+        assert bot.params.depth == 1
+
+
+def test_post_game_rejects_unknown_player_with_400(client):
+    response = client.post("/api/games", json={"players": ["R", "NOSUCHBOT"]})
+    assert response.status_code == 400
+
+
+def test_post_game_rejects_unknown_param_with_400(client):
+    response = client.post("/api/games", json={"players": ["R", "AB:dpeth=3"]})
+    assert response.status_code == 400
+
+
+# ===== spectator and seat views =====
+def _play_a_while(client, game_id, ticks=30):
+    for _ in range(ticks):
+        client.post(f"/api/games/{game_id}/actions", json={})
+    return json.loads(client.get(f"/api/games/{game_id}/states/latest").data)
+
+
+def test_the_browser_sees_every_hand_by_default(client):
+    """The spectator's view: this is a local app, and watching bots play is
+    the point."""
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    data = _play_a_while(client, game_id)
+    assert "P0_WOOD_IN_HAND" in data["player_state"]
+    assert "P1_WOOD_IN_HAND" in data["player_state"]
+
+
+def test_asking_for_a_seat_hides_the_other_hands(client):
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    _play_a_while(client, game_id)
+    data = json.loads(client.get(f"/api/games/{game_id}/states/latest?as=RED").data)
+
+    mine = data["colors"].index("RED")
+    theirs = (mine + 1) % len(data["colors"])
+    assert f"P{mine}_WOOD_IN_HAND" in data["player_state"]
+    assert f"P{theirs}_WOOD_IN_HAND" not in data["player_state"]
+    assert f"P{theirs}_NUM_RESOURCES_IN_HAND" in data["player_state"]
+
+
+def test_asking_for_a_seat_that_is_not_playing_is_a_400(client):
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    response = client.get(f"/api/games/{game_id}/states/latest?as=ORANGE")
+    assert response.status_code == 400
+
+
+# ===== persistence: one document, plus what happened =====
+def test_game_row_is_json_only(client):
+    """The stored game must be plain JSON, with players kept as specs."""
+    response = client.post("/api/games", json={"players": ["R", "CATANATRON"]})
+    game_id = json.loads(response.data)["game_id"]
+
+    with client.application.app_context():
+        row = db.session.get(StoredGame, game_id)
+        assert not hasattr(row, "pickle_data")
+        document = json.loads(row.base_state)
+        assert document["schema_version"] == SCHEMA_VERSION
+
+        # Seating order is shuffled by State.__init__, so compare by key.
+        specs = json.loads(row.player_specs)
+        by_key = {spec["key"]: spec["params"] for spec in specs}
+        assert set(by_key) == {"R", "CATANATRON"}
+        assert by_key["R"] == {}
+        assert by_key["CATANATRON"] == {
+            "depth": 2,
+            "prunning": True,
+            "value_fn": "base",
+            "epsilon": None,
+        }
+
+
+def test_player_specs_stay_aligned_with_seating_order(client):
+    """Specs are stored in seating order, which State.__init__ shuffles."""
+    response = client.post("/api/games", json={"players": ["R", "CATANATRON"]})
+    game_id = json.loads(response.data)["game_id"]
+
+    with client.application.app_context():
+        row = db.session.get(StoredGame, game_id)
+        specs = json.loads(row.player_specs)
+        colors = json.loads(row.base_state)["colors"]
+
+        game = get_game_state(game_id)
+        expected = {
+            "R": "RandomPlayer",
+            "CATANATRON": "Catanatron",
+        }
+        for spec, color, player in zip(specs, colors, game.state.players):
+            assert player.color.value == color
+            assert type(player).__name__ == expected[spec["key"]]
+
+
+def test_game_survives_a_full_database_round_trip(client):
+    """Play some ticks, reload from the database, keep playing."""
+    response = client.post("/api/games", json={"players": ["R", "R"]})
+    game_id = json.loads(response.data)["game_id"]
+
+    for _ in range(12):
+        assert client.post(f"/api/games/{game_id}/actions").status_code == 200
+
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        assert len(game.state.action_records) == 12
+        assert game.playable_actions
+
+    assert client.post(f"/api/games/{game_id}/actions").status_code == 200
+    with client.application.app_context():
+        assert len(get_game_state(game_id).state.action_records) == 13
+
+
+def test_one_row_per_game_and_one_small_row_per_action(client):
+    """The whole point: a game is a document plus a log, not a document per
+    tick."""
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    for _ in range(40):
+        client.post(f"/api/games/{game_id}/actions", json={})
+
+    with client.application.app_context():
+        games = db.session.query(StoredGame).filter_by(uuid=game_id).all()
+        actions = db.session.query(StoredAction).filter_by(uuid=game_id).all()
+        assert len(games) == 1, "one row, however long the game runs"
+        assert len(actions) == games[0].head_index == 40
+
+        documents = len(games[0].base_state)
+        log = sum(len(a.payload) for a in actions)
+        assert log < documents / 4, (
+            f"the log should be small next to one document "
+            f"(log {log}B vs document {documents}B)"
+        )
+
+
+def test_an_earlier_state_is_replayed_not_stored(client):
+    """Historical states are derived, and must match what the game really
+    looked like at that point."""
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+
+    seen = []
+    for _ in range(20):
+        payload = json.loads(client.post(f"/api/games/{game_id}/actions", json={}).data)
+        seen.append(payload)
+
+    for snapshot in seen[:-1]:  # every state but the live one
+        index = snapshot["state_index"]
+        replayed = json.loads(client.get(f"/api/games/{game_id}/states/{index}").data)
+        assert replayed["action_records"] == snapshot["action_records"]
+        assert replayed["player_state"] == snapshot["player_state"]
+        assert replayed["current_color"] == snapshot["current_color"]
+
+
+def test_saving_the_same_state_twice_adds_nothing(client):
+    """The old upsert was an unconditional insert, so re-saving an unchanged
+    game duplicated its whole document."""
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        for _ in range(3):
+            upsert_game_state(game)
+        assert db.session.query(StoredGame).filter_by(uuid=game_id).count() == 1
+        assert db.session.query(StoredAction).filter_by(uuid=game_id).count() == 0
+
+
+def test_the_latest_state_is_read_not_replayed(client):
+    """Nearly every request wants the current state, so it must not cost a
+    replay of the whole game."""
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    for _ in range(12):
+        client.post(f"/api/games/{game_id}/actions", json={})
+
+    with client.application.app_context():
+        live = get_game_state(game_id)
+        db.session.query(StoredAction).filter_by(uuid=game_id).delete()
+        db.session.commit()
+
+        without_a_log = get_game_state(game_id)
+        assert len(without_a_log.state.action_records) == len(live.state.action_records)
+        assert without_a_log.state.random.getstate() == live.state.random.getstate()
+
+
+def test_a_truncated_log_is_an_error_not_a_wrong_state(client):
+    """Replaying over a hole would quietly hand back a state the game never
+    had."""
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    for _ in range(12):
+        client.post(f"/api/games/{game_id}/actions", json={})
+
+    with client.application.app_context():
+        db.session.query(StoredAction).filter(
+            StoredAction.uuid == game_id, StoredAction.index == 4
+        ).delete()
+        db.session.commit()
+
+    assert client.get(f"/api/games/{game_id}/states/8").status_code == 500
+
+
+def test_a_state_the_game_never_reached_is_404(client):
+    game_id = json.loads(client.post("/api/games", json={"players": ["R", "R"]}).data)[
+        "game_id"
+    ]
+    client.post(f"/api/games/{game_id}/actions", json={})
+    assert client.get(f"/api/games/{game_id}/states/99").status_code == 404
+
+
+def test_human_seat_is_not_a_bot_after_reload(client):
+    response = client.post("/api/games", json={"players": ["HUMAN", "CATANATRON"]})
+    game_id = json.loads(response.data)["game_id"]
+    with client.application.app_context():
+        game = get_game_state(game_id)
+        assert [p.is_bot for p in game.state.players].count(False) == 1

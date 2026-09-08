@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { StateProvider, store } from "../store";
 import type { GameState } from "../utils/api.types";
-import { getState, postAction } from "../utils/apiClient";
+import { getState, postAction, setPerspective } from "../utils/apiClient";
 import { dispatchSnackbar } from "../components/Snackbar";
 import { makeGameState } from "../test/fixtures";
 import GameScreen from "./GameScreen";
@@ -20,6 +20,7 @@ vi.mock("../utils/apiClient", () => ({
   getState: vi.fn(),
   postAction: vi.fn(),
   getMctsAnalysis: vi.fn(),
+  setPerspective: vi.fn(),
 }));
 vi.mock("../components/Snackbar", () => ({
   dispatchSnackbar: vi.fn(),
@@ -92,6 +93,9 @@ test("loads a persisted API state into the real gameplay controls", async () => 
   expect(screen.getAllByTitle("Victory Points").length).toBeGreaterThan(0);
   expect(screen.getByTestId("state-index")).toHaveTextContent("12");
   expect(getState).toHaveBeenCalledWith("game-123", undefined);
+  // Spectator by default: every request carries the perspective, so it is set
+  // before the first fetch rather than passed at each call site.
+  expect(setPerspective).toHaveBeenCalledWith(null);
   expect(postAction).not.toHaveBeenCalled();
 });
 

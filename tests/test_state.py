@@ -245,9 +245,9 @@ def test_discard_sequence_advances_to_next_discarder():
         SimplePlayer(Color.WHITE),
     ]
     state = State(players)
-    # Seating is shuffled and discards advance by seat, so pick roles by seat.
-    current_player_index = 0
-    next_player_index = 2
+    # State shuffles seating, so identify the discarders by seat, not by the
+    # order they were passed in.
+    current_player_index, next_player_index = 0, 2
     current_color = state.colors[current_player_index]
     next_color = state.colors[next_player_index]
 
