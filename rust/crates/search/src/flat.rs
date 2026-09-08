@@ -137,4 +137,46 @@ mod tests {
         assert_eq!(root, original);
         assert!(actions.contains(&a.unwrap().action));
     }
+
+    #[test]
+    fn immediate_forced_win_beats_a_cutoff() {
+        let (context, mut root) =
+            initialize_base(2, NumberPlacement::OfficialSpiral, 7, 0).unwrap();
+        let p0 = PlayerId::new(0).unwrap();
+        root.actor = p0;
+        root.turn_owner = p0;
+        root.phase = Phase::PostRoll { actor: p0 };
+        root.players[0].dev[4] = 1;
+        root.players[0].hand = [1, 1, 1, 1, 0];
+        for resource in 0..4 {
+            root.bank[resource] -= 1;
+        }
+        root.players[0].pieces = [14, 5, 0];
+        for node in [0_usize, 10, 19, 30] {
+            root.buildings[node] = 1 + catanatron_core::CITY_OFFSET;
+        }
+        let target = catanatron_core::NodeId::new(53).unwrap();
+        let road = (0..catanatron_core::BASE_EDGE_COUNT as u8)
+            .filter_map(|raw| catanatron_core::EdgeId::new(raw).ok())
+            .find(|edge| {
+                let (a, b) = catanatron_core::edge_endpoints(*edge);
+                a == target || b == target
+            })
+            .unwrap();
+        root.roads[usize::from(road.get())] = 1;
+        let result = flat_monte_carlo(
+            &context,
+            &root,
+            &[Action::EndTurn, Action::BuildSettlement(target)],
+            2,
+            1,
+            RolloutLimits {
+                turn_limit: 1_000,
+                action_limit: 0,
+            },
+        )
+        .unwrap();
+        assert_eq!(result.action, Action::BuildSettlement(target));
+        assert_eq!(result.mean, 1.0);
+    }
 }
