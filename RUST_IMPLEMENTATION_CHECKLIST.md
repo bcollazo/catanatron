@@ -183,4 +183,11 @@ Status at handoff: **planning complete; production implementation not started**.
 * Workspace tests (31 total), formatting, and Clippy with warnings denied pass.
 * Next action: implement scalar rollout with separate chance/policy streams and explicit action/turn caps, then run deterministic 2/4-player game suites and conservation checks.
 
+### 2026-09-07 — E07 scalar-rollout checkpoint
+
+* Added root-copying scalar rollout with separate chance/policy streams, reusable action/outcome scratch, player-intent accounting, and distinct turn/action truncation. Debug trajectories assert resource and piece conservation after every transition.
+* Release validation completed 100 seeds for every 2/4-player × random/weighted combination (400 games total) with no action-limit failures. Determinism and root independence tests pass.
+* `cargo test --release --manifest-path rust/Cargo.toml -p catanatron-search --test full_games`, focused debug tests, formatting, and Clippy with warnings denied pass.
+* Next action: close the remaining E05/E06 edge-case matrix and run the full workspace suite before marking E05–E07 complete and handing off at E08.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.
