@@ -6,8 +6,8 @@ import textwrap
 
 import pytest
 
-import catanatron.players  # noqa: F401  (registers the builtins)
 from catanatron.models.player import Color, Player
+from catanatron.players import register_builtins
 from catanatron.registry import (
     REGISTRY,
     PlayerRegistry,
@@ -15,6 +15,8 @@ from catanatron.registry import (
     describe,
     parse_spec,
 )
+
+register_builtins()
 
 
 class ExampleBot(Player):

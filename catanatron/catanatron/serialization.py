@@ -25,7 +25,14 @@ from collections import Counter, defaultdict
 from catanatron.game import Game
 from catanatron.models.actions import generate_playable_actions
 from catanatron.models.board import STATIC_GRAPH, Board
-from catanatron.models.enums import Action, ActionPrompt, ActionRecord, ActionType
+from catanatron.models.enums import (
+    DEVELOPMENT_CARDS,
+    RESOURCES,
+    Action,
+    ActionPrompt,
+    ActionRecord,
+    ActionType,
+)
 from catanatron.models.map import (
     BASE_MAP_TEMPLATE,
     MINI_MAP_TEMPLATE,
@@ -36,7 +43,7 @@ from catanatron.models.map import (
     get_nodes_and_edges,
 )
 from catanatron.models.player import Color
-from catanatron.state import State
+from catanatron.state import PLAYER_INITIAL_STATE, State
 from catanatron.state_functions import get_longest_road_length
 
 #: Bumped whenever the document shape changes incompatibly.
@@ -302,17 +309,10 @@ def state_from_json(doc, players) -> Game:
     return game
 
 
-#: A seat's own cards. Across the table you can count them, not read them.
-HAND_RESOURCES = ("WOOD", "BRICK", "SHEEP", "WHEAT", "ORE")
-HAND_DEVCARDS = (
-    "KNIGHT",
-    "YEAR_OF_PLENTY",
-    "MONOPOLY",
-    "ROAD_BUILDING",
-    "VICTORY_POINT",
-)
-#: Whether a seat held that card when its turn began: reveals the hand.
-HAND_FLAGS = tuple(f"{d}_OWNED_AT_START" for d in HAND_DEVCARDS[:4])
+#: Whether a seat held that card when its turn began: reveals the hand. Taken
+#: from the state blueprint rather than DEVELOPMENT_CARDS, because only the
+#: playable four have the flag.
+HAND_FLAGS = tuple(k for k in PLAYER_INITIAL_STATE if k.endswith("_OWNED_AT_START"))
 #: Which card you drew is yours alone. Where the robber went is public; what
 #: it stole is not.
 SECRET_VALUE = {"BUY_DEVELOPMENT_CARD"}
@@ -351,10 +351,10 @@ def client_view(doc, perspective=None):
             continue
         prefix = f"P{index}_"
         state[prefix + "NUM_RESOURCES_IN_HAND"] = sum(
-            state.pop(f"{prefix}{resource}_IN_HAND") for resource in HAND_RESOURCES
+            state.pop(f"{prefix}{resource}_IN_HAND") for resource in RESOURCES
         )
         state[prefix + "NUM_DEVELOPMENT_CARDS_IN_HAND"] = sum(
-            state.pop(f"{prefix}{card}_IN_HAND") for card in HAND_DEVCARDS
+            state.pop(f"{prefix}{card}_IN_HAND") for card in DEVELOPMENT_CARDS
         )
         for flag in HAND_FLAGS:
             state.pop(prefix + flag)

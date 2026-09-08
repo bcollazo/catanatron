@@ -10,11 +10,11 @@ import random
 
 import pytest
 
-import catanatron.players  # noqa: F401  (registers builtins)
 from catanatron import Game
 from catanatron.models.map import build_map
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.players.minimax import AlphaBetaPlayer
+from catanatron.players import register_builtins
 from catanatron.registry import REGISTRY
 from catanatron.serialization import (
     SCHEMA_VERSION,
@@ -23,6 +23,8 @@ from catanatron.serialization import (
     state_from_json,
     state_to_json,
 )
+
+register_builtins()
 
 
 @pytest.fixture(autouse=True)

@@ -6,8 +6,10 @@ server can share it; this module only holds what is specific to the terminal.
 
 from rich.table import Table
 
-import catanatron.players  # noqa: F401  (registers the builtin players)
+from catanatron.players import register_builtins
 from catanatron.registry import REGISTRY, describe
+
+register_builtins()
 
 
 def _format_params(params):
