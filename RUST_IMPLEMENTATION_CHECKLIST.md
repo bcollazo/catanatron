@@ -9,11 +9,11 @@ Status at handoff: **planning complete; production implementation not started**.
 - [x] E00 — Checkout/toolchain/baseline provenance verified for the implementation session.
 - [x] E01 — Production Cargo workspace builds; dependency direction enforced.
 - [x] E02 — Rules profile, full fixtures, topology export and named divergences frozen.
-- [ ] E03 — Typed state/action/phase/outcomes and atomic checked boundaries implemented.
-- [ ] E04 — Setup, construction, ordinary turns and independent move generation pass.
-- [ ] E05 — Dice, production, discards, robber and chance outcomes pass.
-- [ ] E06 — All development cards, awards and domestic trades pass.
-- [ ] E07 — Complete games, RNG streams, random/weighted policies and scalar rollouts pass.
+- [x] E03 — Typed state/action/phase/outcomes and atomic checked boundaries implemented.
+- [x] E04 — Setup, construction, ordinary turns and independent move generation pass.
+- [x] E05 — Dice, production, discards, robber and chance outcomes pass.
+- [x] E06 — All development cards, awards and domestic trades pass.
+- [x] E07 — Complete games, RNG streams, random/weighted policies and scalar rollouts pass.
 - [ ] E08 — Differential harness, benchmarks and allocation report implemented.
 - [ ] E09 — Stdio adapter/importer and real host certification pass.
 - [ ] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
@@ -34,9 +34,9 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E03 (typed state, actions, phases, and checked boundaries).
-* Last implementation check: typed-model invariants pass: `cargo test --manifest-path rust/Cargo.toml` (5 tests) and formatting checks pass. Recorded layout is `Position=210B`, `Action=11B`.
-* Next action: extend checked validation/application with action-specific resource, inventory, geometry, and outcome errors while retaining failure atomicity; then decide E03 completion.
+* Current task: E08 (differential harness, benchmarks, and allocation report).
+* Last implementation check: release core/search suite passes, including 33 core invariants, RNG/policy/initialization/rollout tests, and 400 complete seeded games with winners for every 2/4-player × random/weighted combination.
+* Next action: create the `catanatron-bench`/conformance package and canonical fixture DTO boundary, then drive committed transition fixtures through Rust.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -73,6 +73,13 @@ Status at handoff: **planning complete; production implementation not started**.
 
 * Created the dependency-free `catanatron-core` workspace member with safe-Rust policy, release settings, committed lockfile, and a runnable workspace README.
 * `cargo check`, formatting, and unit tests passed. No production crate depends on Python, JSON, or search code; the planning probe remains outside the workspace.
+
+### 2026-09-07 — E03–E07 complete; E08 active
+
+* Completed typed atomic boundaries; setup and ordinary construction; dice/discard/robber/chance rules; all development cards, maritime/domestic trades, awards and victory; reproducible initialization/RNG/policies; and root-preserving scalar rollout.
+* The release game matrix completed 400/400 games with winners and zero turn-limit/action-limit truncations: 100 seeds for each 2/4-player × random/weighted combination.
+* Passed: workspace formatting; Clippy with warnings denied; release core/search tests; deterministic topology export; deterministic fixture export covering all 18 action variants.
+* Current task is E08. Protocol certification, differential equality, allocation targets, and speed targets remain open and are not implied by functional E03–E07 completion.
 
 ### 2026-09-07 — E04 post-roll road checkpoint
 

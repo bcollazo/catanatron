@@ -411,6 +411,116 @@ fn awards_use_exact_trails_and_victory_prefers_the_last_qualifying_seat() {
 }
 
 #[test]
+fn longest_road_handles_loops_blocked_junctions_and_incumbent_ties() {
+    let player_zero = PlayerId::new(0).unwrap();
+    let player_one = PlayerId::new(1).unwrap();
+    let mut loop_position = Position::new(2).unwrap();
+    for raw in [0, 1, 3, 5, 7, 9, 2] {
+        loop_position.roads[raw] = 1;
+    }
+    assert_eq!(
+        catanatron_core::longest_road_length(&loop_position, player_zero),
+        7
+    );
+
+    let mut blocked = Position::new(2).unwrap();
+    blocked.roads[0] = 1;
+    blocked.roads[3] = 1;
+    blocked.buildings[1] = player_one.get() + 1;
+    assert_eq!(
+        catanatron_core::longest_road_length(&blocked, player_zero),
+        1
+    );
+
+    let mut tied = Position::new(2).unwrap();
+    for raw in [0, 3, 5, 7, 9] {
+        tied.roads[raw] = 1;
+    }
+    for raw in [34, 37, 39, 13, 12] {
+        tied.roads[raw] = 2;
+    }
+    tied.longest_road_holder = Some(player_zero);
+    tied.phase = Phase::PostRoll { actor: player_zero };
+    apply_checked(&mut tied, player_zero, Action::EndTurn).unwrap();
+    assert_eq!(tied.longest_road_holder, Some(player_zero));
+}
+
+#[test]
+fn domestic_trade_sequences_cover_every_proposer_and_failed_confirmation_is_atomic() {
+    for player_count in 2..=4 {
+        for proposer_raw in 0..player_count {
+            let proposer = PlayerId::new(proposer_raw).unwrap();
+            let mut position = Position::new(player_count).unwrap();
+            position.actor = proposer;
+            position.turn_owner = proposer;
+            position.phase = Phase::PostRoll { actor: proposer };
+            position.players[usize::from(proposer_raw)].hand[Resource::Wood.index()] = 1;
+            let mut give = [0; 5];
+            give[Resource::Wood.index()] = 1;
+            let mut receive = [0; 5];
+            receive[Resource::Ore.index()] = 1;
+            apply_checked(
+                &mut position,
+                proposer,
+                Action::OfferTrade { give, receive },
+            )
+            .unwrap();
+            while matches!(position.phase, Phase::TradeResponse { .. }) {
+                let responder = position.actor;
+                apply_checked(&mut position, responder, Action::RejectTrade).unwrap();
+            }
+            assert_eq!(position.actor, proposer);
+            assert!(matches!(position.phase, Phase::PostRoll { .. }));
+        }
+    }
+
+    let mut position = Position::new(2).unwrap();
+    let proposer = position.actor;
+    let accepter = PlayerId::new(1).unwrap();
+    position.phase = Phase::PostRoll { actor: proposer };
+    position.players[0].hand[Resource::Wood.index()] = 1;
+    position.players[1].hand[Resource::Ore.index()] = 1;
+    let mut give = [0; 5];
+    give[Resource::Wood.index()] = 1;
+    let mut receive = [0; 5];
+    receive[Resource::Ore.index()] = 1;
+    apply_checked(
+        &mut position,
+        proposer,
+        Action::OfferTrade { give, receive },
+    )
+    .unwrap();
+    apply_checked(&mut position, accepter, Action::AcceptTrade).unwrap();
+    position.players[1].hand[Resource::Ore.index()] = 0;
+    let before = position;
+    assert_eq!(
+        apply_checked(&mut position, proposer, Action::ConfirmTrade(accepter)),
+        Err(IllegalAction::InvalidTrade)
+    );
+    assert_eq!(position, before);
+}
+
+#[test]
+fn a_newly_purchased_non_vp_card_is_not_eligible_this_turn() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    position.phase = Phase::PostRoll { actor };
+    for resource in [Resource::Sheep, Resource::Wheat, Resource::Ore] {
+        position.players[0].hand[resource.index()] = 1;
+        position.bank[resource.index()] -= 1;
+    }
+    apply_checked(&mut position, actor, Action::BuyDevelopmentCard).unwrap();
+    apply_outcome_checked(
+        &mut position,
+        Outcome::DevelopmentCard(DevelopmentCard::Knight),
+    )
+    .unwrap();
+    let mut actions = Vec::new();
+    generate_actions(&position, &mut actions);
+    assert!(!actions.contains(&Action::PlayKnight));
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();
@@ -456,6 +566,43 @@ fn setup_application_follows_two_player_snake_order() {
         position.turns, 2,
         "only setup roads that advance a seat count"
     );
+}
+
+#[test]
+fn setup_snake_actor_order_is_correct_for_every_supported_seat_count() {
+    for player_count in 2..=4 {
+        let mut position = Position::new(player_count).unwrap();
+        let expected: Vec<u8> = (0..player_count).chain((0..player_count).rev()).collect();
+        let mut actual = Vec::new();
+        for _ in 0..usize::from(player_count) * 2 {
+            actual.push(position.actor.get());
+            let actor = position.actor;
+            let mut actions = Vec::new();
+            generate_actions(&position, &mut actions);
+            apply_checked(&mut position, actor, actions[0]).unwrap();
+            generate_actions(&position, &mut actions);
+            apply_checked(&mut position, actor, actions[0]).unwrap();
+        }
+        assert_eq!(actual, expected);
+        assert!(matches!(position.phase, Phase::PreRoll { actor } if actor.get() == 0));
+    }
+}
+
+#[test]
+fn largest_army_retains_incumbent_ties_and_transfers_to_a_strict_leader() {
+    let mut position = Position::new(2).unwrap();
+    let zero = position.actor;
+    let one = PlayerId::new(1).unwrap();
+    position.players[0].played_knights = 3;
+    position.players[1].played_knights = 3;
+    position.largest_army_holder = Some(zero);
+    position.phase = Phase::PostRoll { actor: zero };
+    apply_checked(&mut position, zero, Action::EndTurn).unwrap();
+    assert_eq!(position.largest_army_holder, Some(zero));
+    position.players[1].played_knights = 4;
+    position.phase = Phase::PostRoll { actor: one };
+    apply_checked(&mut position, one, Action::EndTurn).unwrap();
+    assert_eq!(position.largest_army_holder, Some(one));
 }
 
 #[test]
