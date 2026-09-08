@@ -227,6 +227,33 @@ def test_client_view_hides_deck_order_but_keeps_composition():
         )
 
 
+def test_client_view_hides_the_random_stream():
+    """The rng state is every roll and draw still to come."""
+    game, _ = played_game()
+    doc = state_to_json(game)
+    assert "random_state" in doc, "the authoritative document keeps it"
+    for view in (client_view(doc), client_view(doc, Color.RED)):
+        assert "random_state" not in view
+
+
+def test_a_reloaded_game_keeps_its_random_stream():
+    """Each game owns its rng, so the stream is part of what the document
+    has to define."""
+    game, _ = played_game(ticks=30)
+    twin, _ = played_game(ticks=30)
+
+    rebuilt = state_from_json(state_to_json(game), [RandomPlayer(c) for c in Color])
+    assert rebuilt.random is rebuilt.state.random, "game and state share one stream"
+    assert rebuilt.state.random.getstate() == twin.state.random.getstate()
+
+    for _ in range(40):
+        rebuilt.play_tick()
+        twin.play_tick()
+    assert [str(r.action) for r in rebuilt.state.action_records] == [
+        str(r.action) for r in twin.state.action_records
+    ]
+
+
 def test_client_view_hides_the_seed():
     game, _ = played_game()
     view = client_view(state_to_json(game))

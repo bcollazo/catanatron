@@ -1,5 +1,3 @@
-import random
-
 from catanatron.state_functions import (
     player_key,
 )
@@ -34,4 +32,4 @@ class VictoryPointPlayer(Player):
                 best_value = value
                 best_actions = [action]
 
-        return random.choice(best_actions)
+        return game.state.random.choice(best_actions)

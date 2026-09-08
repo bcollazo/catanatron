@@ -261,7 +261,9 @@ def apply_roll(state: State, action: Action, action_record=None):
     key = player_key(state, action.color)
     state.player_state[f"{key}_HAS_ROLLED"] = True
 
-    dices = action_record.result if action_record is not None else roll_dice()
+    dices = (
+        action_record.result if action_record is not None else roll_dice(state.random)
+    )
     number = dices[0] + dices[1]
     action = Action(action.color, action.action_type, dices)
 
@@ -524,13 +526,14 @@ def apply_cancel_trade(state: State, action: Action):
 
 
 # ===== Helper Functions =====
-def roll_dice():
+def roll_dice(rng=None):
     """Yields two random numbers
 
     Returns:
         tuple[int, int]: 2-tuple of random numbers from 1 to 6 inclusive.
     """
-    return (random.randint(1, 6), random.randint(1, 6))
+    rng = rng if rng is not None else random
+    return (rng.randint(1, 6), rng.randint(1, 6))
 
 
 def yield_resources(board: Board, resource_freqdeck, number):

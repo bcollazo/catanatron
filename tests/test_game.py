@@ -7,7 +7,7 @@ from catanatron.state_functions import (
     player_clean_turn,
     player_has_rolled,
 )
-from catanatron.game import Game, is_valid_trade
+from catanatron.game import TURNS_LIMIT, Game, is_valid_trade
 from catanatron.apply_action import apply_action
 from catanatron.state_functions import (
     player_key,
@@ -235,9 +235,7 @@ def test_friendly_robber_filters_tiles_in_game_playable_actions(fake_roll_dice):
     regular_game = Game(players, seed=1, friendly_robber=False)
     build_initial_placements(regular_game)
     regular_game.execute(Action(Color.RED, ActionType.ROLL, None))
-    regular_coordinates = {
-        action.value[0] for action in regular_game.playable_actions
-    }
+    regular_coordinates = {action.value[0] for action in regular_game.playable_actions}
 
     friendly_game = Game(players, seed=1, friendly_robber=True)
     build_initial_placements(friendly_game)
@@ -631,6 +629,7 @@ def test_trading_sequence(fake_roll_dice):
     expected[missing_resource_index] += 1
     assert get_player_freqdeck(game.state, p0.color) == expected
 
+
 def test_cannot_extend_road_past_enemy_settlement_at_endpoint():
     # Blue has a road whose far endpoint is node 10.
     # Red then builds a settlement at node 10 (normal phase).
@@ -654,3 +653,30 @@ def test_cannot_extend_road_past_enemy_settlement_at_endpoint():
         f"Blue should not be able to build a road from enemy-settled node 10, "
         f"but found: {[e for e in blue_edges if 10 in e]}"
     )
+
+
+def test_seeded_games_are_isolated_from_each_other():
+    # Play two games interleaved and check both match their solo runs.
+    def make_players():
+        return [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)]
+
+    def play_solo(seed):
+        game = Game(make_players(), seed=seed)
+        game.play()
+        return [str(a) for a in game.state.action_records]
+
+    solo_a, solo_b = play_solo(7), play_solo(11)
+
+    def ongoing(game):
+        return game.winning_color() is None and game.state.num_turns < TURNS_LIMIT
+
+    game_a = Game(make_players(), seed=7)
+    game_b = Game(make_players(), seed=11)
+    while ongoing(game_a) or ongoing(game_b):
+        if ongoing(game_a):
+            game_a.play_tick()
+        if ongoing(game_b):
+            game_b.play_tick()
+
+    assert [str(a) for a in game_a.state.action_records] == solo_a
+    assert [str(a) for a in game_b.state.action_records] == solo_b

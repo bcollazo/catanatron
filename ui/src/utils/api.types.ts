@@ -83,18 +83,37 @@ type DesertTile = {
   type: "DESERT";
 };
 
+type WaterTile = {
+  type: "WATER";
+};
+
 type PortTile = {
   id: number;
   type: "PORT";
   direction: Direction;
-  resource: ResourceCard;
+  resource: ResourceCard | null;
 };
 
-export type Tile = ResourceTile | DesertTile | PortTile;
+export type Tile = ResourceTile | DesertTile | WaterTile | PortTile;
 
 export type PlacedTile = {
   coordinate: TileCoordinate;
   tile: Tile;
+};
+
+export type GameNode = {
+  id: number;
+  tile_coordinate: TileCoordinate;
+  direction: Direction;
+  building: Building | null;
+  color: Color | null;
+};
+
+export type GameEdge = {
+  id: [number, number];
+  color: Color | null;
+  direction: Direction;
+  tile_coordinate: TileCoordinate;
 };
 
 /**
@@ -109,40 +128,34 @@ export type GameState = {
   bot_colors: Color[];
   colors: Color[];
   current_color: Color;
-  winning_color?: Color;
+  winning_color: Color | null;
   current_prompt: string;
   player_state: Record<string, PlayerState>;
   action_records: GameActionRecord[];
   robber_coordinate: TileCoordinate;
   current_discard_count: number;
-  nodes: Array<{
-    id: number;
-    tile_coordinate: TileCoordinate;
-    direction: Direction;
-    building: Building | null;
-    color: Color | null;
-  }>;
-  edges: Array<{
-    id: [number, number];
-    color: Color | null;
-    direction: Direction;
-    tile_coordinate: TileCoordinate;
-  }>;
+  nodes: Record<string, GameNode>;
+  edges: GameEdge[];
   current_playable_actions: GameAction[];
   is_initial_build_phase: boolean;
+  longest_roads_by_player: Partial<Record<Color, number>>;
   edgeActions?: GameAction[];
   nodeActions?: GameAction[];
   state_index: number;
 
   // Also present, from the state document itself.
   schema_version: number;
-  game: { vps_to_win: number; discard_limit: number; friendly_robber: boolean };
+  game: {
+    id: string;
+    vps_to_win: number;
+    discard_limit: number;
+    friendly_robber: boolean;
+  };
   num_turns: number;
   current_player_index: number;
   current_turn_index: number;
   resource_freqdeck: number[];
   development_listdeck: Record<string, number>;
-  longest_roads_by_player: Record<Color, number>;
 };
 const DIRECTIONS = [
   "NORTH",

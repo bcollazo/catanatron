@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-import random
 from typing import Literal, Optional
 
 
@@ -168,8 +167,9 @@ class ValueFunctionPlayer(Player):
         if len(playable_actions) == 1:
             return playable_actions[0]
 
-        if self.params.epsilon is not None and random.random() < self.params.epsilon:
-            return random.choice(playable_actions)
+        epsilon = self.params.epsilon
+        if epsilon is not None and game.state.random.random() < epsilon:
+            return game.state.random.choice(playable_actions)
 
         best_value = float("-inf")
         best_action = None

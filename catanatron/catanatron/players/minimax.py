@@ -1,5 +1,4 @@
 import time
-import random
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 
@@ -58,8 +57,9 @@ class AlphaBetaPlayer(Player):
         if len(actions) == 1:
             return actions[0]
 
-        if self.params.epsilon is not None and random.random() < self.params.epsilon:
-            return random.choice(playable_actions)
+        epsilon = self.params.epsilon
+        if epsilon is not None and game.state.random.random() < epsilon:
+            return game.state.random.choice(playable_actions)
 
         start = time.time()
         state_id = str(len(game.state.action_records))

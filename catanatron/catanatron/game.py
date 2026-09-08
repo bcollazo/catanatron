@@ -97,7 +97,7 @@ class Game:
         self._steppers = []
         if initialize:
             self.seed = seed if seed is not None else random.randrange(sys.maxsize)
-            random.seed(self.seed)
+            self.random = random.Random(self.seed)
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
@@ -108,6 +108,7 @@ class Game:
                 discard_limit=discard_limit,
                 friendly_robber=friendly_robber,
                 number_placement=number_placement,
+                rng=self.random,
             )
             self.playable_actions = generate_playable_actions(self.state)
 
@@ -214,6 +215,7 @@ class Game:
         """
         game_copy = Game(players=[], initialize=False)
         game_copy.seed = self.seed
+        game_copy.random = self.random
         game_copy.id = self.id
         game_copy.vps_to_win = self.vps_to_win
         game_copy.friendly_robber = self.friendly_robber

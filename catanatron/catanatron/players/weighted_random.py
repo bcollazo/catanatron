@@ -1,5 +1,3 @@
-import random
-
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
 
@@ -25,4 +23,4 @@ class WeightedRandomPlayer(Player):
             weight = WEIGHTS_BY_ACTION_TYPE.get(action.action_type, 1)
             bloated_actions.extend([action] * weight)
 
-        return random.choice(bloated_actions)
+        return game.state.random.choice(bloated_actions)

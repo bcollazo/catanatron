@@ -1,17 +1,29 @@
+import os
+
 import pytest
 import json
+from catanatron import Color, Game, RandomPlayer
+from catanatron.serialization import SCHEMA_VERSION
 from catanatron.web import create_app
-from catanatron.web.models import db, GameState, get_game_state
+from catanatron.web.models import (
+    db,
+    GameState,
+    get_game_state,
+    upsert_game_state,
+)
 
 
 @pytest.fixture
 def app():
     """Create and configure a new app instance for each test."""
-    # Setup an in-memory SQLite database for testing
+    database_url = os.environ.get(
+        "CATANATRON_TEST_DATABASE_URL",
+        "sqlite:///:memory:",
+    )
     app = create_app(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SQLALCHEMY_DATABASE_URI": database_url,
             "SECRET_KEY": "test",
         }
     )
@@ -21,9 +33,9 @@ def app():
 
     yield app
 
-    # Teardown: drop all tables after each test (optional, if tests are isolated)
-    # with app.app_context():
-    #     db.drop_all()
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
 
 
 @pytest.fixture
@@ -156,6 +168,41 @@ def test_repeated_bot_actions_advance_latest_state(client):
     assert len(second_tick["action_records"]) == len(first_tick["action_records"]) + 1
     assert latest_after["state_index"] == second_tick["state_index"]
     assert latest_after["action_records"] == second_tick["action_records"]
+
+
+def test_database_roundtrips_preserve_rng_state_and_continuation(client):
+    """Persisted games must resume the same random stream after every load.
+
+    The stream used to survive because the Game was pickled. It now survives
+    because it is in the document, so this reloads from the database on every
+    tick and checks the game never diverges from one that was never saved.
+    """
+
+    def make_players():
+        return [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)]
+
+    persisted_game = Game(make_players(), seed=123)
+    uninterrupted_game = Game(make_players(), seed=123)
+
+    with client.application.app_context():
+        upsert_game_state(persisted_game)
+
+        for _ in range(25):
+            restored_game = get_game_state(persisted_game.id)
+
+            assert restored_game.random is restored_game.state.random
+            assert (
+                restored_game.state.random.getstate()
+                == uninterrupted_game.state.random.getstate()
+            )
+
+            restored_game.play_tick()
+            uninterrupted_game.play_tick()
+            upsert_game_state(restored_game)
+
+    assert [str(r.action) for r in restored_game.state.action_records] == [
+        str(r.action) for r in uninterrupted_game.state.action_records
+    ]
 
 
 def test_mcts_analysis_endpoint(client):
@@ -308,7 +355,7 @@ def test_game_state_row_is_json_only(client):
         row = db.session.query(GameState).filter_by(uuid=game_id).first()
         assert not hasattr(row, "pickle_data")
         document = json.loads(row.state)
-        assert document["schema_version"] == 1
+        assert document["schema_version"] == SCHEMA_VERSION
 
         # Seating order is shuffled by State.__init__, so compare by key.
         specs = json.loads(row.player_specs)

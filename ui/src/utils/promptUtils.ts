@@ -40,8 +40,12 @@ export function humanizeActionRecord(
     case "BUILD_ROAD": {
       const action = actionRecord[0] as BuildRoadAction;
       const edge = action[2];
-      const a = gameState.adjacent_tiles[edge[0]].map((t) => t.id);
-      const b = gameState.adjacent_tiles[edge[1]].map((t) => t.id);
+      const a = gameState.adjacent_tiles[edge[0]].flatMap((tile) =>
+        "id" in tile ? [tile.id] : []
+      );
+      const b = gameState.adjacent_tiles[edge[1]].flatMap((tile) =>
+        "id" in tile ? [tile.id] : []
+      );
       const intersection = a.filter((t) => b.includes(t));
       const tiles = intersection.map(
         (tileId) => findTileById(gameState, tileId).tile,

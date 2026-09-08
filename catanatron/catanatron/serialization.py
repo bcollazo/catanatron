@@ -7,7 +7,8 @@ This is what lets games be persisted without pickle.
 Two documents, deliberately different:
 
 - ``state_to_json(game)`` is authoritative and server-side only. It includes
-  hidden information, most importantly the order of the development card deck.
+  hidden information: the order of the development card deck, and the state of
+  the game's random stream, which is every roll and draw still to come.
 - ``client_view(doc)`` is the redacted projection handed to a browser or to an
   out-of-process bot. It replaces the ordered deck with its composition
   (how many of each card remain), which is what a player legitimately knows
@@ -20,6 +21,7 @@ None of this is on the path of an in-process bot, which reads ``game.state``
 directly; a self-play run never serializes anything.
 """
 
+import random
 from collections import Counter, defaultdict
 
 from catanatron.game import Game
@@ -47,7 +49,9 @@ from catanatron.state import PLAYER_INITIAL_STATE, State
 from catanatron.state_functions import get_longest_road_length
 
 #: Bumped whenever the document shape changes incompatibly.
-SCHEMA_VERSION = 1
+#: 2 added ``random_state``: each game owns its rng, so the stream is part of
+#: what defines the game.
+SCHEMA_VERSION = 2
 
 MAP_TEMPLATES = {"BASE": BASE_MAP_TEMPLATE, "MINI": MINI_MAP_TEMPLATE}
 
@@ -220,6 +224,7 @@ def state_to_json(game: Game):
         },
         "resource_freqdeck": list(s.resource_freqdeck),
         "development_listdeck": list(s.development_listdeck),  # HIDDEN INFO
+        "random_state": _plain(s.random.getstate()),  # HIDDEN INFO
         "action_records": [
             [action_to_json(r.action), _plain(r.result)] for r in s.action_records
         ],
@@ -239,6 +244,12 @@ def state_to_json(game: Game):
     }
 
 
+def _restore_rng(payload):
+    """random.setstate() wants tuples; JSON only has lists."""
+    version, internal, gauss_next = payload
+    return (version, tuple(internal), gauss_next)
+
+
 def state_from_json(doc, players) -> Game:
     """Rebuild a Game from a document.
 
@@ -255,6 +266,10 @@ def state_from_json(doc, players) -> Game:
         )
     catan_map = map_from_json(doc["map"])
     s = State([], None, initialize=False)
+    # Game and State share one stream by reference, as they do when a game is
+    # built rather than loaded.
+    s.random = random.Random()
+    s.random.setstate(_restore_rng(doc["random_state"]))
     s.colors = tuple(Color[c] for c in doc["colors"])
     s.color_to_index = {c: i for i, c in enumerate(s.colors)}
     by_color = {p.color: p for p in players}
@@ -304,6 +319,7 @@ def state_from_json(doc, players) -> Game:
     game.seed = doc["game"]["seed"]
     game.vps_to_win = doc["game"]["vps_to_win"]
     game.friendly_robber = s.friendly_robber
+    game.random = s.random
     game.state = s
     game.playable_actions = generate_playable_actions(s)
     return game
@@ -337,6 +353,7 @@ def client_view(doc, perspective=None):
         sorted(Counter(doc["development_listdeck"]).items())
     )
     view["game"] = {k: v for k, v in doc["game"].items() if k != "seed"}
+    view.pop("random_state", None)
     if perspective is None:
         return view
 

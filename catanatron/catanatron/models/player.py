@@ -124,4 +124,4 @@ class RandomPlayer(Player):
     LABEL = "Random"
 
     def decide(self, game, playable_actions):
-        return random.choice(playable_actions)
+        return game.state.random.choice(playable_actions)
