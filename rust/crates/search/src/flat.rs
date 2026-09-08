@@ -20,6 +20,18 @@ pub fn flat_monte_carlo(
     seed: u64,
     limits: RolloutLimits,
 ) -> Option<FlatResult> {
+    flat_monte_carlo_until(context, root, actions, simulations, seed, limits, || false)
+}
+
+pub fn flat_monte_carlo_until(
+    context: &GameContext,
+    root: &Position,
+    actions: &[Action],
+    simulations: u32,
+    seed: u64,
+    limits: RolloutLimits,
+    mut should_stop: impl FnMut() -> bool,
+) -> Option<FlatResult> {
     if actions.is_empty() {
         return None;
     }
@@ -28,6 +40,9 @@ pub fn flat_monte_carlo(
     let mut counts = vec![0_u32; actions.len()];
     let mut scratch = RolloutScratch::default();
     for sample in 0..simulations.max(actions.len() as u32) {
+        if sample >= actions.len() as u32 && should_stop() {
+            break;
+        }
         let index = sample as usize % actions.len();
         sums[index] += evaluate(
             context,

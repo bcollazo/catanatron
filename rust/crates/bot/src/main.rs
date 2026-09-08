@@ -1,4 +1,8 @@
-use std::io::{self, BufRead, BufWriter, Write};
+use std::{
+    env,
+    io::{self, BufRead, BufWriter, Write},
+    time::{Duration, Instant},
+};
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -6,6 +10,33 @@ use serde_json::{json, Value};
 mod import;
 
 const PROTOCOL_VERSION: u64 = 1;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Policy {
+    Random,
+    Rollout,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Config {
+    policy: Policy,
+    simulations: u32,
+    budget_ms: u64,
+    seed: u64,
+    threads: u16,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            policy: Policy::Random,
+            simulations: 1_000,
+            budget_ms: 100,
+            seed: 0,
+            threads: 1,
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 struct Envelope {
@@ -23,15 +54,33 @@ struct Envelope {
     state: Option<Value>,
 }
 
-#[derive(Default)]
 struct Bot {
     game_id: Option<String>,
     color: Option<String>,
     static_state: Option<Value>,
     rng: u64,
+    config: Config,
+    decisions: u64,
+}
+
+impl Default for Bot {
+    fn default() -> Self {
+        Self::new(Config::default())
+    }
 }
 
 impl Bot {
+    fn new(config: Config) -> Self {
+        Self {
+            game_id: None,
+            color: None,
+            static_state: None,
+            rng: config.seed,
+            config,
+            decisions: 0,
+        }
+    }
+
     fn handle(&mut self, message: Envelope) -> Result<Option<Value>, String> {
         match message.kind.as_str() {
             "hello" => {
@@ -89,15 +138,39 @@ impl Bot {
                 );
                 let imported = import::import(Value::Object(state), &game_id, &color, actions)?;
                 let _root = (&imported.context, &imported.position);
-                let mut choices = imported.offered;
+                let choices = imported.offered;
                 if choices.is_empty() {
                     return Err("decide.playable_actions is empty".to_owned());
                 }
-                self.rng = self
-                    .rng
-                    .wrapping_mul(6_364_136_223_846_793_005)
-                    .wrapping_add(1);
-                let action = choices.swap_remove((self.rng as usize) % choices.len());
+                let action = if choices.len() == 1 {
+                    choices[0].clone()
+                } else if self.config.policy == Policy::Rollout {
+                    let deadline = Instant::now()
+                        + Duration::from_millis(self.config.budget_ms.saturating_sub(5));
+                    let typed: Vec<_> = choices.iter().map(|choice| choice.1).collect();
+                    let result = catanatron_search::flat_monte_carlo_until(
+                        &imported.context,
+                        &imported.position,
+                        &typed,
+                        self.config.simulations,
+                        self.config.seed.wrapping_add(self.decisions),
+                        catanatron_search::RolloutLimits::default(),
+                        || Instant::now() >= deadline,
+                    )
+                    .ok_or("rollout search received an empty menu")?;
+                    choices
+                        .iter()
+                        .find(|choice| choice.1 == result.action)
+                        .cloned()
+                        .ok_or("search selected an unoffered action")?
+                } else {
+                    self.rng = self
+                        .rng
+                        .wrapping_mul(6_364_136_223_846_793_005)
+                        .wrapping_add(1);
+                    choices[(self.rng as usize) % choices.len()].clone()
+                };
+                self.decisions = self.decisions.wrapping_add(1);
                 Ok(Some(json!({"action": action.0})))
             }
             "after" => {
@@ -134,8 +207,8 @@ fn validate_action_shape(action: &Value) -> Result<(), String> {
     Ok(())
 }
 
-fn run<R: BufRead, W: Write>(reader: R, mut writer: W) -> Result<(), String> {
-    let mut bot = Bot::default();
+fn run<R: BufRead, W: Write>(reader: R, mut writer: W, config: Config) -> Result<(), String> {
+    let mut bot = Bot::new(config);
     for line in reader.lines() {
         let line = line.map_err(|error| format!("stdin read failed: {error}"))?;
         let message: Envelope = serde_json::from_str(&line)
@@ -153,10 +226,66 @@ fn run<R: BufRead, W: Write>(reader: R, mut writer: W) -> Result<(), String> {
 }
 
 fn main() {
-    if let Err(error) = run(io::stdin().lock(), BufWriter::new(io::stdout().lock())) {
+    let result = parse_args(env::args().skip(1)).and_then(|config| {
+        run(
+            io::stdin().lock(),
+            BufWriter::new(io::stdout().lock()),
+            config,
+        )
+    });
+    if let Err(error) = result {
         eprintln!("catanatron-bot: {error}");
         std::process::exit(2);
     }
+}
+
+fn parse_args(args: impl Iterator<Item = String>) -> Result<Config, String> {
+    let mut config = Config::default();
+    let mut args = args;
+    while let Some(flag) = args.next() {
+        let value = args
+            .next()
+            .ok_or_else(|| format!("missing value for {flag}"))?;
+        match flag.as_str() {
+            "--policy" => {
+                config.policy = match value.as_str() {
+                    "random" => Policy::Random,
+                    "rollout" => Policy::Rollout,
+                    _ => return Err("--policy must be random or rollout".to_owned()),
+                }
+            }
+            "--simulations" => config.simulations = positive(&value, &flag)?,
+            "--budget-ms" => config.budget_ms = positive(&value, &flag)?,
+            "--seed" => {
+                config.seed = value
+                    .parse()
+                    .map_err(|_| "--seed must be a u64".to_owned())?
+            }
+            "--threads" => {
+                config.threads = positive(&value, &flag)?;
+                if config.threads != 1 {
+                    return Err(
+                        "E10 supports --threads 1; parallel search arrives in E11".to_owned()
+                    );
+                }
+            }
+            _ => return Err(format!("unknown option {flag}")),
+        }
+    }
+    Ok(config)
+}
+
+fn positive<T: std::str::FromStr + Default + PartialEq>(
+    value: &str,
+    flag: &str,
+) -> Result<T, String> {
+    let parsed = value
+        .parse()
+        .map_err(|_| format!("{flag} has an invalid value"))?;
+    if parsed == T::default() {
+        return Err(format!("{flag} must be positive"));
+    }
+    Ok(parsed)
 }
 
 #[cfg(test)]
@@ -165,7 +294,7 @@ mod tests {
 
     fn transcript(input: &str) -> Result<String, String> {
         let mut output = Vec::new();
-        run(input.as_bytes(), &mut output)?;
+        run(input.as_bytes(), &mut output, Config::default())?;
         String::from_utf8(output).map_err(|error| error.to_string())
     }
 
@@ -208,5 +337,32 @@ mod tests {
         assert!(transcript(malformed)
             .unwrap_err()
             .contains("offered action"));
+    }
+
+    #[test]
+    fn parses_search_options_and_rejects_e11_threads() {
+        let config = parse_args(
+            [
+                "--policy",
+                "rollout",
+                "--simulations",
+                "24",
+                "--budget-ms",
+                "80",
+                "--seed",
+                "7",
+                "--threads",
+                "1",
+            ]
+            .into_iter()
+            .map(str::to_owned),
+        )
+        .unwrap();
+        assert_eq!(config.policy, Policy::Rollout);
+        assert_eq!(config.simulations, 24);
+        assert_eq!(config.budget_ms, 80);
+        assert_eq!(config.seed, 7);
+        assert!(parse_args(["--threads", "2"].into_iter().map(str::to_owned)).is_err());
+        assert!(parse_args(["--simulations", "0"].into_iter().map(str::to_owned)).is_err());
     }
 }
