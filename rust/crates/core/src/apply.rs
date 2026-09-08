@@ -195,6 +195,52 @@ pub fn apply_checked(
             };
             Status::Decision
         }
+        Action::OfferTrade { give, receive } => {
+            next.trade_give = give;
+            next.trade_receive = receive;
+            next.trade_proposer = actor;
+            next.trade_responded_mask = 1 << actor.get();
+            next.trade_accepted_mask = 0;
+            let responder = next_trade_responder(&next, 0).expect("at least two players");
+            next.actor = responder;
+            next.phase = Phase::TradeResponse { actor: responder };
+            Status::Decision
+        }
+        Action::AcceptTrade | Action::RejectTrade => {
+            next.trade_responded_mask |= 1 << actor.get();
+            if matches!(action, Action::AcceptTrade) {
+                next.trade_accepted_mask |= 1 << actor.get();
+            }
+            if let Some(responder) = next_trade_responder(&next, actor.get() + 1) {
+                next.actor = responder;
+                next.phase = Phase::TradeResponse { actor: responder };
+            } else {
+                next.actor = next.trade_proposer;
+                next.phase = if next.trade_accepted_mask == 0 {
+                    clear_trade(&mut next);
+                    Phase::PostRoll { actor: next.actor }
+                } else {
+                    Phase::ChooseAccepter { actor: next.actor }
+                };
+            }
+            Status::Decision
+        }
+        Action::ConfirmTrade(accepter) => {
+            for index in 0..5 {
+                next.players[usize::from(actor.get())].hand[index] -= next.trade_give[index];
+                next.players[usize::from(accepter.get())].hand[index] += next.trade_give[index];
+                next.players[usize::from(accepter.get())].hand[index] -= next.trade_receive[index];
+                next.players[usize::from(actor.get())].hand[index] += next.trade_receive[index];
+            }
+            clear_trade(&mut next);
+            next.phase = Phase::PostRoll { actor };
+            Status::Decision
+        }
+        Action::CancelTrade => {
+            clear_trade(&mut next);
+            next.phase = Phase::PostRoll { actor };
+            Status::Decision
+        }
         Action::BuildRoad(edge) => match next.phase {
             Phase::PostRoll { .. } => {
                 next.roads[usize::from(edge.get())] = actor.get() + 1;
@@ -297,6 +343,24 @@ fn consume_development_card(
         player.eligible_dev_mask &= !(1 << card.index());
     }
     player.played_dev = true;
+}
+
+fn next_trade_responder(position: &Position, first: u8) -> Option<crate::PlayerId> {
+    (first..position.player_count).find_map(|raw| {
+        let mask = 1 << raw;
+        if position.trade_responded_mask & mask == 0 {
+            crate::PlayerId::new(raw).ok()
+        } else {
+            None
+        }
+    })
+}
+
+fn clear_trade(position: &mut Position) {
+    position.trade_give = [0; 5];
+    position.trade_receive = [0; 5];
+    position.trade_responded_mask = 0;
+    position.trade_accepted_mask = 0;
 }
 
 fn next_discarder(position: &Position, first: u8) -> Option<crate::PlayerId> {

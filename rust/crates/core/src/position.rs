@@ -61,6 +61,11 @@ pub struct Position {
     pub turn_owner: PlayerId,
     pub phase: Phase,
     pub turns: u16,
+    pub trade_give: [u8; 5],
+    pub trade_receive: [u8; 5],
+    pub trade_proposer: PlayerId,
+    pub trade_responded_mask: u8,
+    pub trade_accepted_mask: u8,
 }
 impl Position {
     pub fn new(player_count: u8) -> Result<Self, crate::IllegalAction> {
@@ -83,6 +88,11 @@ impl Position {
                 reverse: false,
             },
             turns: 0,
+            trade_give: [0; 5],
+            trade_receive: [0; 5],
+            trade_proposer: zero,
+            trade_responded_mask: 0,
+            trade_accepted_mask: 0,
         })
     }
 }

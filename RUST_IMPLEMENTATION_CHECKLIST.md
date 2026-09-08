@@ -152,4 +152,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (23 tests), formatting, and Clippy with warnings denied pass.
 * Next action: add maritime trading and then domestic trade state/response flows.
 
+### 2026-09-07 — E06 domestic-trade checkpoint
+
+* Added canonical pending-trade state and checked offer/accept/reject/confirm/cancel transitions. Each other seat is asked once in ascending order; confirmation revalidates both balances and transfers atomically.
+* `cargo test --manifest-path rust/Cargo.toml` (24 tests), formatting, and Clippy with warnings denied pass.
+* Next action: add port-aware maritime trade generation/application, then awards and victory maintenance.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

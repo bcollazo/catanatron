@@ -76,6 +76,25 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
             }
         }
         Phase::FreeRoad { actor, .. } => append_road_placements(position, actor, out),
+        Phase::TradeResponse { actor } => {
+            out.push(Action::RejectTrade);
+            if crate::has_resources(
+                &position.players[usize::from(actor.get())].hand,
+                &position.trade_receive,
+            ) {
+                out.push(Action::AcceptTrade);
+            }
+        }
+        Phase::ChooseAccepter { .. } => {
+            out.push(Action::CancelTrade);
+            for raw in 0..position.player_count {
+                if position.trade_accepted_mask & (1 << raw) != 0 {
+                    out.push(Action::ConfirmTrade(
+                        crate::PlayerId::new(raw).expect("active player"),
+                    ));
+                }
+            }
+        }
         Phase::PostRoll { actor } => {
             out.push(Action::EndTurn);
             append_development_actions(position, actor, out);

@@ -25,6 +25,7 @@ pub enum IllegalAction {
     InvalidCityPlacement,
     InvalidRobberMove,
     IneligibleDevelopmentCard,
+    InvalidTrade,
 }
 
 /// Checks a supplied chance result before an application path can mutate state.
@@ -92,9 +93,14 @@ pub fn validate_boundary(
             | (Phase::PostRoll { .. }, Action::YearOfPlenty { .. })
             | (Phase::PostRoll { .. }, Action::Monopoly(_))
             | (Phase::PostRoll { .. }, Action::RoadBuilding)
+            | (Phase::PostRoll { .. }, Action::OfferTrade { .. })
             | (Phase::Discard { .. }, Action::Discard(_))
             | (Phase::Robber { .. }, Action::MoveRobber { .. })
             | (Phase::FreeRoad { .. }, Action::BuildRoad(_))
+            | (Phase::TradeResponse { .. }, Action::AcceptTrade)
+            | (Phase::TradeResponse { .. }, Action::RejectTrade)
+            | (Phase::ChooseAccepter { .. }, Action::ConfirmTrade(_))
+            | (Phase::ChooseAccepter { .. }, Action::CancelTrade)
     );
     if !allowed {
         return Err(IllegalAction::WrongPhase);
@@ -214,6 +220,39 @@ pub fn validate_boundary(
                 .is_ok()
         }) {
             return Err(IllegalAction::InvalidRoadPlacement);
+        }
+    }
+    if let Action::OfferTrade { give, receive } = action {
+        if give.iter().all(|&count| count == 0)
+            || receive.iter().all(|&count| count == 0)
+            || (0..5).any(|index| give[index] > 0 && receive[index] > 0)
+            || !crate::has_resources(&position.players[usize::from(actor.get())].hand, &give)
+        {
+            return Err(IllegalAction::InvalidTrade);
+        }
+    }
+    if matches!(action, Action::AcceptTrade)
+        && !crate::has_resources(
+            &position.players[usize::from(actor.get())].hand,
+            &position.trade_receive,
+        )
+    {
+        return Err(IllegalAction::InvalidTrade);
+    }
+    if let Action::ConfirmTrade(accepter) = action {
+        if accepter == actor
+            || accepter.get() >= position.player_count
+            || position.trade_accepted_mask & (1 << accepter.get()) == 0
+            || !crate::has_resources(
+                &position.players[usize::from(actor.get())].hand,
+                &position.trade_give,
+            )
+            || !crate::has_resources(
+                &position.players[usize::from(accepter.get())].hand,
+                &position.trade_receive,
+            )
+        {
+            return Err(IllegalAction::InvalidTrade);
         }
     }
     Ok(())

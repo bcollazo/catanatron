@@ -295,6 +295,39 @@ fn road_building_places_free_roads_and_resumes_the_original_turn_phase() {
 }
 
 #[test]
+fn domestic_trade_asks_each_other_seat_and_confirms_atomically() {
+    let mut position = Position::new(3).unwrap();
+    let proposer = position.actor;
+    position.phase = Phase::PostRoll { actor: proposer };
+    position.players[0].hand[Resource::Wood.index()] = 1;
+    position.players[1].hand[Resource::Ore.index()] = 1;
+    position.players[2].hand[Resource::Ore.index()] = 1;
+    let mut give = [0; 5];
+    give[Resource::Wood.index()] = 1;
+    let mut receive = [0; 5];
+    receive[Resource::Ore.index()] = 1;
+    apply_checked(
+        &mut position,
+        proposer,
+        Action::OfferTrade { give, receive },
+    )
+    .unwrap();
+    let first = PlayerId::new(1).unwrap();
+    let second = PlayerId::new(2).unwrap();
+    assert_eq!(position.actor, first);
+    apply_checked(&mut position, first, Action::AcceptTrade).unwrap();
+    assert_eq!(position.actor, second);
+    apply_checked(&mut position, second, Action::RejectTrade).unwrap();
+    assert_eq!(position.actor, proposer);
+    assert!(matches!(position.phase, Phase::ChooseAccepter { .. }));
+    apply_checked(&mut position, proposer, Action::ConfirmTrade(first)).unwrap();
+    assert_eq!(position.players[0].hand[Resource::Ore.index()], 1);
+    assert_eq!(position.players[1].hand[Resource::Wood.index()], 1);
+    assert_eq!(position.trade_accepted_mask, 0);
+    assert!(matches!(position.phase, Phase::PostRoll { .. }));
+}
+
+#[test]
 fn setup_generation_respects_distance_and_remembers_settlement_for_road() {
     let mut position = Position::new(2).unwrap();
     let mut actions = Vec::new();

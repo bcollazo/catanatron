@@ -41,6 +41,10 @@ pub use validate::{validate_boundary, validate_outcome, IllegalAction};
 /// `rust/docs/rules-profile.md` during E02.
 pub const RULES_PROFILE: &str = "rust-v1";
 
+pub(crate) fn has_resources(hand: &[u8; 5], required: &[u8; 5]) -> bool {
+    (0..5).all(|index| hand[index] >= required[index])
+}
+
 /// Returns the engine profile name without requiring callers to know its
 /// storage representation. This gives the initially-created crate a small,
 /// tested public contract while later stages add typed game APIs.
