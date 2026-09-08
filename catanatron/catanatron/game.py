@@ -115,7 +115,7 @@ class Game:
         """
         if initialize:
             self.seed = seed if seed is not None else random.randrange(sys.maxsize)
-            random.seed(self.seed)
+            self.random = random.Random(self.seed)
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
@@ -126,8 +126,30 @@ class Game:
                 discard_limit=discard_limit,
                 friendly_robber=friendly_robber,
                 number_placement=number_placement,
+                rng=self.random,
             )
             self.playable_actions = generate_playable_actions(self.state)
+
+    def __setstate__(self, attributes):
+        """Restore pickled games and normalize their per-game RNG.
+
+        Legacy database rows have neither ``Game.random`` nor
+        ``State.random``. Their module-global RNG state was never persisted,
+        so the original stream cannot be resumed exactly. Seed a new per-game
+        stream from the stored game seed so legacy games remain playable;
+        subsequent saves preserve that stream.
+        """
+        self.__dict__.update(attributes)
+
+        state_rng = getattr(self.state, "random", None)
+        game_rng = getattr(self, "random", None)
+        rng = state_rng if state_rng is not None else game_rng
+        if rng is None:
+            rng = random.Random(self.seed)
+
+        # Game and State intentionally share one stream by reference.
+        self.random = rng
+        self.state.random = rng
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
@@ -220,6 +242,7 @@ class Game:
         """
         game_copy = Game(players=[], initialize=False)
         game_copy.seed = self.seed
+        game_copy.random = self.random
         game_copy.id = self.id
         game_copy.vps_to_win = self.vps_to_win
         game_copy.friendly_robber = self.friendly_robber

@@ -19,7 +19,7 @@ import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import MenuList from "@mui/material/MenuList";
 import SimCardIcon from "@mui/icons-material/SimCard";
-import { useParams } from "react-router";
+import { useParams } from "react-router-dom";
 
 import Hidden from "../components/Hidden";
 import Prompt from "../components/Prompt";

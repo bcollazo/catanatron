@@ -7,25 +7,53 @@ from catanatron.models.player import SimplePlayer, Color
 from catanatron.json import GameEncoder, action_from_json
 
 
-def test_serialization():
+def test_serialization_matches_gui_contract():
     game = Game(
         players=[
             SimplePlayer(Color.RED),
             SimplePlayer(Color.BLUE),
             SimplePlayer(Color.WHITE),
             SimplePlayer(Color.ORANGE),
-        ]
+        ],
+        seed=123,
     )
 
-    string = json.dumps(game, cls=GameEncoder)
-    result = json.loads(string)
+    result = json.loads(json.dumps(game, cls=GameEncoder))
 
-    # Loosely assert looks like expected
-    assert isinstance(result["robber_coordinate"], list)
+    assert {
+        "tiles",
+        "adjacent_tiles",
+        "nodes",
+        "edges",
+        "action_records",
+        "player_state",
+        "colors",
+        "bot_colors",
+        "is_initial_build_phase",
+        "robber_coordinate",
+        "current_color",
+        "current_prompt",
+        "current_discard_count",
+        "current_playable_actions",
+        "longest_roads_by_player",
+        "winning_color",
+        "state_index",
+    } <= set(result)
+    assert "random" not in result
     assert isinstance(result["tiles"], list)
-    assert isinstance(result["edges"], list)
     assert isinstance(result["nodes"], dict)
+    assert isinstance(result["edges"], list)
     assert isinstance(result["action_records"], list)
+    assert isinstance(result["robber_coordinate"], list)
+    assert result["winning_color"] is None
+
+    tile_types = {placed_tile["tile"]["type"] for placed_tile in result["tiles"]}
+    assert {"RESOURCE_TILE", "DESERT", "PORT", "WATER"} <= tile_types
+    assert any(
+        placed_tile["tile"]["type"] == "PORT"
+        and placed_tile["tile"]["resource"] is None
+        for placed_tile in result["tiles"]
+    )
 
 
 def test_action_from_json_maritime_trade():

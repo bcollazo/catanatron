@@ -1,5 +1,4 @@
 import time
-import random
 from typing import Any
 
 from catanatron.game import Game
@@ -57,8 +56,8 @@ class AlphaBetaPlayer(Player):
         if len(actions) == 1:
             return actions[0]
 
-        if self.epsilon is not None and random.random() < self.epsilon:
-            return random.choice(playable_actions)
+        if self.epsilon is not None and game.state.random.random() < self.epsilon:
+            return game.state.random.choice(playable_actions)
 
         start = time.time()
         state_id = str(len(game.state.action_records))

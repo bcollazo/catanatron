@@ -1,17 +1,29 @@
+import os
+
 import pytest
 import json
+from catanatron import Color, Game, RandomPlayer
+from catanatron.json import GameEncoder
 from catanatron.web import create_app
-from catanatron.web.models import db, GameState, get_game_state
+from catanatron.web.models import (
+    db,
+    GameState,
+    get_game_state,
+    upsert_game_state,
+)
 
 
 @pytest.fixture
 def app():
     """Create and configure a new app instance for each test."""
-    # Setup an in-memory SQLite database for testing
+    database_url = os.environ.get(
+        "CATANATRON_TEST_DATABASE_URL",
+        "sqlite:///:memory:",
+    )
     app = create_app(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SQLALCHEMY_DATABASE_URI": database_url,
             "SECRET_KEY": "test",
         }
     )
@@ -21,9 +33,9 @@ def app():
 
     yield app
 
-    # Teardown: drop all tables after each test (optional, if tests are isolated)
-    # with app.app_context():
-    #     db.drop_all()
+    with app.app_context():
+        db.session.remove()
+        db.drop_all()
 
 
 @pytest.fixture
@@ -101,6 +113,14 @@ def test_get_game_endpoint(client):
     assert data["is_initial_build_phase"] is True
     assert data["winning_color"] is None
 
+    # The API reserializes the pickled game; it must match the JSON snapshot
+    # stored alongside that pickle for GUI and replay consumers.
+    with client.application.app_context():
+        stored_state = (
+            db.session.query(GameState).filter_by(uuid=game_id, state_index=0).one()
+        )
+        assert data == json.loads(stored_state.state)
+
 
 def test_get_latest_game_endpoint(client):
     """Test retrieving the latest game state."""
@@ -156,6 +176,59 @@ def test_repeated_bot_actions_advance_latest_state(client):
     assert len(second_tick["action_records"]) == len(first_tick["action_records"]) + 1
     assert latest_after["state_index"] == second_tick["state_index"]
     assert latest_after["action_records"] == second_tick["action_records"]
+
+
+def test_database_roundtrips_preserve_rng_state_and_continuation(client):
+    """Persisted games must resume the same random stream after every load."""
+
+    def make_players():
+        return [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)]
+
+    persisted_game = Game(make_players(), seed=123)
+    uninterrupted_game = Game(make_players(), seed=123)
+
+    with client.application.app_context():
+        upsert_game_state(persisted_game)
+
+        for _ in range(25):
+            restored_game = get_game_state(persisted_game.id)
+
+            assert restored_game.random is restored_game.state.random
+            assert (
+                restored_game.state.random.getstate()
+                == uninterrupted_game.state.random.getstate()
+            )
+
+            restored_game.play_tick()
+            uninterrupted_game.play_tick()
+            upsert_game_state(restored_game)
+
+        restored_json = json.loads(json.dumps(restored_game, cls=GameEncoder))
+        uninterrupted_json = json.loads(json.dumps(uninterrupted_game, cls=GameEncoder))
+
+    assert restored_json == uninterrupted_json
+
+
+def test_legacy_database_game_without_rng_can_continue(client):
+    """Games persisted before per-game RNGs existed must remain playable."""
+    game = Game(
+        [RandomPlayer(Color.RED), RandomPlayer(Color.BLUE)],
+        seed=123,
+    )
+    del game.random
+    del game.state.random
+
+    with client.application.app_context():
+        upsert_game_state(game)
+        restored_game = get_game_state(game.id)
+
+        assert restored_game.random is restored_game.state.random
+        restored_game.play_tick()
+        upsert_game_state(restored_game)
+
+        latest_game = get_game_state(game.id)
+
+    assert len(latest_game.state.action_records) == 1
 
 
 def test_mcts_analysis_endpoint(client):
