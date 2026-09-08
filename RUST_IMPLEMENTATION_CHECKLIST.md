@@ -15,7 +15,7 @@ Status at handoff: **planning complete; production implementation not started**.
 - [x] E06 — All development cards, awards and domestic trades pass.
 - [x] E07 — Complete games, RNG streams, random/weighted policies and scalar rollouts pass.
 - [x] E08 — Differential harness, benchmarks and allocation report implemented.
-- [ ] E09 — Stdio adapter/importer and real host certification pass.
+- [x] E09 — Stdio adapter/importer and real host certification pass.
 - [ ] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
 - [ ] E11 — Parallel results match scalar execution; scaling measured.
 - [ ] E12 — MINI and batched Python extension pass parity/lifetime/error tests.
@@ -25,7 +25,7 @@ Status at handoff: **planning complete; production implementation not started**.
 
 - [ ] Functional: complete supported games/actions/configurations, no unfinished stubs.
 - [x] Correctness: zero unexplained differences; all named divergences independently tested.
-- [ ] Protocol: 100 real mixed-process games with zero unexpected fallback/timeout/illegal action.
+- [x] Protocol: 100 real mixed-process games with zero unexpected fallback/timeout/illegal action.
 - [ ] RL interface: scalar/batch parity, documented action/feature versions, safe array lifetimes.
 - [x] Allocations: zero warmed baseline rollout allocations across supported phases.
 - [x] Speed: >=10x comparable same-machine Python games and fixed-state rollout throughput.
@@ -34,13 +34,20 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E09 (stdio adapter/importer and host certification).
-* Last implementation check: release workspace suite passes with 34 core invariants, 394 golden transitions, CLI validation, and the seeded full-game matrix; the live differential corpus has zero unexplained failures across 300 games.
-* Next action: add the `catanatron-bot` workspace member and implement the v1 JSONL handshake/import/export boundary against the locally available PR #386 schema.
-* Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
+* Current task: E10 (bounded flat Monte Carlo search bot).
+* Last implementation check: E09's pinned real-host matrix passed 100/100 mixed Python/Rust games with zero unexpected fallback, timeout, illegal-action, or root-menu mismatch incidents.
+* Next action: add fixed-simulation flat Monte Carlo root evaluation, round-robin sampling, deterministic tie-breaking, and deadline-aware CLI options to `catanatron-bot`.
+* Blocking condition: none. Protocol v1/schema v1 were certified against PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` in the isolated `C:\dev\catanatron-pr386` worktree.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
 * Decisions since the plan: use the isolated ignored `.venv/rust-engine` (Python 3.12.14, NetworkX 3.5) because the system pyenv shim is unconfigured. Topology exports only immutable geometry: resource/port assignments are deliberately excluded because Python map initialization randomizes them. Trace action selection is canonicalized because Python set-backed move menus otherwise vary by hash seed.
+
+### 2026-09-08 — E09 complete
+
+* Added the `catanatron-bot` JSONL process boundary. It defaults to `observe=false`, replies only to `hello`/`decide`, flushes each reply, exits cleanly on EOF, ignores unknown notifications, and rejects protocol, schema, game, color, numeric, duplicate-road, and malformed-action errors clearly on stderr.
+* The importer caches only the static map from `before`, refreshes all dynamic fields on every `decide`, preserves wire seat order, eligibility and award incumbents, derives setup's latest settlement from ordered `buildings_by_color`, treats `current_trade[10]` as a seat index, and labels no hidden-state inference beyond the perfect-information v1 snapshot.
+* Rust generation is compared semantically with the entire offered host menu before selection; the random policy returns the original offered wire triple. Unit coverage includes all 18 action payload types and process lifecycle/error cases.
+* `rust/tools/verify_stdio.py` ran 100 games against pinned PR #386 across 2/3/4-player and multiple Rust seat schedules: 100 completed, zero unexpected fallbacks, zero timeouts, zero illegal actions, and zero root-menu mismatches. Report: `rust/bench-results/e09-stdio.json`.
 
 ### 2026-09-07 — E02 checkpoint
 

@@ -3,9 +3,8 @@
 This directory is the production Rust workspace for the `rust-v1` Catanatron
 rules profile. It is being implemented in stages described by
 [`../RUST_EXECUTION_GUIDE.md`](../RUST_EXECUTION_GUIDE.md). The initial
-workspace contains only `catanatron-core`, a safe, standard-library-only rules
-kernel; search, stdio, benchmark, and Python-extension packages will be added
-when their implementation stages begin.
+workspace contains a safe, dependency-free `catanatron-core` rules kernel,
+scalar rollout search, conformance/benchmark tooling, and the v1 JSONL bot.
 
 ## Local checks
 
@@ -17,9 +16,25 @@ cargo fmt --check --manifest-path rust/Cargo.toml
 cargo test --manifest-path rust/Cargo.toml
 ```
 
-The workspace intentionally has no default dependency on Python, JSON,
-networking, or search code. That keeps rule transitions independently usable
-and testable.
+The core package has no dependency on Python, JSON, networking, or search
+code. Protocol concerns remain in the bot package.
+
+## Stdio bot
+
+Build the bot and register the resulting executable with the Python host:
+
+```powershell
+cargo build --release --manifest-path rust/Cargo.toml -p catanatron-bot
+catanatron-play --bot "RUST=exec:C:/dev/catanatron/rust/target/release/catanatron-bot.exe" --players RUST,R,R,R --num 10
+```
+
+The E09 bot uses the random policy after importing each full dynamic snapshot
+and verifying exact semantic parity with the host's offered action menu. It
+implements protocol/schema v1 from pinned PR #386. To repeat its host gate:
+
+```powershell
+.\.venv\rust-engine\Scripts\python.exe rust\tools\verify_stdio.py --bot rust\target\release\catanatron-bot.exe --games 100 --host-worktree C:\dev\catanatron-pr386
+```
 
 ## Conformance and benchmarks
 

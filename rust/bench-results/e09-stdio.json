@@ -1,0 +1,11 @@
+{
+  "games_completed": 100,
+  "games_requested": 100,
+  "host_revision": "5149b1869ba6318a2f2e3ef3925915576a433286",
+  "illegal_actions": 0,
+  "protocol_version": 1,
+  "schema_version": 1,
+  "status": "pass",
+  "timeouts": 0,
+  "unexpected_fallbacks": 0
+}

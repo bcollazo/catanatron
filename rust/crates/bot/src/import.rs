@@ -651,4 +651,76 @@ mod tests {
         assert!(u8_value(&json!(256), "x").is_err());
         assert!(u16_value(&json!(-1), "x").is_err());
     }
+
+    #[test]
+    fn emits_every_wire_action_kind_with_the_active_seat_color() {
+        let colors = vec!["BLUE".to_owned(), "RED".to_owned()];
+        let mut position = Position::new(2).unwrap();
+        position.actor = PlayerId::new(1).unwrap();
+        position.trade_give = [1, 0, 0, 0, 0];
+        position.trade_receive = [0, 1, 0, 0, 0];
+        let map = Map {
+            template: "BASE".to_owned(),
+            tiles: (0..BASE_LAND_TILE_COUNT)
+                .map(|id| MapTile {
+                    coordinate: [id as i8, 0, 0],
+                    kind: "LAND".to_owned(),
+                    id: Some(json!(id)),
+                    resource: None,
+                    number: None,
+                })
+                .collect(),
+        };
+        let edge = EdgeId::new(0).unwrap();
+        let node = NodeId::new(0).unwrap();
+        let tile = catanatron_core::TileId::new(0).unwrap();
+        let p0 = PlayerId::new(0).unwrap();
+        let actions = [
+            Action::Roll,
+            Action::EndTurn,
+            Action::BuildRoad(edge),
+            Action::BuildSettlement(node),
+            Action::BuildCity(node),
+            Action::BuyDevelopmentCard,
+            Action::PlayKnight,
+            Action::MoveRobber {
+                tile,
+                victim: Some(p0),
+            },
+            Action::Discard(Resource::Wood),
+            Action::YearOfPlenty {
+                first: Resource::Wood,
+                second: Some(Resource::Brick),
+            },
+            Action::Monopoly(Resource::Ore),
+            Action::RoadBuilding,
+            Action::MaritimeTrade {
+                give: Resource::Wood,
+                receive: Resource::Ore,
+                rate: 4,
+            },
+            Action::OfferTrade {
+                give: [1, 0, 0, 0, 0],
+                receive: [0, 1, 0, 0, 0],
+            },
+            Action::AcceptTrade,
+            Action::RejectTrade,
+            Action::ConfirmTrade(p0),
+            Action::CancelTrade,
+        ];
+        let payloads = actions
+            .into_iter()
+            .map(|action| action_to_wire(action, &colors, &map, &position).unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(payloads.len(), 18);
+        assert!(payloads.iter().all(|payload| payload[0] == "RED"));
+        assert_eq!(
+            payloads
+                .iter()
+                .map(|payload| payload[1].as_str().unwrap())
+                .collect::<HashSet<_>>()
+                .len(),
+            18
+        );
+    }
 }
