@@ -38,7 +38,10 @@ fn exported_base_topology_has_expected_dense_bounds() {
 fn exported_mini_topology_masks_and_legality_exclude_base_only_locations() {
     use catanatron_core::{MapKind, MINI_EDGE_COUNT, MINI_LAND_TILE_COUNT, MINI_NODE_COUNT};
 
-    assert_eq!((MINI_NODE_COUNT, MINI_EDGE_COUNT, MINI_LAND_TILE_COUNT), (24, 30, 7));
+    assert_eq!(
+        (MINI_NODE_COUNT, MINI_EDGE_COUNT, MINI_LAND_TILE_COUNT),
+        (24, 30, 7)
+    );
     assert_eq!(MapKind::Mini.active_node_mask().count_ones(), 24);
     assert_eq!(MapKind::Mini.active_edge_mask().count_ones(), 30);
     assert_eq!(MapKind::Mini.active_tile_mask().count_ones(), 7);
@@ -58,7 +61,9 @@ fn exported_mini_topology_masks_and_legality_exclude_base_only_locations() {
 
     let mut legal = Vec::new();
     generate_actions(&position, &mut legal);
-    assert!(legal.iter().all(|action| matches!(action, Action::BuildSettlement(node) if node.get() < 24)));
+    assert!(legal
+        .iter()
+        .all(|action| matches!(action, Action::BuildSettlement(node) if node.get() < 24)));
 }
 
 #[test]
