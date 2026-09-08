@@ -43,3 +43,6 @@ pub const MINI_LAND_TILE_NODES: &[(u8, u8, u8, u8, u8, u8)] = &[
     (6, 7, 8, 9, 2, 1),
     (22, 23, 6, 1, 0, 20),
 ];
+pub const MINI_ACTIVE_NODE_MASK: u64 = 16777215;
+pub const MINI_ACTIVE_EDGE_MASK: u128 = 1073741823;
+pub const MINI_ACTIVE_TILE_MASK: u32 = 127;

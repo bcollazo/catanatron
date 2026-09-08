@@ -266,7 +266,7 @@ pub fn apply_checked(
                     resume_post_roll,
                 };
                 let can_continue = remaining > 0
-                    && (0..crate::BASE_EDGE_COUNT as u8).any(|raw| {
+                    && (0..position.map.edge_count() as u8).any(|raw| {
                         crate::validate::validate_road_placement(
                             &next,
                             actor,
@@ -430,9 +430,12 @@ pub fn apply_checked_with_context(
                 .count()
                 == 2
         {
-            for raw in 0..crate::BASE_LAND_TILE_COUNT as u8 {
+            for raw in 0..position.map.land_tile_count() as u8 {
                 let tile = crate::TileId::new(raw).expect("generated tile");
-                if crate::land_tile_nodes(tile).contains(&node) {
+                if crate::land_tile_nodes_on(position.map, tile)
+                    .expect("active tile")
+                    .contains(&node)
+                {
                     if let Some(resource) = context.layout.tile(tile).resource {
                         next.bank[resource.index()] -= 1;
                         next.players[usize::from(actor.get())].hand[resource.index()] += 1;
@@ -533,7 +536,7 @@ pub fn apply_outcome_checked_with_context(
     }
     let mut next = *position;
     let mut demand = [[0_u8; 5]; crate::MAX_PLAYERS];
-    for raw in 0..crate::BASE_LAND_TILE_COUNT as u8 {
+    for raw in 0..position.map.land_tile_count() as u8 {
         if raw == next.robber {
             continue;
         }
@@ -545,7 +548,7 @@ pub fn apply_outcome_checked_with_context(
         let Some(resource) = assignment.resource else {
             continue;
         };
-        for node in crate::land_tile_nodes(tile) {
+        for node in crate::land_tile_nodes_on(position.map, tile).expect("active tile") {
             let building = next.buildings[usize::from(node.get())];
             if let Some(owner) = crate::building_owner(building) {
                 demand[usize::from(owner.get())][resource.index()] +=

@@ -35,6 +35,33 @@ fn exported_base_topology_has_expected_dense_bounds() {
 }
 
 #[test]
+fn exported_mini_topology_masks_and_legality_exclude_base_only_locations() {
+    use catanatron_core::{MapKind, MINI_EDGE_COUNT, MINI_LAND_TILE_COUNT, MINI_NODE_COUNT};
+
+    assert_eq!((MINI_NODE_COUNT, MINI_EDGE_COUNT, MINI_LAND_TILE_COUNT), (24, 30, 7));
+    assert_eq!(MapKind::Mini.active_node_mask().count_ones(), 24);
+    assert_eq!(MapKind::Mini.active_edge_mask().count_ones(), 30);
+    assert_eq!(MapKind::Mini.active_tile_mask().count_ones(), 7);
+
+    let mut position = Position::new_on_map(2, MapKind::Mini).unwrap();
+    let actor = position.actor;
+    let before = position;
+    assert_eq!(
+        catanatron_core::apply_checked(
+            &mut position,
+            actor,
+            Action::BuildSettlement(NodeId::new(24).unwrap()),
+        ),
+        Err(catanatron_core::IllegalAction::InvalidSettlementPlacement)
+    );
+    assert_eq!(position, before);
+
+    let mut legal = Vec::new();
+    generate_actions(&position, &mut legal);
+    assert!(legal.iter().all(|action| matches!(action, Action::BuildSettlement(node) if node.get() < 24)));
+}
+
+#[test]
 fn layout_is_immutable_context_data_and_rejects_invalid_tile_assignments() {
     let mut tiles = [catanatron_core::LandTile::DESERT; catanatron_core::BASE_LAND_TILE_COUNT];
     tiles[0] = catanatron_core::LandTile::producing(Resource::Wood, 8);

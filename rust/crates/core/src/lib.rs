@@ -34,8 +34,9 @@ pub use position::{
     MAX_PLAYERS,
 };
 pub use topology::{
-    edge_endpoints, incident, land_tile_nodes, node_neighbors, BASE_EDGE_COUNT,
-    BASE_LAND_TILE_COUNT, BASE_NODE_COUNT,
+    edge_endpoints, edge_endpoints_on, incident, incident_on, land_tile_nodes, land_tile_nodes_on,
+    node_neighbors, node_neighbors_on, MapKind, BASE_EDGE_COUNT, BASE_LAND_TILE_COUNT,
+    BASE_NODE_COUNT, MINI_EDGE_COUNT, MINI_LAND_TILE_COUNT, MINI_NODE_COUNT,
 };
 pub use validate::{validate_boundary, validate_outcome, IllegalAction};
 

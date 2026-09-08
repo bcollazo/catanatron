@@ -1,5 +1,6 @@
 use catanatron_core::{
-    draw_bounded, GameContext, LandTile, Layout, NodeId, Port, Position, RandomSource, Resource,
+    draw_bounded, GameContext, LandTile, Layout, MapKind, NodeId, Port, Position, RandomSource,
+    Resource,
 };
 
 use crate::{derive_seed, SearchRng, StreamKind};
@@ -115,6 +116,58 @@ pub fn initialize_base(
     Ok((context, position))
 }
 
+const MINI_SPIRAL_TILE_ORDER: [usize; 7] = [1, 6, 5, 4, 3, 2, 0];
+const MINI_RANDOM_NUMBERS: [u8; 7] = [3, 4, 5, 6, 8, 9, 10];
+
+pub fn initialize_mini(
+    player_count: u8,
+    placement: NumberPlacement,
+    master_seed: u64,
+    game_index: u64,
+) -> Result<(GameContext, Position), catanatron_core::IllegalAction> {
+    let mut random =
+        SearchRng::from_seed(derive_seed(master_seed, game_index, 0, StreamKind::Chance));
+    let mut resources = [
+        Some(Resource::Wood),
+        None,
+        Some(Resource::Brick),
+        Some(Resource::Sheep),
+        Some(Resource::Wheat),
+        Some(Resource::Wheat),
+        Some(Resource::Ore),
+    ];
+    shuffle(&mut resources, &mut random);
+    let mut numbers = MINI_RANDOM_NUMBERS;
+    if placement == NumberPlacement::Random {
+        shuffle(&mut numbers, &mut random);
+    }
+    let mut tiles = [LandTile::DESERT; 19];
+    let order: &[usize] = match placement {
+        NumberPlacement::Random => &[0, 1, 2, 3, 4, 5, 6],
+        NumberPlacement::OfficialSpiral => &MINI_SPIRAL_TILE_ORDER,
+    };
+    let official_numbers = &SPIRAL_NUMBERS[..6];
+    let selected_numbers = if placement == NumberPlacement::Random {
+        &numbers[..]
+    } else {
+        official_numbers
+    };
+    let mut number_index = 0;
+    for &index in order {
+        if let Some(resource) = resources[index] {
+            tiles[index] = LandTile::producing(resource, selected_numbers[number_index]);
+            number_index += 1;
+        }
+    }
+    let context = GameContext::new(Layout::new(tiles).expect("valid MINI assignments"));
+    let mut position = Position::new_on_map(player_count, MapKind::Mini)?;
+    position.robber = resources
+        .iter()
+        .position(Option::is_none)
+        .expect("one desert") as u8;
+    Ok((context, position))
+}
+
 fn shuffle<T>(values: &mut [T], random: &mut impl RandomSource) {
     for upper in (1..values.len()).rev() {
         let index = draw_bounded(random, (upper + 1) as u64).expect("positive bound") as usize;
@@ -144,5 +197,29 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    #[test]
+    fn mini_initialization_uses_only_mini_geometry() {
+        let (context, position) =
+            initialize_mini(2, NumberPlacement::OfficialSpiral, 7, 3).unwrap();
+        assert_eq!(position.map, MapKind::Mini);
+        assert_eq!(position.map.active_node_mask().count_ones(), 24);
+        assert_eq!(position.map.active_edge_mask().count_ones(), 30);
+        assert_eq!(position.map.active_tile_mask().count_ones(), 7);
+        assert_eq!(
+            (0..7)
+                .filter(|&raw| context
+                    .layout
+                    .tile(catanatron_core::TileId::new(raw).unwrap())
+                    .resource
+                    .is_none())
+                .count(),
+            1
+        );
+        assert!((7..19).all(|raw| context
+            .layout
+            .tile(catanatron_core::TileId::new(raw).unwrap())
+            == LandTile::DESERT));
     }
 }

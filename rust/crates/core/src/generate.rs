@@ -1,5 +1,5 @@
 //! Read-only legal move generation for implemented core phases.
-use crate::{node_neighbors, Action, EdgeId, Phase, Position, BASE_EDGE_COUNT, BASE_NODE_COUNT};
+use crate::{Action, EdgeId, Phase, Position};
 
 pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
     out.clear();
@@ -8,10 +8,10 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
             if position.players[usize::from(actor.get())].pieces[1] == 0 {
                 return;
             }
-            for raw in 0..BASE_NODE_COUNT as u8 {
+            for raw in 0..position.map.node_count() as u8 {
                 let node = crate::NodeId::new(raw).expect("generated node");
                 if position.buildings[usize::from(raw)] == 0
-                    && node_neighbors(node)
+                    && crate::node_neighbors_on(position.map, node)
                         .all(|near| position.buildings[usize::from(near.get())] == 0)
                 {
                     out.push(Action::BuildSettlement(node));
@@ -19,12 +19,12 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
             }
         }
         Phase::SetupRoad { settlement, .. } => {
-            for raw in 0..BASE_EDGE_COUNT as u8 {
+            for raw in 0..position.map.edge_count() as u8 {
                 if position.roads[usize::from(raw)] != 0 {
                     continue;
                 }
                 let edge = EdgeId::new(raw).expect("generated edge");
-                if crate::incident(edge, settlement) {
+                if crate::incident_on(position.map, edge, settlement) {
                     out.push(Action::BuildRoad(edge));
                 }
             }
@@ -41,13 +41,13 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
             }
         }
         Phase::Robber { actor, .. } => {
-            for raw in 0..crate::BASE_LAND_TILE_COUNT as u8 {
+            for raw in 0..position.map.land_tile_count() as u8 {
                 if raw == position.robber {
                     continue;
                 }
                 let tile = crate::TileId::new(raw).expect("generated tile");
                 let mut victims = [false; crate::MAX_PLAYERS];
-                for node in crate::land_tile_nodes(tile) {
+                for node in crate::land_tile_nodes_on(position.map, tile).expect("active tile") {
                     let building = position.buildings[usize::from(node.get())];
                     if let Some(owner) = crate::building_owner(building) {
                         if owner != actor
@@ -107,15 +107,19 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
                     .into_iter()
                     .all(|resource| player.hand[resource] > 0)
             {
-                for raw in 0..BASE_NODE_COUNT as u8 {
+                for raw in 0..position.map.node_count() as u8 {
                     let node = crate::NodeId::new(raw).expect("generated node");
-                    let connected = (0..BASE_EDGE_COUNT as u8).any(|edge| {
+                    let connected = (0..position.map.edge_count() as u8).any(|edge| {
                         position.roads[usize::from(edge)] == actor.get() + 1
-                            && crate::incident(EdgeId::new(edge).expect("edge"), node)
+                            && crate::incident_on(
+                                position.map,
+                                EdgeId::new(edge).expect("edge"),
+                                node,
+                            )
                     });
                     if connected
                         && position.buildings[usize::from(raw)] == 0
-                        && node_neighbors(node)
+                        && crate::node_neighbors_on(position.map, node)
                             .all(|near| position.buildings[usize::from(near.get())] == 0)
                     {
                         out.push(Action::BuildSettlement(node));
@@ -126,7 +130,7 @@ pub fn generate_actions(position: &Position, out: &mut Vec<Action>) {
                 && player.hand[crate::Resource::Wheat.index()] >= 2
                 && player.hand[crate::Resource::Ore.index()] >= 3
             {
-                for raw in 0..BASE_NODE_COUNT as u8 {
+                for raw in 0..position.map.node_count() as u8 {
                     if position.buildings[usize::from(raw)] == actor.get() + 1 {
                         out.push(Action::BuildCity(
                             crate::NodeId::new(raw).expect("generated node"),
@@ -158,13 +162,17 @@ pub fn generate_actions_with_context(
             let Action::MoveRobber { tile, .. } = action else {
                 return true;
             };
-            !crate::land_tile_nodes(*tile).into_iter().any(|node| {
-                crate::building_owner(position.buildings[usize::from(node.get())]).is_some_and(
-                    |owner| {
-                        owner != position.actor && crate::actual_victory_points(position, owner) < 3
-                    },
-                )
-            })
+            !crate::land_tile_nodes_on(position.map, *tile)
+                .expect("generated tile")
+                .into_iter()
+                .any(|node| {
+                    crate::building_owner(position.buildings[usize::from(node.get())]).is_some_and(
+                        |owner| {
+                            owner != position.actor
+                                && crate::actual_victory_points(position, owner) < 3
+                        },
+                    )
+                })
         });
         if out.is_empty() {
             out.extend(unfiltered);
@@ -246,7 +254,7 @@ fn append_development_actions(position: &Position, actor: crate::PlayerId, out: 
             remaining: 2,
             resume_post_roll: matches!(position.phase, Phase::PostRoll { .. }),
         };
-        if (0..BASE_EDGE_COUNT as u8).any(|raw| {
+        if (0..position.map.edge_count() as u8).any(|raw| {
             crate::validate::validate_road_placement(
                 &probe,
                 actor,
@@ -260,7 +268,7 @@ fn append_development_actions(position: &Position, actor: crate::PlayerId, out: 
 }
 
 fn append_road_placements(position: &Position, actor: crate::PlayerId, out: &mut Vec<Action>) {
-    for raw in 0..BASE_EDGE_COUNT as u8 {
+    for raw in 0..position.map.edge_count() as u8 {
         let edge = EdgeId::new(raw).expect("generated edge");
         if crate::validate::validate_road_placement(position, actor, edge).is_ok() {
             out.push(Action::BuildRoad(edge));

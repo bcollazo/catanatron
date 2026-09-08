@@ -99,3 +99,6 @@ pub const BASE_LAND_TILE_NODES: &[(u8, u8, u8, u8, u8, u8)] = &[
     (52, 53, 24, 7, 6, 23),
     (50, 51, 52, 23, 22, 49),
 ];
+pub const BASE_ACTIVE_NODE_MASK: u64 = 18014398509481983;
+pub const BASE_ACTIVE_EDGE_MASK: u128 = 4722366482869645213695;
+pub const BASE_ACTIVE_TILE_MASK: u32 = 524287;

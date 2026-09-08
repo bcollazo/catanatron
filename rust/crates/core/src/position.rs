@@ -50,6 +50,7 @@ impl PlayerState {
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Position {
+    pub map: crate::MapKind,
     pub players: [PlayerState; MAX_PLAYERS],
     pub player_count: u8,
     pub buildings: [u8; 54],
@@ -77,6 +78,7 @@ impl Position {
         }
         let zero = PlayerId::new(0).expect("zero player id");
         Ok(Self {
+            map: crate::MapKind::Base,
             players: [PlayerState::EMPTY; MAX_PLAYERS],
             player_count,
             buildings: [0; 54],
@@ -100,5 +102,11 @@ impl Position {
             longest_road_holder: None,
             largest_army_holder: None,
         })
+    }
+
+    pub fn new_on_map(player_count: u8, map: crate::MapKind) -> Result<Self, crate::IllegalAction> {
+        let mut position = Self::new(player_count)?;
+        position.map = map;
+        Ok(position)
     }
 }

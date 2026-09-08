@@ -1,8 +1,5 @@
 //! Non-mutating checked boundary validation shared by later rule transitions.
-use crate::{
-    edge_endpoints, incident, Action, ChanceKind, Outcome, Phase, PlayerId, Position, Resource,
-    BASE_EDGE_COUNT,
-};
+use crate::{Action, ChanceKind, Outcome, Phase, PlayerId, Position, Resource};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IllegalAction {
     InvalidPlayerCount(u8),
@@ -131,6 +128,9 @@ pub fn validate_boundary(
         }
     }
     if let Action::BuildCity(node) = action {
+        if usize::from(node.get()) >= position.map.node_count() {
+            return Err(IllegalAction::InvalidCityPlacement);
+        }
         if position.players[usize::from(actor.get())].pieces[2] == 0 {
             return Err(IllegalAction::ExhaustedCities);
         }
@@ -159,7 +159,9 @@ pub fn validate_boundary(
         }
     }
     if let Action::MoveRobber { tile, victim } = action {
-        if tile.get() == position.robber {
+        if usize::from(tile.get()) >= position.map.land_tile_count()
+            || tile.get() == position.robber
+        {
             return Err(IllegalAction::InvalidRobberMove);
         }
         if let Some(victim) = victim {
@@ -169,23 +171,33 @@ pub fn validate_boundary(
                     .hand
                     .iter()
                     .all(|&count| count == 0)
-                || !crate::land_tile_nodes(tile).into_iter().any(|node| {
-                    crate::building_belongs_to(position.buildings[usize::from(node.get())], victim)
-                })
+                || !crate::land_tile_nodes_on(position.map, tile)
+                    .expect("active tile")
+                    .into_iter()
+                    .any(|node| {
+                        crate::building_belongs_to(
+                            position.buildings[usize::from(node.get())],
+                            victim,
+                        )
+                    })
             {
                 return Err(IllegalAction::InvalidRobberMove);
             }
-        } else if crate::land_tile_nodes(tile).into_iter().any(|node| {
-            crate::building_owner(position.buildings[usize::from(node.get())]).is_some_and(
-                |owner| {
-                    owner != actor
-                        && position.players[usize::from(owner.get())]
-                            .hand
-                            .iter()
-                            .any(|&count| count > 0)
-                },
-            )
-        }) {
+        } else if crate::land_tile_nodes_on(position.map, tile)
+            .expect("active tile")
+            .into_iter()
+            .any(|node| {
+                crate::building_owner(position.buildings[usize::from(node.get())]).is_some_and(
+                    |owner| {
+                        owner != actor
+                            && position.players[usize::from(owner.get())]
+                                .hand
+                                .iter()
+                                .any(|&count| count > 0)
+                    },
+                )
+            })
+        {
             return Err(IllegalAction::InvalidRobberMove);
         }
     }
@@ -215,7 +227,7 @@ pub fn validate_boundary(
             remaining: 2,
             resume_post_roll: matches!(position.phase, Phase::PostRoll { .. }),
         };
-        if !(0..crate::BASE_EDGE_COUNT as u8).any(|raw| {
+        if !(0..position.map.edge_count() as u8).any(|raw| {
             validate_road_placement(&probe, actor, crate::EdgeId::new(raw).expect("base edge"))
                 .is_ok()
         }) {
@@ -282,15 +294,21 @@ fn validate_settlement_placement(
     if position.players[usize::from(actor.get())].pieces[1] == 0 {
         return Err(IllegalAction::ExhaustedSettlements);
     }
-    if position.buildings[usize::from(node.get())] != 0
-        || crate::node_neighbors(node).any(|near| position.buildings[usize::from(near.get())] != 0)
+    if usize::from(node.get()) >= position.map.node_count()
+        || position.buildings[usize::from(node.get())] != 0
+        || crate::node_neighbors_on(position.map, node)
+            .any(|near| position.buildings[usize::from(near.get())] != 0)
     {
         return Err(IllegalAction::InvalidSettlementPlacement);
     }
     if matches!(position.phase, Phase::PostRoll { .. })
-        && !(0..BASE_EDGE_COUNT as u8).any(|raw| {
+        && !(0..position.map.edge_count() as u8).any(|raw| {
             position.roads[usize::from(raw)] == actor.get() + 1
-                && incident(crate::EdgeId::new(raw).expect("base edge"), node)
+                && crate::incident_on(
+                    position.map,
+                    crate::EdgeId::new(raw).expect("active edge"),
+                    node,
+                )
         })
     {
         return Err(IllegalAction::InvalidSettlementPlacement);
@@ -306,20 +324,27 @@ pub(crate) fn validate_road_placement(
     if position.players[usize::from(actor.get())].pieces[0] == 0 {
         return Err(IllegalAction::ExhaustedRoads);
     }
-    if position.roads[usize::from(edge.get())] != 0 {
+    if usize::from(edge.get()) >= position.map.edge_count()
+        || position.roads[usize::from(edge.get())] != 0
+    {
         return Err(IllegalAction::InvalidRoadPlacement);
     }
     let connected = match position.phase {
-        Phase::SetupRoad { settlement, .. } => incident(edge, settlement),
+        Phase::SetupRoad { settlement, .. } => crate::incident_on(position.map, edge, settlement),
         Phase::PostRoll { .. } | Phase::FreeRoad { .. } => {
-            let (first, second) = edge_endpoints(edge);
+            let (first, second) =
+                crate::edge_endpoints_on(position.map, edge).expect("active edge");
             [first, second].into_iter().any(|node| {
                 let building = position.buildings[usize::from(node.get())];
                 crate::building_belongs_to(building, actor)
                     || (building == 0
-                        && (0..BASE_EDGE_COUNT as u8).any(|raw| {
+                        && (0..position.map.edge_count() as u8).any(|raw| {
                             position.roads[usize::from(raw)] == actor.get() + 1
-                                && incident(crate::EdgeId::new(raw).expect("base edge"), node)
+                                && crate::incident_on(
+                                    position.map,
+                                    crate::EdgeId::new(raw).expect("active edge"),
+                                    node,
+                                )
                         }))
             })
         }

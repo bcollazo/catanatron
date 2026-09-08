@@ -1,14 +1,14 @@
 //! Exact public award and victory-point maintenance.
-use crate::{building_owner, edge_endpoints, EdgeId, PlayerId, Position, BASE_EDGE_COUNT};
+use crate::{building_owner, EdgeId, PlayerId, Position};
 
 pub fn longest_road_length(position: &Position, player: PlayerId) -> u8 {
     let mut best = 0;
-    for raw in 0..BASE_EDGE_COUNT as u8 {
+    for raw in 0..position.map.edge_count() as u8 {
         if position.roads[usize::from(raw)] != player.get() + 1 {
             continue;
         }
         let edge = EdgeId::new(raw).expect("base edge");
-        let (a, b) = edge_endpoints(edge);
+        let (a, b) = crate::edge_endpoints_on(position.map, edge).expect("active edge");
         let used = 1_u128 << raw;
         best = best.max(1 + trail(position, player, a, used));
         best = best.max(1 + trail(position, player, b, used));
@@ -21,13 +21,13 @@ fn trail(position: &Position, player: PlayerId, node: crate::NodeId, used: u128)
         return 0;
     }
     let mut best = 0;
-    for raw in 0..BASE_EDGE_COUNT as u8 {
+    for raw in 0..position.map.edge_count() as u8 {
         let bit = 1_u128 << raw;
         if used & bit != 0 || position.roads[usize::from(raw)] != player.get() + 1 {
             continue;
         }
         let edge = EdgeId::new(raw).expect("base edge");
-        let (a, b) = edge_endpoints(edge);
+        let (a, b) = crate::edge_endpoints_on(position.map, edge).expect("active edge");
         let next = if a == node {
             b
         } else if b == node {
