@@ -19,14 +19,14 @@ Status at handoff: **planning complete; production implementation not started**.
 - [x] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
 - [x] E11 — Parallel results match scalar execution; scaling measured.
 - [x] E12 — MINI and batched Python extension pass parity/lifetime/error tests.
-- [ ] E13 — Final checks, docs, examples and handoff complete.
+- [x] E13 — Final checks, docs, examples and handoff complete.
 
 ## Independent release gates
 
-- [ ] Functional: complete supported games/actions/configurations, no unfinished stubs.
+- [x] Functional: complete supported games/actions/configurations, no unfinished stubs.
 - [x] Correctness: zero unexplained differences; all named divergences independently tested.
 - [x] Protocol: 100 real mixed-process games with zero unexpected fallback/timeout/illegal action.
-- [ ] RL interface: scalar/batch parity, documented action/feature versions, safe array lifetimes.
+- [x] RL interface: scalar/batch parity, documented action/feature versions, safe array lifetimes.
 - [x] Allocations: zero warmed baseline rollout allocations across supported phases.
 - [x] Speed: >=10x comparable same-machine Python games and fixed-state rollout throughput.
 - [x] Speed objective: >=1M player intents/second on one core, with workload specified.
@@ -34,9 +34,9 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E13 (final validation, documentation, and handoff).
-* Last implementation check: E12 MINI Python differential traces pass for 2/3/4 seats; the abi3 PyO3/NumPy wheel passes six API/parity/lifetime/atomicity tests, including 1/16/256 environment batches across 1/2/4 workers and exact Gym catalogue sizes/legal setup values for all maps and seat counts.
-* Next action: run the E13 release command matrix, finish operator/API documentation, and produce the final evidence index.
+* Current task: complete through E13.
+* Last implementation check: the E13 release matrix passed, including 275,514 live differential transitions, 100 stdio host games, all workspace release tests and six wheel-level Python tests. Final benchmark and allocation reports are committed.
+* Next action: optional follow-up optimization or external competitive evaluation; neither blocks functional v1.
 * Blocking condition: none. Protocol v1/schema v1 were certified against PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` in the isolated `C:\dev\catanatron-pr386` worktree.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -70,6 +70,14 @@ Status at handoff: **planning complete; production implementation not started**.
 * Added the optional `catanatron-rust` abi3 wheel with owned NumPy observations, explicit batch reset/step/observe/rollout calls, interpreter detachment, atomic validation, independent chance streams, stable rewards/truncation, and immutable rollout roots.
 * Added versioned perfect-information features and generation-stamped dynamic action IDs. Exported all nine Python Gym catalogues; setup legality and catalogue sizes agree exactly for BASE/MINI/TOURNAMENT with 2/3/4 seats.
 * Six wheel-level tests cover stale views/IDs, atomic failures, reset semantics, Gym mapping, and fixed-seed equality for batches 1/16/256 across 1/2/4 workers. The 256-environment timing measured 10,504 complete rollouts/s, 90,877 observations/s, and 117,113 resets/s including Python/NumPy crossing costs.
+
+### 2026-09-08 — E13 complete
+
+* Added final benchmark/differential CLI contracts, BASE/MINI/TOURNAMENT benchmark initialization, a focused Rust/fixture/extension CI job, complete installation/examples, and a validation evidence index.
+* The final BASE differential run covered 300 games and 275,514 transitions: 273,438 exact matches, 2,076 recognized D001–D005 occurrences, and zero unexplained failures.
+* Repeated stdio certification against host revision `5149b1869ba6318a2f2e3ef3925915576a433286`: 100/100 games, zero timeout, illegal action, fallback, or protocol/schema mismatch.
+* Final one-worker Random measurements: 1,070,247 intents/s across 5,000 newly initialized games; 977,378 intents/s across 50,000 fixed-root rollouts; zero allocations across 1,000 warmed rollouts.
+* Functional readiness, correctness, protocol certification and measured speed are green. No external competitive “fastest” claim is made.
 
 ### 2026-09-07 — E02 checkpoint
 

@@ -70,3 +70,17 @@ NumPy result creation and the Python/Rust boundary:
 
 These are single-run engineering measurements, not cross-machine claims. Observation and reset
 figures amortize one Python call over 256 environments.
+
+## E13 final release workloads
+
+The final release commands use Random policy, BASE, four players, seed zero, one worker, and five
+timed batches:
+
+| Workload | Simulations | Player intents/s | Completion |
+|---|---:|---:|---:|
+| Newly initialized games | 5,000 | 1,070,247 | 4,995 wins; 5 turn-limit truncations |
+| Fixed-root rollouts | 50,000 | 977,378 | 49,963 wins; 37 turn-limit truncations |
+
+The warmed allocation run covered 1,000 rollouts and 1,070,180 player intents with zero
+allocations, zero deallocations, and zero allocated bytes inside the measured region. Reports are
+stored as `final-games.json`, `final-rollouts.json`, and `final-allocations.json`.

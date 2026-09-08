@@ -1,0 +1,19 @@
+{
+  "divergent_games": 124,
+  "divergent_transitions": 2076,
+  "equal_games": 176,
+  "failed_games": 0,
+  "fixtures": "rust\\tests\\fixtures",
+  "games_per_configuration": 100,
+  "map": "BASE",
+  "players": [
+    2,
+    3,
+    4
+  ],
+  "rules_profile": "rust-v1",
+  "runner": "{\"divergent\":2076,\"divergent_games\":124,\"equal\":273438,\"status\":\"passed\"}",
+  "seed": 8600,
+  "transitions": 275514,
+  "truncated_games": 0
+}

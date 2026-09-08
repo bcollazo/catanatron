@@ -1,0 +1,20 @@
+{
+  "build": "release-required-for-scoreboard",
+  "detail": {
+    "allocations": 0,
+    "bytes_allocated": 0,
+    "deallocations": 0,
+    "player_intents": 1070180,
+    "rollouts": 1000
+  },
+  "fixtures": "rust/tests/fixtures",
+  "map": "BASE",
+  "players": 4,
+  "policy": "random",
+  "revision": "plan/rust-rollout-engine",
+  "rules_profile": "rust-v1",
+  "sample_seconds": [],
+  "seed": 0,
+  "threads": 1,
+  "workload": "allocations"
+}
