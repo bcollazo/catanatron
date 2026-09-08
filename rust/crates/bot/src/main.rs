@@ -24,6 +24,7 @@ struct Config {
     budget_ms: u64,
     seed: u64,
     threads: u16,
+    metrics: bool,
 }
 
 impl Default for Config {
@@ -34,6 +35,7 @@ impl Default for Config {
             budget_ms: 100,
             seed: 0,
             threads: 1,
+            metrics: false,
         }
     }
 }
@@ -158,6 +160,12 @@ impl Bot {
                         || Instant::now() >= deadline,
                     )
                     .ok_or("rollout search received an empty menu")?;
+                    if self.config.metrics {
+                        eprintln!(
+                            "catanatron_search_metrics {{\"rollouts\":{},\"decision\":{}}}",
+                            result.total_samples, self.decisions
+                        );
+                    }
                     choices
                         .iter()
                         .find(|choice| choice.1 == result.action)
@@ -267,6 +275,13 @@ fn parse_args(args: impl Iterator<Item = String>) -> Result<Config, String> {
                     return Err(
                         "E10 supports --threads 1; parallel search arrives in E11".to_owned()
                     );
+                }
+            }
+            "--metrics" => {
+                config.metrics = match value.as_str() {
+                    "true" => true,
+                    "false" => false,
+                    _ => return Err("--metrics must be true or false".to_owned()),
                 }
             }
             _ => return Err(format!("unknown option {flag}")),

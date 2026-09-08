@@ -28,9 +28,12 @@ cargo build --release --manifest-path rust/Cargo.toml -p catanatron-bot
 catanatron-play --bot "RUST=exec:C:/dev/catanatron/rust/target/release/catanatron-bot.exe" --players RUST,R,R,R --num 10
 ```
 
-The E09 bot uses the random policy after importing each full dynamic snapshot
-and verifying exact semantic parity with the host's offered action menu. It
-implements protocol/schema v1 from pinned PR #386. To repeat its host gate:
+The bot imports each full dynamic snapshot and verifies exact semantic parity
+with the host's offered action menu. It implements protocol/schema v1 from
+pinned PR #386. Random is the default policy; bounded rollout search is enabled
+with, for example, `--policy rollout --simulations 10000 --budget-ms 100
+--seed 7 --threads 1`. E11 will add parallel thread counts. To repeat its host
+gate:
 
 ```powershell
 .\.venv\rust-engine\Scripts\python.exe rust\tools\verify_stdio.py --bot rust\target\release\catanatron-bot.exe --games 100 --host-worktree C:\dev\catanatron-pr386

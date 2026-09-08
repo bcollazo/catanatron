@@ -10,6 +10,7 @@ pub struct FlatResult {
     pub action: Action,
     pub mean: f64,
     pub samples: u32,
+    pub total_samples: u32,
 }
 
 pub fn flat_monte_carlo(
@@ -65,6 +66,7 @@ pub fn flat_monte_carlo_until(
         action: actions[best],
         mean: sums[best] / f64::from(counts[best]),
         samples: counts[best],
+        total_samples: counts.iter().sum(),
     })
 }
 
@@ -178,5 +180,19 @@ mod tests {
         .unwrap();
         assert_eq!(result.action, Action::BuildSettlement(target));
         assert_eq!(result.mean, 1.0);
+    }
+
+    #[test]
+    fn cutoff_is_preferred_to_a_known_loss_reward() {
+        let root = PlayerId::new(0).unwrap();
+        let opponent = PlayerId::new(1).unwrap();
+        assert_eq!(
+            status_reward(
+                Status::Truncated(catanatron_core::Truncation::ActionLimit),
+                root
+            ),
+            Some(0.5)
+        );
+        assert_eq!(status_reward(Status::Won(opponent), root), Some(0.0));
     }
 }

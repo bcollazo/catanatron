@@ -16,7 +16,7 @@ Status at handoff: **planning complete; production implementation not started**.
 - [x] E07 — Complete games, RNG streams, random/weighted policies and scalar rollouts pass.
 - [x] E08 — Differential harness, benchmarks and allocation report implemented.
 - [x] E09 — Stdio adapter/importer and real host certification pass.
-- [ ] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
+- [x] E10 — Bounded flat Monte Carlo search bot works and is evaluated.
 - [ ] E11 — Parallel results match scalar execution; scaling measured.
 - [ ] E12 — MINI and batched Python extension pass parity/lifetime/error tests.
 - [ ] E13 — Final checks, docs, examples and handoff complete.
@@ -34,9 +34,9 @@ Status at handoff: **planning complete; production implementation not started**.
 
 ## Current execution checkpoint
 
-* Current task: E10 (bounded flat Monte Carlo search bot).
-* Last implementation check: E09's pinned real-host matrix passed 100/100 mixed Python/Rust games with zero unexpected fallback, timeout, illegal-action, or root-menu mismatch incidents.
-* Next action: add fixed-simulation flat Monte Carlo root evaluation, round-robin sampling, deterministic tie-breaking, and deadline-aware CLI options to `catanatron-bot`.
+* Current task: E11 (reproducible parallel batch execution).
+* Last implementation check: E10 release search/bot tests pass; a 20-game, 5,569-decision seat-rotated evaluation completed without protocol failures at a 20 ms budget.
+* Next action: implement deterministic-index `Batch`/`rollout_many` with fixed worker chunks and scalar-equality tests for 1/2/4 threads.
 * Blocking condition: none. Protocol v1/schema v1 were certified against PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` in the isolated `C:\dev\catanatron-pr386` worktree.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -48,6 +48,13 @@ Status at handoff: **planning complete; production implementation not started**.
 * The importer caches only the static map from `before`, refreshes all dynamic fields on every `decide`, preserves wire seat order, eligibility and award incumbents, derives setup's latest settlement from ordered `buildings_by_color`, treats `current_trade[10]` as a seat index, and labels no hidden-state inference beyond the perfect-information v1 snapshot.
 * Rust generation is compared semantically with the entire offered host menu before selection; the random policy returns the original offered wire triple. Unit coverage includes all 18 action payload types and process lifecycle/error cases.
 * `rust/tools/verify_stdio.py` ran 100 games against pinned PR #386 across 2/3/4-player and multiple Rust seat schedules: 100 completed, zero unexpected fallbacks, zero timeouts, zero illegal actions, and zero root-menu mismatches. Report: `rust/bench-results/e09-stdio.json`.
+
+### 2026-09-08 — E10 complete
+
+* Added round-robin flat Monte Carlo over every offered root action. Each simulation copies the root, applies one intent, samples immediate chance, and uses the weighted policy to terminal/cutoff. Root-player rewards are 1 win, 0 loss and 0.5 cutoff; deterministic action-key ties and fixed-seed tests are included.
+* Added `--policy random|rollout`, `--simulations`, `--budget-ms`, `--seed`, and `--threads`. Default deadline is 100 ms with 5 ms reserved for response serialization; deadline checks occur between simulations and inside rollouts at every action/chance boundary. E10 rejects thread counts above one until E11.
+* Forced-win, cutoff-over-loss reward, legal-selection, deterministic fixed-seed, deadline interruption, and parent-root immutability regressions pass.
+* The fixed evaluation at 20 ms covered 20 seat-rotated games and 5,569 decisions. Of 2,542 searched decisions, rollouts averaged 204.96 (median 129.5, range 18–10,000). Latency was p50 0.0014 ms, p95 16.75 ms, p99 17.33 ms, max 24.66 ms. Observed records were 9/10 versus Random and 10/10 versus WeightedRandom; the report explicitly does not claim superiority from this small sample. Raw report: `rust/bench-results/e10-search.json`.
 
 ### 2026-09-07 — E02 checkpoint
 

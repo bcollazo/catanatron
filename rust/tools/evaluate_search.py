@@ -8,6 +8,7 @@ import json
 import math
 import random
 import statistics
+import tempfile
 import time
 from pathlib import Path
 
@@ -35,6 +36,7 @@ def main() -> None:
         str(args.bot.resolve()), "--policy", "rollout", "--simulations",
         str(args.simulations), "--budget-ms", str(args.budget_ms), "--seed",
         str(args.seed), "--threads", "1",
+        "--metrics", "true",
     ]
     base = build_stdio_player_class("MeasuredRustBot", command)
     latencies: list[float] = []
@@ -47,7 +49,11 @@ def main() -> None:
             return result
 
     results = {}
-    for label, opponent in (("random", RandomPlayer), ("weighted", WeightedRandomPlayer)):
+    metrics_file = tempfile.TemporaryFile(mode="w+")
+    original_stderr = __import__("os").dup(2)
+    __import__("os").dup2(metrics_file.fileno(), 2)
+    try:
+      for label, opponent in (("random", RandomPlayer), ("weighted", WeightedRandomPlayer)):
         wins = losses = draws = 0
         for game_index in range(args.games_per_opponent):
             bot_color = Color.RED if game_index % 2 == 0 else Color.BLUE
@@ -71,11 +77,26 @@ def main() -> None:
             "games": total, "wins": wins, "losses": losses, "draws": draws,
             "win_rate": rate, "approx_95pct_interval": [max(0, rate-error), min(1, rate+error)],
         }
+    finally:
+        __import__("os").dup2(original_stderr, 2)
+        __import__("os").close(original_stderr)
+    metrics_file.seek(0)
+    rollout_counts = []
+    for line in metrics_file:
+        if line.startswith("catanatron_search_metrics "):
+            rollout_counts.append(json.loads(line.split(" ", 1)[1])["rollouts"])
+    metrics_file.close()
 
     report = {
         "policy": "rollout", "threads": 1, "budget_ms": args.budget_ms,
         "simulation_cap": args.simulations, "seed_schedule_start": args.seed,
         "decisions": len(latencies),
+        "searched_decisions": len(rollout_counts),
+        "rollouts_per_searched_decision": {
+            "mean": statistics.mean(rollout_counts),
+            "median": statistics.median(rollout_counts),
+            "min": min(rollout_counts), "max": max(rollout_counts),
+        },
         "latency_ms": {
             "p50": statistics.median(latencies), "p95": percentile(latencies, .95),
             "p99": percentile(latencies, .99), "max": max(latencies),
