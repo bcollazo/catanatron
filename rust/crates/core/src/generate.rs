@@ -152,6 +152,25 @@ pub fn generate_actions_with_context(
     out: &mut Vec<Action>,
 ) {
     generate_actions(position, out);
+    if context.friendly_robber && matches!(position.phase, Phase::Robber { .. }) {
+        let unfiltered = out.clone();
+        out.retain(|action| {
+            let Action::MoveRobber { tile, .. } = action else {
+                return true;
+            };
+            !crate::land_tile_nodes(*tile).into_iter().any(|node| {
+                crate::building_owner(position.buildings[usize::from(node.get())]).is_some_and(
+                    |owner| {
+                        owner != position.actor && crate::actual_victory_points(position, owner) < 3
+                    },
+                )
+            })
+        });
+        if out.is_empty() {
+            out.extend(unfiltered);
+        }
+        return;
+    }
     let Phase::PostRoll { actor } = position.phase else {
         return;
     };

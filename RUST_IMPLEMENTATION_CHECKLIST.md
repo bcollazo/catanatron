@@ -170,4 +170,10 @@ Status at handoff: **planning complete; production implementation not started**.
 * `cargo test --manifest-path rust/Cargo.toml` (26 tests), formatting, and Clippy with warnings denied pass.
 * Next action: broaden E05/E06 matrix coverage (chance weights, award ties/blocks, proposer seats, failed confirmation) and remove the remaining unsupported action paths before task completion.
 
+### 2026-09-07 — E05 chance/friendly-robber checkpoint
+
+* Added exact integer chance enumeration: all 36 concrete dice pairs, theft weights from victim holdings, and development draw weights from deck counts. Added context-configured friendly-robber filtering with unfiltered fallback behavior.
+* `cargo test --manifest-path rust/Cargo.toml` (28 tests), formatting, and Clippy with warnings denied pass.
+* Next action: consume the exact chance table from E07's deterministic sampler and complete the remaining E05/E06 matrix tests while exercising full games.
+
 Append a dated entry after each completed task/session with commit, commands actually run, outcomes, benchmark report paths and precise next step. Keep incomplete/blocked/missed gates unchecked.

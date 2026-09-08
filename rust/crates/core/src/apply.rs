@@ -382,6 +382,13 @@ pub fn apply_checked_with_context(
     actor: crate::PlayerId,
     action: Action,
 ) -> Result<Transition, IllegalAction> {
+    if matches!(action, Action::MoveRobber { .. }) && context.friendly_robber {
+        let mut legal = Vec::new();
+        crate::generate_actions_with_context(position, context, &mut legal);
+        if !legal.contains(&action) {
+            return Err(IllegalAction::InvalidRobberMove);
+        }
+    }
     if let Action::MaritimeTrade {
         give,
         receive,

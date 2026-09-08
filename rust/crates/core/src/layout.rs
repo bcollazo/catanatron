@@ -53,6 +53,7 @@ impl Layout {
 pub struct GameContext {
     pub layout: Layout,
     pub ports: [Option<Port>; 9],
+    pub friendly_robber: bool,
 }
 
 impl GameContext {
@@ -60,11 +61,17 @@ impl GameContext {
         Self {
             layout,
             ports: [None; 9],
+            friendly_robber: false,
         }
     }
 
     pub const fn with_ports(mut self, ports: [Option<Port>; 9]) -> Self {
         self.ports = ports;
+        self
+    }
+
+    pub const fn with_friendly_robber(mut self, enabled: bool) -> Self {
+        self.friendly_robber = enabled;
         self
     }
 }

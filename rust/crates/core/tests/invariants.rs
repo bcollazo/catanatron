@@ -201,6 +201,31 @@ fn robber_moves_to_a_victim_and_resolves_a_checked_theft() {
 }
 
 #[test]
+fn friendly_robber_filters_tiles_touching_a_low_vp_opponent() {
+    let layout = catanatron_core::Layout::new(
+        [catanatron_core::LandTile::DESERT; catanatron_core::BASE_LAND_TILE_COUNT],
+    )
+    .unwrap();
+    let context = catanatron_core::GameContext::new(layout).with_friendly_robber(true);
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    let victim = PlayerId::new(1).unwrap();
+    position.phase = Phase::Robber {
+        actor,
+        resume_post_roll: true,
+    };
+    position.robber = 18;
+    position.buildings[0] = victim.get() + 1;
+    position.players[1].hand[Resource::Ore.index()] = 1;
+    let mut actions = Vec::new();
+    catanatron_core::generate_actions_with_context(&position, &context, &mut actions);
+    assert!(!actions
+        .iter()
+        .any(|action| matches!(action, Action::MoveRobber { tile, .. } if tile.get() == 9)));
+    assert!(!actions.is_empty());
+}
+
+#[test]
 fn eligible_knight_can_play_before_roll_and_returns_to_pre_roll_after_theft() {
     let mut position = Position::new(2).unwrap();
     let actor = position.actor;
@@ -510,6 +535,49 @@ fn chance_outcomes_must_match_pending_phase_and_available_cards() {
         validate_outcome(&position, Outcome::DevelopmentCard(DevelopmentCard::Knight)),
         Err(IllegalAction::InvalidOutcome)
     );
+}
+
+#[test]
+fn chance_enumeration_has_exact_dice_theft_and_deck_weights() {
+    let mut position = Position::new(2).unwrap();
+    let actor = position.actor;
+    let mut outcomes = Vec::new();
+    position.phase = Phase::Chance {
+        actor,
+        kind: ChanceKind::Dice,
+    };
+    assert_eq!(
+        catanatron_core::enumerate_outcomes(&position, &mut outcomes),
+        36
+    );
+    assert_eq!(outcomes.len(), 36);
+    assert!(outcomes.iter().all(|entry| entry.weight == 1));
+
+    let victim = PlayerId::new(1).unwrap();
+    position.players[1].hand[Resource::Wood.index()] = 2;
+    position.players[1].hand[Resource::Ore.index()] = 3;
+    position.phase = Phase::Chance {
+        actor,
+        kind: ChanceKind::Theft {
+            victim,
+            resume_post_roll: true,
+        },
+    };
+    assert_eq!(
+        catanatron_core::enumerate_outcomes(&position, &mut outcomes),
+        5
+    );
+    assert_eq!(outcomes.len(), 2);
+
+    position.phase = Phase::Chance {
+        actor,
+        kind: ChanceKind::DevelopmentCard,
+    };
+    assert_eq!(
+        catanatron_core::enumerate_outcomes(&position, &mut outcomes),
+        25
+    );
+    assert_eq!(outcomes.len(), 5);
 }
 
 #[test]
