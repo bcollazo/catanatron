@@ -1,8 +1,10 @@
 use catanatron_core::{
-    edge_endpoints, DevelopmentCard, EdgeId, GameContext, LandTile, Layout, NodeId, Phase,
-    PlayerId, Port, Position, Resource, BASE_EDGE_COUNT, BASE_LAND_TILE_COUNT, BASE_NODE_COUNT,
+    apply_checked_with_context, apply_outcome_checked_with_context, edge_endpoints,
+    generate_actions_with_context, Action, DevelopmentCard, EdgeId, GameContext, LandTile, Layout,
+    NodeId, Outcome, Phase, PlayerId, Port, Position, Resource, Status, TileId, BASE_EDGE_COUNT,
+    BASE_LAND_TILE_COUNT, BASE_NODE_COUNT,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub struct FixtureRecord {
@@ -128,6 +130,160 @@ pub enum ImportError {
     InvalidLayout,
     InvalidRobber,
     InconsistentActor,
+    InvalidAction(String),
+    InvalidOutcome,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ConformanceError {
+    pub case_id: String,
+    pub field: String,
+    pub expected: String,
+    pub actual: String,
+}
+
+pub fn check_record(record: &FixtureRecord) -> Result<(), ConformanceError> {
+    let (context, mut actual) = import_state(&record.before)
+        .map_err(|error| mismatch(record, "before", "importable", format!("{error:?}")))?;
+    compare_menu_boundary(
+        record,
+        "legal_before",
+        &context,
+        &actual,
+        &record.before,
+        &record.legal_before,
+    )?;
+    let intent = wire_action(&record.before, &record.action)
+        .map_err(|error| mismatch(record, "action", "valid", format!("{error:?}")))?;
+    let actor = actual.actor;
+    let mut transition = apply_checked_with_context(&mut actual, &context, actor, intent)
+        .map_err(|error| mismatch(record, "apply", "accepted", format!("{error:?}")))?;
+    if matches!(
+        record.action.kind.as_str(),
+        "ROLL" | "BUY_DEVELOPMENT_CARD" | "MOVE_ROBBER"
+    ) {
+        if let Some(value) = &record.outcome {
+            let outcome = wire_outcome(&record.action.kind, value)
+                .map_err(|error| mismatch(record, "outcome", "valid", format!("{error:?}")))?;
+            transition = apply_outcome_checked_with_context(&mut actual, &context, outcome)
+                .map_err(|error| {
+                    mismatch(record, "outcome.apply", "accepted", format!("{error:?}"))
+                })?;
+        }
+    }
+    let (_, expected) = import_state(&record.after)
+        .map_err(|error| mismatch(record, "after", "importable", format!("{error:?}")))?;
+    if actual != expected {
+        return Err(mismatch(
+            record,
+            first_position_difference(&expected, &actual),
+            format!("{expected:?}"),
+            format!("{actual:?}"),
+        ));
+    }
+    let expected_status = match record.status_after.as_str() {
+        "decision" => Status::Decision,
+        other => {
+            return Err(mismatch(
+                record,
+                "status_after",
+                "decision",
+                other.to_owned(),
+            ))
+        }
+    };
+    if transition.status != expected_status {
+        return Err(mismatch(
+            record,
+            "status_after",
+            format!("{expected_status:?}"),
+            format!("{:?}", transition.status),
+        ));
+    }
+    compare_menu_boundary(
+        record,
+        "legal_after",
+        &context,
+        &actual,
+        &record.after,
+        &record.legal_after,
+    )
+}
+
+fn mismatch(
+    record: &FixtureRecord,
+    field: impl Into<String>,
+    expected: impl Into<String>,
+    actual: impl Into<String>,
+) -> ConformanceError {
+    ConformanceError {
+        case_id: record.case_id.clone(),
+        field: field.into(),
+        expected: expected.into(),
+        actual: actual.into(),
+    }
+}
+
+fn compare_menu_boundary(
+    record: &FixtureRecord,
+    field: &str,
+    context: &GameContext,
+    position: &Position,
+    state: &FixtureState,
+    wire_menu: &[WireAction],
+) -> Result<(), ConformanceError> {
+    let mut actual = Vec::new();
+    generate_actions_with_context(position, context, &mut actual);
+    let expected = wire_menu
+        .iter()
+        .map(|action| wire_action(state, action))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| mismatch(record, field, "valid", format!("{error:?}")))?;
+    if actual.len() != expected.len()
+        || actual.iter().any(|action| !expected.contains(action))
+        || expected.iter().any(|action| !actual.contains(action))
+    {
+        return Err(mismatch(
+            record,
+            field,
+            format!("{expected:?}"),
+            format!("{actual:?}"),
+        ));
+    }
+    Ok(())
+}
+
+fn first_position_difference(expected: &Position, actual: &Position) -> &'static str {
+    if expected.players != actual.players {
+        "after.players"
+    } else if expected.buildings != actual.buildings {
+        "after.buildings"
+    } else if expected.roads != actual.roads {
+        "after.roads"
+    } else if expected.bank != actual.bank {
+        "after.bank"
+    } else if expected.dev_bank != actual.dev_bank {
+        "after.development_deck"
+    } else if expected.robber != actual.robber {
+        "after.robber"
+    } else if expected.phase != actual.phase {
+        "after.phase"
+    } else if expected.actor != actual.actor {
+        "after.actor"
+    } else if expected.turn_owner != actual.turn_owner {
+        "after.turn_owner"
+    } else if expected.turns != actual.turns {
+        "after.turns"
+    } else if expected.trade_give != actual.trade_give
+        || expected.trade_receive != actual.trade_receive
+        || expected.trade_proposer != actual.trade_proposer
+        || expected.trade_responded_mask != actual.trade_responded_mask
+        || expected.trade_accepted_mask != actual.trade_accepted_mask
+    {
+        "after.trade"
+    } else {
+        "after.awards"
+    }
 }
 
 pub fn import_state(state: &FixtureState) -> Result<(GameContext, Position), ImportError> {
@@ -369,6 +525,164 @@ fn development(value: &str) -> Result<DevelopmentCard, ImportError> {
     }
 }
 
+fn wire_action(state: &FixtureState, wire: &WireAction) -> Result<Action, ImportError> {
+    if seat(state, &wire.color)? != state_actor(state)? {
+        return Err(ImportError::InconsistentActor);
+    }
+    let invalid = || ImportError::InvalidAction(wire.kind.clone());
+    Ok(match wire.kind.as_str() {
+        "ROLL" => Action::Roll,
+        "END_TURN" => Action::EndTurn,
+        "BUILD_ROAD" => Action::BuildRoad(edge_from_value(&wire.value)?),
+        "BUILD_SETTLEMENT" => Action::BuildSettlement(
+            NodeId::new(json_u8(&wire.value, invalid())?).map_err(|_| invalid())?,
+        ),
+        "BUILD_CITY" => {
+            Action::BuildCity(NodeId::new(json_u8(&wire.value, invalid())?).map_err(|_| invalid())?)
+        }
+        "BUY_DEVELOPMENT_CARD" => Action::BuyDevelopmentCard,
+        "PLAY_KNIGHT_CARD" => Action::PlayKnight,
+        "MOVE_ROBBER" => {
+            let values = wire.value.as_array().ok_or_else(invalid)?;
+            if values.len() != 2 {
+                return Err(invalid());
+            }
+            let coordinate: [i8; 3] =
+                serde_json::from_value(values[0].clone()).map_err(|_| invalid())?;
+            let tile = state
+                .layout
+                .iter()
+                .position(|candidate| candidate.coordinate == coordinate)
+                .and_then(|index| TileId::new(index as u8).ok())
+                .ok_or_else(invalid)?;
+            let victim = values[1]
+                .as_str()
+                .map(|color| seat(state, color))
+                .transpose()?;
+            Action::MoveRobber { tile, victim }
+        }
+        "DISCARD_RESOURCE" => {
+            Action::Discard(resource_from(wire.value.as_str().ok_or_else(invalid)?)?)
+        }
+        "PLAY_YEAR_OF_PLENTY" => {
+            let values = wire.value.as_array().ok_or_else(invalid)?;
+            let first = resource_from(
+                values
+                    .first()
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or_else(invalid)?,
+            )?;
+            let second = values
+                .get(1)
+                .and_then(serde_json::Value::as_str)
+                .map(resource_from)
+                .transpose()?;
+            Action::YearOfPlenty { first, second }
+        }
+        "PLAY_MONOPOLY" => {
+            Action::Monopoly(resource_from(wire.value.as_str().ok_or_else(invalid)?)?)
+        }
+        "PLAY_ROAD_BUILDING" => Action::RoadBuilding,
+        "MARITIME_TRADE" => {
+            let values = wire.value.as_array().ok_or_else(invalid)?;
+            let mut counts = [0_u8; 5];
+            for value in values {
+                if let Some(resource) = value.as_str() {
+                    counts[resource_from(resource)?.index()] += 1;
+                } else if !value.is_null() {
+                    return Err(invalid());
+                }
+            }
+            let give = Resource::ALL
+                .into_iter()
+                .find(|resource| counts[resource.index()] > 1)
+                .ok_or_else(invalid)?;
+            let receive = Resource::ALL
+                .into_iter()
+                .find(|resource| counts[resource.index()] == 1)
+                .ok_or_else(invalid)?;
+            Action::MaritimeTrade {
+                give,
+                receive,
+                rate: counts[give.index()],
+            }
+        }
+        "OFFER_TRADE" => {
+            let (give, receive) = trade_arrays(&wire.value)?;
+            Action::OfferTrade { give, receive }
+        }
+        "ACCEPT_TRADE" => Action::AcceptTrade,
+        "REJECT_TRADE" => Action::RejectTrade,
+        "CONFIRM_TRADE" => {
+            let values = wire.value.as_array().ok_or_else(invalid)?;
+            let color = values
+                .get(10)
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(invalid)?;
+            Action::ConfirmTrade(seat(state, color)?)
+        }
+        "CANCEL_TRADE" => Action::CancelTrade,
+        _ => return Err(invalid()),
+    })
+}
+
+fn state_actor(state: &FixtureState) -> Result<PlayerId, ImportError> {
+    seat(state, &state.actor)
+}
+
+fn json_u8(value: &serde_json::Value, error: ImportError) -> Result<u8, ImportError> {
+    value
+        .as_u64()
+        .and_then(|raw| u8::try_from(raw).ok())
+        .ok_or(error)
+}
+
+fn edge_from_value(value: &serde_json::Value) -> Result<EdgeId, ImportError> {
+    let nodes: [u8; 2] = serde_json::from_value(value.clone())
+        .map_err(|_| ImportError::InvalidAction("BUILD_ROAD".to_owned()))?;
+    (0..BASE_EDGE_COUNT as u8)
+        .map(|raw| EdgeId::new(raw).expect("base edge"))
+        .find(|edge| {
+            let (a, b) = edge_endpoints(*edge);
+            [a.get(), b.get()] == nodes || [b.get(), a.get()] == nodes
+        })
+        .ok_or(ImportError::InvalidRoad(nodes))
+}
+
+fn trade_arrays(value: &serde_json::Value) -> Result<([u8; 5], [u8; 5]), ImportError> {
+    let values = value
+        .as_array()
+        .filter(|values| values.len() >= 10)
+        .ok_or(ImportError::InvalidTrade)?;
+    let mut give = [0; 5];
+    let mut receive = [0; 5];
+    for index in 0..5 {
+        give[index] = wire_u8(&values[index])?;
+        receive[index] = wire_u8(&values[index + 5])?;
+    }
+    Ok((give, receive))
+}
+
+fn wire_outcome(kind: &str, value: &serde_json::Value) -> Result<Outcome, ImportError> {
+    match kind {
+        "ROLL" => {
+            let dice: [u8; 2] =
+                serde_json::from_value(value.clone()).map_err(|_| ImportError::InvalidOutcome)?;
+            Ok(Outcome::Dice {
+                first: dice[0],
+                second: dice[1],
+            })
+        }
+        "BUY_DEVELOPMENT_CARD" => Ok(Outcome::DevelopmentCard(development(
+            value.as_str().ok_or(ImportError::InvalidOutcome)?,
+        )?)),
+        "MOVE_ROBBER" => Ok(Outcome::StolenResource(resource_from(
+            value.as_str().ok_or(ImportError::InvalidOutcome)?,
+        )?)),
+        _ => Err(ImportError::InvalidOutcome),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -408,6 +722,25 @@ mod tests {
                     .unwrap_or_else(|error| panic!("{} before: {error:?}", record.case_id));
                 import_state(&record.after)
                     .unwrap_or_else(|error| panic!("{} after: {error:?}", record.case_id));
+            }
+        }
+    }
+
+    #[test]
+    fn applies_every_committed_python_transition() {
+        let corpora = [
+            include_str!("../../../tests/fixtures/transitions/sample-base-2p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-base-3p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-base-4p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/sample-tournament-4p.jsonl"),
+            include_str!("../../../tests/fixtures/transitions/crafted-builds-and-trades.jsonl"),
+        ];
+        for corpus in corpora {
+            for line in corpus.lines() {
+                let record: FixtureRecord = serde_json::from_str(line).unwrap();
+                if let Err(error) = check_record(&record) {
+                    panic!("{error:#?}");
+                }
             }
         }
     }

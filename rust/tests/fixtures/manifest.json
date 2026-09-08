@@ -31,10 +31,10 @@
     "divergences\\D001-domestic-trade-proposer-revisited.json": "d2e16ea34354a79fe64056abcb88fade84386e2708728abdf1a3951801ca12af",
     "transitions\\chance-outcomes.json": "d8507503cf62797780f0ca4d8cbcb2505b97b5438f56e1819a2fdabe8f4cbb6f",
     "transitions\\crafted-builds-and-trades.jsonl": "ba0739c4f81775b287d6e51d03e34e010835aca04cba5f6a1cea4e49bf08fd6b",
-    "transitions\\sample-base-2p.jsonl": "5d97982a9e18e96a771f389853eaa5682b38fcb12b380618e672ed91c4828899",
-    "transitions\\sample-base-3p.jsonl": "35e00b92e164ba12bfa69cbedb182c8b447010435f2acef4269e6d5595c37bbc",
-    "transitions\\sample-base-4p.jsonl": "4f9fb9c0f99fae703a3175f2bbee9a6aa28345af0d114dfca3fe8f6367f3ea9c",
-    "transitions\\sample-tournament-4p.jsonl": "f9d9502dfc6e63b5123f045230cd86105ac41c10e1519b8d6ec7eaca7fe4d91b"
+    "transitions\\sample-base-2p.jsonl": "24b6974b90f34565a382379ce8503ff4b9e2f54b0b12e19a4661cb09a3d018c8",
+    "transitions\\sample-base-3p.jsonl": "dae17ea0a8b1cf94015c508a420d690c0fd52dda1aba72ad915b0ca8b58c92d2",
+    "transitions\\sample-base-4p.jsonl": "bba234a7de11021b5f1a0c600862daba36a4b30356488f83a3e37da63db90852",
+    "transitions\\sample-tournament-4p.jsonl": "23eb26633cade4d4e581729ade97c67188c6d7ee33d3d5c72edd28fa7cb86d67"
   },
   "fixture_version": 2,
   "resource_order": [

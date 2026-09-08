@@ -1,4 +1,4 @@
-# Rust fixture format (v1)
+# Rust fixture format (v2)
 
 Fixtures are canonical JSON or JSONL records generated from the pinned Python
 rules source. A transition record contains `fixture_version`, `case_id`,
@@ -8,13 +8,16 @@ optional stochastic `outcome`, `after`, `legal_before`, `legal_after`, and
 purchase have `value: null` in the intent; their concrete result is in
 `outcome`.
 
-State snapshots contain only semantic fields: concrete map assignment, active
-seats, ownership, bank/hands/development counts, timing flags and piece
-inventories, awards, robber position, actor/turn owner, prompt/trade state,
-and turn count. Caches, UUIDs, history, and RNG state are intentionally
+State snapshots contain only semantic fields: concrete map and port assignment,
+active seats, owned roads/buildings, bank/hands/development counts, piece
+inventories, graph-derived award state, robber position, actor/turn owner, a
+typed phase with resume payload, pending trade/responses, and turn count. The
+legacy Python prompt and timing flags remain diagnostic fields; importers use
+the typed `phase`. Caches, UUIDs, history, and RNG state are intentionally
 excluded. Enum values become strings, coordinates/edges become JSON arrays,
-and action menus are canonicalized by sorting their JSON representations.
+and action menus are compared canonically without depending on ordering.
 
-The E02 exporter currently emits deterministic initialized states and bounded
-sample traces. Its manifest reports actual coverage; it must reach the guide's
-full action/phase matrix before E02 can be checked off.
+The corpus covers all 18 Python action variants, all reachable decision prompts,
+BASE/TOURNAMENT, and 2/3/4 seats. The E08 conformance runner imports both
+boundaries, compares both legal menus, applies the intent and forced chance
+outcome, and compares the resulting typed state and status.

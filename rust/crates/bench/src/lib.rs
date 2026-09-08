@@ -2,4 +2,4 @@
 
 mod fixture;
 
-pub use fixture::{import_state, FixtureRecord, ImportError};
+pub use fixture::{check_record, import_state, ConformanceError, FixtureRecord, ImportError};

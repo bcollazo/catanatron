@@ -36,7 +36,7 @@ Status at handoff: **planning complete; production implementation not started**.
 
 * Current task: E08 (differential harness, benchmarks, and allocation report).
 * Last implementation check: release core/search suite passes, including 33 core invariants, RNG/policy/initialization/rollout tests, and 400 complete seeded games with winners for every 2/4-player × random/weighted combination.
-* Next action: convert fixture actions/outcomes, apply every golden transition in Rust, and compare canonical after-state/status/menu field by field.
+* Next action: implement the live Python/Rust differential driver and generate at least 100 controlled-outcome trajectories for each 2/3/4-player configuration.
 * Blocking condition: none for core work. PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` is locally available but not merged into local `main`; real stdio certification remains pending that source or a recorded successor.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
 * Known failing fixture/test IDs: none. E02 complete; later Rust conformance tests must consume the committed corpus.
@@ -87,6 +87,13 @@ Status at handoff: **planning complete; production implementation not started**.
 * Upgraded canonical fixtures to version 2 so snapshots explicitly carry typed phase/resume payloads, owned roads, ports, award state, and domestic-trade response progress instead of asking Rust to infer missing facts.
 * Every before/after boundary in all five committed transition corpora deserializes and imports into typed Rust context/state. Deterministic fixture regeneration, focused tests, formatting, and Clippy with warnings denied pass.
 * This checkpoint proves lossless import coverage only. Transition/menu parity is the next gate and is not yet claimed.
+
+### 2026-09-07 — E08 golden-transition parity checkpoint
+
+* Added the `catanatron-conformance` JSONL executable. It imports each before state, compares the pre-action legal menu, applies the typed intent and forced outcome, and compares after-state, status, and post-action legal menu with first-field mismatch reporting.
+* All 394 committed Python transition records are equal under `rust-v1`; the release runner reports `{"cases":394,"status":"equal"}`.
+* Differential work found and corrected two exporter ambiguities (stale Python longest-road and robber flags) and aligned Rust's eligibility mask with Python's turn-start snapshot semantics. The full workspace suite (38 tests), formatting, and Clippy with warnings denied pass.
+* This is golden-corpus parity, not the E08 exit: live controlled full-game trajectories, divergence accounting, benchmark reports, and allocation measurement remain open.
 
 ### 2026-09-07 — E04 post-roll road checkpoint
 

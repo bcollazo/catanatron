@@ -340,9 +340,9 @@ fn consume_development_card(
 ) {
     let player = &mut position.players[usize::from(actor.get())];
     player.dev[card.index()] -= 1;
-    if player.dev[card.index()] == 0 {
-        player.eligible_dev_mask &= !(1 << card.index());
-    }
+    // Python's OWNED_AT_START flags are a turn-start snapshot. They remain
+    // set after the last eligible card is consumed and are refreshed on end
+    // turn; `dev` and `played_dev` still prevent a second play.
     player.played_dev = true;
 }
 

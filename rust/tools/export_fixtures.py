@@ -63,7 +63,9 @@ def snapshot(game: Game, map_name: str) -> dict[str, Any]:
                 "played_dev": state.player_state[prefix + "HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"],
                 "pieces": [state.player_state[prefix + "ROADS_AVAILABLE"], state.player_state[prefix + "SETTLEMENTS_AVAILABLE"], state.player_state[prefix + "CITIES_AVAILABLE"]],
                 "played_knights": state.player_state[prefix + "PLAYED_KNIGHT"],
-                "longest_road_length": state.player_state[prefix + "LONGEST_ROAD_LENGTH"],
+                # The player-state cache is not refreshed for free setup roads;
+                # Board owns the graph-derived semantic value used by the rules.
+                "longest_road_length": board.road_lengths[color],
                 "has_longest_road": state.player_state[prefix + "HAS_ROAD"],
                 "has_largest_army": state.player_state[prefix + "HAS_ARMY"],
                 "has_rolled": state.player_state[prefix + "HAS_ROLLED"],
@@ -141,21 +143,26 @@ def phase_value(state) -> dict[str, Any]:
             if state.current_prompt == ActionPrompt.BUILD_INITIAL_SETTLEMENT
             else "SETUP_ROAD"
         )
+        building_count = len(state.board.buildings)
         phase = {
             "kind": kind,
             "actor": actor,
-            "reverse": sum(1 for building in state.board.buildings.values()) >= len(state.colors),
+            "reverse": (
+                building_count >= len(state.colors)
+                if kind == "SETUP_SETTLEMENT"
+                else building_count > len(state.colors)
+            ),
         }
         if kind == "SETUP_ROAD":
             phase["settlement"] = state.action_records[-1].action.value
         return phase
-    if state.is_discarding:
+    if state.current_prompt == ActionPrompt.DISCARD:
         return {
             "kind": "DISCARD",
             "actor": actor,
             "remaining": state.discard_counts[state.current_player_index],
         }
-    if state.is_moving_knight:
+    if state.current_prompt == ActionPrompt.MOVE_ROBBER:
         return {"kind": "ROBBER", "actor": actor, "resume_post_roll": resume_post_roll}
     if state.is_road_building and state.free_roads_available:
         return {
