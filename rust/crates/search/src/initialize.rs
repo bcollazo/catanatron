@@ -168,6 +168,71 @@ pub fn initialize_mini(
     Ok((context, position))
 }
 
+/// Initializes Python's fixed TOURNAMENT assignment on BASE geometry.
+pub fn initialize_tournament(
+    player_count: u8,
+) -> Result<(GameContext, Position), catanatron_core::IllegalAction> {
+    use Resource::{Brick, Ore, Sheep, Wheat, Wood};
+    let tiles = [
+        LandTile::producing(Brick, 8),
+        LandTile::producing(Wheat, 10),
+        LandTile::producing(Wood, 5),
+        LandTile::producing(Sheep, 4),
+        LandTile::producing(Ore, 11),
+        LandTile::producing(Brick, 9),
+        LandTile::producing(Wheat, 2),
+        LandTile::producing(Brick, 11),
+        LandTile::producing(Wood, 3),
+        LandTile::DESERT,
+        LandTile::producing(Ore, 4),
+        LandTile::producing(Wood, 6),
+        LandTile::producing(Sheep, 12),
+        LandTile::producing(Ore, 6),
+        LandTile::producing(Wheat, 5),
+        LandTile::producing(Sheep, 3),
+        LandTile::producing(Wheat, 9),
+        LandTile::producing(Wood, 10),
+        LandTile::producing(Sheep, 8),
+    ];
+    let assignments = [
+        None,
+        Some(Brick),
+        Some(Wood),
+        None,
+        Some(Wheat),
+        Some(Ore),
+        None,
+        Some(Sheep),
+        None,
+    ];
+    let nodes = [
+        (25, 26),
+        (28, 29),
+        (32, 33),
+        (35, 36),
+        (38, 39),
+        (40, 44),
+        (45, 47),
+        (48, 49),
+        (52, 53),
+    ];
+    let mut ports = [None; 9];
+    for (index, ((first, second), resource)) in nodes.into_iter().zip(assignments).enumerate() {
+        ports[index] = Some(Port::new(
+            resource,
+            [
+                NodeId::new(first).expect("tournament port node"),
+                NodeId::new(second).expect("tournament port node"),
+            ],
+        ));
+    }
+    let context = GameContext::new(Layout::new(tiles).expect("valid TOURNAMENT assignment"))
+        .with_ports(ports);
+    let mut position = Position::new(player_count)?;
+    position.robber = 9;
+    Ok((context, position))
+}
+
 fn shuffle<T>(values: &mut [T], random: &mut impl RandomSource) {
     for upper in (1..values.len()).rev() {
         let index = draw_bounded(random, (upper + 1) as u64).expect("positive bound") as usize;
@@ -221,5 +286,26 @@ mod tests {
             .layout
             .tile(catanatron_core::TileId::new(raw).unwrap())
             == LandTile::DESERT));
+    }
+
+    #[test]
+    fn tournament_initialization_preserves_the_fixed_python_assignment() {
+        let (context, position) = initialize_tournament(4).unwrap();
+        assert_eq!(position.robber, 9);
+        assert_eq!(
+            context
+                .layout
+                .tile(catanatron_core::TileId::new(0).unwrap()),
+            LandTile::producing(Resource::Brick, 8)
+        );
+        assert_eq!(
+            context
+                .layout
+                .tile(catanatron_core::TileId::new(9).unwrap()),
+            LandTile::DESERT
+        );
+        assert_eq!(context.ports[0].unwrap().resource, None);
+        assert_eq!(context.ports[1].unwrap().resource, Some(Resource::Brick));
+        assert_eq!(context.ports[7].unwrap().resource, Some(Resource::Sheep));
     }
 }
