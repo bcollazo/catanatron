@@ -26,7 +26,7 @@ fn run() -> Result<serde_json::Value, String> {
     let mut args = env::args().skip(1);
     let name = args
         .next()
-        .ok_or("usage: compare-agents POLICY GAMES [SIMULATIONS] [BUDGET_MS]")?;
+        .ok_or("usage: compare-agents POLICY GAMES [SIMULATIONS] [BUDGET_MS] [MAX_DEPTH]")?;
     let games: u64 = args
         .next()
         .ok_or("missing GAMES")?
@@ -43,10 +43,15 @@ fn run() -> Result<serde_json::Value, String> {
         .parse()
         .map_err(|_| "invalid BUDGET_MS")?;
     let kind = parse_kind(&name)?;
+    let max_depth: u8 = args
+        .next()
+        .unwrap_or_else(|| "2".to_owned())
+        .parse()
+        .map_err(|_| "invalid MAX_DEPTH")?;
     let contender = AgentConfig {
         kind,
         simulations,
-        max_depth: 32,
+        max_depth,
         budget: Duration::from_millis(budget_ms),
     };
     let random = AgentConfig::new(AgentKind::Random);
@@ -87,6 +92,7 @@ fn run() -> Result<serde_json::Value, String> {
         "seconds": seconds,
         "simulations": simulations,
         "budget_ms": budget_ms,
+        "depth": max_depth,
         "seat_rotation": "game_index_mod_4",
         "opponents": "three Random players"
     }))

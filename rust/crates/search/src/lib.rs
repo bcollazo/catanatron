@@ -9,7 +9,8 @@ mod rollout;
 
 pub use agents::{play_agents, select_agent_action, AgentConfig, AgentKind};
 pub use alphabeta::{
-    heuristic, iterative_alpha_beta, AlphaBetaMode, AlphaBetaResult, AlphaBetaStats,
+    heuristic, iterative_alpha_beta, iterative_alpha_beta_with_evaluator, AlphaBetaMode,
+    AlphaBetaResult, AlphaBetaStats,
 };
 pub use flat::{flat_monte_carlo, flat_monte_carlo_until, FlatResult};
 pub use initialize::{initialize_base, initialize_mini, initialize_tournament, NumberPlacement};

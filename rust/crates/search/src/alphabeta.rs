@@ -35,12 +35,23 @@ pub fn iterative_alpha_beta(
     budget: Duration,
     mode: AlphaBetaMode,
 ) -> AlphaBetaResult {
+    iterative_alpha_beta_with_evaluator(context, root, max_depth, budget, mode, heuristic)
+}
+
+pub fn iterative_alpha_beta_with_evaluator(
+    context: &GameContext,
+    root: &Position,
+    max_depth: u8,
+    budget: Duration,
+    mode: AlphaBetaMode,
+    evaluator: fn(&GameContext, &Position, PlayerId) -> f64,
+) -> AlphaBetaResult {
     let started = Instant::now();
     let deadline = started + budget;
     let root_player = root.actor;
     let mut result = AlphaBetaResult {
         action: None,
-        value: heuristic(context, root, root_player),
+        value: evaluator(context, root, root_player),
         stats: AlphaBetaStats::default(),
     };
     for depth in 1..=max_depth {
@@ -55,6 +66,7 @@ pub fn iterative_alpha_beta(
             f64::INFINITY,
             deadline,
             mode,
+            evaluator,
             &mut scratch,
         );
         result.stats.nodes += scratch.nodes;
@@ -95,13 +107,14 @@ fn search(
     mut beta: f64,
     deadline: Instant,
     mode: AlphaBetaMode,
+    evaluator: fn(&GameContext, &Position, PlayerId) -> f64,
     scratch: &mut SearchScratch,
 ) -> NodeResult {
     scratch.nodes += 1;
     if Instant::now() >= deadline {
         return NodeResult {
             action: None,
-            value: heuristic(context, position, root_player),
+            value: evaluator(context, position, root_player),
             complete: false,
         };
     }
@@ -111,7 +124,7 @@ fn search(
     {
         return NodeResult {
             action: None,
-            value: heuristic(context, position, root_player),
+            value: evaluator(context, position, root_player),
             complete: true,
         };
     }
@@ -121,7 +134,7 @@ fn search(
         scratch.actions = actions;
         return NodeResult {
             action: None,
-            value: heuristic(context, position, root_player),
+            value: evaluator(context, position, root_player),
             complete: true,
         };
     }
@@ -154,6 +167,7 @@ fn search(
                 beta,
                 deadline,
                 mode,
+                evaluator,
                 scratch,
             );
             if !searched.complete {
