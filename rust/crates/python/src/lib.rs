@@ -11,11 +11,13 @@ use catanatron_search::{
 use numpy::{ndarray::Array2, IntoPyArray};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
+mod generated;
+
 const OBSERVATION_SCHEMA_VERSION: u16 = 1;
 const ACTION_SCHEMA_VERSION: u16 = 1;
 const FEATURE_COUNT: usize = 1 + 1 + 1 + 5 + 54 + 72 + 4 * (5 + 5 + 3 + 2);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 enum BoardConfig {
     Base,
     Mini,
@@ -199,6 +201,54 @@ impl Batch {
         Ok(dict)
     }
 
+    fn step_gym_many<'py>(
+        &mut self,
+        py: Python<'py>,
+        indices: Vec<usize>,
+        action_ids: Vec<usize>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        validate_indices(&indices, self.positions.len())?;
+        if indices.len() != action_ids.len() {
+            return Err(PyValueError::new_err(
+                "indices and action_ids must have equal length",
+            ));
+        }
+        let keys = generated::gym_keys(self.board, self.players);
+        let mut actions = Vec::with_capacity(indices.len());
+        for (&index, &action_id) in indices.iter().zip(&action_ids) {
+            let expected = keys
+                .get(action_id)
+                .ok_or_else(|| PyValueError::new_err("Gym action id is out of range"))?;
+            let mut menu = Vec::new();
+            generate_actions_with_context(&self.positions[index], &self.contexts[index], &mut menu);
+            actions.push(
+                menu.into_iter()
+                    .find(|action| action_key(*action).as_deref() == Some(*expected))
+                    .ok_or_else(|| {
+                        PyValueError::new_err("Gym action is not legal in the current menu")
+                    })?,
+            );
+        }
+        let results = py
+            .detach(|| {
+                indices
+                    .iter()
+                    .zip(actions)
+                    .map(|(&index, action)| self.step_one(index, action))
+                    .collect::<Result<Vec<_>, String>>()
+            })
+            .map_err(PyValueError::new_err)?;
+        step_result_dict(
+            py,
+            &self.contexts,
+            &self.positions,
+            &self.generations,
+            &indices,
+            &results,
+            self.players,
+        )
+    }
+
     #[pyo3(signature = (indices, seeds, turn_limit=1000, action_limit=100000, policy="weighted", threads=1))]
     #[allow(clippy::too_many_arguments)]
     fn rollout_many<'py>(
@@ -321,12 +371,33 @@ fn observations<'py>(
     let mut actors = Vec::with_capacity(indices.len());
     let mut offsets = Vec::with_capacity(indices.len() + 1);
     let mut action_ids = Vec::new();
+    let gym_keys = generated::gym_keys(
+        if positions
+            .first()
+            .is_some_and(|position| position.map == catanatron_core::MapKind::Mini)
+        {
+            BoardConfig::Mini
+        } else {
+            BoardConfig::Base
+        },
+        positions
+            .first()
+            .map_or(0, |position| position.player_count),
+    );
+    let mut gym_mask = vec![0_u8; indices.len() * gym_keys.len()];
     offsets.push(0_u32);
-    for &index in indices {
+    for (batch_row, &index) in indices.iter().enumerate() {
         encode_features(&positions[index], &mut features);
         actors.push(positions[index].actor.get());
         let mut menu = Vec::new();
         generate_actions_with_context(&positions[index], &contexts[index], &mut menu);
+        for action in &menu {
+            if let Some(key) = action_key(*action) {
+                if let Some(gym_id) = gym_keys.iter().position(|candidate| *candidate == key) {
+                    gym_mask[batch_row * gym_keys.len() + gym_id] = 1;
+                }
+            }
+        }
         action_ids
             .extend((0..menu.len()).map(|row| (u64::from(generations[index]) << 32) | row as u64));
         offsets.push(action_ids.len() as u32);
@@ -343,6 +414,86 @@ fn observations<'py>(
     dict.set_item("actors", actors.into_pyarray(py))?;
     dict.set_item("menu_offsets", offsets.into_pyarray(py))?;
     dict.set_item("action_ids", action_ids.into_pyarray(py))?;
+    dict.set_item("gym_catalogue_size", gym_keys.len())?;
+    dict.set_item(
+        "gym_legal_mask",
+        Array2::from_shape_vec((indices.len(), gym_keys.len()), gym_mask)
+            .expect("Gym mask shape")
+            .into_pyarray(py),
+    )?;
+    Ok(dict)
+}
+
+fn action_key(action: Action) -> Option<String> {
+    Some(match action {
+        Action::Roll => "ROLL".to_owned(),
+        Action::Discard(resource) => format!("DISCARD:{}", resource.index()),
+        Action::BuildRoad(edge) => format!("ROAD:{}", edge.get()),
+        Action::BuildSettlement(node) => format!("SETTLEMENT:{}", node.get()),
+        Action::BuildCity(node) => format!("CITY:{}", node.get()),
+        Action::BuyDevelopmentCard => "BUY_DEV".to_owned(),
+        Action::PlayKnight => "KNIGHT".to_owned(),
+        Action::YearOfPlenty { first, second } => second.map_or_else(
+            || format!("YOP:{}", first.index()),
+            |second| format!("YOP:{}:{}", first.index(), second.index()),
+        ),
+        Action::RoadBuilding => "ROAD_BUILDING".to_owned(),
+        Action::Monopoly(resource) => format!("MONOPOLY:{}", resource.index()),
+        Action::MoveRobber { tile, victim } => format!(
+            "ROBBER:{}:{}",
+            tile.get(),
+            victim.map_or(-1, |player| i16::from(player.get()))
+        ),
+        Action::MaritimeTrade {
+            give,
+            receive,
+            rate,
+        } => {
+            format!("MARITIME:{}:{}:{rate}", give.index(), receive.index())
+        }
+        Action::EndTurn => "END_TURN".to_owned(),
+        Action::OfferTrade { .. }
+        | Action::AcceptTrade
+        | Action::RejectTrade
+        | Action::ConfirmTrade(_)
+        | Action::CancelTrade => return None,
+    })
+}
+
+fn step_result_dict<'py>(
+    py: Python<'py>,
+    contexts: &[GameContext],
+    positions: &[Position],
+    generations: &[u32],
+    indices: &[usize],
+    results: &[Status],
+    players: u8,
+) -> PyResult<Bound<'py, PyDict>> {
+    let actors: Vec<u8> = indices.iter().map(|&i| positions[i].actor.get()).collect();
+    let terminal: Vec<bool> = results
+        .iter()
+        .map(|result| matches!(result, Status::Won(_)))
+        .collect();
+    let mut rewards = Vec::with_capacity(indices.len() * usize::from(players));
+    for result in results {
+        for player in 0..players {
+            rewards.push(match result {
+                Status::Won(winner) if winner.get() == player => 1_i8,
+                Status::Won(_) => -1,
+                _ => 0,
+            });
+        }
+    }
+    let dict = observations(py, contexts, positions, generations, indices)?;
+    dict.set_item("actors", actors.into_pyarray(py))?;
+    dict.set_item(
+        "rewards",
+        Array2::from_shape_vec((indices.len(), usize::from(players)), rewards)
+            .expect("reward shape")
+            .into_pyarray(py),
+    )?;
+    dict.set_item("terminal", terminal.into_pyarray(py))?;
+    dict.set_item("truncated", vec![false; indices.len()].into_pyarray(py))?;
     Ok(dict)
 }
 

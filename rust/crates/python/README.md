@@ -20,3 +20,7 @@ batch.reset_many([i for i, value in enumerate(done) if value], [1000 + i for i, 
 Menus are ragged: environment `i` uses `action_ids[menu_offsets[i]:menu_offsets[i+1]]`.
 These dynamic IDs are valid for one decision generation only. Rewards are `int8[N, players]`:
 `+1` for the winner, `-1` for other players, and zero before terminal or on truncation.
+
+For compatibility with the existing Gym environment, `gym_legal_mask` uses the exact exported
+Python catalogue and `step_gym_many` accepts those stable catalogue indices. Domestic offers are
+intentionally available only through the dynamic menu because the legacy catalogue omits them.

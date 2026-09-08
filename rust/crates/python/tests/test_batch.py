@@ -44,6 +44,33 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(result["truncated"].shape, (2,))
         np.testing.assert_array_equal(batch.observe_many([0, 1])["features"], before)
 
+    def test_gym_catalogues_match_python_and_stable_ids_step(self):
+        from catanatron.gym.envs.action_space import get_action_array
+        from catanatron.models.player import Color
+
+        colors = (Color.RED, Color.BLUE, Color.ORANGE, Color.WHITE)
+        for map_name in ("BASE", "MINI", "TOURNAMENT"):
+            for players in (2, 3, 4):
+                batch = Batch(1, players=players, map=map_name)
+                observed = batch.observe_many([0])
+                self.assertEqual(
+                    observed["gym_catalogue_size"],
+                    len(get_action_array(colors[:players], map_name)),
+                )
+                self.assertEqual(
+                    observed["gym_legal_mask"].shape,
+                    (1, observed["gym_catalogue_size"]),
+                )
+
+        batch = Batch(1, players=2, map="MINI")
+        observed = batch.observe_many([0])
+        legal_id = int(np.flatnonzero(observed["gym_legal_mask"][0])[0])
+        batch.step_gym_many([0], [legal_id])
+        after = batch.observe_many([0])["features"].copy()
+        with self.assertRaisesRegex(ValueError, "not legal"):
+            batch.step_gym_many([0], [legal_id])
+        np.testing.assert_array_equal(batch.observe_many([0])["features"], after)
+
 
 if __name__ == "__main__":
     unittest.main()
