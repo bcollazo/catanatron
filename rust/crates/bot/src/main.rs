@@ -98,7 +98,7 @@ impl Bot {
                     .wrapping_mul(6_364_136_223_846_793_005)
                     .wrapping_add(1);
                 let action = choices.swap_remove((self.rng as usize) % choices.len());
-                Ok(Some(json!({"action": action})))
+                Ok(Some(json!({"action": action.0})))
             }
             "after" => {
                 if let Some(game_id) = message.game_id {

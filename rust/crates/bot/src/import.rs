@@ -31,7 +31,7 @@ const DEVELOPMENTS: [&str; 5] = [
 pub struct Imported {
     pub context: GameContext,
     pub position: Position,
-    pub offered: Vec<Value>,
+    pub offered: Vec<(Value, Action)>,
 }
 
 #[derive(Deserialize)]
@@ -159,6 +159,16 @@ pub fn import(
             Value::Array(generated_wire)
         ));
     }
+    let offered = offered
+        .into_iter()
+        .map(|wire| {
+            let index = generated_wire
+                .iter()
+                .position(|candidate| candidate == &wire)
+                .expect("menus were proven equal");
+            (wire, generated[index])
+        })
+        .collect();
     Ok(Imported {
         context,
         position,
