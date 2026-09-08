@@ -179,6 +179,24 @@ def _plain(v):
     return v
 
 
+def action_record_to_json(record):
+    """One entry of a game's log: the action, and whatever the engine rolled,
+    drew or stole to carry it out. That second half is what lets the log be
+    replayed without consulting the game's rng."""
+    return [action_to_json(record.action), _plain(record.result)]
+
+
+def action_record_from_json(payload) -> ActionRecord:
+    """The inverse. Results come back as tuples, the shape the engine stores
+    them in, so a replayed record is identical to a loaded one."""
+    action, result = action_from_json(payload[0]), payload[1]
+    return ActionRecord(action=action, result=_tupled(result))
+
+
+def _tupled(result):
+    return tuple(result) if isinstance(result, list) else result
+
+
 def action_from_json(payload) -> Action:
     """Decode ``[color, action_type, value]``.
 
@@ -225,9 +243,7 @@ def state_to_json(game: Game):
         "resource_freqdeck": list(s.resource_freqdeck),
         "development_listdeck": list(s.development_listdeck),  # HIDDEN INFO
         "random_state": _plain(s.random.getstate()),  # HIDDEN INFO
-        "action_records": [
-            [action_to_json(r.action), _plain(r.result)] for r in s.action_records
-        ],
+        "action_records": [action_record_to_json(r) for r in s.action_records],
         "num_turns": s.num_turns,
         "current_player_index": s.current_player_index,
         "current_turn_index": s.current_turn_index,
@@ -297,8 +313,7 @@ def state_from_json(doc, players) -> Game:
         for c, d in doc["buildings_by_color"].items()
     }
     s.action_records = [
-        ActionRecord(action_from_json(a), tuple(r) if isinstance(r, list) else r)
-        for a, r in doc["action_records"]
+        action_record_from_json(entry) for entry in doc["action_records"]
     ]
     s.num_turns = doc["num_turns"]
     s.current_player_index = doc["current_player_index"]
