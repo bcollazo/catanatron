@@ -2,7 +2,7 @@ use std::{env, fs, process::ExitCode, time::Instant};
 
 use catanatron_core::{generate_actions_with_context, Position};
 use catanatron_search::{
-    initialize_base, rollout, NumberPlacement, Policy, RolloutLimits, RolloutScratch,
+    initialize_base, rollout, rollout_many, NumberPlacement, Policy, RolloutLimits, RolloutScratch,
 };
 use serde_json::{json, Value};
 use stats_alloc::{Region, StatsAlloc, INSTRUMENTED_SYSTEM};
@@ -20,6 +20,7 @@ struct Args {
     rollouts: u64,
     fixtures: u64,
     output: Option<String>,
+    threads: usize,
 }
 
 fn main() -> ExitCode {
@@ -40,7 +41,7 @@ fn parse() -> Result<Args, String> {
     let command = values.next().ok_or_else(usage)?;
     if !matches!(
         command.as_str(),
-        "games" | "rollouts" | "kernels" | "allocations"
+        "games" | "rollouts" | "kernels" | "allocations" | "parallel"
     ) {
         return Err(usage());
     }
@@ -53,6 +54,7 @@ fn parse() -> Result<Args, String> {
         rollouts: 1_000,
         fixtures: 1,
         output: None,
+        threads: 1,
     };
     while let Some(flag) = values.next() {
         let value = values
@@ -73,9 +75,8 @@ fn parse() -> Result<Args, String> {
             "--fixtures" => args.fixtures = number(&flag, &value)?,
             "--output" => args.output = Some(value),
             "--map" if value == "BASE" => {}
-            "--threads" if value == "1" => {}
+            "--threads" => args.threads = number(&flag, &value)?,
             "--map" => return Err("only BASE is implemented before E12 MINI support".to_owned()),
-            "--threads" => return Err("this baseline command supports --threads 1".to_owned()),
             _ => return Err(format!("unknown option {flag}")),
         }
     }
@@ -83,10 +84,14 @@ fn parse() -> Result<Args, String> {
         || args.games == 0
         || args.rollouts == 0
         || args.fixtures != 1
+        || args.threads == 0
     {
         return Err(
             "players must be 2..=4, counts positive, and baseline --fixtures must be 1".to_owned(),
         );
+    }
+    if args.command != "parallel" && args.threads != 1 {
+        return Err("only the parallel workload accepts --threads above 1".to_owned());
     }
     Ok(args)
 }
@@ -98,7 +103,7 @@ fn number<T: std::str::FromStr>(flag: &str, value: &str) -> Result<T, String> {
 }
 
 fn usage() -> String {
-    "usage: catanatron-bench <games|rollouts|kernels|allocations> [--seed N] [--players 2..4] [--policy random|weighted] [--games N] [--rollouts N] [--threads 1] [--map BASE] [--output PATH]".to_owned()
+    "usage: catanatron-bench <games|rollouts|kernels|allocations|parallel> [--seed N] [--players 2..4] [--policy random|weighted] [--games N] [--rollouts N] [--threads N] [--map BASE] [--output PATH]".to_owned()
 }
 
 fn run(args: Args) -> Result<Value, String> {
@@ -107,6 +112,7 @@ fn run(args: Args) -> Result<Value, String> {
         "rollouts" => timed_rollouts(&args, args.rollouts, "rollouts"),
         "kernels" => kernels(&args),
         "allocations" => allocations(&args),
+        "parallel" => parallel(&args),
         _ => unreachable!(),
     }?;
     if let Some(path) = &args.output {
@@ -114,6 +120,49 @@ fn run(args: Args) -> Result<Value, String> {
             .map_err(|error| format!("{path}: {error}"))?;
     }
     Ok(report)
+}
+
+fn parallel(args: &Args) -> Result<Value, String> {
+    let (context, root) =
+        initialize_base(args.players, NumberPlacement::OfficialSpiral, args.seed, 0)
+            .map_err(|error| format!("initialization failed: {error:?}"))?;
+    let roots = vec![root; args.rollouts as usize];
+    let seeds: Vec<u64> = (0..args.rollouts)
+        .map(|index| args.seed.wrapping_add(index))
+        .collect();
+    let mut samples = Vec::new();
+    let mut total_actions = 0_u64;
+    for _ in 0..5 {
+        let started = Instant::now();
+        let results = rollout_many(
+            &context,
+            &roots,
+            &seeds,
+            args.policy,
+            RolloutLimits::default(),
+            args.threads,
+        )
+        .map_err(|error| format!("parallel rollout failed: {error:?}"))?;
+        samples.push(started.elapsed().as_secs_f64());
+        total_actions += results
+            .iter()
+            .map(|result| u64::from(result.player_actions))
+            .sum::<u64>();
+    }
+    let seconds: f64 = samples.iter().sum();
+    Ok(common_report(
+        args,
+        "parallel",
+        samples,
+        json!({
+            "batch_size": args.rollouts,
+            "batches": 5,
+            "player_intents": total_actions,
+            "intents_per_second": total_actions as f64 / seconds,
+            "estimated_batch_bytes": roots.len() * std::mem::size_of::<Position>()
+                + roots.len() * std::mem::size_of::<catanatron_search::RolloutResult>(),
+        }),
+    ))
 }
 
 fn timed_rollouts(args: &Args, count: u64, workload: &str) -> Result<Value, String> {
@@ -256,7 +305,7 @@ fn common_report(args: &Args, workload: &str, samples: Vec<f64>, detail: Value) 
         "policy": format!("{:?}", args.policy).to_lowercase(),
         "seed": args.seed,
         "players": args.players,
-        "threads": 1,
+        "threads": args.threads,
         "build": "release-required-for-scoreboard",
         "workload": workload,
         "sample_seconds": samples,
