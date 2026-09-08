@@ -2,7 +2,8 @@ use std::{env, fs, process::ExitCode, time::Instant};
 
 use catanatron_core::{generate_actions_with_context, Position};
 use catanatron_search::{
-    initialize_base, rollout, rollout_many, NumberPlacement, Policy, RolloutLimits, RolloutScratch,
+    initialize_base, initialize_mini, initialize_tournament, rollout, rollout_many,
+    NumberPlacement, Policy, RolloutLimits, RolloutScratch,
 };
 use serde_json::{json, Value};
 use stats_alloc::{Region, StatsAlloc, INSTRUMENTED_SYSTEM};
@@ -18,7 +19,8 @@ struct Args {
     policy: Policy,
     games: u64,
     rollouts: u64,
-    fixtures: u64,
+    fixtures: String,
+    map: String,
     output: Option<String>,
     threads: usize,
 }
@@ -52,7 +54,8 @@ fn parse() -> Result<Args, String> {
         policy: Policy::Weighted,
         games: 100,
         rollouts: 1_000,
-        fixtures: 1,
+        fixtures: "rust/tests/fixtures".to_owned(),
+        map: "BASE".to_owned(),
         output: None,
         threads: 1,
     };
@@ -72,26 +75,30 @@ fn parse() -> Result<Args, String> {
             }
             "--games" => args.games = number(&flag, &value)?,
             "--rollouts" => args.rollouts = number(&flag, &value)?,
-            "--fixtures" => args.fixtures = number(&flag, &value)?,
+            "--fixtures" => args.fixtures = value,
             "--output" => args.output = Some(value),
-            "--map" if value == "BASE" => {}
+            "--map" if matches!(value.as_str(), "BASE" | "MINI" | "TOURNAMENT") => {
+                args.map = value;
+            }
             "--threads" => args.threads = number(&flag, &value)?,
-            "--map" => return Err("only BASE is implemented before E12 MINI support".to_owned()),
+            "--map" => return Err("--map must be BASE, MINI, or TOURNAMENT".to_owned()),
             _ => return Err(format!("unknown option {flag}")),
         }
     }
     if !(2..=4).contains(&args.players)
         || args.games == 0
         || args.rollouts == 0
-        || args.fixtures != 1
         || args.threads == 0
     {
-        return Err(
-            "players must be 2..=4, counts positive, and baseline --fixtures must be 1".to_owned(),
-        );
+        return Err("players must be 2..=4 and counts must be positive".to_owned());
     }
     if args.command != "parallel" && args.threads != 1 {
         return Err("only the parallel workload accepts --threads above 1".to_owned());
+    }
+    if matches!(args.command.as_str(), "rollouts" | "allocations")
+        && !std::path::Path::new(&args.fixtures).exists()
+    {
+        return Err(format!("fixture path does not exist: {}", args.fixtures));
     }
     Ok(args)
 }
@@ -103,7 +110,7 @@ fn number<T: std::str::FromStr>(flag: &str, value: &str) -> Result<T, String> {
 }
 
 fn usage() -> String {
-    "usage: catanatron-bench <games|rollouts|kernels|allocations|parallel> [--seed N] [--players 2..4] [--policy random|weighted] [--games N] [--rollouts N] [--threads N] [--map BASE] [--output PATH]".to_owned()
+    "usage: catanatron-bench <games|rollouts|kernels|allocations|parallel> [--seed N] [--players 2..4] [--policy random|weighted] [--games N] [--rollouts N] [--fixtures PATH] [--threads N] [--map BASE|MINI|TOURNAMENT] [--output PATH]".to_owned()
 }
 
 fn run(args: Args) -> Result<Value, String> {
@@ -123,9 +130,7 @@ fn run(args: Args) -> Result<Value, String> {
 }
 
 fn parallel(args: &Args) -> Result<Value, String> {
-    let (context, root) =
-        initialize_base(args.players, NumberPlacement::OfficialSpiral, args.seed, 0)
-            .map_err(|error| format!("initialization failed: {error:?}"))?;
+    let (context, root) = initialize(args, 0)?;
     let roots = vec![root; args.rollouts as usize];
     let seeds: Vec<u64> = (0..args.rollouts)
         .map(|index| args.seed.wrapping_add(index))
@@ -171,10 +176,7 @@ fn timed_rollouts(args: &Args, count: u64, workload: &str) -> Result<Value, Stri
     let mut completed = 0_u64;
     let mut truncated = 0_u64;
     let fixed = if workload == "rollouts" {
-        Some(
-            initialize_base(args.players, NumberPlacement::OfficialSpiral, args.seed, 0)
-                .map_err(|error| format!("initialization failed: {error:?}"))?,
-        )
+        Some(initialize(args, 0)?)
     } else {
         None
     };
@@ -185,13 +187,7 @@ fn timed_rollouts(args: &Args, count: u64, workload: &str) -> Result<Value, Stri
             let game_index = batch * count + index;
             let (context, root) = match fixed {
                 Some(pair) => pair,
-                None => initialize_base(
-                    args.players,
-                    NumberPlacement::OfficialSpiral,
-                    args.seed,
-                    game_index,
-                )
-                .map_err(|error| format!("initialization failed: {error:?}"))?,
+                None => initialize(args, game_index)?,
             };
             let result = rollout(
                 &context,
@@ -227,9 +223,7 @@ fn timed_rollouts(args: &Args, count: u64, workload: &str) -> Result<Value, Stri
 }
 
 fn kernels(args: &Args) -> Result<Value, String> {
-    let (context, position) =
-        initialize_base(args.players, NumberPlacement::OfficialSpiral, args.seed, 0)
-            .map_err(|error| format!("initialization failed: {error:?}"))?;
+    let (context, position) = initialize(args, 0)?;
     let mut actions = Vec::with_capacity(256);
     let mut samples = Vec::new();
     let iterations = args.rollouts;
@@ -255,9 +249,7 @@ fn kernels(args: &Args) -> Result<Value, String> {
 }
 
 fn allocations(args: &Args) -> Result<Value, String> {
-    let (context, root) =
-        initialize_base(args.players, NumberPlacement::OfficialSpiral, args.seed, 0)
-            .map_err(|error| format!("initialization failed: {error:?}"))?;
+    let (context, root) = initialize(args, 0)?;
     let mut scratch = RolloutScratch::default();
     let _ = rollout(
         &context,
@@ -301,14 +293,38 @@ fn common_report(args: &Args, workload: &str, samples: Vec<f64>, detail: Value) 
     json!({
         "revision": "plan/rust-rollout-engine",
         "rules_profile": "rust-v1",
-        "map": "BASE",
+        "map": args.map,
         "policy": format!("{:?}", args.policy).to_lowercase(),
         "seed": args.seed,
         "players": args.players,
         "threads": args.threads,
+        "fixtures": args.fixtures,
         "build": "release-required-for-scoreboard",
         "workload": workload,
         "sample_seconds": samples,
         "detail": detail,
     })
+}
+
+fn initialize(
+    args: &Args,
+    game_index: u64,
+) -> Result<(catanatron_core::GameContext, Position), String> {
+    let result = match args.map.as_str() {
+        "BASE" => initialize_base(
+            args.players,
+            NumberPlacement::OfficialSpiral,
+            args.seed,
+            game_index,
+        ),
+        "MINI" => initialize_mini(
+            args.players,
+            NumberPlacement::OfficialSpiral,
+            args.seed,
+            game_index,
+        ),
+        "TOURNAMENT" => initialize_tournament(args.players),
+        _ => unreachable!("validated map"),
+    };
+    result.map_err(|error| format!("initialization failed: {error:?}"))
 }

@@ -23,11 +23,12 @@ DEFAULT_RUNNER = RUST / "target" / "release" / "catanatron-conformance.exe"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--games", type=int, default=100)
+    parser.add_argument("--games", "--games-per-config", dest="games", type=int, default=100)
+    parser.add_argument("--fixtures", type=Path, default=RUST / "tests" / "fixtures")
     parser.add_argument("--game-offset", type=int, default=0)
     parser.add_argument("--players", type=int, nargs="+", default=[2, 3, 4])
     parser.add_argument("--seed", type=int, default=8600)
-    parser.add_argument("--map", default="BASE", choices=["BASE", "TOURNAMENT"])
+    parser.add_argument("--map", default="BASE", choices=["BASE", "TOURNAMENT", "MINI"])
     parser.add_argument("--runner", type=Path, default=DEFAULT_RUNNER)
     parser.add_argument("--failure-output", type=Path)
     parser.add_argument("--output", type=Path)
@@ -38,6 +39,8 @@ def main() -> int:
     args = parse_args()
     if args.games < 1 or any(players not in (2, 3, 4) for players in args.players):
         raise SystemExit("--games must be positive and --players must contain only 2, 3, or 4")
+    if not (args.fixtures / "manifest.json").is_file():
+        raise SystemExit(f"fixture manifest not found under {args.fixtures}")
     process = subprocess.Popen(
         [str(args.runner), "--allow-known-divergences"],
         stdin=subprocess.PIPE,
@@ -120,6 +123,7 @@ def main() -> int:
         "failed_games": 0 if return_code == 0 else 1,
         "transitions": transitions,
         "runner": stdout.strip(),
+        "fixtures": str(args.fixtures),
     }
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     print(json.dumps(report, sort_keys=True))
