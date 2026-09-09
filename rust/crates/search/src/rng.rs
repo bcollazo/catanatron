@@ -12,7 +12,7 @@ pub enum StreamKind {
 pub fn derive_seed(master: u64, game: u64, rollout: u64, kind: StreamKind) -> [u8; 32] {
     let mut state = master ^ game.rotate_left(17) ^ rollout.rotate_left(39) ^ kind as u64;
     let mut seed = [0_u8; 32];
-    for chunk in seed.chunks_exact_mut(8) {
+    for chunk in seed.as_chunks_mut::<8>().0 {
         state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
         let mut value = state;
         value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
