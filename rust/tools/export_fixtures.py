@@ -459,7 +459,10 @@ def main() -> None:
         "development_order": DEVELOPMENT_CARDS,
         "coverage": dict(sorted(coverage.items())),
         "canonical_state": "typed phase, owned roads, ports, awards, and resume state",
-        "files": {str(path.relative_to(OUT)): hashlib.sha256(contents.encode()).hexdigest() for path, contents in sorted(files.items())},
+        "files": {
+            path.relative_to(OUT).as_posix(): hashlib.sha256(contents.encode()).hexdigest()
+            for path, contents in sorted(files.items())
+        },
     }
     files[OUT / "manifest.json"] = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     failed = [str(path) for path, contents in files.items() if not write_or_check(path, contents, args.check)]
