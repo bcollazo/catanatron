@@ -7,6 +7,9 @@
 
 Catanatron is a high-performance simulator and strong AI player for Settlers of Catan. You can run thousands of games in the order of seconds. The goal is to find the strongest Settlers of Catan bot possible.
 
+An implementation-complete Rust rollout engine, stdio bot, conformance suite,
+and optional batched Python extension are documented in the [Rust engine overview](rust/README.md).
+
 Get Started with the Full Documentation: https://docs.catanatron.com
 
 Join our Discord: https://discord.gg/FgFmb75TWd!

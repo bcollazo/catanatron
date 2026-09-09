@@ -1,0 +1,26 @@
+{
+  "build": "release-required-for-scoreboard",
+  "detail": {
+    "completed": 40,
+    "games": 40,
+    "intents_per_second": 1042728.5103537224,
+    "player_intents": 43658,
+    "state_bytes": 232,
+    "truncated": 0
+  },
+  "map": "BASE",
+  "players": 4,
+  "policy": "random",
+  "revision": "plan/rust-rollout-engine",
+  "rules_profile": "rust-v1",
+  "sample_seconds": [
+    0.0094734,
+    0.0070753,
+    0.0069937,
+    0.0100674,
+    0.0082592
+  ],
+  "seed": 8600,
+  "threads": 1,
+  "workload": "games"
+}

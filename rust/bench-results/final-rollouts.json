@@ -1,0 +1,27 @@
+{
+  "build": "release-required-for-scoreboard",
+  "detail": {
+    "completed": 49963,
+    "games": 50000,
+    "intents_per_second": 977377.9336570894,
+    "player_intents": 52824232,
+    "state_bytes": 232,
+    "truncated": 37
+  },
+  "fixtures": "rust/tests/fixtures",
+  "map": "BASE",
+  "players": 4,
+  "policy": "random",
+  "revision": "plan/rust-rollout-engine",
+  "rules_profile": "rust-v1",
+  "sample_seconds": [
+    10.7393424,
+    10.8402846,
+    10.9288949,
+    10.7620304,
+    10.7763319
+  ],
+  "seed": 0,
+  "threads": 1,
+  "workload": "rollouts"
+}

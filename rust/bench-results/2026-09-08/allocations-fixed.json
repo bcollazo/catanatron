@@ -1,0 +1,19 @@
+{
+  "build": "release-required-for-scoreboard",
+  "detail": {
+    "allocations": 0,
+    "bytes_allocated": 0,
+    "deallocations": 0,
+    "player_intents": 65555,
+    "rollouts": 100
+  },
+  "map": "BASE",
+  "players": 4,
+  "policy": "weighted",
+  "revision": "plan/rust-rollout-engine",
+  "rules_profile": "rust-v1",
+  "sample_seconds": [],
+  "seed": 8600,
+  "threads": 1,
+  "workload": "allocations"
+}

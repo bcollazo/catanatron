@@ -1,0 +1,25 @@
+{
+  "build": "release-required-for-scoreboard",
+  "detail": {
+    "batch_size": 32,
+    "batches": 5,
+    "estimated_batch_bytes": 7808,
+    "intents_per_second": 947374.1654994271,
+    "player_intents": 104160
+  },
+  "map": "BASE",
+  "players": 4,
+  "policy": "weighted",
+  "revision": "plan/rust-rollout-engine",
+  "rules_profile": "rust-v1",
+  "sample_seconds": [
+    0.0217077,
+    0.0223508,
+    0.0218989,
+    0.0221786,
+    0.02181
+  ],
+  "seed": 8600,
+  "threads": 1,
+  "workload": "parallel"
+}

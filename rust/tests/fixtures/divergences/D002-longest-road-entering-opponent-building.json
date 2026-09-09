@@ -1,0 +1,30 @@
+{
+  "divergence_id": "D002-longest-road-entering-opponent-building",
+  "input": {
+    "actor": "ORANGE",
+    "built_road": [
+      37,
+      38
+    ],
+    "opponent_building_node": 38,
+    "owned_roads_before": [
+      [
+        35,
+        36
+      ],
+      [
+        36,
+        37
+      ]
+    ]
+  },
+  "python_observed": {
+    "longest_road_length": 2
+  },
+  "rationale": "An edge-simple trail may enter, but not continue through, an opponent building. The pinned Python connected-component cache drops the incoming edge; rust-v1 follows the explicit E02 correction.",
+  "rules_profile": "rust-v1",
+  "rust_expected": {
+    "longest_road_length": 3
+  },
+  "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816"
+}

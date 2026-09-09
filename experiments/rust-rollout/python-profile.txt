@@ -1,0 +1,36 @@
+         1764852 function calls in 0.399 seconds
+
+   Ordered by: internal time
+   List reduced from 214 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   164343    0.032    0.000    0.059    0.000 state_functions.py:74(player_key)
+      344    0.029    0.000    0.065    0.000 board.py:355(longest_acyclic_path)
+   223993    0.024    0.000    0.037    0.000 enum.py:1266(__hash__)
+     9323    0.020    0.000    0.188    0.000 actions.py:46(generate_playable_actions)
+      592    0.018    0.000    0.039    0.000 actions.py:222(_robber_possibilities_without_friendly_robber)
+     2493    0.015    0.000    0.023    0.000 apply_action.py:536(yield_resources)
+   224289    0.013    0.000    0.013    0.000 {built-in method builtins.hash}
+    39183    0.011    0.000    0.025    0.000 state_functions.py:275(player_num_resource_cards)
+    30979    0.009    0.000    0.020    0.000 state_functions.py:232(player_can_play_dev)
+     4617    0.008    0.000    0.038    0.000 actions.py:300(maritime_trade_possibilities)
+    91843    0.008    0.000    0.008    0.000 {method 'get' of 'dict' objects}
+     9331    0.007    0.000    0.021    0.000 game.py:197(winning_color)
+     3001    0.007    0.000    0.050    0.000 apply_action.py:260(apply_roll)
+    49101    0.007    0.000    0.013    0.000 board.py:351(is_friendly_road)
+     4617    0.007    0.000    0.008    0.000 actions.py:314(inner_maritime_trade_possibilities)
+    54536    0.006    0.000    0.006    0.000 board.py:333(get_edge_color)
+    16268    0.006    0.000    0.009    0.000 random.py:242(_randbelow_with_getrandbits)
+     9315    0.006    0.000    0.350    0.000 game.py:179(execute)
+     9315    0.006    0.000    0.369    0.000 game.py:153(play_tick)
+    51843    0.006    0.000    0.006    0.000 {built-in method builtins.sorted}
+    48603    0.005    0.000    0.005    0.000 {built-in method __new__ of type object at 0x00007FFF8FE118F0}
+     9315    0.005    0.000    0.155    0.000 apply_action.py:58(apply_action)
+    14458    0.005    0.000    0.010    0.000 state_functions.py:221(player_resource_freqdeck_contains)
+    30642    0.005    0.000    0.010    0.000 board.py:340(is_enemy_node)
+    52555    0.005    0.000    0.005    0.000 {method 'append' of 'list' objects}
+    33062    0.005    0.000    0.005    0.000 board.py:326(get_node_color)
+    16375    0.005    0.000    0.006    0.000 coreviews.py:354(new_node_ok)
+    63666    0.004    0.000    0.004    0.000 {built-in method builtins.len}
+     9674    0.004    0.000    0.011    0.000 random.py:341(choice)
+     5952    0.003    0.000    0.021    0.000 reportviews.py:856(__iter__)
