@@ -1007,6 +1007,9 @@ fn copy_is_independent_and_uses_no_heap_owned_fields() {
     child.players[0].hand[0] = 3;
     child.bank[0] = 16;
     child.buildings[0] = 1;
+    assert_eq!(child.players[0].hand[0], 3);
+    assert_eq!(child.bank[0], 16);
+    assert_eq!(child.buildings[0], 1);
     assert_eq!(root.players[0].hand[0], 0);
     assert_eq!(root.bank[0], 19);
     assert_eq!(root.buildings[0], 0);
