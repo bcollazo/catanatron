@@ -55,6 +55,15 @@ def test_play_with_friendly_robber():
     assert "Game Summary" in result.output
 
 
+def test_play_handles_all_games_reaching_the_turn_limit(monkeypatch):
+    monkeypatch.setattr("catanatron.game.TURNS_LIMIT", 0)
+    result = CliRunner().invoke(simulate, ["--num=1", "--players=R,R"])
+
+    assert result.exit_code == 0
+    assert "Game Summary" in result.output
+    assert "N/A" in result.output
+
+
 def test_play_rejects_official_spiral_for_tournament():
     runner = CliRunner()
     result = runner.invoke(

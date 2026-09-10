@@ -475,6 +475,18 @@ def play_batch(
     table.add_column("AVG DEV VP", justify="right")
     for player in players:
         vps = statistics_accumulator.results_by_player[player.color]
+        if not vps:
+            table.add_row(
+                rich_player_name(player),
+                str(statistics_accumulator.wins[player.color]),
+                "N/A",
+                "N/A",
+                "N/A",
+                "N/A",
+                "N/A",
+                "N/A",
+            )
+            continue
         avg_vps = sum(vps) / len(vps)
         avg_settlements = vp_accumulator.get_avg_settlements(player.color)
         avg_cities = vp_accumulator.get_avg_cities(player.color)
@@ -494,9 +506,12 @@ def play_batch(
     console.print(table)
 
     # ===== GAME SUMMARY
-    avg_ticks = f"{statistics_accumulator.get_avg_ticks():.2f}"
-    avg_turns = f"{statistics_accumulator.get_avg_turns():.2f}"
-    avg_duration = format_secs(statistics_accumulator.get_avg_duration())
+    if statistics_accumulator.games:
+        avg_ticks = f"{statistics_accumulator.get_avg_ticks():.2f}"
+        avg_turns = f"{statistics_accumulator.get_avg_turns():.2f}"
+        avg_duration = format_secs(statistics_accumulator.get_avg_duration())
+    else:
+        avg_ticks = avg_turns = avg_duration = "N/A"
     table = Table(box=box.MINIMAL, title="Game Summary")
     table.add_column("AVG TICKS", justify="right")
     table.add_column("AVG TURNS", justify="right")

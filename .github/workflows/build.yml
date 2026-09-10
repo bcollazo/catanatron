@@ -10,6 +10,34 @@ on:
     branches: [main, staging]
 
 jobs:
+  build-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install fixture and extension dependencies
+        run: pip install .[gym] "maturin>=1,<2" numpy
+      - name: Check generated fixtures
+        run: |
+          python rust/tools/export_topology.py --check
+          python rust/tools/export_fixtures.py --check
+          python rust/tools/export_gym_catalogue.py --check
+      - name: Check Rust workspace
+        run: |
+          cargo fmt --all --manifest-path rust/Cargo.toml -- --check
+          cargo clippy --workspace --all-targets --manifest-path rust/Cargo.toml -- -D warnings
+          cargo test --workspace --manifest-path rust/Cargo.toml
+      - name: Smoke-test optional Python extension
+        run: |
+          python -m maturin build --release --manifest-path rust/crates/python/Cargo.toml --out rust/target/wheels
+          pip install --force-reinstall rust/target/wheels/*.whl
+          python -m unittest discover -s rust/crates/python/tests -v
+
   build-docker:
     runs-on: ubuntu-latest
 
