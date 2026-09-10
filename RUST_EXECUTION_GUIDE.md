@@ -1,6 +1,9 @@
 # Execute the Rust rollout-engine plan
 
-Read this first, then consult [the architecture and benchmark evidence](RUST_IMPLEMENTATION_PLAN.md). Update [the progress checklist](RUST_IMPLEMENTATION_CHECKLIST.md) after each task. The planning branch contains experiments, **no production Rust engine**. Everything under `rust/` below is a file or command to implement, not a claim that it already exists.
+This is the completed implementation guide retained for design context and
+reproduction. See [the architecture](RUST_IMPLEMENTATION_PLAN.md),
+[progress record](RUST_IMPLEMENTATION_CHECKLIST.md), and the production
+workspace under `rust/`.
 
 ## Working instructions and scope
 
@@ -15,7 +18,7 @@ Use these defaults without re-litigating the architecture: safe Rust; edition 20
 1. Read root/nested `AGENTS.md` if present. Run `git status --short`, `git rev-parse HEAD`, `rustc -vV`, `cargo --version`, and a working Python's `--version`. Preserve user edits.
 2. Baseline rules source is commit `d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816`; protocol/schema source is PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286`. Check whether current main has merged a newer #386. Record what is actually used. Do not silently mix newer rules with old expected outputs.
 3. Use a virtual environment for Python. Install the core package and needed tests; avoid requiring web/database/Gym dependencies for core-only tests. Minimal probe dependency is `networkx==3.5`. On the planning host, `python` was an unconfigured pyenv shim; the working executable was `C:\Users\bcoll\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`. Discover an appropriate interpreter on other hosts rather than hardcoding this path into source.
-4. Run the existing Rust probe with `cargo run --release --offline --manifest-path experiments/rust-rollout/Cargo.toml`. Consult its README to run Python/wire probes. Keep the recorded planning results; write new results under `rust/bench-results/<run-id>/` once created.
+4. Run the generated-fixture checks and the production benchmark smoke commands from `rust/README.md`. Write raw results under the ignored `rust/bench-results/<run-id>/` directory.
 5. Create `rust/docs/provenance.md` recording revisions, tool versions, OS/CPU, and which actual commands ran. Do not describe unavailable checks as passed.
 
 **Exit:** a working compiler/interpreter, baseline revisions recorded, probe assertions pass, existing Python core imports work. If a dependency/network/PR checkout is unavailable, record the exact external blocker, keep independent core work moving, and retain the affected integration gate as pending.
@@ -48,7 +51,7 @@ rust/
   tools/{export_topology,export_fixtures,differential,compare_bench,verify_stdio}.py
   tests/fixtures/{manifest.json,topology,transitions,protocol,divergences}/
   docs/{rules-profile,fixture-format,provenance,performance}.md
-  bench-results/                     # ignore bulky runs; commit selected reports
+  bench-results/                     # ignored local benchmark output
 ```
 
 Use package names above so subsequent commands stay valid. Set the bench package's `default-run = "catanatron-bench"` because it also contains the conformance binary. Set workspace `default-members` to core/search/bot/bench once present; keep the Python extension optional so basic Rust checks do not need Python linker configuration. Add crates as they become useful, not nonexistent workspace members. Release profile: `opt-level=3`, `lto="thin"`, `codegen-units=1`; keep debug assertions/overflow checks in debug tests. Keep native CPU flags out of distributable default builds.

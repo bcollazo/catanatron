@@ -68,7 +68,9 @@ No merge or modification of PR #386 is required to start core work. Pin golden f
 
 ## 3. Experiments performed for this plan
 
-Reproducible code, fixtures and raw observations are in [`experiments/rust-rollout/`](experiments/rust-rollout/README.md). These are deliberately small probes, not a partial production engine.
+These planning measurements informed the production workspace. The superseded
+probe code and machine-specific raw outputs are not retained; reproducible
+production harnesses live under `rust/crates/bench/` and `rust/tools/`.
 
 Hardware/software: AMD Ryzen 9 9950X, 32 logical processors, Windows 11 build 26200; CPython 3.12.14, NetworkX 3.5; rustc 1.90.0 / LLVM 20.1.8, `x86_64-pc-windows-msvc`. Rust uses release optimization, thin LTO, one codegen unit, no third-party crates. Both portable and `target-cpu=native` builds were measured. No CPU affinity, clock locking or system isolation was applied.
 

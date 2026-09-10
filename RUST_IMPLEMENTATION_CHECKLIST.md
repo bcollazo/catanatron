@@ -2,7 +2,7 @@
 
 Execution instructions: [RUST_EXECUTION_GUIDE.md](RUST_EXECUTION_GUIDE.md). Architecture/evidence: [RUST_IMPLEMENTATION_PLAN.md](RUST_IMPLEMENTATION_PLAN.md).
 
-Status at handoff: **planning complete; production implementation not started**. Existing executable code is limited to `experiments/rust-rollout/` design probes. The user will choose the implementation model. No remote branch or PR is requested.
+Status: **E00–E13 complete; production Rust implementation ready for review**.
 
 ## Ordered tasks
 
@@ -35,7 +35,7 @@ Status at handoff: **planning complete; production implementation not started**.
 ## Current execution checkpoint
 
 * Current task: complete through E13.
-* Last implementation check: the E13 release matrix passed, including 275,514 live differential transitions, 100 stdio host games, all workspace release tests and six wheel-level Python tests. Final benchmark and allocation reports are committed.
+* Last implementation check: the E13 release matrix passed, including 275,514 live differential transitions, 100 stdio host games, all workspace release tests and six wheel-level Python tests. Reviewed benchmark and allocation results are summarized in the Rust documentation.
 * Next action: optional follow-up optimization or external competitive evaluation; neither blocks functional v1.
 * Blocking condition: none. Protocol v1/schema v1 were certified against PR #386 head `5149b1869ba6318a2f2e3ef3925915576a433286` in the isolated `C:\dev\catanatron-pr386` worktree.
 * Changed implementation files: `rust/` workspace files, generated topology/transition fixtures/tables, `rust/docs/provenance.md`, `rust/docs/rules-profile.md`, this checklist.
@@ -47,21 +47,21 @@ Status at handoff: **planning complete; production implementation not started**.
 * Added the `catanatron-bot` JSONL process boundary. It defaults to `observe=false`, replies only to `hello`/`decide`, flushes each reply, exits cleanly on EOF, ignores unknown notifications, and rejects protocol, schema, game, color, numeric, duplicate-road, and malformed-action errors clearly on stderr.
 * The importer caches only the static map from `before`, refreshes all dynamic fields on every `decide`, preserves wire seat order, eligibility and award incumbents, derives setup's latest settlement from ordered `buildings_by_color`, treats `current_trade[10]` as a seat index, and labels no hidden-state inference beyond the perfect-information v1 snapshot.
 * Rust generation is compared semantically with the entire offered host menu before selection; the random policy returns the original offered wire triple. Unit coverage includes all 18 action payload types and process lifecycle/error cases.
-* `rust/tools/verify_stdio.py` ran 100 games against pinned PR #386 across 2/3/4-player and multiple Rust seat schedules: 100 completed, zero unexpected fallbacks, zero timeouts, zero illegal actions, and zero root-menu mismatches. Report: `rust/bench-results/e09-stdio.json`.
+* `rust/tools/verify_stdio.py` ran 100 games against pinned PR #386 across 2/3/4-player and multiple Rust seat schedules: 100 completed, zero unexpected fallbacks, zero timeouts, zero illegal actions, and zero root-menu mismatches.
 
 ### 2026-09-08 — E10 complete
 
 * Added round-robin flat Monte Carlo over every offered root action. Each simulation copies the root, applies one intent, samples immediate chance, and uses the weighted policy to terminal/cutoff. Root-player rewards are 1 win, 0 loss and 0.5 cutoff; deterministic action-key ties and fixed-seed tests are included.
 * Added `--policy random|rollout`, `--simulations`, `--budget-ms`, `--seed`, and `--threads`. Default deadline is 100 ms with 5 ms reserved for response serialization; deadline checks occur between simulations and inside rollouts at every action/chance boundary. E10 rejects thread counts above one until E11.
 * Forced-win, cutoff-over-loss reward, legal-selection, deterministic fixed-seed, deadline interruption, and parent-root immutability regressions pass.
-* The fixed evaluation at 20 ms covered 20 seat-rotated games and 5,569 decisions. Of 2,542 searched decisions, rollouts averaged 204.96 (median 129.5, range 18–10,000). Latency was p50 0.0014 ms, p95 16.75 ms, p99 17.33 ms, max 24.66 ms. Observed records were 9/10 versus Random and 10/10 versus WeightedRandom; the report explicitly does not claim superiority from this small sample. Raw report: `rust/bench-results/e10-search.json`.
+* The fixed evaluation at 20 ms covered 20 seat-rotated games and 5,569 decisions. Of 2,542 searched decisions, rollouts averaged 204.96 (median 129.5, range 18–10,000). Latency was p50 0.0014 ms, p95 16.75 ms, p99 17.33 ms, max 24.66 ms. Observed records were 9/10 versus Random and 10/10 versus WeightedRandom; this small sample does not establish superiority.
 
 ### 2026-09-08 — E11 complete
 
 * Added `Batch` and `rollout_many` with fixed worker chunks, worker-local position/scratch/RNG state, deterministic input-index aggregation, and whole-batch validation before work starts.
 * Scalar and 1/2/4-thread results match exactly for fixed seeds; mixed/disjoint roots remain unchanged and cannot corrupt each other.
 * On the 32-logical-processor host, the 2,048-root batch measured 0.98M, 1.94M, 3.80M, 7.08M, 10.08M and 14.92M intents/s at 1/2/4/8/16/32 requested workers. The 32-root batch measured 0.95M through 7.05M over the same range. Physical-core and SMT topology are unavailable, so these are not labeled physical-core measurements.
-* Estimated root/result payload memory was 7,808 bytes for 32 roots and 499,712 bytes for 2,048. Peak RSS and stack reservations were not measured and remain explicitly unavailable. Raw reports are committed under `rust/bench-results/2026-09-08/parallel-*.json`.
+* Estimated root/result payload memory was 7,808 bytes for 32 roots and 499,712 bytes for 2,048. Peak RSS and stack reservations were not measured and remain explicitly unavailable.
 
 ### 2026-09-08 — E12 complete
 
@@ -138,7 +138,7 @@ Status at handoff: **planning complete; production implementation not started**.
 * Fixed a Rust correctness bug found by the live run: development-card/theft chance completion now executes award/victory finalization; a victory-point draw that reaches 10 immediately returns `Won` and enters `Terminal`.
 * The required 100 games for each 2/3/4-player BASE configuration completed 300/300 with 275,514 checked transitions, zero truncations, and zero unexplained failures. 176 games were fully equal; 124 encountered one of the narrowly registered Python longest-road corrections and were counted as divergent rather than equal.
 * Registered D002–D005 for pinned Python longest-road undercounts, incumbent-tie transfer, and below-threshold award behavior. Each allowance requires every non-award field to match; terminal differences are accepted only when fully caused by that award delta.
-* Report: `rust/bench-results/2026-09-08/differential-100x-2p-3p-4p.json`. At this checkpoint E08 still remained open for performance and allocation gates; those are closed below.
+* At this checkpoint E08 still remained open for performance and allocation gates; those are closed below.
 
 ### 2026-09-08 — E08 complete
 

@@ -15,15 +15,16 @@ Validation date: 2026-09-08. Branch: `plan/rust-rollout-engine`.
 The live differential count treats occurrences of D001–D005 as recognized differences, not exact
 matches. Definitions and minimal tests are in [`python-divergences.md`](python-divergences.md).
 
-## Final artifacts
+## Final evidence
 
-* `rust/bench-results/final-differential.json`: 300 live Python games across 2/3/4 players.
-* `rust/bench-results/final-games.json`: five batches of 1,000 newly initialized games.
-* `rust/bench-results/final-rollouts.json`: five batches of 10,000 fixed-root rollouts.
-* `rust/bench-results/final-allocations.json`: 1,000 warmed fixed-root rollouts.
-* `rust/bench-results/e09-stdio.json`: original 100-game protocol certification; E13 repeated it with the same all-green result.
+* Committed deterministic topology, transition, and divergence fixtures.
+* Reusable conformance, differential, stdio, and benchmark harnesses.
 * [`features-v1.md`](features-v1.md): exact Python observation/action schema.
 * [`performance.md`](performance.md): workload definitions, comparisons, and limitations.
+* [`../ALPHABETA_DEPTH_RESULTS.md`](../ALPHABETA_DEPTH_RESULTS.md): seat-balanced search-depth evaluation.
+
+Raw benchmark output is machine-specific and intentionally ignored under
+`rust/bench-results/`; the documents above retain the reviewed results.
 
 ## Reproduction
 

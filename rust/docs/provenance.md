@@ -37,11 +37,11 @@ Recorded 2026-09-07 for the local implementation session.
 * `git rev-parse HEAD`
 * `rustc -vV`
 * `cargo --version`
-* `cargo run --release --offline --manifest-path experiments/rust-rollout/Cargo.toml`
-  — passed its 128-fixture assertions.
-* `python experiments/rust-rollout/baseline.py` with `PYTHONHASHSEED=0`
-  — passed with `corpus_size=128` and `road_query_mismatches=0`.
-* Editable core import probe — passed (`catanatron`, `networkx==3.5`).
+* Generated topology, transition, divergence, and Gym catalogue checks.
+* Full workspace formatting, Clippy, unit, integration, and documentation tests.
+* Live Python/Rust differential runs and stdio-host certification.
+* Release game, rollout, allocation, parallel-scaling, and alpha-beta benchmarks.
 
-The production Rust workspace has not been created at this point. The
-experiment remains separate under `experiments/rust-rollout/`.
+Reusable commands live in the workspace README and benchmark tools. Raw local
+outputs are intentionally ignored; reviewed measurements and their constraints
+are summarized in `performance.md` and `../ALPHABETA_DEPTH_RESULTS.md`.

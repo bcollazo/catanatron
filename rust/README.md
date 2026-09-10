@@ -103,15 +103,10 @@ the exact rules, and [`docs/python-divergences.md`](docs/python-divergences.md)
 for the five independently tested Python inconsistencies intentionally corrected
 by `rust-v1`.
 
-## Design probes are separate
+## Benchmark artifacts
 
-`experiments/rust-rollout/` is a committed, standalone planning probe. It is
-not a member of this workspace and is not the production engine. Run it
-separately after its dependencies have been cached:
-
-```powershell
-cargo run --release --offline --manifest-path experiments/rust-rollout/Cargo.toml
-```
-
-See [`docs/provenance.md`](docs/provenance.md) for the implementation-session
-baseline and commands that have actually run.
+The reusable benchmark and conformance harnesses live in `crates/bench/` and
+`tools/`. Generated reports belong under the ignored `bench-results/`
+directory; concise, reviewed results are kept in
+[`docs/performance.md`](docs/performance.md) and
+[`ALPHABETA_DEPTH_RESULTS.md`](ALPHABETA_DEPTH_RESULTS.md).

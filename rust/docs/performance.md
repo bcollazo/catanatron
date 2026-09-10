@@ -31,9 +31,9 @@ construction and one warmup rollout. Across 100 weighted fixed-root rollouts
 (65,555 player intents), it recorded zero allocations, zero deallocations and
 zero allocated bytes. `Position` is 232 bytes.
 
-Selected raw JSON reports are under `rust/bench-results/2026-09-08/`.
-These measurements establish the project targets, not a competitive
-world-record claim.
+The benchmark CLI reproduces these workloads and can write raw JSON under the
+ignored `rust/bench-results/` directory. These measurements establish the
+project targets, not a competitive world-record claim.
 
 ## E11 parallel fixed-root rollouts
 
@@ -83,4 +83,4 @@ timed batches:
 
 The warmed allocation run covered 1,000 rollouts and 1,070,180 player intents with zero
 allocations, zero deallocations, and zero allocated bytes inside the measured region. Reports are
-stored as `final-games.json`, `final-rollouts.json`, and `final-allocations.json`.
+Raw reports were generated locally and are intentionally not source-controlled.
