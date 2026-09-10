@@ -28,6 +28,22 @@ def test_serialization():
     assert isinstance(result["action_records"], list)
 
 
+def test_serialization_preserves_custom_game_settings():
+    game = Game(
+        players=[SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)],
+        vps_to_win=14,
+        discard_limit=9,
+        friendly_robber=True,
+    )
+    for snapshot in [game, game.copy()]:
+        result = json.loads(json.dumps(snapshot, cls=GameEncoder))
+        assert result["settings"] == {
+            "vps_to_win": 14,
+            "discard_limit": 9,
+            "friendly_robber": True,
+        }
+
+
 def test_action_from_json_maritime_trade():
     data = ["RED", "MARITIME_TRADE", [SHEEP, SHEEP, SHEEP, SHEEP, ORE]]
     action = action_from_json(data)

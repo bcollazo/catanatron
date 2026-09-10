@@ -104,6 +104,11 @@ class GameEncoder(json.JSONEncoder):
                 "longest_roads_by_player": longest_roads_by_player(obj.state),
                 "winning_color": obj.winning_color(),
                 "state_index": get_state_index(obj.state),
+                "settings": {
+                    "vps_to_win": obj.vps_to_win,
+                    "discard_limit": obj.state.discard_limit,
+                    "friendly_robber": obj.state.friendly_robber,
+                },
             }
         if isinstance(obj, Water):
             return {"type": "WATER"}
