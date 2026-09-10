@@ -1,3 +1,5 @@
+//! Measures the deepest alpha-beta iteration completed within a fixed time budget.
+
 use std::{env, process::ExitCode, time::Duration};
 
 use catanatron_core::{actual_victory_points, GameContext, PlayerId, Position};

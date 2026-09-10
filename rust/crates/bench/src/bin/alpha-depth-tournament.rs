@@ -1,3 +1,5 @@
+//! Compares four alpha-beta depth limits in seat-balanced, full-game tournaments.
+
 use std::{
     env,
     process::ExitCode,

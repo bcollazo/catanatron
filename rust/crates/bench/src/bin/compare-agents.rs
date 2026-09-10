@@ -1,3 +1,5 @@
+//! Measures each Rust agent's win rate and runtime against three Random agents.
+
 use std::{
     env,
     process::ExitCode,

@@ -1,3 +1,5 @@
+//! Verifies that invalid benchmark CLI options fail with a useful error.
+
 use std::process::Command;
 
 #[test]

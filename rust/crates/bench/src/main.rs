@@ -1,3 +1,5 @@
+//! Benchmarks full games, fixed-root rollouts, allocations, parallel scaling, and move generation.
+
 use std::{env, fs, process::ExitCode, time::Instant};
 
 use catanatron_core::{generate_actions_with_context, Position};

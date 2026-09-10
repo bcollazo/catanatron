@@ -1,3 +1,5 @@
+//! Imports Python game states and verifies the corresponding Rust transitions and actions.
+
 use catanatron_core::{
     apply_checked_with_context, apply_outcome_checked_with_context, edge_endpoints,
     edge_endpoints_on, generate_actions_with_context, Action, DevelopmentCard, EdgeId, GameContext,

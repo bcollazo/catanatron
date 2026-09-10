@@ -1,3 +1,5 @@
+//! Checks Rust rule transitions and legal actions against Python-generated fixtures.
+
 use std::{
     collections::BTreeSet,
     env,
