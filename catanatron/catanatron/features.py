@@ -332,11 +332,15 @@ def get_owned_or_buildable(game, color, board_buildable):
     )
 
 
-def reachability_features(game: Game, p0_color: Color, levels=REACHABLE_FEATURES_MAX):
+def reachability_features(
+    game: Game, p0_color: Color, levels=REACHABLE_FEATURES_MAX, *, only_p0=False
+):
+    """Road reachability; optionally extract just the perspective player."""
     features = {}
 
     board_buildable = game.state.board.buildable_node_ids(p0_color, True)
-    for i, color in iter_players(game.state.colors, p0_color):
+    players = [(0, p0_color)] if only_p0 else iter_players(game.state.colors, p0_color)
+    for i, color in players:
         owned_or_buildable = get_owned_or_buildable(game, color, board_buildable)
 
         # do layer 0

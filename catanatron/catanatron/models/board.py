@@ -1,5 +1,3 @@
-import pickle
-import copy
 from collections import defaultdict
 from typing import Any, Set, Dict, Tuple, List
 import functools
@@ -306,8 +304,13 @@ class Board:
         board.map = self.map  # reuse since its immutable
         board.buildings = self.buildings.copy()
         board.roads = self.roads.copy()
-        board.connected_components = pickle.loads(
-            pickle.dumps(self.connected_components)
+        # Rebuild sets in iteration order, as the pickle round trip did.
+        board.connected_components = defaultdict(
+            self.connected_components.default_factory,
+            (
+                (color, [set(list(nodes)) for nodes in components])
+                for color, components in self.connected_components.items()
+            ),
         )
         board.board_buildable_ids = self.board_buildable_ids.copy()
         board.road_lengths = self.road_lengths.copy()
@@ -316,10 +319,13 @@ class Board:
 
         board.robber_coordinate = self.robber_coordinate
         board.buildable_subgraph = self.buildable_subgraph
-        board.buildable_edges_cache = copy.deepcopy(self.buildable_edges_cache)
-        board.player_port_resources_cache = copy.deepcopy(
-            self.player_port_resources_cache
-        )
+        board.buildable_edges_cache = {
+            color: list(edges) for color, edges in self.buildable_edges_cache.items()
+        }
+        board.player_port_resources_cache = {
+            color: set(list(resources))
+            for color, resources in self.player_port_resources_cache.items()
+        }
         return board
 
     # ===== Helper functions
