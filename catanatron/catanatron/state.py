@@ -94,8 +94,12 @@ class State:
         initialize=True,
         rng=None,
     ):
+        # Always present, for the same reason as `Game.seed`/`Game.random`:
+        # `copy()` reads it unconditionally, so a State(initialize=False) --
+        # how an adapter mirrors a foreign engine's position -- could not be
+        # copied, and AlphaBeta copies before it searches.
+        self.random = rng if rng is not None else random.Random()
         if initialize:
-            self.random = rng if rng is not None else random.Random()
             self.players = self.random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(
