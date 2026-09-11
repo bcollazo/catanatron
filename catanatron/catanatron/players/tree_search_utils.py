@@ -63,7 +63,11 @@ def execute_spectrum(game: Game, action: Action):
             option_action = Action(action.color, action.action_type, card)
             option_game = game.copy()
             try:
-                option_game.execute(option_action, validate_action=False)
+                option_game.execute(
+                    option_action,
+                    validate_action=False,
+                    action_record=ActionRecord(action=option_action, result=card),
+                )
             except Exception:
                 # ignore exceptions, since player might imagine impossible outcomes.
                 # ignoring means the value function of this node will be flattened,
@@ -78,7 +82,11 @@ def execute_spectrum(game: Game, action: Action):
 
             option_action = Action(action.color, action.action_type, outcome)
             option_game = game.copy()
-            option_game.execute(option_action, validate_action=False)
+            option_game.execute(
+                option_action,
+                validate_action=False,
+                action_record=ActionRecord(action=option_action, result=outcome),
+            )
             results.append((option_game, number_probability(roll)))
         return results
     elif action.action_type == ActionType.MOVE_ROBBER:
