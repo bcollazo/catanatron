@@ -2,7 +2,7 @@
 
 Prepared September 11, 2026 UTC. Branch `perf/native-evaluator-speedups` is based
 on latest upstream `ecf931181b9a65bb4116a2153fb78c16f1438e00`, checked directly
-against GitHub. The PR is prepared for submission with the user's approval.
+against GitHub. Published as [PR #389](https://github.com/bcollazo/catanatron/pull/389).
 
 GitHub has no published releases or tags. PyPI's latest release is
 [3.2.1, published July 17, 2022](https://pypi.org/project/catanatron/3.2.1/).
