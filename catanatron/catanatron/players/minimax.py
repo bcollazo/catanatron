@@ -1,4 +1,5 @@
 import time
+from functools import cached_property
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 
@@ -8,6 +9,7 @@ from catanatron.players.tree_search_utils import expand_spectrum, list_prunned_a
 from catanatron.players.value import (
     DEFAULT_WEIGHTS,
     get_value_fn,
+    BoardFeatureCache,
 )
 
 ALPHABETA_DEFAULT_DEPTH = 2
@@ -43,6 +45,10 @@ class AlphaBetaPlayer(Player):
     @property
     def value_fn_builder_name(self):
         return "contender_fn" if self.params.value_fn == "contender" else "base_fn"
+
+    @cached_property
+    def _board_feature_cache(self):
+        return BoardFeatureCache()
 
     def value_function(self, game, p0_color):
         raise NotImplementedError
@@ -90,6 +96,7 @@ class AlphaBetaPlayer(Player):
                 self.value_fn_builder_name,
                 self.params.weights,
                 self.value_function if self.use_value_function else None,
+                cache=self._board_feature_cache,
             )
             value = value_fn(game, self.color)
 
@@ -245,6 +252,7 @@ class SameTurnAlphaBetaPlayer(AlphaBetaPlayer):
                 self.value_fn_builder_name,
                 self.params.weights,
                 self.value_function if self.use_value_function else None,
+                cache=self._board_feature_cache,
             )
             value = value_fn(game, self.color)
 
