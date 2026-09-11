@@ -78,7 +78,7 @@ python -m pytest -q --benchmark-disable \
 The excluded tests need unavailable pandas/web/pygame dependencies. An initial
 broader run also hit one 200ms stdio-bot startup timeout; the complete supported
 selection above passed on rerun. Full optional UI/data integration validation
-remains for an environment with those dependencies before an upstream PR.
+remains for upstream CI in an environment with those dependencies.
 Black 25.11.0 and git diff --check pass for changed files.
 
 `run_comparison.py` records the exact trial plan. It expects clean baseline
