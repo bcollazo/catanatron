@@ -1,0 +1,65 @@
+{
+  "divergence_id": "D003-longest-road-branch-undercount",
+  "input": {
+    "actor": "RED",
+    "edge_simple_trail": [
+      [
+        19,
+        21
+      ],
+      [
+        19,
+        20
+      ],
+      [
+        20,
+        22
+      ],
+      [
+        22,
+        23
+      ],
+      [
+        23,
+        52
+      ]
+    ],
+    "owned_roads_after": [
+      [
+        0,
+        20
+      ],
+      [
+        19,
+        20
+      ],
+      [
+        19,
+        21
+      ],
+      [
+        20,
+        22
+      ],
+      [
+        22,
+        23
+      ],
+      [
+        23,
+        52
+      ]
+    ]
+  },
+  "python_observed": {
+    "holder": null,
+    "longest_road_length": 4
+  },
+  "rationale": "The pinned Python traversal undercounts this branching graph. rust-v1 uses the E02 edge-simple-trail definition and retains all five edges in the valid trail.",
+  "rules_profile": "rust-v1",
+  "rust_expected": {
+    "holder": "RED",
+    "longest_road_length": 5
+  },
+  "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816"
+}

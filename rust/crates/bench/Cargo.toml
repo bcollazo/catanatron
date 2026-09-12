@@ -1,0 +1,12 @@
+[package]
+name = "catanatron-bench"
+version = "0.1.0"
+edition = "2021"
+default-run = "catanatron-bench"
+
+[dependencies]
+catanatron-core = { path = "../core" }
+catanatron-search = { path = "../search" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+stats_alloc = "0.1"
