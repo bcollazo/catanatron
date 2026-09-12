@@ -1,0 +1,35 @@
+{
+  "name": "catanatron-game-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "vite --host 0.0.0.0 --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "dev": "vite --host 0.0.0.0 --port 3000"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "lucide-react": "^1.43.0",
+    "motion": "^12.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-zoom-pan-pinch": "^3.7.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4"
+  }
+}
