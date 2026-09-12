@@ -141,7 +141,20 @@ impl Bot {
                         .ok_or("before.state.map is missing")?
                         .clone(),
                 );
-                let imported = import::import(Value::Object(state), &game_id, &color, actions)?;
+                let mut determinize_rng =
+                    catanatron_search::SearchRng::from_seed(catanatron_search::derive_seed(
+                        self.config.seed,
+                        self.decisions,
+                        0,
+                        catanatron_search::StreamKind::Determinize,
+                    ));
+                let imported = import::import(
+                    Value::Object(state),
+                    &game_id,
+                    &color,
+                    actions,
+                    &mut determinize_rng,
+                )?;
                 let _root = (&imported.context, &imported.position);
                 let choices = imported.offered;
                 if choices.is_empty() {

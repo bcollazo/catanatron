@@ -7,6 +7,11 @@ use rand_core::{RngCore, SeedableRng};
 pub enum StreamKind {
     Chance = 0x4348_414e_4345,
     Policy = 0x504f_4c49_4359,
+    /// Sampling one plausible assignment of hidden opponent information
+    /// (exact resource/development cards) consistent with what a bot on the
+    /// wire is actually told, so an existing perfect-information search can
+    /// run against a full but guessed position instead of the true one.
+    Determinize = 0x4445_5445_524d,
 }
 
 pub fn derive_seed(master: u64, game: u64, rollout: u64, kind: StreamKind) -> [u8; 32] {

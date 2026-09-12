@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use catanatron_core::{
-    edge_endpoints, generate_actions_with_context, Action, EdgeId, GameContext, LandTile, Layout,
-    NodeId, Phase, PlayerId, Port, Position, Resource, BASE_EDGE_COUNT, BASE_LAND_TILE_COUNT,
-    BASE_NODE_COUNT, CITY_OFFSET,
+    draw_bounded, edge_endpoints, generate_actions_with_context, Action, EdgeId, GameContext,
+    LandTile, Layout, NodeId, Phase, PlayerId, Port, Position, RandomSource, Resource,
+    BASE_EDGE_COUNT, BASE_LAND_TILE_COUNT, BASE_NODE_COUNT, CITY_OFFSET,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -27,6 +27,12 @@ const DEVELOPMENTS: [&str; 5] = [
     "ROAD_BUILDING",
     "VICTORY_POINT",
 ];
+// rust-v1 profile (RUST_EXECUTION_GUIDE.md E02): bank starts with 19 of each
+// resource; the development deck has these counts of each card. Along with
+// the always-visible bank and remaining-deck composition, these are the
+// conservation totals determinization draws an opponent's hidden hand from.
+const TOTAL_RESOURCE_SUPPLY: [u8; 5] = [19; 5];
+const TOTAL_DEVELOPMENT_SUPPLY: [u8; 5] = [14, 2, 2, 2, 5];
 
 pub struct Imported {
     pub context: GameContext,
@@ -92,6 +98,7 @@ pub fn import(
     game_id: &str,
     bot_color: &str,
     offered: Vec<Value>,
+    rng: &mut impl RandomSource,
 ) -> Result<Imported, String> {
     let state: Snapshot =
         serde_json::from_value(state).map_err(|error| format!("state: {error}"))?;
@@ -135,7 +142,7 @@ pub fn import(
     position.turns = u16_value(&state.num_turns, "num_turns")?;
     position.bank = counts(&state.resource_freqdeck, "resource_freqdeck")?;
     position.dev_bank = named_map_counts(&state.development_listdeck, &DEVELOPMENTS)?;
-    import_players(&state, &mut position)?;
+    import_players(&state, &mut position, rng)?;
     import_board(&state, &mut position)?;
     let (context, robber) = import_map(
         &state.map,
@@ -179,12 +186,38 @@ pub fn import(
     })
 }
 
-fn import_players(state: &Snapshot, position: &mut Position) -> Result<(), String> {
-    for index in 0..state.colors.len() {
+/// Imports each seat's player_state. A bot on the wire only ever gets its
+/// own hand and development cards exactly (`client_view()` with a
+/// perspective replaces every other seat's with aggregate counts:
+/// `NUM_RESOURCES_IN_HAND`, `NUM_DEVELOPMENT_CARDS_IN_HAND`, and drops the
+/// `*_OWNED_AT_START` eligibility flags entirely). For a seat missing the
+/// exact fields, this records the known total and leaves the hand at zero;
+/// `determinize_hidden_cards` fills every such seat in afterward with one
+/// sampled assignment consistent with the totals and the always-visible
+/// bank and remaining deck.
+fn import_players(
+    state: &Snapshot,
+    position: &mut Position,
+    rng: &mut impl RandomSource,
+) -> Result<(), String> {
+    let seats = state.colors.len();
+    let mut hand_known = [true; 4];
+    let mut dev_known = [true; 4];
+    for index in 0..seats {
         let prefix = format!("P{index}_");
+        hand_known[index] = has_all_keys(&state.player_state, &prefix, &RESOURCES, "_IN_HAND");
+        dev_known[index] = has_all_keys(&state.player_state, &prefix, &DEVELOPMENTS, "_IN_HAND");
         let player = &mut position.players[index];
-        player.hand = state_counts(&state.player_state, &prefix, &RESOURCES, "_IN_HAND")?;
-        player.dev = state_counts(&state.player_state, &prefix, &DEVELOPMENTS, "_IN_HAND")?;
+        player.hand = if hand_known[index] {
+            state_counts(&state.player_state, &prefix, &RESOURCES, "_IN_HAND")?
+        } else {
+            [0; 5]
+        };
+        player.dev = if dev_known[index] {
+            state_counts(&state.player_state, &prefix, &DEVELOPMENTS, "_IN_HAND")?
+        } else {
+            [0; 5]
+        };
         player.pieces = state_counts(
             &state.player_state,
             &prefix,
@@ -196,12 +229,14 @@ fn import_players(state: &Snapshot, position: &mut Position) -> Result<(), Strin
             &format!("{prefix}HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"),
         )?;
         player.played_knights = number_key(&state.player_state, &format!("{prefix}PLAYED_KNIGHT"))?;
-        for (bit, card) in DEVELOPMENTS[..4].iter().enumerate() {
-            if bool_key(
-                &state.player_state,
-                &format!("{prefix}{card}_OWNED_AT_START"),
-            )? {
-                player.eligible_dev_mask |= 1 << bit;
+        if dev_known[index] {
+            for (bit, card) in DEVELOPMENTS[..4].iter().enumerate() {
+                if bool_key(
+                    &state.player_state,
+                    &format!("{prefix}{card}_OWNED_AT_START"),
+                )? {
+                    player.eligible_dev_mask |= 1 << bit;
+                }
             }
         }
         position.longest_road_lengths[index] = state
@@ -223,7 +258,132 @@ fn import_players(state: &Snapshot, position: &mut Position) -> Result<(), Strin
             return Err("board.road_color disagrees with P<i>_HAS_ROAD".to_owned());
         }
     }
+    determinize_hidden_cards(
+        &state.player_state,
+        position,
+        seats,
+        &hand_known,
+        &dev_known,
+        rng,
+    )?;
     Ok(())
+}
+
+/// Samples one assignment of every seat whose hand or development cards
+/// were only given as an aggregate count, drawing without replacement from
+/// exactly what is left unaccounted for by conservation: the fixed supply
+/// (`TOTAL_RESOURCE_SUPPLY` / `TOTAL_DEVELOPMENT_SUPPLY`) minus the bank,
+/// the remaining draw deck, and every seat whose hand *is* known exactly
+/// (which always includes the bot's own). This is a single Perfect
+/// Information Monte Carlo sample, not a distribution -- the search that
+/// runs against it is exactly as blind to which specific sample was chosen
+/// as a person across the table reasoning about a guess would be, but it is
+/// still one guess, not an average over many.
+fn determinize_hidden_cards(
+    player_state: &HashMap<String, Value>,
+    position: &mut Position,
+    seats: usize,
+    hand_known: &[bool; 4],
+    dev_known: &[bool; 4],
+    rng: &mut impl RandomSource,
+) -> Result<(), String> {
+    let mut unseen_resources = TOTAL_RESOURCE_SUPPLY;
+    subtract_into(&mut unseen_resources, &position.bank, "bank")?;
+    let mut unseen_dev = TOTAL_DEVELOPMENT_SUPPLY;
+    subtract_into(&mut unseen_dev, &position.dev_bank, "development deck")?;
+    for index in 0..seats {
+        if hand_known[index] {
+            subtract_into(&mut unseen_resources, &position.players[index].hand, "hand")?;
+        }
+        if dev_known[index] {
+            subtract_into(
+                &mut unseen_dev,
+                &position.players[index].dev,
+                "development cards",
+            )?;
+        }
+    }
+    for index in 0..seats {
+        let prefix = format!("P{index}_");
+        if !hand_known[index] {
+            let total = number_key(player_state, &format!("{prefix}NUM_RESOURCES_IN_HAND"))?;
+            position.players[index].hand = deal_from_pool(&mut unseen_resources, total, rng)?;
+        }
+        if !dev_known[index] {
+            let total = number_key(
+                player_state,
+                &format!("{prefix}NUM_DEVELOPMENT_CARDS_IN_HAND"),
+            )?;
+            position.players[index].dev = deal_from_pool(&mut unseen_dev, total, rng)?;
+            // The wire never says which of a determinized hand's card types
+            // were already held at the start of the turn (that flag is
+            // popped along with everything else client_view() redacts), so
+            // every type this sample happens to hold is treated as eligible
+            // rather than as just bought. A search reaching this seat's
+            // turn can then offer one extra card type at most, in the rare
+            // case they truly bought it moments before -- overestimating an
+            // opponent's options is the safe direction for a search
+            // choosing its own move against them.
+            for (bit, &count) in position.players[index].dev[..4].iter().enumerate() {
+                if count > 0 {
+                    position.players[index].eligible_dev_mask |= 1 << bit;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn subtract_into<const N: usize>(
+    total: &mut [u8; N],
+    accounted: &[u8; N],
+    what: &str,
+) -> Result<(), String> {
+    for i in 0..N {
+        total[i] = total[i]
+            .checked_sub(accounted[i])
+            .ok_or_else(|| format!("{what} claims more cards than the rules-profile supply"))?;
+    }
+    Ok(())
+}
+
+/// Draws `count` cards from `pool` without replacement, uniformly over the
+/// remaining multiset (each draw is weighted by how many of each type are
+/// still left), and removes what it drew from `pool` in place.
+fn deal_from_pool<const N: usize>(
+    pool: &mut [u8; N],
+    mut count: u8,
+    rng: &mut impl RandomSource,
+) -> Result<[u8; N], String> {
+    let mut dealt = [0_u8; N];
+    while count > 0 {
+        let total: u32 = pool.iter().map(|&c| u32::from(c)).sum();
+        if total == 0 {
+            return Err("determinization pool ran out before dealing every known card".to_owned());
+        }
+        let mut pick = draw_bounded(rng, u64::from(total)).ok_or("rng draw failed")? as u32;
+        for slot in 0..N {
+            if pick < u32::from(pool[slot]) {
+                pool[slot] -= 1;
+                dealt[slot] += 1;
+                break;
+            }
+            pick -= u32::from(pool[slot]);
+        }
+        count -= 1;
+    }
+    Ok(dealt)
+}
+
+fn has_all_keys<const N: usize>(
+    map: &HashMap<String, Value>,
+    prefix: &str,
+    names: &[&str; N],
+    suffix: &str,
+) -> bool {
+    names
+        .iter()
+        .all(|name| map.contains_key(&format!("{prefix}{name}{suffix}")))
 }
 
 fn import_board(state: &Snapshot, position: &mut Position) -> Result<(), String> {
@@ -650,6 +810,102 @@ fn u16_value(value: &Value, field: &str) -> Result<u16, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deal_from_pool_never_exceeds_what_is_available_and_is_seed_reproducible() {
+        let mut rng = catanatron_search::SearchRng::from_seed(catanatron_search::derive_seed(
+            1,
+            2,
+            0,
+            catanatron_search::StreamKind::Determinize,
+        ));
+        let mut pool = [3_u8, 2, 1, 0, 0];
+        let dealt = deal_from_pool(&mut pool, 4, &mut rng).unwrap();
+        assert_eq!(dealt.iter().map(|&c| u32::from(c)).sum::<u32>(), 4);
+        assert_eq!(dealt[3], 0, "can't deal a resource with zero left");
+        assert_eq!(dealt[4], 0, "can't deal a resource with zero left");
+        assert_eq!(pool, [3 - dealt[0], 2 - dealt[1], 1 - dealt[2], 0, 0]);
+
+        let mut rng_again = catanatron_search::SearchRng::from_seed(
+            catanatron_search::derive_seed(1, 2, 0, catanatron_search::StreamKind::Determinize),
+        );
+        let mut pool_again = [3_u8, 2, 1, 0, 0];
+        assert_eq!(
+            deal_from_pool(&mut pool_again, 4, &mut rng_again).unwrap(),
+            dealt,
+            "the same seed must deal the same hand"
+        );
+    }
+
+    #[test]
+    fn deal_from_pool_rejects_asking_for_more_than_the_pool_holds() {
+        let mut rng = catanatron_search::SearchRng::from_seed(catanatron_search::derive_seed(
+            1,
+            0,
+            0,
+            catanatron_search::StreamKind::Determinize,
+        ));
+        let mut pool = [1_u8, 0, 0, 0, 0];
+        assert!(deal_from_pool(&mut pool, 2, &mut rng).is_err());
+    }
+
+    #[test]
+    fn determinize_hidden_cards_respects_conservation_and_declared_totals() {
+        let mut rng = catanatron_search::SearchRng::from_seed(catanatron_search::derive_seed(
+            7,
+            0,
+            0,
+            catanatron_search::StreamKind::Determinize,
+        ));
+        let mut position = Position::new(2).unwrap();
+        position.bank = [10, 10, 10, 10, 10];
+        position.dev_bank = [5, 1, 1, 1, 2];
+        position.players[0].hand = [2, 0, 0, 0, 0]; // this bot's own, exact
+        position.players[0].dev = [1, 0, 0, 0, 0];
+        let mut player_state = HashMap::new();
+        player_state.insert("P1_NUM_RESOURCES_IN_HAND".to_owned(), json!(5));
+        player_state.insert("P1_NUM_DEVELOPMENT_CARDS_IN_HAND".to_owned(), json!(1));
+
+        determinize_hidden_cards(
+            &player_state,
+            &mut position,
+            2,
+            &[true, false, true, true],
+            &[true, false, true, true],
+            &mut rng,
+        )
+        .unwrap();
+
+        // Bank and this bot's own hand are exact, so what dealing could ever
+        // hand seat 1 is bounded (per resource) by the fixed 19-card supply
+        // minus those -- the dealt total must fit under that bound, never
+        // invent cards no one could actually be holding.
+        let hand1 = position.players[1].hand;
+        assert_eq!(hand1.iter().map(|&c| u32::from(c)).sum::<u32>(), 5);
+        for (r, &dealt) in hand1.iter().enumerate() {
+            let unseen = 19 - position.bank[r] - position.players[0].hand[r];
+            assert!(
+                dealt <= unseen,
+                "resource {r}: dealt {dealt} > unseen {unseen}"
+            );
+        }
+
+        let dev1 = position.players[1].dev;
+        assert_eq!(dev1.iter().map(|&c| u32::from(c)).sum::<u32>(), 1);
+        for (i, &dealt) in dev1.iter().enumerate() {
+            let supply = [14, 2, 2, 2, 5][i];
+            let unseen = supply - position.dev_bank[i] - position.players[0].dev[i];
+            assert!(dealt <= unseen);
+        }
+        // Every development type the sampled hand holds is a card the
+        // determinized seat is assumed eligible to play right away.
+        for (bit, &count) in dev1[..4].iter().enumerate() {
+            assert_eq!(
+                count > 0,
+                position.players[1].eligible_dev_mask & (1 << bit) != 0
+            );
+        }
+    }
 
     #[test]
     fn rejects_duplicate_roads_with_different_owners() {
