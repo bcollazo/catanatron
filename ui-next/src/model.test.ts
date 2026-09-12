@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import snapshots from "../public/example-game.json";
+import rustReplay from "../public/example-rust-ab2-vs-ab2.json";
 import { parseReplay, actionLabel, nodePoint, type Action } from "./model";
 
 describe("CLI compatibility", () => {
@@ -58,5 +59,23 @@ describe("CLI compatibility", () => {
     expect(actionLabel(["RED", "MOVE_ROBBER", [[0, 0, 0], "BLUE"]])).toBe(
       "Steal from Blue",
     );
+  });
+});
+
+describe("Rust engine replay import", () => {
+  // Both seats were decided entirely by the Rust engine's alpha-beta search
+  // (rust/crates/bench/src/bin/export-tournament-replay.rs), then
+  // force-replayed through the real Python engine
+  // (rust/tools/replay_trace_for_ui.py) so every snapshot is
+  // catanatron.serialization.web_view() -- schema_version 2, not the
+  // retired GameEncoder. This is the same document shape live/DB-backed
+  // play already uses; nothing in model.ts changed to read it.
+  it("opens a Rust-vs-Rust alpha-beta game exported via web_view()", () => {
+    const frames = parseReplay(JSON.stringify(rustReplay));
+    expect(frames.length).toBeGreaterThan(100);
+    expect(frames[0].state_index).toBe(0);
+    expect(frames.at(-1)!.state_index).toBe(frames.length - 1);
+    expect(frames.at(-1)!.winning_color).not.toBeNull();
+    expect(frames.at(-1)!.colors).toEqual(["BLUE", "RED"]);
   });
 });
