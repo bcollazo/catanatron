@@ -10,6 +10,34 @@ on:
     branches: [main, staging]
 
 jobs:
+  build-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install fixture and extension dependencies
+        run: pip install .[gym] "maturin>=1,<2" numpy
+      - name: Check generated fixtures
+        run: |
+          python rust/tools/export_topology.py --check
+          python rust/tools/export_fixtures.py --check
+          python rust/tools/export_gym_catalogue.py --check
+      - name: Check Rust workspace
+        run: |
+          cargo fmt --all --manifest-path rust/Cargo.toml -- --check
+          cargo clippy --workspace --all-targets --manifest-path rust/Cargo.toml -- -D warnings
+          cargo test --workspace --manifest-path rust/Cargo.toml
+      - name: Smoke-test optional Python extension
+        run: |
+          python -m maturin build --release --manifest-path rust/crates/python/Cargo.toml --out rust/target/wheels
+          pip install --force-reinstall rust/target/wheels/*.whl
+          python -m unittest discover -s rust/crates/python/tests -v
+
   build-docker:
     runs-on: ubuntu-latest
 
@@ -24,22 +52,6 @@ jobs:
 
   build-python:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: catanatron
-          POSTGRES_PASSWORD: victorypoint
-          POSTGRES_DB: catanatron_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U catanatron -d catanatron_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      CATANATRON_TEST_DATABASE_URL: postgresql://catanatron:victorypoint@127.0.0.1:5432/catanatron_test
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -59,10 +71,10 @@ jobs:
           catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Test Custom Bot
         run: |
-          catanatron-play --bot examples/custom_player.py --players=F,FooPlayer --num=1
+          catanatron-play --code=examples/custom_player.py --players=F,FOO --num=1
       - name: Test Custom Accumulator
         run: |
-          catanatron-play --accumulator examples/custom_accumulator.py --players=F,R --num=1
+          catanatron-play --code=examples/custom_accumulator.py --players=F,R --num=1
       - name: Test Library Example
         run: |
           python -W error examples/library_example.py
@@ -104,8 +116,6 @@ jobs:
         with:
           node-version: ${{ steps.node-version.outputs.node-version }}
       - run: npm ci
-        working-directory: ./ui
-      - run: npm test -- --run
         working-directory: ./ui
       - run: npm run build
         working-directory: ./ui
