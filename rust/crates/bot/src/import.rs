@@ -95,7 +95,10 @@ pub fn import(
 ) -> Result<Imported, String> {
     let state: Snapshot =
         serde_json::from_value(state).map_err(|error| format!("state: {error}"))?;
-    if state.schema_version != 1 {
+    // v2 only added `random_state` to the authoritative document
+    // (catanatron.serialization.SCHEMA_VERSION); client_view() already strips
+    // that field before it reaches a bot, so v1 and v2 are wire-compatible here.
+    if state.schema_version != 1 && state.schema_version != 2 {
         return Err(format!(
             "unsupported schema_version {}",
             state.schema_version

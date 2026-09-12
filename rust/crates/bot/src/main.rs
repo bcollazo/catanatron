@@ -15,6 +15,7 @@ const PROTOCOL_VERSION: u64 = 1;
 enum Policy {
     Random,
     Rollout,
+    AlphaBeta,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -22,6 +23,7 @@ struct Config {
     policy: Policy,
     simulations: u32,
     budget_ms: u64,
+    max_depth: u8,
     seed: u64,
     threads: u16,
     metrics: bool,
@@ -33,6 +35,7 @@ impl Default for Config {
             policy: Policy::Random,
             simulations: 1_000,
             budget_ms: 100,
+            max_depth: 2,
             seed: 0,
             threads: 1,
             metrics: false,
@@ -171,6 +174,28 @@ impl Bot {
                         .find(|choice| choice.1 == result.action)
                         .cloned()
                         .ok_or("search selected an unoffered action")?
+                } else if self.config.policy == Policy::AlphaBeta {
+                    let budget =
+                        Duration::from_millis(self.config.budget_ms.saturating_sub(5).max(1));
+                    let result = catanatron_search::iterative_alpha_beta(
+                        &imported.context,
+                        &imported.position,
+                        self.config.max_depth,
+                        budget,
+                        catanatron_search::AlphaBetaMode::Full,
+                    );
+                    if self.config.metrics {
+                        eprintln!(
+                            "catanatron_search_metrics {{\"completed_depth\":{},\"nodes\":{},\"decision\":{}}}",
+                            result.stats.completed_depth, result.stats.nodes, self.decisions
+                        );
+                    }
+                    let chosen = result.action.unwrap_or(choices[0].1);
+                    choices
+                        .iter()
+                        .find(|choice| choice.1 == chosen)
+                        .cloned()
+                        .ok_or("search selected an unoffered action")?
                 } else {
                     self.rng = self
                         .rng
@@ -259,11 +284,13 @@ fn parse_args(args: impl Iterator<Item = String>) -> Result<Config, String> {
                 config.policy = match value.as_str() {
                     "random" => Policy::Random,
                     "rollout" => Policy::Rollout,
-                    _ => return Err("--policy must be random or rollout".to_owned()),
+                    "alphabeta" => Policy::AlphaBeta,
+                    _ => return Err("--policy must be random, rollout or alphabeta".to_owned()),
                 }
             }
             "--simulations" => config.simulations = positive(&value, &flag)?,
             "--budget-ms" => config.budget_ms = positive(&value, &flag)?,
+            "--max-depth" => config.max_depth = positive(&value, &flag)?,
             "--seed" => {
                 config.seed = value
                     .parse()
@@ -379,5 +406,25 @@ mod tests {
         assert_eq!(config.seed, 7);
         assert!(parse_args(["--threads", "2"].into_iter().map(str::to_owned)).is_err());
         assert!(parse_args(["--simulations", "0"].into_iter().map(str::to_owned)).is_err());
+    }
+
+    #[test]
+    fn parses_alphabeta_policy_and_max_depth() {
+        let config = parse_args(
+            [
+                "--policy",
+                "alphabeta",
+                "--max-depth",
+                "3",
+                "--budget-ms",
+                "50",
+            ]
+            .into_iter()
+            .map(str::to_owned),
+        )
+        .unwrap();
+        assert_eq!(config.policy, Policy::AlphaBeta);
+        assert_eq!(config.max_depth, 3);
+        assert!(parse_args(["--max-depth", "0"].into_iter().map(str::to_owned)).is_err());
     }
 }
