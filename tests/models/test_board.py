@@ -130,6 +130,72 @@ def test_buildable_nodes_respects_distance_two():
     assert nodes.pop() == 5
 
 
+def test_settlement_cut_survives_a_node_missing_from_the_components():
+    """A settlement on a node where an opponent has two road segments deletes
+    the component holding the node; when the node is in no component (see
+    the next test for how that happens) there is nothing to delete and the
+    cut must still succeed, appending the walks from either side."""
+    board = Board()
+    board.build_settlement(Color.RED, 10, initial_build_phase=True)
+    board.build_road(Color.RED, (10, 11))
+    board.build_road(Color.RED, (11, 12))
+    board.build_road(Color.RED, (12, 3))
+    board.build_settlement(Color.BLUE, 14, initial_build_phase=True)
+    board.build_road(Color.BLUE, (14, 13))
+    board.build_road(Color.BLUE, (13, 12))
+    # the drift: 12 is on RED's road but in none of RED's components
+    (component,) = board.connected_components[Color.RED]
+    component.discard(12)
+
+    board.build_settlement(Color.BLUE, 12)  # used to raise TypeError
+
+    assert board.buildings[12] == (Color.BLUE, "SETTLEMENT")
+    components = sorted(sorted(c) for c in board.connected_components[Color.RED])
+    assert components == [[3, 10, 11], [3, 12], [10, 11, 12]]  # the walks, and the drifted set left as it was
+
+
+def test_cut_walks_keep_enemy_stop_nodes_and_drop_the_stretch_behind_them():
+    """How a node ends up in no component (captured from a 4-player game):
+    a cut keeps an enemy building inside the cut colour's component as a
+    stop node of the walk, that colour extends a road out of the enemy
+    node, a later cut's walks stop at the building and drop everything
+    behind it, and a settlement on the dropped stretch found nothing to
+    delete. The step "RED builds out of node 0" is what a rule fix for
+    roads through enemy buildings would refuse; the guard covers the
+    cut either way."""
+    board = Board()
+    board.build_settlement(Color.ORANGE, 0, initial_build_phase=True)
+    board.build_road(Color.ORANGE, (0, 1))
+    board.build_settlement(Color.RED, 10, initial_build_phase=True)
+    for edge in ((10, 11), (11, 12), (12, 3), (3, 4), (4, 5), (5, 0)):
+        board.build_road(Color.RED, edge)  # 5-0 ends at ORANGE's settlement
+    assert 0 not in set().union(*board.connected_components[Color.RED])
+
+    board.build_settlement(Color.BLUE, 14, initial_build_phase=True)
+    board.build_road(Color.BLUE, (14, 13))
+    board.build_road(Color.BLUE, (13, 12))
+    board.build_settlement(Color.BLUE, 12)  # cut 1: the walk from 3 reaches 0 and keeps it
+    assert 0 in set().union(*board.connected_components[Color.RED])
+    for edge in ((0, 20), (20, 19), (19, 21)):
+        board.build_road(Color.RED, edge)  # out of the enemy building
+
+    board.build_settlement(Color.WHITE, 17, initial_build_phase=True)
+    board.build_road(Color.WHITE, (17, 15))
+    board.build_road(Color.WHITE, (15, 4))
+    board.build_settlement(Color.WHITE, 4)  # cut 2: the walks stop at 12 and 0
+    components = sorted(sorted(c) for c in board.connected_components[Color.RED])
+    assert components == [[0, 4, 5], [3, 4, 12], [10, 11, 12]]  # 19, 20, 21 dropped
+
+    board.build_settlement(Color.BLUE, 45, initial_build_phase=True)
+    board.build_road(Color.BLUE, (45, 46))
+    board.build_road(Color.BLUE, (46, 19))
+    board.build_settlement(Color.BLUE, 19)  # cut 3 on the dropped stretch: used to raise TypeError
+
+    assert board.buildings[19] == (Color.BLUE, "SETTLEMENT")
+    components = [sorted(c) for c in board.connected_components[Color.RED]]
+    assert [0, 19, 20] in components and [19, 21] in components
+
+
 def test_cant_use_enemy_roads_to_connect():
     board = Board()
     board.build_settlement(Color.RED, 3, initial_build_phase=True)
