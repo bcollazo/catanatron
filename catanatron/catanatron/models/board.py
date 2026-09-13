@@ -127,9 +127,15 @@ class Board:
                     a_nodeset = self.dfs_walk(a, edge_color)
                     c_nodeset = self.dfs_walk(c, edge_color)
 
-                    # split this components on here.
+                    # split this components on here. The node can be in no
+                    # component: the sets drift from the roads over a sequence
+                    # of cuts (a cut keeps enemy stop nodes, a road gets built
+                    # out of one, a later cut's walks stop there and drop what
+                    # lies behind it). Then there is nothing to delete and the
+                    # two walks are the components of this stretch.
                     b_index = self._get_connected_component_index(node_id, edge_color)
-                    del self.connected_components[edge_color][b_index]
+                    if b_index is not None:
+                        del self.connected_components[edge_color][b_index]
                     self.connected_components[edge_color].append(a_nodeset)
                     self.connected_components[edge_color].append(c_nodeset)
 
