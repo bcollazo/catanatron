@@ -496,6 +496,11 @@ def web_view(game, perspective=None) -> dict:
                 color.value: get_longest_road_length(state, color)
                 for color in state.colors
             },
+            "settings": {
+                "vps_to_win": game.vps_to_win,
+                "discard_limit": state.discard_limit,
+                "friendly_robber": state.friendly_robber,
+            },
         }
     )
     return view

@@ -1,0 +1,9 @@
+[workspace]
+members = ["crates/core", "crates/search", "crates/bench", "crates/bot", "crates/python"]
+default-members = ["crates/core", "crates/search", "crates/bench", "crates/bot"]
+resolver = "2"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

@@ -1,0 +1,12 @@
+[package]
+name = "catanatron-core"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Rules kernel for the Catanatron Rust rollout engine"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]

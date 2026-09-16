@@ -1,0 +1,341 @@
+{
+  "development_draw": {
+    "counts": {
+      "KNIGHT": 14,
+      "MONOPOLY": 2,
+      "ROAD_BUILDING": 2,
+      "VICTORY_POINT": 5,
+      "YEAR_OF_PLENTY": 2
+    },
+    "denominator": 25
+  },
+  "dice": [
+    {
+      "pair": [
+        1,
+        1
+      ],
+      "sum": 2,
+      "weight": 1
+    },
+    {
+      "pair": [
+        1,
+        2
+      ],
+      "sum": 3,
+      "weight": 1
+    },
+    {
+      "pair": [
+        1,
+        3
+      ],
+      "sum": 4,
+      "weight": 1
+    },
+    {
+      "pair": [
+        1,
+        4
+      ],
+      "sum": 5,
+      "weight": 1
+    },
+    {
+      "pair": [
+        1,
+        5
+      ],
+      "sum": 6,
+      "weight": 1
+    },
+    {
+      "pair": [
+        1,
+        6
+      ],
+      "sum": 7,
+      "weight": 1
+    },
+    {
+      "pair": [
+        2,
+        1
+      ],
+      "sum": 3,
+      "weight": 1
+    },
+    {
+      "pair": [
+        2,
+        2
+      ],
+      "sum": 4,
+      "weight": 1
+    },
+    {
+      "pair": [
+        2,
+        3
+      ],
+      "sum": 5,
+      "weight": 1
+    },
+    {
+      "pair": [
+        2,
+        4
+      ],
+      "sum": 6,
+      "weight": 1
+    },
+    {
+      "pair": [
+        2,
+        5
+      ],
+      "sum": 7,
+      "weight": 1
+    },
+    {
+      "pair": [
+        2,
+        6
+      ],
+      "sum": 8,
+      "weight": 1
+    },
+    {
+      "pair": [
+        3,
+        1
+      ],
+      "sum": 4,
+      "weight": 1
+    },
+    {
+      "pair": [
+        3,
+        2
+      ],
+      "sum": 5,
+      "weight": 1
+    },
+    {
+      "pair": [
+        3,
+        3
+      ],
+      "sum": 6,
+      "weight": 1
+    },
+    {
+      "pair": [
+        3,
+        4
+      ],
+      "sum": 7,
+      "weight": 1
+    },
+    {
+      "pair": [
+        3,
+        5
+      ],
+      "sum": 8,
+      "weight": 1
+    },
+    {
+      "pair": [
+        3,
+        6
+      ],
+      "sum": 9,
+      "weight": 1
+    },
+    {
+      "pair": [
+        4,
+        1
+      ],
+      "sum": 5,
+      "weight": 1
+    },
+    {
+      "pair": [
+        4,
+        2
+      ],
+      "sum": 6,
+      "weight": 1
+    },
+    {
+      "pair": [
+        4,
+        3
+      ],
+      "sum": 7,
+      "weight": 1
+    },
+    {
+      "pair": [
+        4,
+        4
+      ],
+      "sum": 8,
+      "weight": 1
+    },
+    {
+      "pair": [
+        4,
+        5
+      ],
+      "sum": 9,
+      "weight": 1
+    },
+    {
+      "pair": [
+        4,
+        6
+      ],
+      "sum": 10,
+      "weight": 1
+    },
+    {
+      "pair": [
+        5,
+        1
+      ],
+      "sum": 6,
+      "weight": 1
+    },
+    {
+      "pair": [
+        5,
+        2
+      ],
+      "sum": 7,
+      "weight": 1
+    },
+    {
+      "pair": [
+        5,
+        3
+      ],
+      "sum": 8,
+      "weight": 1
+    },
+    {
+      "pair": [
+        5,
+        4
+      ],
+      "sum": 9,
+      "weight": 1
+    },
+    {
+      "pair": [
+        5,
+        5
+      ],
+      "sum": 10,
+      "weight": 1
+    },
+    {
+      "pair": [
+        5,
+        6
+      ],
+      "sum": 11,
+      "weight": 1
+    },
+    {
+      "pair": [
+        6,
+        1
+      ],
+      "sum": 7,
+      "weight": 1
+    },
+    {
+      "pair": [
+        6,
+        2
+      ],
+      "sum": 8,
+      "weight": 1
+    },
+    {
+      "pair": [
+        6,
+        3
+      ],
+      "sum": 9,
+      "weight": 1
+    },
+    {
+      "pair": [
+        6,
+        4
+      ],
+      "sum": 10,
+      "weight": 1
+    },
+    {
+      "pair": [
+        6,
+        5
+      ],
+      "sum": 11,
+      "weight": 1
+    },
+    {
+      "pair": [
+        6,
+        6
+      ],
+      "sum": 12,
+      "weight": 1
+    }
+  ],
+  "dice_sum_weights": {
+    "10": 3,
+    "11": 2,
+    "12": 1,
+    "2": 1,
+    "3": 2,
+    "4": 3,
+    "5": 4,
+    "6": 5,
+    "7": 6,
+    "8": 5,
+    "9": 4
+  },
+  "fixture_version": 2,
+  "rules_profile": "rust-v1",
+  "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816",
+  "theft": {
+    "hand": [
+      2,
+      0,
+      1,
+      0,
+      3
+    ],
+    "outcomes": [
+      {
+        "resource": "WOOD",
+        "weight": 2
+      },
+      {
+        "resource": "SHEEP",
+        "weight": 1
+      },
+      {
+        "resource": "ORE",
+        "weight": 3
+      }
+    ]
+  }
+}

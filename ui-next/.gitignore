@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.local
+coverage/
+.npm-cache/
+.venv/
+*.db
+.api-smoke.json

@@ -1,0 +1,28 @@
+{
+  "divergence_id": "D004-longest-road-incumbent-tie-retention",
+  "input": {
+    "holder_before": "ORANGE",
+    "lengths_after": [
+      5,
+      4,
+      4,
+      5
+    ],
+    "lengths_before": [
+      5,
+      4,
+      4,
+      7
+    ],
+    "trigger": "RED settlement splits ORANGE road"
+  },
+  "python_observed": {
+    "holder": "RED"
+  },
+  "rationale": "rust-v1 follows E06: an incumbent tied for the maximum at or above five retains Longest Road. The pinned Python cache transfers to the first maximum after a road split.",
+  "rules_profile": "rust-v1",
+  "rust_expected": {
+    "holder": "ORANGE"
+  },
+  "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816"
+}

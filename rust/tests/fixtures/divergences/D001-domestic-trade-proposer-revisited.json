@@ -1,0 +1,23 @@
+{
+  "divergence_id": "D001-domestic-trade-proposer-revisited",
+  "input": {
+    "first_responder": "ORANGE",
+    "proposer_index": 1,
+    "seat_order": [
+      "ORANGE",
+      "BLUE",
+      "RED"
+    ]
+  },
+  "python_observed": {
+    "next_actor": "BLUE",
+    "prompt": "DECIDE_TRADE"
+  },
+  "rationale": "Each other seat responds once; the proposer is never asked to answer its own offer.",
+  "rules_profile": "rust-v1",
+  "rust_expected": {
+    "next_actor": "RED",
+    "prompt": "DECIDE_TRADE"
+  },
+  "source_revision": "d3f4ad05bb78d8b2309631d6d3cfa8fcb6fda816"
+}

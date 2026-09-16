@@ -1,0 +1,11 @@
+# Run with the repository's compose file first so relative paths use the repo root.
+services:
+  react-ui:
+    build: ./ui-next
+    environment:
+      # Docker Desktop does not reliably forward Windows bind-mount file events.
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "200"
+    volumes:
+      - /app/node_modules
+      - ./ui-next:/app
