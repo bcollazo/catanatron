@@ -99,7 +99,14 @@ class Game:
         # to the `initialize` branch makes a Game(initialize=False) -- the way
         # an adapter builds a mirror of a foreign engine's position -- fail to
         # copy, and AlphaBeta copies before it searches.
-        self.seed = seed if seed is not None else random.randrange(sys.maxsize)
+        #
+        # The unseeded default draws from a throwaway generator, not the
+        # `random` module's shared stream. Hoisted out of `initialize`, this
+        # runs for every mirror an adapter builds -- once per decision, and
+        # AlphaBeta copies again inside its search -- so drawing from the
+        # global stream would let the count of mirrors built perturb every
+        # other module-level `random` consumer in the process.
+        self.seed = seed if seed is not None else random.Random().randrange(sys.maxsize)
         self.random = random.Random(self.seed)
         if initialize:
 
