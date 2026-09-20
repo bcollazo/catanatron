@@ -95,9 +95,20 @@ class Game:
         #: The subset that overrides step(), so the per-action loop skips
         #: players that only decide. Purely an optimization.
         self._steppers = []
+        # Always present: `copy()` reads both unconditionally, so leaving them
+        # to the `initialize` branch makes a Game(initialize=False) -- the way
+        # an adapter builds a mirror of a foreign engine's position -- fail to
+        # copy, and AlphaBeta copies before it searches.
+        #
+        # The unseeded default draws from a throwaway generator, not the
+        # `random` module's shared stream. Hoisted out of `initialize`, this
+        # runs for every mirror an adapter builds -- once per decision, and
+        # AlphaBeta copies again inside its search -- so drawing from the
+        # global stream would let the count of mirrors built perturb every
+        # other module-level `random` consumer in the process.
+        self.seed = seed if seed is not None else random.Random().randrange(sys.maxsize)
+        self.random = random.Random(self.seed)
         if initialize:
-            self.seed = seed if seed is not None else random.randrange(sys.maxsize)
-            self.random = random.Random(self.seed)
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win

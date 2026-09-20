@@ -1,0 +1,258 @@
+{
+  "complete": true,
+  "equivalent": true,
+  "rows": [
+    {
+      "mode": "base",
+      "action_sha256": "dbd17d6fc229129569a2cf4283901ad5e4d90f7cd76fb9c8e68142ee164dddef",
+      "actions": 267,
+      "audit": true,
+      "cpu_seconds": 8.962805907,
+      "deadline_observations": 0,
+      "leaf_sha256": "85a3e1b910cdd173f28d964485b40ba402b8d939a89952e89152ad3f5cb66547",
+      "leaves": 27295,
+      "points": {
+        "BLUE": 6,
+        "ORANGE": 6,
+        "RED": 10,
+        "WHITE": 8
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 8.964627000968903,
+      "seed": 670000000,
+      "source_sha256": "d17c64ace107eae861082e75fdeda02c8f18b9f029e377881987ab768f89e7b2",
+      "winner": "RED"
+    },
+    {
+      "mode": "fast",
+      "action_sha256": "dbd17d6fc229129569a2cf4283901ad5e4d90f7cd76fb9c8e68142ee164dddef",
+      "actions": 267,
+      "audit": true,
+      "cpu_seconds": 5.404398055,
+      "deadline_observations": 0,
+      "leaf_sha256": "85a3e1b910cdd173f28d964485b40ba402b8d939a89952e89152ad3f5cb66547",
+      "leaves": 27295,
+      "points": {
+        "BLUE": 6,
+        "ORANGE": 6,
+        "RED": 10,
+        "WHITE": 8
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 5.409663463011384,
+      "seed": 670000000,
+      "source_sha256": "b25ccab7598c1266650fd6e0c46379bff5f822c337deb91209d6e5b110f95493",
+      "winner": "RED"
+    },
+    {
+      "mode": "fast",
+      "action_sha256": "4643597ca84871c8f4e7073894052c6616452a5935b4f4508c2e6c7a1cdc0b7d",
+      "actions": 251,
+      "audit": true,
+      "cpu_seconds": 4.866259501,
+      "deadline_observations": 0,
+      "leaf_sha256": "553e677b1bea1794c1f099da1dd9c6e6cae5e6f56a434189d791dee7ccd3bb2f",
+      "leaves": 27077,
+      "points": {
+        "BLUE": 11,
+        "ORANGE": 4,
+        "RED": 7,
+        "WHITE": 4
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 4.868970218114555,
+      "seed": 670000001,
+      "source_sha256": "b25ccab7598c1266650fd6e0c46379bff5f822c337deb91209d6e5b110f95493",
+      "winner": "BLUE"
+    },
+    {
+      "mode": "base",
+      "action_sha256": "4643597ca84871c8f4e7073894052c6616452a5935b4f4508c2e6c7a1cdc0b7d",
+      "actions": 251,
+      "audit": true,
+      "cpu_seconds": 7.959437192,
+      "deadline_observations": 0,
+      "leaf_sha256": "553e677b1bea1794c1f099da1dd9c6e6cae5e6f56a434189d791dee7ccd3bb2f",
+      "leaves": 27077,
+      "points": {
+        "BLUE": 11,
+        "ORANGE": 4,
+        "RED": 7,
+        "WHITE": 4
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 7.964358986122534,
+      "seed": 670000001,
+      "source_sha256": "d17c64ace107eae861082e75fdeda02c8f18b9f029e377881987ab768f89e7b2",
+      "winner": "BLUE"
+    },
+    {
+      "mode": "base",
+      "action_sha256": "1173d8e2564046c3afa413683b05ceaf4c324c82cae17d4c920086a068d9b80e",
+      "actions": 451,
+      "audit": false,
+      "cpu_seconds": 18.129979265,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 9,
+        "ORANGE": 5,
+        "RED": 10,
+        "WHITE": 7
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 18.140035412972793,
+      "seed": 670100000,
+      "source_sha256": "d17c64ace107eae861082e75fdeda02c8f18b9f029e377881987ab768f89e7b2",
+      "winner": "RED"
+    },
+    {
+      "mode": "fast",
+      "action_sha256": "1173d8e2564046c3afa413683b05ceaf4c324c82cae17d4c920086a068d9b80e",
+      "actions": 451,
+      "audit": false,
+      "cpu_seconds": 5.443910341,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 9,
+        "ORANGE": 5,
+        "RED": 10,
+        "WHITE": 7
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 5.445401021977887,
+      "seed": 670100000,
+      "source_sha256": "b25ccab7598c1266650fd6e0c46379bff5f822c337deb91209d6e5b110f95493",
+      "winner": "RED"
+    },
+    {
+      "mode": "fast",
+      "action_sha256": "959a64c82c12f10ef0b9fbb5bc45f935825b8a4702d75e1214c23b5fa8003c39",
+      "actions": 218,
+      "audit": false,
+      "cpu_seconds": 1.477016345,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 3,
+        "ORANGE": 10,
+        "RED": 5,
+        "WHITE": 6
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 1.4772520209662616,
+      "seed": 670100001,
+      "source_sha256": "b25ccab7598c1266650fd6e0c46379bff5f822c337deb91209d6e5b110f95493",
+      "winner": "ORANGE"
+    },
+    {
+      "mode": "base",
+      "action_sha256": "959a64c82c12f10ef0b9fbb5bc45f935825b8a4702d75e1214c23b5fa8003c39",
+      "actions": 218,
+      "audit": false,
+      "cpu_seconds": 4.79150744,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 3,
+        "ORANGE": 10,
+        "RED": 5,
+        "WHITE": 6
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 4.795602740952745,
+      "seed": 670100001,
+      "source_sha256": "d17c64ace107eae861082e75fdeda02c8f18b9f029e377881987ab768f89e7b2",
+      "winner": "ORANGE"
+    },
+    {
+      "mode": "base",
+      "action_sha256": "962ed36334cf1a7ab5192895933091a1e5d703a07ca860f1b7b86e033ed15a77",
+      "actions": 234,
+      "audit": false,
+      "cpu_seconds": 10.917754603,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 5,
+        "ORANGE": 10,
+        "RED": 2,
+        "WHITE": 5
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 10.91971858101897,
+      "seed": 670100002,
+      "source_sha256": "d17c64ace107eae861082e75fdeda02c8f18b9f029e377881987ab768f89e7b2",
+      "winner": "ORANGE"
+    },
+    {
+      "mode": "fast",
+      "action_sha256": "962ed36334cf1a7ab5192895933091a1e5d703a07ca860f1b7b86e033ed15a77",
+      "actions": 234,
+      "audit": false,
+      "cpu_seconds": 3.2499580139999997,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 5,
+        "ORANGE": 10,
+        "RED": 2,
+        "WHITE": 5
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 3.2506104719359428,
+      "seed": 670100002,
+      "source_sha256": "b25ccab7598c1266650fd6e0c46379bff5f822c337deb91209d6e5b110f95493",
+      "winner": "ORANGE"
+    },
+    {
+      "mode": "fast",
+      "action_sha256": "e59567c8313a49173b6e51f5ddbbc9b7245c27ffa62ae848d00221a3ca0d300b",
+      "actions": 254,
+      "audit": false,
+      "cpu_seconds": 2.740514036,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 8,
+        "ORANGE": 7,
+        "RED": 10,
+        "WHITE": 3
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 2.7444428529124707,
+      "seed": 670100003,
+      "source_sha256": "b25ccab7598c1266650fd6e0c46379bff5f822c337deb91209d6e5b110f95493",
+      "winner": "RED"
+    },
+    {
+      "mode": "base",
+      "action_sha256": "e59567c8313a49173b6e51f5ddbbc9b7245c27ffa62ae848d00221a3ca0d300b",
+      "actions": 254,
+      "audit": false,
+      "cpu_seconds": 9.433336929,
+      "deadline_observations": null,
+      "leaf_sha256": null,
+      "leaves": null,
+      "points": {
+        "BLUE": 8,
+        "ORANGE": 7,
+        "RED": 10,
+        "WHITE": 3
+      },
+      "python": "3.12.14 (main, Sep  1 2026, 00:10:07) [GCC 14.2.0]",
+      "seconds": 9.43477422813885,
+      "seed": 670100003,
+      "source_sha256": "d17c64ace107eae861082e75fdeda02c8f18b9f029e377881987ab768f89e7b2",
+      "winner": "RED"
+    }
+  ]
+}

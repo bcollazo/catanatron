@@ -1,4 +1,3 @@
-import pickle
 import random
 from collections import defaultdict
 from typing import Any, Dict, List, Sequence, Tuple
@@ -95,8 +94,12 @@ class State:
         initialize=True,
         rng=None,
     ):
+        # Always present, for the same reason as `Game.seed`/`Game.random`:
+        # `copy()` reads it unconditionally, so a State(initialize=False) --
+        # how an adapter mirrors a foreign engine's position -- could not be
+        # copied, and AlphaBeta copies before it searches.
+        self.random = rng if rng is not None else random.Random()
         if initialize:
-            self.random = rng if rng is not None else random.Random()
             self.players = self.random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(
@@ -178,9 +181,13 @@ class State:
         state_copy.resource_freqdeck = self.resource_freqdeck.copy()
         state_copy.development_listdeck = self.development_listdeck.copy()
 
-        state_copy.buildings_by_color = pickle.loads(
-            pickle.dumps(self.buildings_by_color)
-        )
+        state_copy.buildings_by_color = {
+            color: defaultdict(
+                buildings.default_factory,
+                ((kind, nodes.copy()) for kind, nodes in buildings.items()),
+            )
+            for color, buildings in self.buildings_by_color.items()
+        }
         state_copy.action_records = self.action_records.copy()
         state_copy.num_turns = self.num_turns
 
