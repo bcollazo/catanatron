@@ -230,7 +230,7 @@ class PerspectivePlayer(Player):
 
     def __init__(self, agent, is_bot=True):
         self.agent = agent
-        super().__init__(agent.color, is_bot)
+        super().__init__(agent.color)
 
     def decide(self, game, playable_actions):
         color = self.agent.color

@@ -6,8 +6,10 @@ local engine (through a PerspectivePlayer adapter) and by a future site-mode
 adapter that feeds observations built from external events.
 """
 
+from catanatron.observer import GameObserver
 
-class ObservationAgent:
+
+class ObservationAgent(GameObserver):
     """Base class for agents that only ever perceive Observations.
 
     Subclass and implement decide_observation. The fairness contract is
