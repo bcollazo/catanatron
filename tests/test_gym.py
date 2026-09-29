@@ -6,7 +6,7 @@ from gymnasium.utils.env_checker import check_env
 import numpy as np
 
 from catanatron.features import get_feature_ordering
-from catanatron.json import GameEncoder
+from catanatron.serialization import web_view
 from catanatron.models.player import Color, RandomPlayer
 from catanatron.models.enums import Action, ActionType, WHEAT, SHEEP, ORE
 from catanatron.players.value import ValueFunctionPlayer
@@ -290,8 +290,7 @@ def test_action_space_conversion_roundtrip():
         ), f"Action conversion failed: {action} -> {action_int} -> {recovered_action}"
 
 
-def test_gym_reproducibility():
-    # Play a game with the same seed, and ensure the game is the same
+def _play_seeded_gym_game(seed):
     env = gymnasium.make(
         "catanatron/Catanatron-v0",
         config={
@@ -300,24 +299,33 @@ def test_gym_reproducibility():
             ]
         },
     )
-    observation, info = env.reset(seed=123)
-    env.action_space.seed(123)
+    observation, info = env.reset(seed=seed)
+    rng = random.Random(seed)
+
     game = env.unwrapped.game
     center_tile = game.state.board.map.land_tiles[(0, 0, 0)]
     assert center_tile.resource == ORE
     assert center_tile.number == 11
 
     done = False
-    reward = 0
     while not done:
-        action_mask = env.action_masks()
+        action_mask = env.unwrapped.action_masks()
         valid_indices = np.flatnonzero(action_mask)
-        action = random.choice(valid_indices)
+        action = rng.choice(list(valid_indices))
 
         observation, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
     game = env.unwrapped.game
-    game_json = json.loads(json.dumps(game, cls=GameEncoder))
+    game_json = json.loads(json.dumps(web_view(game)))
+    # Every game gets a fresh uuid; everything else must match.
+    game_json["game"].pop("id")
     env.close()
+    return game_json
 
-    assert game_json["state_index"] == 125
+
+def test_gym_reproducibility():
+    # The same seed and action sequence must yield the same game.
+    first = _play_seeded_gym_game(123)
+    second = _play_seeded_gym_game(123)
+
+    assert first == second

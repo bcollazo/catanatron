@@ -92,9 +92,9 @@ DATASET_PATH = os.path.join(DATA_DIRECTORY, "simple.csv.gz")
 
 
 class MCTSScoreCollector(AlphaBetaPlayer):
-    def reset_state(self):
+    def before(self, game):
         global RECORDS
-        super().reset_state()
+        super().before(game)
 
         if len(RECORDS) > 0:  # Flush data to disk
             ensure_dir(DATA_DIRECTORY)

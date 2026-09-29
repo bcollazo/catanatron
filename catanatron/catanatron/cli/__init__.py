@@ -1,2 +1,3 @@
-from catanatron.cli.cli_players import register_cli_accumulator, register_cli_player
 from catanatron.cli.simulation_accumulator import SimulationAccumulator
+
+__all__ = ["SimulationAccumulator"]

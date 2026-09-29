@@ -1,5 +1,3 @@
-import random
-
 from catanatron.state_functions import (
     player_key,
 )
@@ -13,6 +11,8 @@ class VictoryPointPlayer(Player):
     If multiple actions lead to the same max-points-achievable
     in this turn, selects from them at random.
     """
+
+    LABEL = "Victory Point"
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
@@ -32,4 +32,4 @@ class VictoryPointPlayer(Player):
                 best_value = value
                 best_actions = [action]
 
-        return random.choice(best_actions)
+        return game.state.random.choice(best_actions)

@@ -1,6 +1,7 @@
-import time
-import random
+from dataclasses import dataclass
 import multiprocessing
+import random
+import time
 from collections import Counter
 
 from catanatron.game import Game
@@ -21,9 +22,11 @@ PLAYOUTS_BUDGET = 100
 class GreedyPlayoutsPlayer(Player):
     """For each playable action, play N random playouts."""
 
-    def __init__(self, color, num_playouts=DEFAULT_NUM_PLAYOUTS):
-        super().__init__(color)
-        self.num_playouts = int(num_playouts)
+    LABEL = "Greedy Playouts"
+
+    @dataclass(frozen=True)
+    class Params:
+        num_playouts: int = DEFAULT_NUM_PLAYOUTS
 
     def decide(self, game: Game, playable_actions):
         if len(playable_actions) == 1:
@@ -31,7 +34,7 @@ class GreedyPlayoutsPlayer(Player):
 
         start = time.time()
         # num_playouts = PLAYOUTS_BUDGET // len(playable_actions)
-        num_playouts = self.num_playouts
+        num_playouts = self.params.num_playouts
 
         best_action = None
         max_wins = None
@@ -55,17 +58,40 @@ class GreedyPlayoutsPlayer(Player):
 
 def run_playouts(action_applied_game_copy, num_playouts):
     start = time.time()
-    params = []
-    for _ in range(num_playouts):
-        params.append(action_applied_game_copy)
+    params = [
+        (action_applied_game_copy, seed)
+        for seed in _derive_playout_seeds(action_applied_game_copy, num_playouts)
+    ]
     if USE_MULTIPROCESSING:
         with multiprocessing.Pool(NUM_WORKERS) as p:
-            counter = Counter(p.map(run_playout, params))
+            counter = Counter(p.map(_run_seeded_playout, params))
     else:
-        counter = Counter(map(run_playout, params))
+        counter = Counter(map(_run_seeded_playout, params))
     duration = time.time() - start
     # print(f"{num_playouts} playouts took: {duration}. Results: {counter}")
     return counter
+
+
+def _derive_playout_seeds(game, count):
+    """Derive distinct deterministic child seeds without advancing the game.
+
+    Pool workers deserialize their inputs independently. Passing the same game
+    repeatedly would therefore restart every worker from the same RNG state
+    and turn supposedly random playouts into identical simulations.
+    """
+    seed_rng = random.Random()
+    seed_rng.setstate(game.state.random.getstate())
+    return [seed_rng.getrandbits(128) for _ in range(count)]
+
+
+def _run_seeded_playout(params):
+    game, seed = params
+    game_copy = game.copy()
+    rng = random.Random(seed)
+    game_copy.random = rng
+    game_copy.state.random = rng
+    game_copy.play(decide_fn=decide_fn)
+    return game_copy.winning_color()
 
 
 def run_playout(action_applied_game_copy):
@@ -75,5 +101,5 @@ def run_playout(action_applied_game_copy):
 
 
 def decide_fn(self, game, playable_actions):
-    index = random.randrange(0, len(playable_actions))
+    index = game.state.random.randrange(0, len(playable_actions))
     return playable_actions[index]

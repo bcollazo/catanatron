@@ -10,11 +10,13 @@ def ensure_link(game, get_replay_link: bool = False):
         str: URL for inspecting state, per convention
     """
     with database_session() as session:
-        game_state = upsert_game_state(game, session)
+        stored = upsert_game_state(game, session)
         if get_replay_link:
-            url = f"http://localhost:3000/replays/{game_state.uuid}"
+            url = f"http://localhost:3000/replays/{stored.uuid}"
         else:
-            url = f"http://localhost:3000/games/{game_state.uuid}/states/{game_state.state_index}"
+            url = (
+                f"http://localhost:3000/games/{stored.uuid}/states/{stored.head_index}"
+            )
 
     return url
 

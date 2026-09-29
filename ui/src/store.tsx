@@ -1,9 +1,12 @@
 import React, { createContext, useReducer } from "react";
 import ACTIONS from "./actions";
-import { type GameState } from "./utils/api.types";
+import { type Color, type GameState } from "./utils/api.types";
 
 export type CatanState = {
   gameState: GameState | null; // TODO
+  /** Whose eyes to see the table through. null watches as a spectator, with
+   * every hand face up. */
+  perspective: Color | null;
   freeRoadsAvailable: number;
   isBuildingRoad: boolean;
   isBuildingSettlement: boolean;
@@ -22,6 +25,7 @@ type ReducerAction = {
 
 const initialState: CatanState = {
   gameState: null,
+  perspective: null,
   // UI
   isBuildingRoad: false,
   isBuildingSettlement: false,
@@ -45,6 +49,8 @@ const StateProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(
     (state: CatanState, action: ReducerAction) => {
       switch (action.type) {
+        case ACTIONS.SET_PERSPECTIVE:
+          return { ...state, perspective: action.data };
         case ACTIONS.SET_LEFT_DRAWER_OPENED:
           return { ...state, isLeftDrawerOpen: action.data };
         case ACTIONS.SET_RIGHT_DRAWER_OPENED:

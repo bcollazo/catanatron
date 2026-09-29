@@ -207,8 +207,11 @@ class CatanMap:
     def from_template(
         map_template: MapTemplate,
         number_placement: NumberPlacement = "official_spiral",
+        rng=None,
     ):
-        tiles = initialize_tiles(map_template, number_placement=number_placement)
+        tiles = initialize_tiles(
+            map_template, number_placement=number_placement, rng=rng
+        )
 
         return CatanMap.from_tiles(tiles)
 
@@ -313,6 +316,7 @@ def initialize_tiles(
     shuffled_port_resources_param=None,
     shuffled_tile_resources_param=None,
     number_placement: NumberPlacement = "official_spiral",
+    rng=None,
 ) -> Dict[Coordinate, Tile]:
     """Initializes a new random board, based on the MapTemplate.
 
@@ -329,13 +333,14 @@ def initialize_tiles(
     Returns:
         Dict[Coordinate, Tile]: Coordinate to initialized Tile mapping.
     """
-    shuffled_port_resources = shuffled_port_resources_param or random.sample(
+    rng = rng if rng is not None else random
+    shuffled_port_resources = shuffled_port_resources_param or rng.sample(
         map_template.port_resources, len(map_template.port_resources)
     )
-    shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
+    shuffled_tile_resources = shuffled_tile_resources_param or rng.sample(
         map_template.tile_resources, len(map_template.tile_resources)
     )
-    shuffled_numbers = shuffled_numbers_param or random.sample(
+    shuffled_numbers = shuffled_numbers_param or rng.sample(
         map_template.numbers, len(map_template.numbers)
     )
 

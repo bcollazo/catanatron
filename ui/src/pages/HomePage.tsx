@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -14,21 +14,13 @@ import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
 import { GridLoader } from "react-spinners";
 import {
   createGame,
+  getPlayers,
   type MapTemplate,
-  type PlayerArchetype,
+  type PlayerEntry,
+  type PlayerKey,
 } from "../utils/apiClient";
 
 import "./HomePage.scss";
-
-const PLAYER_ARCHETYPES: Array<{
-  value: PlayerArchetype;
-  label: string;
-}> = [
-  { value: "HUMAN", label: "Human" },
-  { value: "RANDOM", label: "Random" },
-  { value: "CATANATRON", label: "Catanatron" },
-  { value: "WEIGHTED_RANDOM", label: "Weighted Random" },
-];
 
 const MAP_TEMPLATES: MapTemplate[] = ["BASE", "MINI", "TOURNAMENT"];
 const PLAYER_COLORS = ["RED", "BLUE", "ORANGE", "WHITE"] as const;
@@ -39,20 +31,27 @@ export default function HomePage() {
   const [vpsToWin, setVpsToWin] = useState(15);
   const [discardLimit, setDiscardLimit] = useState(9);
   const [friendlyRobber, setFriendlyRobber] = useState(true);
-  const [players, setPlayers] = useState<PlayerArchetype[]>([
-    "HUMAN",
-    "CATANATRON",
-  ]);
+  const [players, setPlayers] = useState<PlayerKey[]>(["HUMAN", "CATANATRON"]);
+  const [available, setAvailable] = useState<PlayerEntry[]>([]);
   const navigate = useNavigate();
-  const humanCount = players.filter((player) => player === "HUMAN").length;
+
+  // The server decides which players exist; the UI no longer hardcodes them.
+  useEffect(() => {
+    getPlayers()
+      .then(setAvailable)
+      .catch(() => setAvailable([]));
+  }, []);
+
+  const humanKeys = useMemo(
+    () => new Set(available.filter((entry) => !entry.is_bot).map((e) => e.key)),
+    [available]
+  );
+  const isHuman = (key: PlayerKey) => humanKeys.has(key);
+  const humanCount = players.filter(isHuman).length;
   const hasTooManyHumans = humanCount > 1;
 
-  const handlePlayerChange = (index: number, value: PlayerArchetype) => {
-    if (
-      value === "HUMAN" &&
-      players[index] !== "HUMAN" &&
-      humanCount >= 1
-    ) {
+  const handlePlayerChange = (index: number, value: PlayerKey) => {
+    if (isHuman(value) && !isHuman(players[index]) && humanCount >= 1) {
       return;
     }
 
@@ -215,21 +214,21 @@ export default function HomePage() {
                       onChange={(event) =>
                         handlePlayerChange(
                           index,
-                          event.target.value as PlayerArchetype
+                          event.target.value as PlayerKey
                         )
                       }
                     >
-                      {PLAYER_ARCHETYPES.map((option) => (
+                      {available.map((option) => (
                         <MenuItem
-                          key={option.value}
-                          value={option.value}
+                          key={option.key}
+                          value={option.key}
                           disabled={
-                            option.value === "HUMAN" &&
+                            isHuman(option.key) &&
                             humanCount >= 1 &&
-                            player !== "HUMAN"
+                            !isHuman(player)
                           }
                         >
-                          {option.label}
+                          {option.name}
                         </MenuItem>
                       ))}
                     </Select>

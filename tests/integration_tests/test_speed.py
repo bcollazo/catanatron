@@ -1,7 +1,7 @@
 import json
 
 from catanatron.game import Game
-from catanatron.json import GameEncoder
+from catanatron.serialization import web_view
 from catanatron.models.player import Color, SimplePlayer, RandomPlayer
 from catanatron.players.weighted_random import WeightedRandomPlayer
 from catanatron.features import create_sample
@@ -23,7 +23,7 @@ def test_to_json_speed(benchmark):
     ]
     game = Game(players, seed=RANDOM_SEED)
 
-    result = benchmark(json.dumps, game, cls=GameEncoder)
+    result = benchmark(lambda: json.dumps(web_view(game)))
     assert isinstance(result, str)
 
 

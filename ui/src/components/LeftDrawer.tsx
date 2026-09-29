@@ -4,16 +4,46 @@ import SwipeableDrawer from "@mui/material/SwipeableDrawer";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 
+import Button from "@mui/material/Button";
+
 import Hidden from "./Hidden";
 import PlayerStateBox from "./PlayerStateBox";
 import { humanizeActionRecord } from "../utils/promptUtils";
 import { store } from "../store";
 import ACTIONS from "../actions";
-import { playerKey } from "../utils/stateUtils";
+import { getHumanColor, playerKey } from "../utils/stateUtils";
 import { type GameState } from "../utils/api.types";
 import { isTabOrShift, type InteractionEvent } from "../utils/events";
 
 import "./LeftDrawer.scss";
+
+function PerspectiveToggle({ gameState }: { gameState: GameState }) {
+  const { state, dispatch } = useContext(store);
+  const humanColor = getHumanColor(gameState);
+  if (!humanColor) {
+    return null; // Bots only: there is no seat to sit in.
+  }
+  const seated = state.perspective !== null;
+  return (
+    <Button
+      className="perspective-toggle"
+      size="small"
+      onClick={() =>
+        dispatch({
+          type: ACTIONS.SET_PERSPECTIVE,
+          data: seated ? null : humanColor,
+        })
+      }
+      title={
+        seated
+          ? "Showing only what your seat can see"
+          : "Showing every hand, as a spectator"
+      }
+    >
+      {seated ? `Playing as ${humanColor}` : "Spectating"}
+    </Button>
+  );
+}
 
 function DrawerContent({ gameState }: { gameState: GameState }) {
   const playerSections = gameState.colors.map((color) => {
@@ -32,6 +62,7 @@ function DrawerContent({ gameState }: { gameState: GameState }) {
 
   return (
     <>
+      <PerspectiveToggle gameState={gameState} />
       {playerSections}
       <div className="log">
         {gameState.action_records

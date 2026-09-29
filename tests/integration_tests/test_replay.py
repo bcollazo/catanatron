@@ -1,7 +1,7 @@
 import json
 
 from catanatron.models.player import Color, RandomPlayer, SimplePlayer
-from catanatron.json import GameEncoder
+from catanatron.serialization import web_view
 from catanatron.game import Game
 from catanatron.models.enums import VICTORY_POINT, Action, ActionType, CITY, SETTLEMENT
 from catanatron.state_functions import (
@@ -49,7 +49,7 @@ def test_copy():
         game.play_tick()
 
     game_copy = game.copy()
-    assert json.dumps(game, cls=GameEncoder) == json.dumps(game_copy, cls=GameEncoder)
+    assert json.dumps(web_view(game)) == json.dumps(web_view(game_copy))
     assert game_copy != game
 
 
@@ -75,6 +75,19 @@ def test_execute_action_on_copies_doesnt_conflict():
     game.execute(action)
 
 
+def played_json(players, seed):
+    """A game's payload, minus its identity.
+
+    Every game gets a fresh uuid, so comparing two seeded games means
+    comparing how they played, not which game they were.
+    """
+    game = Game(players, seed=seed)
+    game.play()
+    view = web_view(game)
+    view["game"] = {k: v for k, v in view["game"].items() if k != "id"}
+    return json.dumps(view)
+
+
 def test_seed_reproducibility():
     # Play 10 games with the same seed, assert the action logs look the same
     players = [
@@ -83,12 +96,7 @@ def test_seed_reproducibility():
         RandomPlayer(Color.WHITE),
         RandomPlayer(Color.ORANGE),
     ]
-    game = Game(players, seed=123)
-    game.play()
-    game_json = json.dumps(game, cls=GameEncoder)
+    game_json = played_json(players, seed=123)
 
     for i in range(10):
-        game = Game(players, seed=123)
-        game.play()
-        game_json_copy = json.dumps(game, cls=GameEncoder)
-        assert game_json == game_json_copy
+        assert played_json(players, seed=123) == game_json

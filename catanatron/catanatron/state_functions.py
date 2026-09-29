@@ -4,7 +4,6 @@ Some are helpers to _read_ information from state and keep the rest
 of the code decoupled from state representation.
 """
 
-import random
 from typing import Optional
 
 from catanatron.models.decks import ROAD_COST_FREQDECK, freqdeck_add
@@ -321,7 +320,7 @@ def player_deck_replenish(state: State, color, resource, amount=1):
 
 def player_deck_random_select(state: State, color):
     deck_array = player_deck_to_array(state, color)
-    return random.choice(deck_array)
+    return state.random.choice(deck_array)
 
 
 def play_dev_card(state: State, color, dev_card):

@@ -24,6 +24,22 @@ jobs:
 
   build-python:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: catanatron
+          POSTGRES_PASSWORD: victorypoint
+          POSTGRES_DB: catanatron_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U catanatron -d catanatron_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CATANATRON_TEST_DATABASE_URL: postgresql://catanatron:victorypoint@127.0.0.1:5432/catanatron_test
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -43,10 +59,10 @@ jobs:
           catanatron-play --players=R,W,F,AB:2 --num=2
       - name: Test Custom Bot
         run: |
-          catanatron-play --code=examples/custom_player.py --players=F,FOO --num=1
+          catanatron-play --bot examples/custom_player.py --players=F,FooPlayer --num=1
       - name: Test Custom Accumulator
         run: |
-          catanatron-play --code=examples/custom_accumulator.py --players=F,R --num=1
+          catanatron-play --accumulator examples/custom_accumulator.py --players=F,R --num=1
       - name: Test Library Example
         run: |
           python -W error examples/library_example.py
@@ -88,6 +104,8 @@ jobs:
         with:
           node-version: ${{ steps.node-version.outputs.node-version }}
       - run: npm ci
+        working-directory: ./ui
+      - run: npm test -- --run
         working-directory: ./ui
       - run: npm run build
         working-directory: ./ui

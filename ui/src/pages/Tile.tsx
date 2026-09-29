@@ -103,12 +103,12 @@ const Port = ({
   resource,
   style,
 }: {
-  resource: ResourceCard;
+  resource: ResourceCard | null;
   style: Partial<React.CSSProperties>;
 }) => {
   let ratio;
   let tile;
-  if (resource in RESOURCES) {
+  if (resource !== null && resource in RESOURCES) {
     ratio = "2:1";
     tile = RESOURCES[resource];
   } else {
@@ -164,8 +164,8 @@ export default function Tile({
     resourceTile = desertTile;
   } else if (tile.type === "PORT") {
     const { x, y } = calculatePortPosition(tile.direction, size);
-    contents = (<Port resource={tile.resource} style={{ left: x, top: y }}  />)
-    }
+    contents = <Port resource={tile.resource} style={{ left: x, top: y }} />;
+  }
 
   return (
     <div

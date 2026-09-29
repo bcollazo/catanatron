@@ -93,12 +93,17 @@ class State:
         friendly_robber=False,
         number_placement: NumberPlacement = "official_spiral",
         initialize=True,
+        rng=None,
     ):
         if initialize:
-            self.players = random.sample(players, len(players))
+            self.random = rng if rng is not None else random.Random()
+            self.players = self.random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(
-                catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE, number_placement)
+                catan_map
+                or CatanMap.from_template(
+                    BASE_MAP_TEMPLATE, number_placement, rng=self.random
+                )
             )
             self.discard_limit = discard_limit
             self.friendly_robber = friendly_robber
@@ -114,7 +119,7 @@ class State:
 
             self.resource_freqdeck = starting_resource_bank()
             self.development_listdeck = starting_devcard_bank()
-            random.shuffle(self.development_listdeck)
+            self.random.shuffle(self.development_listdeck)
 
             # Auxiliary attributes to implement game logic
             self.buildings_by_color: Dict[Color, Dict[Any, Any]] = {
@@ -158,6 +163,8 @@ class State:
             State: State copy.
         """
         state_copy = State([], None, initialize=False)
+        # Shared by reference: simulations on copies must advance the same stream.
+        state_copy.random = self.random
         state_copy.players = self.players
         state_copy.discard_limit = self.discard_limit  # immutable
         state_copy.friendly_robber = self.friendly_robber  # immutable

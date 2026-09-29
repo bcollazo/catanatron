@@ -23,7 +23,7 @@ def client(app):
 def test_create_game_get_game_and_run_action(client):
     response = client.post(
         "/api/games",
-        data=json.dumps({"players": ["RANDOM", "HUMAN"]}),
+        data=json.dumps({"players": ["R", "HUMAN"]}),
         content_type="application/json",
     )
     response_json = response.get_json()

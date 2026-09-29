@@ -2,7 +2,7 @@ import { useContext, useState } from "react";
 import { CircularProgress, Button } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import { type MCTSProbabilities, type StateIndex, getMctsAnalysis } from "../utils/apiClient";
-import { useParams } from "react-router";
+import { useParams } from "react-router-dom";
 
 import "./AnalysisBox.scss";
 import { store } from "../store";
