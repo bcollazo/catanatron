@@ -11,6 +11,7 @@ from catanatron.models.player import Color, RandomPlayer
 from catanatron.models.enums import Action, ActionType, WHEAT, SHEEP, ORE
 from catanatron.players.value import ValueFunctionPlayer
 from catanatron.gym.envs.catanatron_env import CatanatronEnv
+from catanatron.gym.envs.perspective_catanatron_env import PerspectiveCatanatronEnv
 from catanatron.gym.envs.action_space import (
     get_action_array,
     to_action_space,
@@ -71,6 +72,44 @@ def test_gym_registration_and_api_works():
         done = terminated or truncated
     env.close()
     assert reward in [-1, 1]
+
+
+def test_perspective_gym_registration_and_api_works():
+    env = gymnasium.make("catanatron/PerspectiveCatanatron-v0")
+    observation, info = env.reset(seed=7)
+    assert isinstance(observation, np.ndarray)
+    assert observation.shape == env.observation_space.shape
+    action = random.choice(info["valid_actions"])
+    observation, reward, terminated, truncated, info = env.step(action)
+    assert isinstance(observation, np.ndarray)
+    assert reward == 0
+    assert not terminated
+    assert not truncated
+    env.close()
+
+
+def test_perspective_gym_matches_base_vector():
+    base = CatanatronEnv()
+    perspective = PerspectiveCatanatronEnv()
+
+    base_observation, base_info = base.reset(seed=123)
+    perspective_observation, perspective_info = perspective.reset(seed=123)
+    np.testing.assert_array_equal(base_observation, perspective_observation)
+    assert base_info["valid_actions"] == perspective_info["valid_actions"]
+
+    action = base_info["valid_actions"][0]
+    base_observation, *_ = base.step(action)
+    perspective_observation, *_ = perspective.step(action)
+    np.testing.assert_array_equal(base_observation, perspective_observation)
+
+    base.close()
+    perspective.close()
+
+
+def test_perspective_gym_passes_env_checker():
+    from gymnasium.utils.env_checker import check_env
+
+    check_env(PerspectiveCatanatronEnv())
 
 
 def test_invalid_action_reward():

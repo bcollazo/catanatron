@@ -66,7 +66,7 @@ class CatanatronEnv(gym.Env):
         self.player_colors = tuple([Color.BLUE] + [p.color for p in self.enemies])
         assert all(p.color != Color.BLUE for p in self.enemies)
 
-        self.p0 = Player(Color.BLUE)
+        self.p0 = self._create_p0()
         self.players = [self.p0] + self.enemies  # type: ignore
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
@@ -104,6 +104,10 @@ class CatanatronEnv(gym.Env):
             )
 
         self.reset()
+
+    def _create_p0(self):
+        """Create the controlled player; subclasses may change its adapter."""
+        return Player(Color.BLUE)
 
     def get_valid_actions(self):
         """
