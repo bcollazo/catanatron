@@ -202,6 +202,19 @@ def _build_inventory(game, color):
     )
 
 
+def build_observation(game, color):
+    """Build the fair observation presented to a perspective player."""
+    return Observation(
+        color=color,
+        features=create_sample(game, color),
+        public_history=_sanitize_history(game, color),
+        current_prompt=game.state.current_prompt,
+        pending_trades=_build_pending_trades(game),
+        public_state=_build_public_state(game),
+        inventory=_build_inventory(game, color),
+    )
+
+
 class PerspectivePlayer(Player):
     """Player that adapts an ObservationAgent into the perfect-info game loop.
 
@@ -221,15 +234,7 @@ class PerspectivePlayer(Player):
 
     def decide(self, game, playable_actions):
         color = self.agent.color
-        observation = Observation(
-            color=color,
-            features=create_sample(game, color),
-            public_history=_sanitize_history(game, color),
-            current_prompt=game.state.current_prompt,
-            pending_trades=_build_pending_trades(game),
-            public_state=_build_public_state(game),
-            inventory=_build_inventory(game, color),
-        )
+        observation = build_observation(game, color)
         return self.agent.decide_observation(observation, playable_actions)
 
     def reset_state(self):
