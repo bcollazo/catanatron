@@ -118,27 +118,18 @@ class Board:
             for edge_color, edges in edges_by_color.items():
                 if edge_color == color or edge_color is None:
                     continue  # ignore
+                # The new settlement ends or cuts edge_color's road here. Rebuild its
+                # networks so this node is no longer part of them (roads can't
+                # continue through an enemy building).
+                self._recompute_connected_components(edge_color)
                 if len(edges) == 2:  # rip, edge_color has been plowed
-                    # consider cut was at b=node_id for edges (a, b) and (b, c)
-                    a = [n for n in edges[0] if n != node_id].pop()
-                    c = [n for n in edges[1] if n != node_id].pop()
-
-                    # do dfs from a adding all encountered nodes
-                    a_nodeset = self.dfs_walk(a, edge_color)
-                    c_nodeset = self.dfs_walk(c, edge_color)
-
-                    # split this components on here.
-                    b_index = self._get_connected_component_index(node_id, edge_color)
-                    del self.connected_components[edge_color][b_index]
-                    self.connected_components[edge_color].append(a_nodeset)
-                    self.connected_components[edge_color].append(c_nodeset)
-
                     # Update longest road by plowed player. Compare again with all
                     self.road_lengths[edge_color] = max(
-                        *[
+                        [
                             len(longest_acyclic_path(self, component, edge_color))
                             for component in self.connected_components[edge_color]
-                        ]
+                        ],
+                        default=0,
                     )
                     self.road_color, self.road_length = max(
                         self.road_lengths.items(), key=lambda e: e[1]
@@ -178,6 +169,30 @@ class Board:
             agenda.extend(expandable)
 
         return visited
+
+    def _recompute_connected_components(self, color):
+        """Rebuilds color's road networks from its buildings and roads.
+
+        Each component holds the nodes reachable over color's roads without passing
+        through an enemy building. Enemy buildings themselves are left out.
+        """
+        starts = {n for n, (c, _) in self.buildings.items() if c == color}
+        starts.update(
+            a for (a, _), road_color in self.roads.items() if road_color == color
+        )
+        components = []
+        covered = set()
+        for node_id in sorted(starts):
+            if node_id in covered or self.is_enemy_node(node_id, color):
+                continue
+            component = {
+                n
+                for n in self.dfs_walk(node_id, color)
+                if not self.is_enemy_node(n, color)
+            }
+            covered.update(component)
+            components.append(component)
+        self.connected_components[color] = components
 
     def _get_connected_component_index(self, node_id, color):
         for i, component in enumerate(self.connected_components[color]):
@@ -364,13 +379,17 @@ def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
                 if not board.is_friendly_road(edge, color):
                     continue
 
-                # Can't expand past an enemy node.
-                if board.is_enemy_node(neighbor_node, color):
+                if edge in path_thus_far:
                     continue
 
-                if edge not in path_thus_far:
-                    agenda.append((neighbor_node, path_thus_far + [edge]))
+                # A road into an enemy building counts, but can't continue past it.
+                if board.is_enemy_node(neighbor_node, color):
+                    paths_from_this_node.append(path_thus_far + [edge])
                     able_to_navigate = True
+                    continue
+
+                agenda.append((neighbor_node, path_thus_far + [edge]))
+                able_to_navigate = True
 
             if not able_to_navigate:  # then it is leaf node
                 paths_from_this_node.append(path_thus_far)

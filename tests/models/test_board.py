@@ -357,3 +357,52 @@ def test_many_buildings():
 
 
 # TODO: Test super long road, cut at many places, to yield 5+ component graph
+
+
+def test_road_into_enemy_settlement_counts_toward_longest_road():
+    board = Board()
+
+    board.build_settlement(Color.BLUE, 0, initial_build_phase=True)
+    board.build_settlement(Color.RED, 3, initial_build_phase=True)
+    board.build_road(Color.RED, (3, 2))
+    board.build_road(Color.RED, (2, 1))
+    board.build_road(Color.RED, (1, 0))
+
+    # The enemy settlement ends the road, but the road leading into it still counts.
+    assert board.road_lengths[Color.RED] == 3
+
+
+def test_cant_build_road_out_of_enemy_settlement_on_road_end():
+    board = Board()
+
+    # RED's road ends at node 0.
+    board.build_settlement(Color.RED, 2, initial_build_phase=True)
+    board.build_road(Color.RED, (2, 1))
+    board.build_road(Color.RED, (1, 0))
+    # BLUE reaches node 0 with its own road and settles on the end of RED's road.
+    board.build_settlement(Color.BLUE, 22, initial_build_phase=True)
+    board.build_road(Color.BLUE, (22, 20))
+    board.build_road(Color.BLUE, (20, 0))
+    board.build_settlement(Color.BLUE, 0)
+
+    assert all(0 not in c for c in board.find_connected_components(Color.RED))
+    assert not any(0 in edge for edge in board.buildable_edges(Color.RED))
+    with pytest.raises(ValueError):
+        board.build_road(Color.RED, (0, 5))
+
+
+def test_cutting_a_road_splits_networks_without_the_enemy_node():
+    board = Board()
+
+    board.build_settlement(Color.RED, 2, initial_build_phase=True)
+    for edge in [(2, 1), (1, 0), (0, 5), (5, 16)]:
+        board.build_road(Color.RED, edge)
+    board.build_settlement(Color.BLUE, 22, initial_build_phase=True)
+    board.build_road(Color.BLUE, (22, 20))
+    board.build_road(Color.BLUE, (20, 0))
+
+    board.build_settlement(Color.BLUE, 0)  # cuts RED's road in two
+
+    components = sorted(sorted(c) for c in board.find_connected_components(Color.RED))
+    assert components == [[1, 2], [5, 16]]
+    assert board.road_lengths[Color.RED] == 2
