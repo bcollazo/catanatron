@@ -127,9 +127,14 @@ class Board:
                     a_nodeset = self.dfs_walk(a, edge_color)
                     c_nodeset = self.dfs_walk(c, edge_color)
 
-                    # split this components on here.
-                    b_index = self._get_connected_component_index(node_id, edge_color)
-                    del self.connected_components[edge_color][b_index]
+                    # split this components on here. Cutting a loop leaves two
+                    # copies of the same component, so replace every one that
+                    # goes through node_id, not just the first.
+                    self.connected_components[edge_color] = [
+                        component
+                        for component in self.connected_components[edge_color]
+                        if node_id not in component
+                    ]
                     self.connected_components[edge_color].append(a_nodeset)
                     self.connected_components[edge_color].append(c_nodeset)
 
@@ -144,10 +149,9 @@ class Board:
                         self.road_lengths.items(), key=lambda e: e[1]
                     )
                 elif len(edges) == 1:
-                    # Endpoint blocked: remove node_id from opponent's component
-                    b_index = self._get_connected_component_index(node_id, edge_color)
-                    if b_index is not None:
-                        self.connected_components[edge_color][b_index].discard(node_id)
+                    # Endpoint blocked: remove node_id from opponent's components
+                    for component in self.connected_components[edge_color]:
+                        component.discard(node_id)
 
         self.board_buildable_ids.discard(node_id)
         for n in STATIC_GRAPH.neighbors(node_id):
@@ -166,17 +170,19 @@ class Board:
 
         Returns:
             Set[int]: Nodes that are "connected" to this one
-                by roads of the color player.
+                by roads of the color player. Nodes with an enemy building
+                end the road and are left out, as in build_road, so that no
+                road can be built out of them.
         """
         agenda = [node_id]  # assuming node_id is owned.
         visited = set()
 
         while len(agenda) != 0:
             n = agenda.pop()
-            visited.add(n)
-
             if self.is_enemy_node(n, color):
                 continue  # end of the road
+
+            visited.add(n)
 
             neighbors = [v for v in STATIC_GRAPH.neighbors(n) if v not in visited]
             expandable = [v for v in neighbors if self.roads.get((n, v), None) == color]
