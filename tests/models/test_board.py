@@ -357,3 +357,72 @@ def test_many_buildings():
 
 
 # TODO: Test super long road, cut at many places, to yield 5+ component graph
+
+
+def test_cut_road_does_not_allow_building_out_of_enemy_settlement():
+    board = Board()
+    board.build_settlement(Color.BLUE, 46, initial_build_phase=True)
+    board.build_settlement(Color.RED, 0, initial_build_phase=True)
+    board.build_settlement(Color.ORANGE, 6, initial_build_phase=True)
+    # RED's road ends at BLUE's settlement on 46.
+    for edge in [(0, 20), (20, 22), (22, 49), (49, 48), (48, 46)]:
+        board.build_road(Color.RED, edge)
+    assert (19, 46) not in board.buildable_edges(Color.RED)
+
+    # ORANGE cuts RED's road at 22.
+    board.build_road(Color.ORANGE, (6, 23))
+    board.build_road(Color.ORANGE, (23, 22))
+    board.build_settlement(Color.ORANGE, 22)
+
+    for component in board.find_connected_components(Color.RED):
+        assert 22 not in component
+        assert 46 not in component
+    buildable = board.buildable_edges(Color.RED)
+    assert (19, 46) not in buildable
+    assert (45, 46) not in buildable
+    with pytest.raises(ValueError):
+        board.build_road(Color.RED, (46, 45))
+
+
+def build_red_loop_around_tile(board):
+    """RED settles at 4 and builds a loop 17-15-14-37-38-39 off it."""
+    board.build_settlement(Color.RED, 4, initial_build_phase=True)
+    board.build_road(Color.RED, (4, 15))
+    for edge in [(17, 15), (15, 14), (14, 37), (37, 38), (38, 39), (39, 17)]:
+        board.build_road(Color.RED, edge)
+
+
+def test_cutting_a_loop_twice_keeps_enemy_settlements_out_of_components():
+    board = Board()
+    build_red_loop_around_tile(board)
+    board.build_settlement(Color.BLUE, 35, initial_build_phase=True)
+    board.build_road(Color.BLUE, (35, 36))
+    board.build_road(Color.BLUE, (36, 37))
+    board.build_settlement(Color.ORANGE, 42, initial_build_phase=True)
+    board.build_road(Color.ORANGE, (42, 41))
+    board.build_road(Color.ORANGE, (41, 39))
+
+    board.build_settlement(Color.BLUE, 37)  # cutting the loop disconnects nothing
+    board.build_settlement(Color.ORANGE, 39)  # leaves 38 on its own
+
+    components = board.find_connected_components(Color.RED)
+    assert sorted(sorted(c) for c in components) == [[4, 14, 15, 17], [38]]
+
+
+def test_blocking_a_road_end_after_a_loop_cut_removes_it_from_every_component():
+    board = Board()
+    build_red_loop_around_tile(board)
+    board.build_road(Color.RED, (14, 13))
+    board.build_settlement(Color.BLUE, 35, initial_build_phase=True)
+    board.build_road(Color.BLUE, (35, 36))
+    board.build_road(Color.BLUE, (36, 37))
+    board.build_settlement(Color.ORANGE, 11, initial_build_phase=True)
+    board.build_road(Color.ORANGE, (11, 12))
+    board.build_road(Color.ORANGE, (12, 13))
+
+    board.build_settlement(Color.BLUE, 37)  # cutting the loop disconnects nothing
+    board.build_settlement(Color.ORANGE, 13)  # on the end of RED's road
+
+    for component in board.find_connected_components(Color.RED):
+        assert 13 not in component
+    assert (13, 34) not in board.buildable_edges(Color.RED)
