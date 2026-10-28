@@ -22,6 +22,7 @@ from catanatron.models.decks import (
     freqdeck_add,
     freqdeck_can_draw,
     freqdeck_contains,
+    freqdeck_count,
     freqdeck_draw,
     freqdeck_from_listdeck,
     freqdeck_replenish,
@@ -593,6 +594,11 @@ def yield_resources(board: Board, resource_freqdeck, number):
         for resource, count in player_payout.items():
             if resource not in depleted:
                 freqdeck_replenish(payout[player], count, resource)
+            elif count == resource_totals[resource]:
+                # Only one player is owed this resource, so they take
+                # whatever the bank has left (rulebook: Collect Resources).
+                remaining = freqdeck_count(resource_freqdeck, resource)
+                freqdeck_replenish(payout[player], remaining, resource)
 
     return payout, depleted
 
