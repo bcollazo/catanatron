@@ -11,7 +11,11 @@ from catanatron.models.actions import generate_playable_actions
 from catanatron.models.enums import Action, ActionPrompt, ActionRecord, ActionType
 from catanatron.state import State
 from catanatron.apply_action import apply_action
-from catanatron.state_functions import player_key, player_has_rolled
+from catanatron.state_functions import (
+    player_key,
+    player_has_rolled,
+    player_resource_freqdeck_contains,
+)
 from catanatron.models.map import CatanMap, NumberPlacement
 from catanatron.models.player import Color, Player
 from catanatron.observer import GameObserver
@@ -29,6 +33,7 @@ def is_valid_action(playable_actions, state: State, action: Action) -> bool:
             and state.current_prompt == ActionPrompt.PLAY_TURN
             and player_has_rolled(state, action.color)
             and is_valid_trade(action.value)
+            and player_resource_freqdeck_contains(state, action.color, action.value[:5])
         )
 
     return action in playable_actions

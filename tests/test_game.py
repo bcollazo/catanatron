@@ -680,3 +680,50 @@ def test_seeded_games_are_isolated_from_each_other():
 
     assert [str(a) for a in game_a.state.action_records] == solo_a
     assert [str(a) for a in game_b.state.action_records] == solo_b
+
+
+def _game_in_action_phase(seat):
+    players = [
+        SimplePlayer(c) for c in (Color.RED, Color.BLUE, Color.WHITE, Color.ORANGE)
+    ]
+    game = Game(players, seed=1)
+    while game.state.is_initial_build_phase:
+        game.play_tick()
+    state = game.state
+    state.current_turn_index = state.current_player_index = seat
+    state.player_state[f"P{seat}_HAS_ROLLED"] = True
+    game.playable_actions = generate_playable_actions(state)
+    return game
+
+
+def test_offering_player_is_not_asked_to_respond():
+    game = _game_in_action_phase(2)
+    state = game.state
+    offerer = state.colors[2]
+    state.player_state["P2_WOOD_IN_HAND"] = 1
+    game.execute(
+        Action(offerer, ActionType.OFFER_TRADE, (1, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+    )
+
+    asked = []
+    while state.current_prompt == ActionPrompt.DECIDE_TRADE:
+        asked.append(state.current_color())
+        game.execute(
+            Action(state.current_color(), ActionType.REJECT_TRADE, state.current_trade)
+        )
+
+    assert asked == [c for c in state.colors if c != offerer]
+    assert state.current_prompt == ActionPrompt.PLAY_TURN
+
+
+def test_cannot_offer_cards_not_in_hand():
+    game = _game_in_action_phase(0)
+    state = game.state
+    for resource in RESOURCES:
+        state.player_state[f"P0_{resource}_IN_HAND"] = 0
+    with pytest.raises(ValueError):
+        game.execute(
+            Action(
+                state.colors[0], ActionType.OFFER_TRADE, (3, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+            )
+        )

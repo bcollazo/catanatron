@@ -468,11 +468,11 @@ def apply_accept_trade(state: State, action: Action):
     state.acceptees = tuple(new_acceptess)
 
     try:
-        # keep going around table w/o asking yourself or players that have answered
+        # keep going around table w/o asking the offering player or players that have answered
         state.current_player_index = next(
             i
-            for i, c in enumerate(state.colors)
-            if c != action.color and i > state.current_player_index
+            for i in range(len(state.colors))
+            if i != state.current_turn_index and i > state.current_player_index
         )
         # .is_resolving_trade, .current_trade, .current_prompt, .acceptees stay the same
     except StopIteration:
@@ -486,11 +486,11 @@ def apply_accept_trade(state: State, action: Action):
 
 def apply_reject_trade(state: State, action: Action):
     try:
-        # keep going around table w/o asking yourself or players that have answered
+        # keep going around table w/o asking the offering player or players that have answered
         state.current_player_index = next(
             i
-            for i, c in enumerate(state.colors)
-            if c != action.color and i > state.current_player_index
+            for i in range(len(state.colors))
+            if i != state.current_turn_index and i > state.current_player_index
         )
         # .is_resolving_trade, .current_trade, .current_prompt, .acceptees stay the same
     except StopIteration:
@@ -513,6 +513,10 @@ def apply_confirm_trade(state: State, action: Action):
     offering = action.value[:5]
     asking = action.value[5:10]
     enemy_color = action.value[10]
+    if not player_resource_freqdeck_contains(state, action.color, offering):
+        raise ValueError("Offering player cannot pay for this trade")
+    if not player_resource_freqdeck_contains(state, enemy_color, asking):
+        raise ValueError("Accepting player cannot pay for this trade")
     player_freqdeck_subtract(state, action.color, offering)
     player_freqdeck_add(state, action.color, asking)
     player_freqdeck_subtract(state, enemy_color, asking)
