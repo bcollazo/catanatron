@@ -192,19 +192,18 @@ class Game:
     def winning_color(self) -> Union[Color, None]:
         """Gets winning color
 
+        Only the player whose turn it is can win (rulebook: Winning the Game).
+        A player who reaches the target on someone else's turn wins once their
+        own turn begins, if they still have the points.
+
         Returns:
             Union[Color, None]: Might be None if game truncated by TURNS_LIMIT
         """
-        result = None
-        for color in self.state.colors:
-            key = player_key(self.state, color)
-            if (
-                self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-                >= self.vps_to_win
-            ):
-                result = color
-
-        return result
+        color = self.state.colors[self.state.current_turn_index]
+        key = player_key(self.state, color)
+        if self.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"] >= self.vps_to_win:
+            return color
+        return None
 
     def copy(self) -> "Game":
         """Creates a copy of this Game, that can be modified without

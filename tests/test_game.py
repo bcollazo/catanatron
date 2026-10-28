@@ -680,3 +680,28 @@ def test_seeded_games_are_isolated_from_each_other():
 
     assert [str(a) for a in game_a.state.action_records] == solo_a
     assert [str(a) for a in game_b.state.action_records] == solo_b
+
+
+def _game_in_action_phase(seat):
+    players = [
+        SimplePlayer(c) for c in (Color.RED, Color.BLUE, Color.WHITE, Color.ORANGE)
+    ]
+    game = Game(players, seed=1)
+    while game.state.is_initial_build_phase:
+        game.play_tick()
+    state = game.state
+    state.current_turn_index = state.current_player_index = seat
+    state.player_state[f"P{seat}_HAS_ROLLED"] = True
+    game.playable_actions = generate_playable_actions(state)
+    return game
+
+
+def test_only_active_player_can_win():
+    game = _game_in_action_phase(0)
+    state = game.state
+    state.player_state["P1_ACTUAL_VICTORY_POINTS"] = 10
+    assert game.winning_color() is None
+
+    # They win once their own turn begins, if they still have the points.
+    game.execute(Action(state.colors[0], ActionType.END_TURN, None))
+    assert game.winning_color() == state.colors[1]
