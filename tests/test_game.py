@@ -680,3 +680,28 @@ def test_seeded_games_are_isolated_from_each_other():
 
     assert [str(a) for a in game_a.state.action_records] == solo_a
     assert [str(a) for a in game_b.state.action_records] == solo_b
+
+
+def test_alphabeta_can_respond_to_trade_offers():
+    from catanatron.players.minimax import AlphaBetaPlayer
+
+    colors = (Color.RED, Color.BLUE, Color.WHITE, Color.ORANGE)
+    players = [SimplePlayer(colors[0])] + [AlphaBetaPlayer(c) for c in colors[1:]]
+    game = Game(players, seed=1)
+    while game.state.is_initial_build_phase:
+        game.execute(game.playable_actions[0])
+    state = game.state
+    offerer = state.colors[state.current_turn_index]
+    seat = state.colors.index(offerer)
+    state.player_state[f"P{seat}_HAS_ROLLED"] = True
+    state.player_state[f"P{seat}_WOOD_IN_HAND"] = 1
+    game.playable_actions = generate_playable_actions(state)
+    game.execute(
+        Action(offerer, ActionType.OFFER_TRADE, (1, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+    )
+
+    while state.current_prompt == ActionPrompt.DECIDE_TRADE:
+        responder = state.current_player()
+        action = responder.decide(game, game.playable_actions)
+        assert action.action_type in (ActionType.ACCEPT_TRADE, ActionType.REJECT_TRADE)
+        game.execute(action)

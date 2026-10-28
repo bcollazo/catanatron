@@ -33,6 +33,12 @@ DETERMINISTIC_ACTIONS = set(
         ActionType.MARITIME_TRADE,
         ActionType.DISCARD_RESOURCE,  # for simplicity... ok if reality is slightly different
         ActionType.PLAY_MONOPOLY,  # for simplicity... we assume good card-counting and bank is visible...
+        # Domestic trade steps involve no chance.
+        ActionType.OFFER_TRADE,
+        ActionType.ACCEPT_TRADE,
+        ActionType.REJECT_TRADE,
+        ActionType.CONFIRM_TRADE,
+        ActionType.CANCEL_TRADE,
     ]
 )
 
