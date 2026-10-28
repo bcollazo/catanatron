@@ -204,3 +204,31 @@ def test_cut_but_not_disconnected():
         max(map(lambda path: len(path), board.continuous_roads_by_player(Color.RED)))
         == 6
     )
+
+
+def _board_after_cut(road_color, road_lengths):
+    board = Board()
+    board.road_color = road_color
+    board.road_length = road_lengths.get(road_color, 0)
+    board.road_lengths.update(road_lengths)
+    return board
+
+
+def test_longest_road_returns_to_supply_when_cut_below_five():
+    board = _board_after_cut(Color.RED, {Color.RED: 3, Color.BLUE: 4})
+    assert board._holder_after_cut() == (None, 0)
+
+
+def test_longest_road_passes_to_single_longest_after_cut():
+    board = _board_after_cut(Color.RED, {Color.RED: 4, Color.BLUE: 6})
+    assert board._holder_after_cut() == (Color.BLUE, 6)
+
+
+def test_longest_road_returns_to_supply_on_tie_after_cut():
+    board = _board_after_cut(Color.RED, {Color.RED: 4, Color.BLUE: 6, Color.WHITE: 6})
+    assert board._holder_after_cut() == (None, 6)
+
+
+def test_longest_road_holder_keeps_tile_on_tie_after_cut():
+    board = _board_after_cut(Color.RED, {Color.RED: 6, Color.BLUE: 6})
+    assert board._holder_after_cut() == (Color.RED, 6)

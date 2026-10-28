@@ -140,9 +140,7 @@ class Board:
                             for component in self.connected_components[edge_color]
                         ]
                     )
-                    self.road_color, self.road_length = max(
-                        self.road_lengths.items(), key=lambda e: e[1]
-                    )
+                    self.road_color, self.road_length = self._holder_after_cut()
                 elif len(edges) == 1:
                     # Endpoint blocked: remove node_id from opponent's component
                     b_index = self._get_connected_component_index(node_id, edge_color)
@@ -156,6 +154,31 @@ class Board:
         self.buildable_edges_cache = {}  # Reset buildable_edges
         self.player_port_resources_cache = {}  # Reset port resources
         return previous_road_color, self.road_color, self.road_lengths
+
+    def _holder_after_cut(self):
+        """Longest Route holder after a settlement cuts a route.
+
+        Per the rulebook (Longest Route): the holder keeps the tile while their
+        route is still at least 5 and no one has a longer one. Otherwise the tile
+        goes to a single player with the strictly longest route of at least 5, or
+        back to the supply. While it sits in the supply because of a tie, the
+        tied length is kept so that only a longer route can claim it.
+
+        Returns:
+            (Color|None, int): new holder and the length a builder must exceed.
+        """
+        best = max(self.road_lengths.values(), default=0)
+        if best < 5:
+            return None, 0
+
+        leaders = [
+            color for color, length in self.road_lengths.items() if length == best
+        ]
+        if self.road_color in leaders:
+            return self.road_color, best
+        if len(leaders) == 1:
+            return leaders[0], best
+        return None, best
 
     def dfs_walk(self, node_id, color):
         """Generates set of nodes that are "connected" to given node.
