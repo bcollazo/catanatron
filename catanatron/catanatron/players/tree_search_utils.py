@@ -59,7 +59,7 @@ def execute_spectrum(game: Game, action: Action):
                 number = get_dev_cards_in_hand(game.state, color, card)
                 current_deck += [card] * number
 
-        for card in set(current_deck):
+        for card in sorted(set(current_deck)):
             option_action = Action(action.color, action.action_type, card)
             option_game = game.copy()
             try:

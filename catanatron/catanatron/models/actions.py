@@ -139,7 +139,8 @@ def year_of_plenty_possibilities(color, freqdeck: List[int]) -> List[Action]:
     return list(
         map(
             lambda cards: Action(color, ActionType.PLAY_YEAR_OF_PLENTY, tuple(cards)),
-            options,
+            # Sets of strings iterate in hash-seed order; sort for reproducibility.
+            sorted(options, key=lambda cards: [RESOURCES.index(c) for c in cards]),
         )
     )
 
@@ -241,7 +242,7 @@ def _robber_possibilities_without_friendly_robber(state, color) -> List[Action]:
         if len(to_steal_from) == 0:
             actions.append(Action(color, ActionType.MOVE_ROBBER, (coordinate, None)))
         else:
-            for enemy_color in to_steal_from:
+            for enemy_color in sorted(to_steal_from, key=lambda c: c.value):
                 actions.append(
                     Action(color, ActionType.MOVE_ROBBER, (coordinate, enemy_color))
                 )
@@ -307,7 +308,10 @@ def maritime_trade_possibilities(state, color) -> List[Action]:
     )
 
     return list(
-        map(lambda t: Action(color, ActionType.MARITIME_TRADE, t), trade_offers)
+        map(
+            lambda t: Action(color, ActionType.MARITIME_TRADE, t),
+            sorted(trade_offers, key=lambda t: [r or "" for r in t]),
+        )
     )
 
 
