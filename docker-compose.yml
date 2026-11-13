@@ -6,7 +6,7 @@ services:
       - POSTGRES_PASSWORD=victorypoint
       - POSTGRES_DB=catanatron_db
     ports:
-      - 5433:5432
+      - 5432:5432
     volumes:
       - ./db-data:/var/lib/postgresql
     healthcheck:
