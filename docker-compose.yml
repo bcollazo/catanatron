@@ -6,14 +6,14 @@ services:
       - POSTGRES_PASSWORD=victorypoint
       - POSTGRES_DB=catanatron_db
     ports:
-      - 5432:5432
+      - 5433:5432
     volumes:
       - ./db-data:/var/lib/postgresql
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -d postgresql://catanatron:victorypoint@db:5432/catanatron_db",
+          "pg_isready -d postgresql+psycopg2://catanatron:victorypoint@db:5432/catanatron_db",
         ]
       interval: 5s
       timeout: 5s
