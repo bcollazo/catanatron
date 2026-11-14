@@ -16,6 +16,7 @@ from catanatron.models.enums import (
 )
 from catanatron.models.decks import (
     CITY_COST_FREQDECK,
+    ROAD_COST_FREQDECK,
     DEVELOPMENT_CARD_COST_FREQDECK,
     SETTLEMENT_COST_FREQDECK,
     draw_from_listdeck,
@@ -147,6 +148,12 @@ def apply_build_settlement(state: State, action: Action):
                 if tile.resource != None:
                     freqdeck_draw(state.resource_freqdeck, 1, tile.resource)  # type: ignore
                     state.player_state[f"{key}_{tile.resource}_IN_HAND"] += 1
+                    if state.card_counter is not None:
+                        gained = [0] * 5
+                        freqdeck_replenish(gained, 1, tile.resource)
+                        state.card_counter.gain(
+                            state.color_to_index[action.color], gained
+                        )
 
         # state.current_player_index stays the same
         state.current_prompt = ActionPrompt.BUILD_INITIAL_ROAD
@@ -157,6 +164,7 @@ def apply_build_settlement(state: State, action: Action):
             road_lengths,
         ) = state.board.build_settlement(action.color, node_id, False)
         build_settlement(state, action.color, node_id, False)
+        _cc_spend(state, action.color, SETTLEMENT_COST_FREQDECK)
         state.resource_freqdeck = freqdeck_add(
             state.resource_freqdeck, SETTLEMENT_COST_FREQDECK
         )  # replenish bank
@@ -213,6 +221,7 @@ def apply_build_road(state: State, action: Action):
         result = state.board.build_road(action.color, edge)
         previous_road_color, road_color, road_lengths = result
         build_road(state, action.color, edge, False)
+        _cc_spend(state, action.color, ROAD_COST_FREQDECK)
         maintain_longest_road(state, previous_road_color, road_color, road_lengths)
 
         # state.current_player_index stays the same
@@ -224,6 +233,7 @@ def apply_build_city(state: State, action: Action):
     node_id = action.value
     state.board.build_city(action.color, node_id)
     build_city(state, action.color, node_id)
+    _cc_spend(state, action.color, CITY_COST_FREQDECK)
     state.resource_freqdeck = freqdeck_add(
         state.resource_freqdeck, CITY_COST_FREQDECK
     )  # replenish bank
@@ -255,6 +265,7 @@ def apply_buy_development_card(state: State, action: Action, action_record=None)
         draw_from_listdeck(state.development_listdeck, 1, card)
 
     buy_dev_card(state, action.color, card)
+    _cc_spend(state, action.color, DEVELOPMENT_CARD_COST_FREQDECK)
     state.resource_freqdeck = freqdeck_add(
         state.resource_freqdeck, DEVELOPMENT_CARD_COST_FREQDECK
     )
@@ -303,6 +314,7 @@ def apply_roll(state: State, action: Action, action_record=None):
         for color, resource_freqdeck in payout.items():
             # Atomically add to player's hand and remove from bank
             player_freqdeck_add(state, color, resource_freqdeck)
+            _cc_gain(state, color, resource_freqdeck)
             state.resource_freqdeck = freqdeck_subtract(
                 state.resource_freqdeck, resource_freqdeck
             )
@@ -321,6 +333,10 @@ def apply_discard(state: State, action: Action):
 
     to_discard = freqdeck_from_listdeck([discarded])
     player_freqdeck_subtract(state, action.color, to_discard)
+    if state.card_counter is not None:
+        state.card_counter.spend(
+            state.color_to_index[action.color], to_discard
+        )
     state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, to_discard)
     state.discard_counts[player_index] -= 1
     action = Action(action.color, action.action_type, discarded)
@@ -362,6 +378,12 @@ def apply_move_robber(state: State, action: Action, action_record=None):
         )
         player_deck_draw(state, robbed_color, robbed_resource)
         player_deck_replenish(state, action.color, robbed_resource)
+        if state.card_counter is not None:
+            state.card_counter.steal(
+                state.color_to_index[action.color],
+                state.color_to_index[robbed_color],
+                robbed_resource,
+            )
     state.board.robber_coordinate = coordinate
 
     # state.current_player_index stays the same
@@ -388,6 +410,7 @@ def apply_play_year_of_plenty(state: State, action: Action):
     if not freqdeck_contains(state.resource_freqdeck, cards_selected):
         raise ValueError("Not enough resources of this type (these types?) in bank")
     player_freqdeck_add(state, action.color, cards_selected)
+    _cc_gain(state, action.color, cards_selected)
     state.resource_freqdeck = freqdeck_subtract(state.resource_freqdeck, cards_selected)
     play_dev_card(state, action.color, YEAR_OF_PLENTY)
 
@@ -409,7 +432,11 @@ def apply_play_monopoly(state: State, action: Action):
             ]
             freqdeck_replenish(cards_stolen, number_of_cards_to_steal, mono_resource)
             player_deck_draw(state, color, mono_resource, number_of_cards_to_steal)
+            taken = [0] * 5
+            freqdeck_replenish(taken, number_of_cards_to_steal, mono_resource)
+            _cc_spend(state, color, taken)
     player_freqdeck_add(state, action.color, cards_stolen)
+    _cc_gain(state, action.color, cards_stolen)
     play_dev_card(state, action.color, MONOPOLY)
 
     # state.current_player_index stays the same
@@ -439,8 +466,10 @@ def apply_maritime_trade(state: State, action: Action):
     if not freqdeck_contains(state.resource_freqdeck, asking):
         raise ValueError("Bank doenst have those cards")
     player_freqdeck_subtract(state, action.color, offering)
+    _cc_spend(state, action.color, offering)
     state.resource_freqdeck = freqdeck_add(state.resource_freqdeck, offering)
     player_freqdeck_add(state, action.color, asking)
+    _cc_gain(state, action.color, asking)
     state.resource_freqdeck = freqdeck_subtract(state.resource_freqdeck, asking)
 
     # state.current_player_index stays the same
@@ -517,6 +546,10 @@ def apply_confirm_trade(state: State, action: Action):
     player_freqdeck_add(state, action.color, asking)
     player_freqdeck_subtract(state, enemy_color, asking)
     player_freqdeck_add(state, enemy_color, offering)
+    _cc_spend(state, action.color, offering)
+    _cc_gain(state, action.color, asking)
+    _cc_spend(state, enemy_color, asking)
+    _cc_gain(state, enemy_color, offering)
 
     reset_trading_state(state)
 
@@ -534,6 +567,18 @@ def apply_cancel_trade(state: State, action: Action):
 
 
 # ===== Helper Functions =====
+def _cc_gain(state: State, color, freqdeck):
+    """Tell the card counter (if on) about a publicly visible gain."""
+    if state.card_counter is not None:
+        state.card_counter.gain(state.color_to_index[color], freqdeck)
+
+
+def _cc_spend(state: State, color, freqdeck):
+    """Tell the card counter (if on) about a publicly visible loss."""
+    if state.card_counter is not None:
+        state.card_counter.spend(state.color_to_index[color], freqdeck)
+
+
 def roll_dice(rng=None):
     """Yields two random numbers
 

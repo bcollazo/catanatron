@@ -78,6 +78,7 @@ class Game:
         catan_map: Optional[CatanMap] = None,
         number_placement: NumberPlacement = "official_spiral",
         initialize: bool = True,
+        card_counting: bool = False,
     ):
         """Creates a game (doesn't run it).
 
@@ -88,6 +89,10 @@ class Game:
             vps_to_win (int, optional): Victory Points needed to win. Defaults to 10.
             catan_map (CatanMap, optional): Map to use. Defaults to None.
             initialize (bool, optional): Whether to initialize. Defaults to True.
+            card_counting (bool, optional): Maintain per-player beliefs about
+                everyone's resource hand in ``state.card_counter``, built only
+                from what each player could see. Off by default since it costs
+                time in games that don't use it. Defaults to False.
         """
         #: Everything watching this game: the seated players, plus any
         #: accumulators handed to play(). One list, so each hook is one loop.
@@ -109,6 +114,7 @@ class Game:
                 friendly_robber=friendly_robber,
                 number_placement=number_placement,
                 rng=self.random,
+                card_counting=card_counting,
             )
             self.playable_actions = generate_playable_actions(self.state)
 
