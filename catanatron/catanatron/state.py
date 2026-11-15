@@ -3,6 +3,7 @@ import random
 from collections import defaultdict
 from typing import Any, Dict, List, Sequence, Tuple
 
+from catanatron.card_counting import CardCounter
 from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap, NumberPlacement
 from catanatron.models.board import Board
 from catanatron.models.enums import (
@@ -83,7 +84,14 @@ class State:
             Building dev card.
         free_roads_available (int): Number of roads available left in Road Building
             phase.
+        card_counter (CardCounter, optional): Per-observer beliefs about every
+            player's resource hand, kept up to date by apply_action. None
+            unless the state was created with card_counting=True.
     """
+
+    # Class-level default so states built without __init__ (deserialization)
+    # simply have counting off.
+    card_counter = None
 
     def __init__(
         self,
@@ -94,6 +102,7 @@ class State:
         number_placement: NumberPlacement = "official_spiral",
         initialize=True,
         rng=None,
+        card_counting=False,
     ):
         if initialize:
             self.random = rng if rng is not None else random.Random()
@@ -146,6 +155,8 @@ class State:
             self.is_resolving_trade = False
             self.current_trade: Tuple = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             self.acceptees = tuple(False for _ in self.colors)
+
+            self.card_counter = CardCounter(self.colors) if card_counting else None
 
     def current_player(self):
         """Helper for accessing Player instance who should decide next"""
@@ -200,5 +211,8 @@ class State:
         state_copy.is_resolving_trade = self.is_resolving_trade
         state_copy.current_trade = self.current_trade
         state_copy.acceptees = self.acceptees
+
+        if self.card_counter is not None:
+            state_copy.card_counter = self.card_counter.copy()
 
         return state_copy
