@@ -334,6 +334,12 @@ def initialize_tiles(
         Dict[Coordinate, Tile]: Coordinate to initialized Tile mapping.
     """
     rng = rng if rng is not None else random
+    if shuffled_port_resources_param is not None:
+        shuffled_port_resources_param = list(shuffled_port_resources_param)
+    if shuffled_tile_resources_param is not None:
+        shuffled_tile_resources_param = list(shuffled_tile_resources_param)
+    if shuffled_numbers_param is not None:
+        shuffled_numbers_param = list(shuffled_numbers_param)
     shuffled_port_resources = shuffled_port_resources_param or rng.sample(
         map_template.port_resources, len(map_template.port_resources)
     )
