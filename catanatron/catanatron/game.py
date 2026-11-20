@@ -38,6 +38,11 @@ def is_valid_trade(action_value):
     """Checks the value of a OFFER_TRADE does not
     give away resources or trade matching resources.
     """
+    if not isinstance(action_value, (tuple, list)) or len(action_value) != 10:
+        return False
+    if any(type(count) is not int or count < 0 for count in action_value):
+        return False
+
     offering = action_value[:5]
     asking = action_value[5:]
     if sum(offering) == 0 or sum(asking) == 0:
