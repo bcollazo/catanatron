@@ -23,6 +23,19 @@ gzip -dc artifacts/catanatron-duel-1000.json.gz | cmp - artifacts/confirmation.j
 
 The uncompressed confirmation report has SHA-256 `c9d5d18482ee150ad69521b40b566f643cd9c63052e342e7393a76ca6b96f346`.
 
+## Independent comparison with ValueFunctionPlayer
+
+Issue #381 reports that the built-in value player can outperform depth-2 AlphaBeta under some configurations. The same frozen tactical player faced the stock `ValueFunctionPlayer()` in 1,000 additional games on 500 new boards, with the seats swapped on each board. The new board seeds and starting-state digests are disjoint from both AlphaBeta runs. [Benchmark discussion](https://github.com/bcollazo/catanatron/issues/381)
+
+The tactical player won **751 of 1,000 games (75.1%)**, including 395/500 moving first and 356/500 moving second. All games finished. The 95% whole-board bootstrap interval is 72.4% to 77.7%. Both players used the stock two-player referee with the same rules as the AlphaBeta comparison. [Per-game results](artifacts/catanatron-value-duel-1000.json.gz)
+
+Run the following commands from this example directory. The uncompressed report has SHA-256 `0bf6903fcfe653c5e4d7887af9ff2ff61a38c4b6d8dc94b7a639999220ebc06e`.
+
+```sh
+.venv/bin/python catanatron_value_duel.py --output artifacts/value-reproduction.json
+gzip -dc artifacts/catanatron-value-duel-1000.json.gz | cmp - artifacts/value-reproduction.json
+```
+
 ## Run from the repository
 
 From the repository root, enter `examples/tactical_player`. Use Python 3.12 and the pinned Catanatron revision for the paired replay. The runner checks the installed engine digest before starting.
