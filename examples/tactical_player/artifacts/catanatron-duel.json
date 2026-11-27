@@ -1,0 +1,1592 @@
+{
+  "benchmark": "Catanatron project leaderboard, native two-player challenge",
+  "leaderboard": "https://docs.catanatron.com/advanced/making-catanatron-stronger",
+  "upstream_commit": "ecf931181b9a65bb4116a2153fb78c16f1438e00",
+  "upstream_all_python_sha256": "d17c64ace107eae861082e75fdeda02c8f18b9f029e377881987ab768f89e7b2",
+  "python_version": "3.12.0",
+  "networkx_version": "3.7",
+  "python_hash_seed_in_workers": 0,
+  "board_seed_generator": 948561723,
+  "boards": 64,
+  "workers": 4,
+  "policy_file_sha256": "938088b1cff75b2add60e54f06cf12651ef078c0845914e8a88af3bb2f71def2",
+  "policy_weights": {
+    "diversity": 3.594089207415212,
+    "wheat_ore": 0.18967423637412334,
+    "port": 0.43333930217702643,
+    "expansion": 2.119703157230031,
+    "city": 1.3512156232354957,
+    "development": 0.6963633576037146,
+    "trade": 1.262846527519069,
+    "longest_road": 2.8531470498388916,
+    "offer_threshold": 0.060905432731926515,
+    "accept_threshold": 0.08531464701805991,
+    "trade_rivalry": 0.04940390490576203,
+    "policy_version": 2
+  },
+  "candidate": "CatanAgent with trained three-player weights and domestic proposals disabled only in this duel",
+  "opponent": "Unmodified catanatron.players.minimax.AlphaBetaPlayer, Params(depth=2), all other defaults",
+  "referee": "Unmodified catanatron.Game.play(), default base map, official_spiral, 10 VP, discard limit 7, friendly robber off",
+  "turn_limit": 1000,
+  "pairing": "Seats exchanged on the same starting map, development deck and initial RNG state. Stock search shares the referee RNG, so later dice can differ.",
+  "scope": "The project documents a two-player reference comparison. This does not measure the three-player base game or its active bargaining. Stock search cannot evaluate domestic trade replies. Maritime and port trades remain legal.",
+  "uncertainty": "95% percentile bootstrap across complete board pairs, 10000 resamples, seed 175983107. Unfinished games count as candidate non-wins.",
+  "summary": {
+    "games": 128,
+    "candidate_wins": 96,
+    "alphabeta_wins": 32,
+    "unfinished": 0,
+    "candidate_win_rate": 0.75,
+    "candidate_win_rate_95pct_board_bootstrap": [
+      0.671875,
+      0.828125
+    ],
+    "candidate_wins_by_seat": [
+      47,
+      49
+    ],
+    "boards_with_0_1_2_candidate_wins": [
+      4,
+      24,
+      36
+    ]
+  },
+  "pairs": [
+    {
+      "seed": 1806976944071971012,
+      "setup_sha256": "2d8a525058e2f9085a5581aa31e31e5c8a9275fa61b74ee729c0614a59cafd2a",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 2,
+          "turns": 44,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 7,
+          "alphabeta_vp": 10,
+          "turns": 66,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 10397506577117435400,
+      "setup_sha256": "08b2a0d2a25b4359308b923ee2ebc42899337b58b9b472deefee08816e6efc16",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 2,
+          "turns": 46,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 9,
+          "alphabeta_vp": 10,
+          "turns": 90,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 4123976658735791497,
+      "setup_sha256": "c3815e1a1d53e5a7b8769d55bb5bdc9a8fa2e53b91771d6a605b9682d3152bd1",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 78,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 71,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 7663173997408017336,
+      "setup_sha256": "c9d448f3f5a4c58e1a21e652b25f58499e486cc7edc402ee13d134b4845fe30e",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 48,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 6,
+          "alphabeta_vp": 10,
+          "turns": 60,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 5710020674721529880,
+      "setup_sha256": "2c0e6d0030e6596ac9a27dc78304984d49556240719ec1cc15d331305c602319",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 40,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 63,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 7252587380984936618,
+      "setup_sha256": "a65d88850dacac894883e283535ce62d0e85a1e8ca81f396677a092a70ac6041",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 66,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 97,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 13103856696255556203,
+      "setup_sha256": "1244b3c950b80d1a2256182f91b834c31990b044ba35ed15e29ffb0b44d5f8da",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 11,
+          "alphabeta_vp": 3,
+          "turns": 70,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 9,
+          "turns": 101,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 4807042568410422523,
+      "setup_sha256": "b864606e5c767716ed8cbea55b245027e496ee299fb120614ef9abffaa499e97",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 64,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 2,
+          "turns": 49,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 9083474271905886516,
+      "setup_sha256": "a433a44d088e0e904bf9a6bd277f6c08bb33369c654f7decec3ad28d16b085ca",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 9,
+          "alphabeta_vp": 10,
+          "turns": 63,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 45,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 3487036077397414646,
+      "setup_sha256": "923eff0f44b650bcb9ef4174f05e6a34a37ab830e2762520988bb5666f2b70fa",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 60,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 2,
+          "alphabeta_vp": 10,
+          "turns": 60,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 18394427355164401264,
+      "setup_sha256": "07c8a9051ca61c4214b4e060ebe45879fd7bff5dbd0adec72846664695506138",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 62,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 6,
+          "alphabeta_vp": 10,
+          "turns": 58,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15624176592357428591,
+      "setup_sha256": "2debea07cb8789ce76788c1dff20635dea9975c00d65dc4c1538ce8b623a3bbc",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 50,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 51,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15242464967729302243,
+      "setup_sha256": "e6c830aea870e9ed8bd9d48310f386402ead566443dfd49224ad1ac2ca0a2f57",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 5,
+          "alphabeta_vp": 10,
+          "turns": 63,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 37,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 12150275712431476826,
+      "setup_sha256": "8d42ac0b7fb72e5135b758f9885b1ade87b863d61568fef4a3df0b479984351b",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 54,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 2,
+          "turns": 45,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 14295043381691658460,
+      "setup_sha256": "6b1fce4ebbcb52f52d8e57f47ce1ef5aa5d5622d285f8ceff030519c664c000b",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 99,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 9,
+          "alphabeta_vp": 10,
+          "turns": 78,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 10126289671663917390,
+      "setup_sha256": "a4011921c09efa93d4253ecd4260e1af7bd8af2cf82f697d7f56fb3ee56cb1c0",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 62,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 49,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 14024680728631751558,
+      "setup_sha256": "c83c76bb5ad2342101dce4e2d5e7c77ddff09d2d31ab663aca890c5eee603cd0",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 81,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 11,
+          "alphabeta_vp": 6,
+          "turns": 43,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 18375446598204128258,
+      "setup_sha256": "3934754f2ff3e6d9167f43007cc053b903ccfcdb89b13eb0559d5eb2a02fafbd",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 8,
+          "turns": 74,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 49,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 4922684347476765158,
+      "setup_sha256": "bf20169a581fe98bf75658e07dc7dbf15f542bd815d53ef7ca8bbf34d2fd3ed8",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 58,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 70,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 1592198366616439970,
+      "setup_sha256": "54af5d9d2b4e73e030a2db7c2ced6dfaca17a5a5b3538f45f2d945dd59d9f6cd",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 44,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 59,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 7176419710905112902,
+      "setup_sha256": "a5105c4dd1495f19b8d3b723e78af9a087f6c65475f4d990070c67ca65fa3203",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 68,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 51,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 11802256212348789901,
+      "setup_sha256": "b37df5daca06febdf9ffd49e1898a76ad30c41f591276cb647dc2dc940c18e2e",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 44,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 11,
+          "alphabeta_vp": 4,
+          "turns": 59,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 8323014836125759382,
+      "setup_sha256": "82b281a5bea3e90f2a32f00106f2954faf6e3627cc1781b8e1af6da74b6146f8",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 102,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 6,
+          "alphabeta_vp": 10,
+          "turns": 62,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15879273698186346711,
+      "setup_sha256": "a8aa315247f01b2f04aee312bf5c2762b2f7f7f8d4e06ad590371750f852a56b",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 56,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 6,
+          "alphabeta_vp": 10,
+          "turns": 82,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 7318335492464760850,
+      "setup_sha256": "63ceea2fefb8aa8b389c81902c443968b06c1fe2a257728c01d232bb18559021",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 6,
+          "alphabeta_vp": 10,
+          "turns": 87,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 69,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 7017630085264195845,
+      "setup_sha256": "9dbefe130c124b3b17dd6c184e831de5180cc5c9086456ea613bee2588df036b",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 4,
+          "alphabeta_vp": 10,
+          "turns": 49,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 55,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 16984797630385596290,
+      "setup_sha256": "2b8ec35ea4c1aa839f22b80352152bc3ffae5291e33087e88693943a94fd4547",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 64,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 41,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 4884764063058552852,
+      "setup_sha256": "b62dac894c4fe46016fb9642df07161ba2e11421eeb6fbbec91b2615eaee8f31",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 2,
+          "turns": 62,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 8,
+          "turns": 99,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 163571772222147335,
+      "setup_sha256": "956cd04418e340ba7c1064d91cf73338f43c608ad3ee1891fc1404007e46e1e3",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 6,
+          "alphabeta_vp": 10,
+          "turns": 87,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 57,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 5624871349276144494,
+      "setup_sha256": "33b0886e413bd038613a973a50d62190d019e7eaf32202d54f9032841fb8200c",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 70,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 9,
+          "alphabeta_vp": 10,
+          "turns": 74,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 2117659756379793686,
+      "setup_sha256": "e33ca1a0fe1bb0fb071b3d7f17f0bace2c5dd06aced03f7ed324c5c70ce1c6c5",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 50,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 65,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 5176124107356564167,
+      "setup_sha256": "42a9b7f095356a423fddae3180e746cf5f7dd2a9e2e0f1e9184deb4c3370c323",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 60,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 9,
+          "turns": 95,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 11525427684451102224,
+      "setup_sha256": "c247a5a0634fe9a9bc836cb8cbb6706c787224e13973a237ae09d99678ffa35b",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 60,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 77,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 663213518596347458,
+      "setup_sha256": "06984662d78cd4894f0dca901f503c0987d2c537aaf0c9e364e107cd08d6d09e",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 11,
+          "alphabeta_vp": 4,
+          "turns": 48,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 61,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 3522491254393820709,
+      "setup_sha256": "5371d4d62aac117f5ac954462836012121bba0e72d74f270ff4f6866941aacd5",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 7,
+          "alphabeta_vp": 10,
+          "turns": 55,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 65,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 5426232494559209330,
+      "setup_sha256": "c12eb55ca6d3388293ce8af637595b3a151cdf7babfb586a424ab7b809d7d624",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 86,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 3,
+          "turns": 45,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 9962384256782409279,
+      "setup_sha256": "fc1e6bd9d9daeb5535ac617e1a62e7bcf1ab188fc63222e84fbbe361c1fe01f6",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 68,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 47,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15957032796023134639,
+      "setup_sha256": "5515df8dc5c46f22b70c9ab0c9cb1a70de02dd00c169c4f56ba390d17c1e0076",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 8,
+          "turns": 66,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 61,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15811858247558116527,
+      "setup_sha256": "e6cf27e89d98d4405da64630849fbc5560fe05c802fff89535b9cb17b8e1181c",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 11,
+          "alphabeta_vp": 4,
+          "turns": 82,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 9,
+          "turns": 67,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 4965260198385498281,
+      "setup_sha256": "08adc07c7ef08bc8c2be32879b70ce0dbca858de4919676b750f367cb44b1aa8",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 5,
+          "alphabeta_vp": 10,
+          "turns": 65,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 74,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 8689247991530173518,
+      "setup_sha256": "ac8f028e16242b35bd002f900a33f15f87dcd525cb9612cfa8ab4422f9f5581e",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 72,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 39,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 9251276938276800593,
+      "setup_sha256": "2a2446ada0f46e564ec90b8474e5d8d4b56db62e1523f365cade91296c91e75c",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 64,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 65,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 1174060212116529919,
+      "setup_sha256": "a4c8322654d5f37e95b9408b0737ad4cb27dfdf56a2359df57a007447ca27bad",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 7,
+          "alphabeta_vp": 10,
+          "turns": 55,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 59,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 2705513460914997764,
+      "setup_sha256": "9534e186dbc2eb284686982c0969e9b4fcd9b17d6f3bf671e08f5de64e314bc0",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 9,
+          "alphabeta_vp": 10,
+          "turns": 63,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 61,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 2476322555477578532,
+      "setup_sha256": "b0b3db7969eb7dd8ab4ce379f06c5e58e92d0bd528182dd4a4ff56daba8c0f39",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 74,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 111,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 9172344562820040922,
+      "setup_sha256": "afb13aeee47d1055a918ebbb7d8f588738c0e724880386b4723cd71e31daad90",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 56,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 75,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 8323214861845066691,
+      "setup_sha256": "86faa137df664cc5d3025daada079c69d3bfd98d64b204522ff8c710f3b279a6",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 2,
+          "turns": 54,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 55,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 4719903570230852852,
+      "setup_sha256": "75d79c8851b460193a0732d5f704a1ad32a78970c6e58b94d7090162281e0a06",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 56,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 85,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 17120058372335092289,
+      "setup_sha256": "e891bf1dd021bb189c42902c0737cd4d22cc24cf5c2cb7d61a4021afec955987",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 11,
+          "alphabeta_vp": 5,
+          "turns": 76,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 75,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 14106001819777728100,
+      "setup_sha256": "e1d54188bcc4b3a0dd92c280e84b37e8eedac71729cc8a1423c2aa721e851810",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 9,
+          "turns": 60,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 47,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15480720547667508731,
+      "setup_sha256": "88d38da7ef8ef0fc4ab669edef6b41335e356f9c6073e4ad06caa6da1cc1380e",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 60,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 78,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 5991814522824680567,
+      "setup_sha256": "e0d027eb8f45c173b5c6520071959a3cdb7d0f80859971099407a08e1afea943",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 88,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 49,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 1516689159897112093,
+      "setup_sha256": "d5e7196281223a3d96b32e55f0ba8bca1780186684f2c8bfe1800ca962c49d2c",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 60,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 6,
+          "turns": 63,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 14853464267316181814,
+      "setup_sha256": "adac9efbc22d38ca0031cc99fa6df086682101076bad7adc5921d06c5b8314b2",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 62,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 53,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 4068901947994236167,
+      "setup_sha256": "4597308e4851f0746a630a24a8d62272ace78f2368fd75860351addfba15cabe",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 4,
+          "alphabeta_vp": 10,
+          "turns": 33,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 7,
+          "alphabeta_vp": 10,
+          "turns": 86,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 12581683637195892936,
+      "setup_sha256": "b134a16458f33e3bd7570fddec1454a5536f7e7f22171e4121d46139f3771537",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 79,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 77,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 2442709647304963174,
+      "setup_sha256": "0e79ecd08dc765325e2222d080f1bc61353e6cdb93b651a410e6d83e4833d950",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 7,
+          "alphabeta_vp": 10,
+          "turns": 153,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 73,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15484297506479195025,
+      "setup_sha256": "80fdc0efed0d9fc8d12be933721f53561221bd324417929b030fa28560e6ac0c",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 4,
+          "alphabeta_vp": 10,
+          "turns": 57,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 78,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 8682633443853302988,
+      "setup_sha256": "f31a8774fae6e19b35669994dbecc3b38645ab38441ad046eec3937d8bf0c1a4",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 11,
+          "alphabeta_vp": 4,
+          "turns": 50,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 71,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 15148603501401486137,
+      "setup_sha256": "a51450591199af61df8aed71c9a12e23afb9efaf3f1c703e567f80c15884685f",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 7,
+          "turns": 78,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 8,
+          "turns": 103,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 13649840116965451767,
+      "setup_sha256": "a42bfeb5dbbdb7c7c44d06f34600302ff001610fcc4f710d2f31f1d4f5d2c148",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "alphabeta",
+          "candidate_vp": 6,
+          "alphabeta_vp": 10,
+          "turns": 59,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 9,
+          "turns": 89,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 7669496976536417005,
+      "setup_sha256": "46033bec5fe4984d8193e331dc1fd776a1b78c1f80c0786731bc3723c1c6b6b0",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 5,
+          "turns": 66,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 55,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 6849329268024185421,
+      "setup_sha256": "6187ee48d4dbb986e8ce3bdf2af3259d2808f2e4c78b7858caafb865951f12d9",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 2,
+          "turns": 60,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 8,
+          "alphabeta_vp": 10,
+          "turns": 84,
+          "domestic_offers": 0
+        }
+      ]
+    },
+    {
+      "seed": 2863856211698291283,
+      "setup_sha256": "3eec1c4b507aaa978c8da90c385b8aaf8afe8b260f1deb67141758548e0d4798",
+      "legs": [
+        {
+          "candidate_seat": 1,
+          "candidate_color": "BLUE",
+          "winner": "alphabeta",
+          "candidate_vp": 4,
+          "alphabeta_vp": 10,
+          "turns": 71,
+          "domestic_offers": 0
+        },
+        {
+          "candidate_seat": 2,
+          "candidate_color": "RED",
+          "winner": "candidate",
+          "candidate_vp": 10,
+          "alphabeta_vp": 4,
+          "turns": 47,
+          "domestic_offers": 0
+        }
+      ]
+    }
+  ]
+}
