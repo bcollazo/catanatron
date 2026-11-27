@@ -8,7 +8,20 @@ The candidate won **96 of 128 games (75.0%)** against the stock depth-2 AlphaBet
 | One game | 24 |
 | Both games | 36 |
 
-The Catanatron project names depth-2 AlphaBetaPlayer as its strongest documented bot and invites reproducible challenges. This attachment records a local comparison under that project's 1v1 benchmark. [Catanatron project benchmark](https://docs.catanatron.com/advanced/making-catanatron-stronger)
+At the pinned revision, the Catanatron project listed depth-2 AlphaBetaPlayer first and invited reproducible challenges. This attachment records a local comparison under that project's 1v1 benchmark. [Catanatron project benchmark](https://docs.catanatron.com/advanced/making-catanatron-stronger)
+
+## Confirmation on 500 fresh boards
+
+With the policy and weights frozen, the candidate won **721/1,000 games (72.1%)** on 500 additional boards. It won 371/500 moving first and 350/500 moving second. All games finished. Resampling the 500 board pairs gives a 95% interval of 69.3% to 74.9%. The candidate lost both games on 42 boards, split 195 and won both games on 263. The board seeds and initial setup digests are disjoint from those in the original 128-game test.
+
+The [full confirmation record](artifacts/catanatron-duel-1000.json.gz) contains the runner's JSON output compressed with gzip. To reproduce the confirmation after installing the dependencies below, run these commands in this directory.
+
+```sh
+.venv/bin/python catanatron_duel.py --boards 500 --seed 27062041 --workers 4 --output artifacts/confirmation.json
+gzip -dc artifacts/catanatron-duel-1000.json.gz | cmp - artifacts/confirmation.json
+```
+
+The uncompressed confirmation report has SHA-256 `c9d5d18482ee150ad69521b40b566f643cd9c63052e342e7393a76ca6b96f346`.
 
 ## Run from the repository
 
